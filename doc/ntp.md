@@ -169,6 +169,7 @@ admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>end</b>
 </code></pre>
 
 Poll intervals are specified as powers of 2:
+
 - `minpoll 4` = poll every 2^4 = 16 seconds (minimum polling rate)
 - `maxpoll 10` = poll every 2^10 = 1024 seconds (maximum polling rate)
 - Defaults: minpoll 6 (64 seconds), maxpoll 10 (1024 seconds)

@@ -152,12 +152,13 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 
 **Key radio parameters:**
 
-  **⚠ Must match your physical location for legal compliance! ⚠**
+**⚠ Must match your physical location for legal compliance! ⚠**
+
 - `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
   appropriate WiFi standards:
-      - 2.4GHz: 802.11n/ax
-      - 5GHz: 802.11n/ac/ax
-      - 6GHz: 802.11ax
+    - 2.4GHz: 802.11n/ax
+    - 5GHz: 802.11n/ac/ax
+    - 6GHz: 802.11ax
 - `channel`: Channel number (1-233) or "auto".  When set to "auto", defaults to
   channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 37 for 6GHz
 - `channel-width`: AP channel bandwidth.  Supported values are `auto`, `20MHz`,
@@ -583,6 +584,7 @@ admin@example:/config/> <b>set interface wifi0 wifi access-point roaming dot11r 
 </code></pre>
 
 **Requirements:**
+
 - All APs in roaming group must have **identical** SSID
 - All APs must have **identical** passphrase (same keystore secret)
 - All APs must have the **same key holder secret**, if one is set
@@ -598,6 +600,7 @@ admin@example:/config/> <b>set interface wifi0 wifi access-point roaming dot11r 
   there is enough
 
 **Mobility Domain Options:**
+
 - Explicit 4-character hex value (e.g., `4f57`) - default if not specified
 - `hash` - Automatically derive from SSID using MD5 (OpenWrt-compatible)
 
