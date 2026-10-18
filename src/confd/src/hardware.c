@@ -1416,18 +1416,24 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
-		enum lydx_op op;
 		struct lyd_node *state, *cif;
 		const char *admin_state;
 		const char *class, *name;
 
-		op = lydx_get_op(dif);
 		name = lydx_get_cattr(dif, "name");
 
 		/* Get the current config node for this component */
 		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
-		if (!cif)
+		if (!cif) {
+			/* Component deleted, lock its USB port */
+			class = lydx_get_cattr(dif, "class");
+			if (event == SR_EV_DONE && class && !strcmp(class, "infix-hardware:usb") &&
+			    usb_authorize(confd->root, name, 0)) {
+				rc = SR_ERR_INTERNAL;
+				goto err;
+			}
 			continue;
+		}
 
 		class = lydx_get_cattr(cif, "class");
 		if (country_changed && strcmp(class, "infix-hardware:wifi") &&
@@ -1439,14 +1445,6 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (event != SR_EV_DONE)
 				continue;
 
-			if (op == LYDX_OP_DELETE) {
-				/* Handle USB deletion */
-				if (usb_authorize(confd->root, name, 0)) {
-					rc = SR_ERR_INTERNAL;
-					goto err;
-				}
-				continue;
-			}
 			state = lydx_get_child(cif, "state");
 			admin_state = lydx_get_cattr(state, "admin-state");
 			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {

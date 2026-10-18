@@ -9,7 +9,7 @@ and verifies whether the USB ports are correctly _locked_ (restricted from
 use) and _unlocked_ (available for use) when they should. It also verifies
 this behavior during reboot. This test does not involve the actual use of
 the USB port; it only ensures the configured state is consistent with the
-hardware state.
+hardware state.  Removing the configuration of a port locks it.
 
 If this pass you can be certain that the configuration of the USB
 port is handled correctly.
@@ -25,6 +25,8 @@ image::topology.svg[USB Configuration topology, align=center, scaledwidth=75%]
 . Verify that all USB ports are unlocked
 . Lock all USB ports
 . Verify that all USB ports are locked
+. Unlock all USB ports again
+. Verify that all USB ports are unlocked
 . Remove all hardware configuration
 . Verify that all USB ports are locked
 . Unlock USB ports

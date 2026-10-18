@@ -106,6 +106,8 @@ All notable changes to the project are documented in this file.
   WPA3 clients
 - Changing the MAC address of a WiFi access point could leave the access
   points on that radio down until the WiFi service was restarted
+- Removing a USB port component from the configuration left the port
+  unlocked, now the port is locked
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
