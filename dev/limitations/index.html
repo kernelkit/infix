@@ -653,6 +653,8 @@
       
         
       
+        
+      
     
     
     
@@ -1189,6 +1191,34 @@
     
   
     Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
   
 
     
@@ -2543,7 +2573,7 @@ settings below before upgrading from an older release.</p>
 </tr>
 <tr>
 <td>DHCP client option <code>value</code></td>
-<td>Letters, digits, space, <code>_</code>, <code>.</code>, <code>:</code>, <code>/</code>, <code>@</code>, <code>=</code>, <code>,</code>, <code>+</code>, <code>-</code></td>
+<td>Anything except control characters, <code>"</code>, <code>'</code>, <code>$</code>, <code>`</code>, and <code>\</code></td>
 <td>1..255</td>
 </tr>
 <tr>
@@ -2553,12 +2583,12 @@ settings below before upgrading from an older release.</p>
 </tr>
 <tr>
 <td>DHCP server static-host <code>client-id</code></td>
-<td>Letters, digits, <code>_</code>, <code>.</code>, <code>:</code>, <code>+</code>, <code>-</code></td>
+<td>Anything except control characters</td>
 <td>1..255</td>
 </tr>
 <tr>
 <td>Syslog <code>property-filter</code> value</td>
-<td>Letters, digits, space, <code>_</code>, <code>.</code>, <code>:</code>, <code>/</code>, <code>@</code>, <code>=</code>, <code>,</code>, <code>-</code>, and <code>+ * ? \| ^ $ ( ) [ ] { }</code></td>
+<td>Anything except control characters</td>
 <td></td>
 </tr>
 <tr>

@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -1415,6 +1417,34 @@
     
   
     Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
   
 
     
@@ -2886,7 +2916,7 @@
 <p>Infix support several network interface types, each can be assigned one
 or more IP addresses, both IPv4 and IPv6 are supported.  (There is no
 concept of a "primary" address.)</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-iface-examples.svg" data-desc-position="bottom"><img alt="IP on top of network interface examples" src="../img/ip-iface-examples.svg"></a></p>
+<p></p>
 <h2 id="ipv4-address-assignment">IPv4 Address Assignment<a class="headerlink" href="#ipv4-address-assignment" title="Permanent link">¶</a></h2>
 <p>Multiple address assignment methods are available:</p>
 <table>
@@ -3166,7 +3196,7 @@ NTP client is not enabled, any NTP servers provided by the DHCPv6 server
 will be ignored. For details on how to enable the NTP client, see the
 <a href="../system/#ntp-client-configuration">NTP Client Configuration</a> section.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h2>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-switch.svg" data-desc-position="bottom"><img alt="Switch example (eth0 and lo)" src="../img/ip-address-example-switch.svg"></a></p>
+<p></p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
 <span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
 eth0            ethernet      UP          02:00:00:00:00:00
@@ -3183,7 +3213,7 @@ interface (lo). As shown above, these examples assume <em>eth0</em> has an
 IPv6 link-local address and <em>lo</em> has static IPv4 and IPv6 addresses by
 default.</p>
 <h3 id="static-and-link-local-ipv4-addresses">Static and link-local IPv4 addresses<a class="headerlink" href="#static-and-link-local-ipv4-addresses" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-static.svg" data-desc-position="bottom"><img alt="Setting static IPv4 (and link-local IPv4)" src="../img/ip-address-example-ipv4-static.svg"></a></p>
+<p></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
 admin@example:/config/interface/eth0/ipv4/&gt; <b>set address 10.0.1.1 prefix-length 24</b>
@@ -3225,7 +3255,7 @@ admin@example:/config/interface/eth0/ipv4/autoconf/&gt; <b>leave</b>
 </code></pre>
 
 <h3 id="use-of-dhcp-for-ipv4-address-assignment">Use of DHCP for IPv4 address assignment<a class="headerlink" href="#use-of-dhcp-for-ipv4-address-assignment" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCP for IPv4 address assignment" src="../img/ip-address-example-ipv4-dhcp.svg"></a></p>
+<p></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
 admin@example:/config/interface/eth0/ipv4/&gt; <b>set dhcp</b>
@@ -3267,7 +3297,7 @@ automatically use the configured system hostname.</p>
 </ul>
 <p>For advanced usage with vendor-specific options, see the YANG model.</p>
 <h3 id="use-of-dhcpv6-for-ipv6-address-assignment">Use of DHCPv6 for IPv6 address assignment<a class="headerlink" href="#use-of-dhcpv6-for-ipv6-address-assignment" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCPv6 for IPv6 address assignment" src="../img/ip-address-example-ipv6-dhcp.svg"></a></p>
+<p></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set dhcp</b>
@@ -3366,7 +3396,7 @@ its address class:</p>
 <p>Multicast and reserved addresses (class D and E) have no default and
 need an explicit prefix length.</p>
 <h3 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-static.svg" data-desc-position="bottom"><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg"></a></p>
+<p></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set address 2001:db8::1 prefix-length 64</b>
@@ -3383,7 +3413,7 @@ admin@example:/&gt;
 </code></pre>
 
 <h3 id="stateless-auto-configuration-of-global-ipv6-address">Stateless Auto-configuration of Global IPv6 Address<a class="headerlink" href="#stateless-auto-configuration-of-global-ipv6-address" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
+<p></p>
 <p>Stateless address auto-configuration of global addresses is enabled by
 default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
@@ -3417,7 +3447,7 @@ admin@example:/&gt;
 </code></pre>
 
 <h3 id="random-link-identifiers-for-ipv6-stateless-autoconfiguration">Random Link Identifiers for IPv6 Stateless Autoconfiguration<a class="headerlink" href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" title="Permanent link">¶</a></h3>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
+<p></p>
 <p>By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface</b>

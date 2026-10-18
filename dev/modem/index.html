@@ -1,0 +1,3624 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/modem/">
+      
+      
+        <link rel="prev" href="../wifi/">
+      
+      
+        <link rel="next" href="../discovery/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Cellular Modem (wwan) - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cellular-modem-wwan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden="">
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cellular Modem (wwan)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard="" data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keybindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Calculator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/edit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Networking
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pppoe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PPPoE Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quality of Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RMON Counters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tunneling (L2/L3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        
+          
+          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPN Tunnels
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#naming-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-bearer-multiple-apns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Bearer (Multiple APNs)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-modems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Modems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-by-step-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-step Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-step Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-hardware-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Hardware Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-hardware-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Hardware Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Hardware Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slow-usb-modems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow USB Modems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-configure-the-bearer-apn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Configure the Bearer (APN)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-configure-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Configure Authentication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-configure-sim-pin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Configure SIM PIN
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-verify-connectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Verify Connectivity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cellular-failover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cellular Failover
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roaming
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#location-and-gps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Location and GPS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#management-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Management Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Management Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#restart-bearer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restart Bearer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset-modem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reset Modem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send SMS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DHCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ntp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ptp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTP (IEEE 1588/802.1AS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snmp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNMP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tftp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TFTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    System
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Info &amp; Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schedule/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scheduling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syslog Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-netconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NETCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-restconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Corner
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer's Corner
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Branding &amp; Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing with Buildroot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Netboot HowTo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test System Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vital Product Data (VPD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases &amp; Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Origin &amp; Licensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#naming-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-bearer-multiple-apns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Bearer (Multiple APNs)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-modems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Modems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-by-step-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-step Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-step Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-hardware-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Hardware Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-hardware-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Hardware Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Hardware Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slow-usb-modems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow USB Modems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-configure-the-bearer-apn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Configure the Bearer (APN)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-configure-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Configure Authentication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-configure-sim-pin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Configure SIM PIN
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-verify-connectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Verify Connectivity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cellular-failover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cellular Failover
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roaming
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#location-and-gps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Location and GPS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#management-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Management Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Management Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#restart-bearer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restart Bearer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset-modem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reset Modem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send SMS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation">
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../networking/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Networking
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cellular-modem-wwan">Cellular Modem (WWAN)<a class="headerlink" href="#cellular-modem-wwan" title="Permanent link">¶</a></h1>
+<p>Cellular modems are supported when they expose a QMI or MBIM control
+interface, or only AT commands, over USB.  Form factor does not matter:
+USB dongles, mPCIe cards, and M.2 Key-B modules all work as long as
+the modem chipset uses USB on the connector (the typical case for
+4G/LTE modems).  See <em>Supported Modems</em> below for the exceptions.</p>
+<p>Setup involves three configuration items:</p>
+<ul>
+<li>A <code>modem0</code> hardware component for the physical modem</li>
+<li>A <code>sim0</code> hardware component for the SIM card slot</li>
+<li>A <code>wwan0</code> network interface that references both and carries the
+  bearer (APN) configuration</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modem support is not part of the default builds.  Enable it with the
+<code>modem</code> configuration snippet when building, e.g., for 64-bit Arm:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make aarch64_defconfig apply-modem
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make
+</code></pre></div>
+<p>Use the defconfig for your architecture, e.g., <code>riscv64_defconfig</code> or
+<code>x86_64_defconfig</code>, the snippet works with any of them.</p>
+</div>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">¶</a></h2>
+<p>Cellular modem support is built in three layers:</p>
+<ol>
+<li>
+<p><strong>Modem hardware component (modem0)</strong>: the physical modem</p>
+<ul>
+<li>Configured via <code>ietf-hardware</code> with class <code>infix-hardware:modem</code></li>
+<li><code>admin-state</code> controls whether the cellular subsystem is active</li>
+<li>Holds physical-layer config: allowed bands, preferred mode, location</li>
+<li>Auto-discovered into factory-default config when the modem is
+   present at first boot</li>
+</ul>
+</li>
+<li>
+<p><strong>SIM hardware component (sim0)</strong>: the SIM card slot</p>
+<ul>
+<li>Configured via <code>ietf-hardware</code> with class <code>infix-hardware:sim</code></li>
+<li>Holds PIN/PUK credentials and carrier profile</li>
+<li>Auto-discovered into factory-default config alongside the modem</li>
+</ul>
+</li>
+<li>
+<p><strong>Network interface (wwan0)</strong>: data bearer to the cellular network</p>
+<ul>
+<li>Configured via <code>ietf-interfaces</code> with type <code>infix-if-type:modem</code></li>
+<li>References a modem component and a SIM component</li>
+<li>Holds bearer config: APN, IP type, roaming, route preference,
+   authentication</li>
+<li>Always added by the user, never auto-created</li>
+</ul>
+</li>
+</ol>
+<h2 id="naming-conventions">Naming Conventions<a class="headerlink" href="#naming-conventions" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th><strong>Name Pattern</strong></th>
+<th><strong>Type</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modemN</code></td>
+<td>Modem hardware</td>
+<td>Hardware component for the physical modem</td>
+</tr>
+<tr>
+<td><code>simN</code></td>
+<td>SIM hardware</td>
+<td>Hardware component for the SIM card slot</td>
+</tr>
+<tr>
+<td><code>wwanN</code></td>
+<td>Modem interface</td>
+<td>Network interface for cellular data</td>
+</tr>
+</tbody>
+</table>
+<p>Where <code>N</code> is a number (0, 1, 2, ...).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Using these naming conventions simplifies configuration since type and
+class are automatically inferred.  Creating a hardware component named
+<code>modem0</code> automatically sets its class to <code>infix-hardware:modem</code>, and
+creating an interface named <code>wwan0</code> automatically sets its type to
+<code>infix-if-type:modem</code>.</p>
+<p><strong>Note:</strong> This inference only works via the CLI.  When configuring
+over NETCONF or RESTCONF the class and type must be set explicitly.</p>
+</div>
+<h2 id="multi-bearer-multiple-apns">Multi-Bearer (Multiple APNs)<a class="headerlink" href="#multi-bearer-multiple-apns" title="Permanent link">¶</a></h2>
+<p>Multiple wwan interfaces can reference the same modem component, each
+with a different APN.  Same idea as multi-SSID on a WiFi radio: one
+hardware modem, several independent data connections.</p>
+<p>Configure <code>wwan0</code> and <code>wwan1</code> both pointing to <code>modem0</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>edit interface wwan0 wwan
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>set modem modem0
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>set bearer apn internet
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>edit interface wwan1 wwan
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>set modem modem0
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>set bearer apn corporate.vpn.apn
+</code></pre></div>
+<h2 id="current-limitations">Current Limitations<a class="headerlink" href="#current-limitations" title="Permanent link">¶</a></h2>
+<ul>
+<li>The modem must be present at boot.  Hot-plug is not supported.</li>
+<li>If the modem is absent at boot, and no <code>probe-timeout</code> is set, a
+  dummy <code>wwan0</code> placeholder is created immediately so IP configuration
+  can proceed.  A reboot is required once the hardware is inserted.</li>
+</ul>
+<h2 id="supported-modems">Supported Modems<a class="headerlink" href="#supported-modems" title="Permanent link">¶</a></h2>
+<p>Modems exposing a CDC-WDM control interface over USB are supported,
+regardless of physical form factor.  Two control protocols are
+recognised:</p>
+<ul>
+<li><strong>MBIM</strong>: Mobile Broadband Interface Model (e.g. Sierra Wireless,
+  Quectel EM06/EM12)</li>
+<li><strong>QMI</strong>: Qualcomm MSM Interface (e.g. Sierra Wireless EM7xxx,
+  Quectel EM/RMxxx)</li>
+</ul>
+<p>Modems with only an AT command port, e.g. a USB serial port handled by
+the <code>cdc_acm</code> driver (<code>ttyACM0</code>), are supported too.  They have no
+network interface of their own, so the data connection runs as PPP
+over the AT port, and the wwan interface is the PPP link.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>AT-only modems have only been tested with the virtual modem of the
+test system, not with modem hardware.</p>
+</div>
+<p>Most 4G/LTE modules (USB dongles, mPCIe cards, M.2 Key-B) use USB on
+the connector even when the slot also carries PCIe lanes.  To the
+system they are all USB modems.  PCIe-only modems (some 5G NR modules)
+are not supported, since the cellular subsystem assumes a USB-attached
+control interface.</p>
+<h2 id="step-by-step-setup">Step-by-step Setup<a class="headerlink" href="#step-by-step-setup" title="Permanent link">¶</a></h2>
+<h3 id="1-hardware-detection">1. Hardware Detection<a class="headerlink" href="#1-hardware-detection" title="Permanent link">¶</a></h3>
+<p>At first boot, USB modems detected by the kernel are written to
+<code>/run/system.json</code> and added as hardware components in the
+factory-default configuration.  Verify the modem appears:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show modem</b>
+──────────────────────────────────────────────────────────────
+<span class="title">Cellular Modems</span>
+NAME    MANUFACTURER  MODEL   STATE       NETWORK  SIGNAL
+modem0  Quectel       EM06-E  registered  lte      good
+──────────────────────────────────────────────────────────────
+<span class="title">SIM Cards</span>
+NAME  SLOT  STATE     OPERATOR
+sim0  1     unlocked  Tele2
+</code></pre>
+
+<p>The <code>STATE</code>, <code>SIM STATE</code>, and <code>SIGNAL</code> columns are color-coded so the
+healthy / attention / problem cases are visible at a glance: green for
+<code>registered</code>, <code>connected</code>, <code>unlocked</code>, <code>excellent</code>, <code>good</code>; yellow for
+transient or attention states like <code>enabling</code>, <code>pin-required</code>, <code>poor</code>;
+red for <code>failed</code>, <code>not-inserted</code>, <code>bad</code>.</p>
+<p>If <code>modem0</code> does not appear:</p>
+<ul>
+<li>Verify the kernel sees the modem (<code>dmesg | grep -i mbim</code> or
+  <code>dmesg | grep -i qmi</code>).  Without a kernel driver no further setup
+  is possible.</li>
+<li>On boards with a custom factory configuration, or after replacing
+  hardware on a running system, the components may need to be added
+  manually.  See Step 2.</li>
+</ul>
+<h3 id="2-hardware-components">2. Hardware Components<a class="headerlink" href="#2-hardware-components" title="Permanent link">¶</a></h3>
+<p>If <code>show modem</code> already lists <code>modem0</code> and <code>sim0</code>, the components were
+auto-discovered into the factory-default configuration and you can skip
+ahead to Step 3.</p>
+<p>Otherwise, add them manually.  Start by finding the modem's USB
+attachment point.  Detected modems are always visible in the hardware
+detail view, even before they are configured:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware modem0</b>
+<span class="header">COMPONENT: modem0                                             </span>
+  Name                : modem0
+  Class               : modem
+  USB ID              : 2c7c:0125
+  URI                 : usb:///sys/bus/usb/devices/3-1.2.1
+  Oper State          : unknown
+
+See 'show modem modem0' for cellular status.
+</code></pre>
+
+<p>Copy the <code>URI</code> value into the component configuration.  It anchors the
+component to the physical USB port, so the data interface always gets
+the name you configured, no matter in which order the hardware
+enumerates.  Anchoring also acts as a lock: once every modem component
+is anchored, a modem plugged into any other port is detected and shown,
+but stays unmanaged until it too is configured.</p>
+<p>The class is inferred from the component name (<code>modemN</code> →
+<code>infix-hardware:modem</code>, <code>simN</code> → <code>infix-hardware:sim</code>).  The
+<code>admin-state</code> must be set explicitly.  There is no implicit default,
+and without <code>unlocked</code> the cellular subsystem stays inactive:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit hardware component modem0</b>
+admin@example:/config/hardware/component/modem0/&gt; <b>set uri usb:///sys/bus/usb/devices/3-1.2.1</b>
+admin@example:/config/hardware/component/modem0/&gt; <b>set state admin-state unlocked</b>
+admin@example:/config/hardware/component/modem0/&gt; <b>end</b>
+admin@example:/config/hardware/&gt; <b>edit component sim0</b>
+admin@example:/config/hardware/component/sim0/&gt; <b>set state admin-state unlocked</b>
+admin@example:/config/hardware/component/sim0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>To take the modem offline cleanly without removing the configuration,
+set <code>admin-state locked</code>.  All related services are stopped and the
+bearer is torn down before the modem goes offline:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit hardware component modem0</b>
+admin@example:/config/hardware/component/modem0/&gt; <b>set state admin-state locked</b>
+admin@example:/config/hardware/component/modem0/&gt; <b>leave</b>
+</code></pre>
+
+<h4 id="slow-usb-modems">Slow USB Modems<a class="headerlink" href="#slow-usb-modems" title="Permanent link">¶</a></h4>
+<p>USB modems can be slow to enumerate at boot.  The kernel wwan interface
+may not appear until several seconds after the system starts applying
+configuration.  The <code>probe-timeout</code> leaf inside the <code>modem</code> hardware
+configuration container controls how long the system waits.  It
+defaults to 30 seconds when the container is present.</p>
+<p>To enable the timeout, create the modem configuration container (this
+also lets you configure bands, preferred mode, etc.):</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit hardware component modem0 modem</b>
+admin@example:/config/hardware/component/modem0/modem/&gt; <b>leave</b>
+</code></pre>
+
+<p>With <code>probe-timeout</code> at its default of 30, the system waits up to 30
+seconds for the wwan interface to appear before proceeding.  For most
+modems it is ready in 2-5 seconds.  If the modem has not appeared
+within the timeout, a dummy placeholder interface is created so the
+rest of the configuration can be applied, and a reboot is required
+once the hardware is available, same as for WiFi radios.  Set
+<code>probe-timeout 0</code> to disable waiting entirely.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some Quectel modules (e.g. EM05) re-enumerate the USB device several
+times during a cold-boot firmware-init sequence that takes around 50
+to 60 seconds.  Bump <code>probe-timeout</code> to 90 for those, so the
+interface is in place before the configuration is applied.</p>
+</div>
+<h3 id="3-configure-the-bearer-apn">3. Configure the Bearer (APN)<a class="headerlink" href="#3-configure-the-bearer-apn" title="Permanent link">¶</a></h3>
+<p>Bearer configuration lives on the <code>wwan0</code> interface.  Reference the
+modem hardware component and set the APN:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface wwan0</b>
+admin@example:/config/interface/wwan0/&gt; <b>set wwan modem modem0</b>
+admin@example:/config/interface/wwan0/&gt; <b>set wwan sim sim0</b>
+admin@example:/config/interface/wwan0/&gt; <b>set wwan bearer apn internet</b>
+admin@example:/config/interface/wwan0/&gt; <b>leave</b>
+</code></pre>
+
+<p>The modem will connect automatically once the bearer is configured and
+the hardware is unlocked.</p>
+<p><strong>Key bearer parameters:</strong></p>
+<ul>
+<li><code>apn</code>: Access Point Name, required, provided by your operator
+  (e.g. <code>internet</code>, <code>data.vodafone.com</code>, <code>web.tele2.se</code>)</li>
+<li><code>route-preference</code>: Administrative distance for the default route
+  (default: <code>200</code>).  Higher value = lower priority.  The default of 200
+  places cellular behind wired Ethernet (distance 5) and WiFi, so
+  cellular acts as a failover when the wired link is up</li>
+<li><code>roaming</code>: Allow data when roaming on a foreign network
+  (default: <code>false</code>)</li>
+<li><code>ip-type</code>: <code>ipv4</code>, <code>ipv6</code>, or <code>ipv4v6</code> dual-stack
+  (default: <code>ipv4v6</code>)</li>
+</ul>
+<h3 id="4-configure-authentication">4. Configure Authentication<a class="headerlink" href="#4-configure-authentication" title="Permanent link">¶</a></h3>
+<p>Most consumer APNs connect without credentials.  If your operator
+requires authentication, first store the password in the keystore, then
+reference it from the bearer.</p>
+<p>Create the keystore entry for the APN password:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit keystore symmetric-key apn-pass</b>
+admin@example:/config/keystore/…/apn-pass/&gt; <b>set key-format passphrase-key-format</b>
+admin@example:/config/keystore/…/apn-pass/&gt; <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
+admin@example:/config/keystore/…/apn-pass/&gt; <b>leave</b>
+</code></pre>
+
+<p>Then point the bearer's authentication at it:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface wwan0 wwan bearer</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set authentication username myuser</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set authentication password apn-pass</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>leave</b>
+</code></pre>
+
+<p>Setting any leaf inside <code>authentication</code> creates the container, which
+enables authentication.  The <code>password</code> leaf is a reference to a
+symmetric key in the keystore, not the plaintext password itself.</p>
+<p>The authentication protocol defaults to <code>chap</code>.  To use PAP instead:</p>
+<pre class="cli"><code>admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set authentication type pap</b>
+</code></pre>
+
+<h3 id="5-configure-sim-pin">5. Configure SIM PIN<a class="headerlink" href="#5-configure-sim-pin" title="Permanent link">¶</a></h3>
+<p>If the SIM requires a PIN to unlock, configure it on the SIM hardware
+component:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit hardware component sim0</b>
+admin@example:/config/hardware/component/sim0/&gt; <b>set sim pin 1234</b>
+admin@example:/config/hardware/component/sim0/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="6-verify-connectivity">6. Verify Connectivity<a class="headerlink" href="#6-verify-connectivity" title="Permanent link">¶</a></h3>
+<p>Once connected, the <code>wwan0</code> interface receives an IP address from the
+carrier and the default route is installed automatically:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface wwan0</b>
+name                : wwan0
+type                : modem
+index               : 5
+mtu                 : 1500
+operational status  : up
+ip forwarding       : enabled
+physical address    : 12:34:56:78:9a:bc
+ipv4 addresses      : 10.142.87.33/30 (wwan)
+ipv6 addresses      : 2001:db8:1:2::1/64 (wwan)
+in-octets           : 84213
+out-octets          : 31456
+</code></pre>
+
+<p>Check the full modem state including signal quality and registration:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show modem modem0</b>
+<span class="header">MODEM: modem0                                                 </span>
+──────────────────────────────────────────────────────────────
+<span class="title">Hardware Information</span>
+  Manufacturer        : Quectel
+  Model               : EM06-E
+  Firmware Version    : EM06ELAR04A07M4G
+  Serial Number       : 352753090141905
+  IMSI                : 240021234567890
+  ICCID               : 8946020000001234567
+──────────────────────────────────────────────────────────────
+<span class="title">Status</span>
+  State               : connected
+  Power State         : on
+  Signal              : Quality: 72% good  RSSI: -59 dBm  RSRP: -95 dBm  RSRQ: -11.0 dB
+──────────────────────────────────────────────────────────────
+<span class="title">Cellular</span>
+  Registration        : home
+  Service State       : attached
+  Operator            : Tele2
+  Operator ID         : 23002
+  Network Type        : lte
+──────────────────────────────────────────────────────────────
+<span class="title">SIM Card</span>
+  Name                : sim0
+  Slot                : 1
+  Lock State          : unlocked
+  Operator            : Tele2
+</code></pre>
+
+<p>When the modem is in trouble, the same view shows why.  A
+<code>State: failed</code> line is followed by <code>Failed Reason</code> (e.g.
+<code>sim-missing</code>), and the <code>SIM Card</code> section's <code>Lock State</code> reads
+<code>not-inserted</code> or <code>pin-required</code> to match.</p>
+<h2 id="cellular-failover">Cellular Failover<a class="headerlink" href="#cellular-failover" title="Permanent link">¶</a></h2>
+<p>The default <code>route-preference</code> (200) is deliberately higher than the
+distances used by wired Ethernet (udhcpc default: 5) and WiFi.  When a
+wired link is up it takes precedence automatically; cellular becomes
+the active path only if higher-priority routes are withdrawn.</p>
+<p>A default route via the bearer is always installed when the bearer
+connects.  To adjust the failover priority between two cellular modems,
+or to prefer cellular over WiFi, set <code>route-preference</code> explicitly:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface wwan0 wwan bearer</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set route-preference 100</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>leave</b>
+</code></pre>
+
+<p>Lower <code>route-preference</code> = higher priority.</p>
+<h2 id="roaming">Roaming<a class="headerlink" href="#roaming" title="Permanent link">¶</a></h2>
+<p>Data roaming is disabled by default.  To allow the modem to connect
+when on a foreign (roaming) network:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface wwan0 wwan bearer</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set roaming true</b>
+admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Enabling roaming may incur significant charges depending on your
+mobile subscription.  Check with your operator before enabling.</p>
+</div>
+<h2 id="location-and-gps">Location and GPS<a class="headerlink" href="#location-and-gps" title="Permanent link">¶</a></h2>
+<p>Cellular modems with a GNSS chip can report their location into the
+YANG operational tree, and feed the system GPS subsystem so the modem
+shows up alongside any USB GPS receivers in <code>show hardware</code> and is
+available as an NTP reference clock.  See the
+<a href="https://www.kernelkit.org/infix/latest/hardware/#gpsgnss-receivers">Hardware User's Guide</a> for the system-wide view of
+GPS/GNSS receivers, and the <a href="https://www.kernelkit.org/infix/latest/ntp/#gps-reference-clock">NTP User's Guide</a> for using a
+GPS source as a time reference.</p>
+<p>Location reporting is off by default.  Enable it under the modem
+hardware container:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit hardware component modem0 modem</b>
+admin@example:/config/hardware/component/modem0/modem/&gt; <b>set location enabled</b>
+admin@example:/config/hardware/component/modem0/modem/&gt; <b>set location source gps</b>
+admin@example:/config/hardware/component/modem0/modem/&gt; <b>leave</b>
+</code></pre>
+
+<p>The <code>source</code> leaf-list takes one or more of:</p>
+<ul>
+<li><code>gps</code>: on-modem GNSS receiver.  The modem joins the system GPS
+  subsystem and is reported alongside any USB GPS dongles in
+  <code>show hardware</code></li>
+<li><code>3gpp</code>: cell-tower based location reported by the network as
+  MCC/MNC/LAC/TAC/cell-id.  No external antenna required, but
+  positional accuracy is coarse</li>
+<li><code>agps-msa</code>, <code>agps-msb</code>: assisted-GPS variants that use the cellular
+  network to download almanac and ephemeris data, speeding up the
+  first fix</li>
+</ul>
+<p>When <code>gps</code> is enabled and the modem has a fix, <code>show modem modem0</code>
+gains a Location section with current latitude, longitude, and
+altitude.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Not every modem has GNSS hardware.  Many LTE-only modules only
+support <code>3gpp</code> location.  If <code>show modem modem0</code> does not gain a
+Location section after several minutes outdoors with <code>gps</code>
+enabled, the firmware does not expose GNSS regardless of the YANG
+configuration.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Most cellular modems' GNSS antenna input is passive RF only.  The
+host board, or an inline bias-T, must supply DC power on the coax
+to drive an active antenna's LNA.  Check the carrier-board README
+for the GPS antenna wiring on your specific hardware.  Cold-start
+time to first fix is typically several minutes with a clear view
+of the sky.</p>
+</div>
+<h2 id="management-commands">Management Commands<a class="headerlink" href="#management-commands" title="Permanent link">¶</a></h2>
+<h3 id="restart-bearer">Restart Bearer<a class="headerlink" href="#restart-bearer" title="Permanent link">¶</a></h3>
+<p>Disconnect and reconnect all bearers without resetting the modem
+hardware.  Use this after changing APN or authentication settings:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>modem restart modem0</b>
+</code></pre>
+
+<h3 id="reset-modem">Reset Modem<a class="headerlink" href="#reset-modem" title="Permanent link">¶</a></h3>
+<p>Factory-reset the modem firmware.  This clears all modem-internal
+settings and takes longer than a restart.  Only use it if the modem is
+in a bad state that a bearer restart cannot fix:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>modem reset modem0</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Not every modem accepts a software reset.  Quectel EM05, for
+example, refuses programmatic reset requests.  The only way to
+recover from a hung firmware on these is a physical power cycle.
+The system logs the refusal once and stops retrying.</p>
+</div>
+<h3 id="send-sms">Send SMS<a class="headerlink" href="#send-sms" title="Permanent link">¶</a></h3>
+<p>Send an SMS message via the signalling plane.  No active data bearer
+is required; the modem only needs to be registered on the network:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>modem sms modem0 +46701234567 "Hello from the router"</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some SIM cards have Fixed Dialing Number (FDN) enabled, which
+restricts outgoing SMS and calls to a pre-configured whitelist.  If
+<code>modem sms</code> fails, check whether <code>fixed-dialing</code> appears in the
+<code>Locks</code> line of <code>show modem modem0</code>.</p>
+</div>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">¶</a></h2>
+<p><strong>Modem not detected (<code>show modem</code> shows no modem entry)</strong></p>
+<ul>
+<li>Verify the modem is connected and recognized by the kernel: check
+  <code>dmesg</code> for <code>cdc_mbim</code> or <code>qmi_wwan</code> driver messages</li>
+<li>Confirm <code>/sys/class/usbmisc/</code> contains a <code>cdc-wdm*</code> entry</li>
+<li>The modem must be present at boot; hotplug after boot is not
+  supported</li>
+</ul>
+<p><strong><code>wwan0</code> shows as <code>down</code> or has no IP address</strong></p>
+<ul>
+<li>Check <code>show modem modem0</code>.  The State should show <code>registered</code> or
+  <code>connected</code>, not <code>failed</code></li>
+<li>If the State is <code>failed</code>, look at the <code>Failed Reason</code> line that
+  immediately follows:<ul>
+<li><code>sim-missing</code>: the SIM Card section will also show
+  <code>Lock State: not-inserted</code>.  Power off the device, insert the
+  SIM, power back on.  A warm reboot is not enough; on most M.2
+  slots the SIM tray stays powered through reboot, so the modem
+  keeps the original not-inserted reading</li>
+<li><code>unlock-required</code>: the SIM Card section will show
+  <code>Lock State: pin-required</code>.  Configure the PIN with
+  <code>set hardware component sim0 sim pin &lt;code&gt;</code></li>
+<li><code>sim-wrong</code> / <code>sim-error</code>: the SIM is not compatible or is
+  damaged.  Try a different SIM</li>
+</ul>
+</li>
+<li>Verify the APN is correct for your operator</li>
+<li>Check system logs with <code>show log</code> for modem-related messages</li>
+</ul>
+<p><strong><code>wwan0</code> interface is a dummy (no data flows, no carrier address)</strong></p>
+<ul>
+<li>The modem was not enumerated by the kernel before the system
+  applied the configuration</li>
+<li>Increase <code>probe-timeout</code> (see Slow USB Modems above) to cover the
+  modem's boot time, then reboot with the modem in place</li>
+</ul>
+<p><strong>High latency or poor signal</strong></p>
+<ul>
+<li>Use <code>show modem modem0</code> to check signal quality and RSRP</li>
+<li>Signal below -110 dBm RSRP typically indicates poor coverage</li>
+<li>Consider repositioning the antenna or the device</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2022-2026 The KernelKit Team
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

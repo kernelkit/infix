@@ -1134,6 +1134,8 @@
       
         
       
+        
+      
     
     
     
@@ -1670,6 +1672,34 @@
     
   
     Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
   
 
     
@@ -3354,7 +3384,7 @@
 
 
 <h1 id="docker-container-support">Docker Container Support<a class="headerlink" href="#docker-container-support" title="Permanent link">¶</a></h1>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/docker.webp" data-desc-position="bottom"><img align="right" alt="Docker whale" src="../img/docker.webp" width="360"></a></p>
+<p></p>
 <p>Infix comes with native support for Docker containers using <a href="https://podman.io">podman</a>.
 The <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang">YANG model</a> describes the current level of support, complete
 enough to run both system and application containers.</p>
@@ -3425,7 +3455,7 @@ your container image and application to run.</p>
 support the CPU architecture of your host system.  Remember, unlike
 virtualization, containers reuse the host's CPU and kernel.</p>
 </div>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/docker-hello-world.svg" data-desc-position="bottom"><img align="right" alt="Hello World" src="../img/docker-hello-world.svg" width="200"></a></p>
+<p></p>
 <h3 id="example-hello-world">Example: Hello World<a class="headerlink" href="#example-hello-world" title="Permanent link">¶</a></h3>
 <p>Classic Hello World:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>container run docker://hello-world</b>
@@ -3634,7 +3664,7 @@ rather than mutable tags (<code>:latest</code>). This ensures all your systems r
 identical software and upgrades happen only when you decide.</p>
 </div>
 <h2 id="upgrading-container-images">Upgrading Container Images<a class="headerlink" href="#upgrading-container-images" title="Permanent link">¶</a></h2>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/shield-checkmark.svg" data-desc-position="bottom"><img align="right" alt="Up-to-date Shield" src="../img/shield-checkmark.svg" width="100"></a></p>
+<p></p>
 <p>The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!</p>
 <h3 id="how-container-lifecycle-works">How Container Lifecycle Works<a class="headerlink" href="#how-container-lifecycle-works" title="Permanent link">¶</a></h3>
@@ -3822,7 +3852,7 @@ the bridge (see the next section).</p>
 </div>
 <h3 id="container-bridge">Container Bridge<a class="headerlink" href="#container-bridge" title="Permanent link">¶</a></h3>
 <p>A container bridge is what most container setups use and users want.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-bridge-firewall.svg" data-desc-position="bottom"><img alt="IP Masquerading Container Bridge" src="../img/cni-bridge-firewall.svg"></a></p>
+<p></p>
 <p>The difference from a regular bridge is that the container runtime fully
 manages them -- connecting containers with automatically created VETH
 pairs (look at the bridge port names) and setting up firewall rules
@@ -3929,7 +3959,7 @@ containers directly without involving the host namespace.</p>
 <h4 id="routed-setup">Routed Setup<a class="headerlink" href="#routed-setup" title="Permanent link">¶</a></h4>
 <p>In this routed setup we reserve 192.168.0.0/24 for the network between
 the host and the <code>ntpd</code> container.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-ntpd-routed.svg" data-desc-position="bottom"><img alt="Basic VETH pair connecting ntpd container." src="../img/cni-ntpd-routed.svg"></a></p>
+<p></p>
 <p>Configuration is a straight-forward VETH pair setup where we name the
 container-end of pair <code>ntpd</code>.  This is just a convenience for us when
 reading the configuration later.  The <em>real action</em> happens on the last
@@ -3967,7 +3997,7 @@ is the default in the masquerading container bridge setup.</p>
 <p>A perhaps more common case is to bridge the other end of the VETH pair
 with other physical ports.  In this section we show how to add a new
 pair to give our container two interfaces:</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-ntpd-bridged.svg" data-desc-position="bottom"><img alt="Bridged setup with ntpd container." src="../img/cni-ntpd-bridged.svg"></a></p>
+<p></p>
 <p>We start by adding the second VETH pair:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth1a</b>
 admin@example:/config/interface/veth1a/&gt; <b>set veth peer veth1</b>

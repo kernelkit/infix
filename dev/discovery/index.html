@@ -10,7 +10,7 @@
         <link rel="canonical" href="https://kernelkit.github.io/infix/dev/discovery/">
       
       
-        <link rel="prev" href="../wifi/">
+        <link rel="prev" href="../modem/">
       
       
         <link rel="next" href="../dhcp/">
@@ -653,6 +653,8 @@
       
         
       
+        
+      
     
     
     
@@ -1189,6 +1191,34 @@
     
   
     Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
   
 
     
@@ -2803,7 +2833,7 @@ Windows even though the Infix device replies correctly.  If you need to
 confirm connectivity, Wireshark will show the ICMPv6 echo replies
 arriving.  Use mDNS (see <a href="#mdns-sd">mDNS-SD</a> below) as the reliable
 alternative.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/windows-ipv6-ping-reply.png" data-desc-position="bottom"><img alt="Wireshark showing IPv6 ping responses" src="../img/windows-ipv6-ping-reply.png"></a></p>
+<p></p>
 </div>
 <h2 id="lldp">LLDP<a class="headerlink" href="#lldp" title="Permanent link">¶</a></h2>
 <p>Infix supports LLDP (IEEE 802.1AB). For a device with factory default
@@ -3093,7 +3123,7 @@ e.g., <em>infix-c0-ff-ee.local</em> or <em>foo.local</em> rather than the alias
 <p>Another mDNS alias that all Infix devices advertise is <em>network.local</em>.
 This is a web service which basically runs <code>avahi-browse</code> and displays a
 table of other Infix devices and their services.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/network-local.png" data-desc-position="bottom"><img alt="Netbrowse Service - network.local" src="../img/network-local.png"></a></p>
+<p></p>
 <p>With multiple Infix devices on the LAN, one will take the role of your
 portal to access all others, if it goes down another takes its place.</p>
 <p>To disable the netbrowse service, and the <em>network.local</em> alias, the

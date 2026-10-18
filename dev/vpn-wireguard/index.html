@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -1361,6 +1363,34 @@
     
   
     Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
   
 
     
@@ -2895,7 +2925,7 @@ admin@siteB:/&gt;
    for a given destination</li>
 </ol>
 <p>Think of <code>allowed-ips</code> as a combination of firewall rules and routing table.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/wireguard-allowed-ips.svg" data-desc-position="bottom"><img alt="WireGuard Keys and Allowed IPs" src="../img/wireguard-allowed-ips.svg"></a>
+<p>
 <em>Figure: WireGuard key exchange and allowed-ips configuration between two peers</em></p>
 <p>For a simple point-to-point tunnel, you typically allow only the peer's
 tunnel IP address (e.g., <code>10.0.0.2/32</code>).  For site-to-site VPNs connecting
@@ -2982,7 +3012,7 @@ admin@example:/&gt;
 configurations - set the common defaults once at the bag level, then only
 specify per-peer differences.</p>
 <h2 id="site-to-site-vpn">Site-to-Site VPN<a class="headerlink" href="#site-to-site-vpn" title="Permanent link">¶</a></h2>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-site-to-site.svg" data-desc-position="bottom"><img alt="Site-to-Site VPN Topology" src="../img/vpn-site-to-site.svg"></a>
+<p>
 <em>Figure: Site-to-Site VPN connecting two office networks</em></p>
 <p>A site-to-site VPN connects entire networks across locations, creating a unified
 private network over the internet.  This allows devices in one location to
@@ -2992,7 +3022,7 @@ to allow access to networks behind each peer.  Configure the WireGuard tunnel
 as shown in <a href="#point-to-point-configuration">Point-to-Point Configuration</a>,
 then add the remote network to <code>allowed-ips</code> and configure static routes.</p>
 <h2 id="road-warrior-vpn">Road Warrior VPN<a class="headerlink" href="#road-warrior-vpn" title="Permanent link">¶</a></h2>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-roadwarrior.svg" data-desc-position="bottom"><img alt="Road Warrior VPN Topology" src="../img/vpn-roadwarrior.svg"></a>
+<p>
 <em>Figure: Mobile clients connecting to corporate network</em></p>
 <p>For mobile clients or peers without fixed IPs, omit the <code>endpoint</code> setting.
 WireGuard learns the peer's endpoint from authenticated incoming packets:</p>
@@ -3006,7 +3036,7 @@ admin@hub:/&gt;
 <p>The mobile client configures the hub's endpoint normally.  The hub learns
 and tracks the mobile client's changing IP address automatically.</p>
 <h2 id="hub-and-spoke-topology">Hub-and-Spoke Topology<a class="headerlink" href="#hub-and-spoke-topology" title="Permanent link">¶</a></h2>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-hub-spoke.svg" data-desc-position="bottom"><img alt="Hub-and-Spoke VPN Topology" src="../img/vpn-hub-spoke.svg"></a>
+<p>
 <em>Figure: Hub-and-Spoke topology with central hub routing traffic between spokes</em></p>
 <p>WireGuard excels at hub-and-spoke (star) topologies where multiple remote
 sites connect to a central hub.</p>
