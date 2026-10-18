@@ -332,18 +332,21 @@ matching device tree:
 
 ```bash
 # Build bootloaders for SD and eMMC
-make x-bpi-r4-sd-boot
-make x-bpi-r4-emmc-boot
+make O=x-bpi-r4-sd-boot bpi_r4_sd_boot_defconfig && make O=x-bpi-r4-sd-boot
+make O=x-bpi-r4-emmc-boot bpi_r4_emmc_boot_defconfig && make O=x-bpi-r4-emmc-boot
 
 # Build main system
-make aarch64
+make O=x-aarch64 aarch64_defconfig && make O=x-aarch64
 
 # Create SD card image
-./utils/mkimage.sh -od bananapi-bpi-r4
+./utils/mkimage.sh -b x-bpi-r4-sd-boot -r x-aarch64 bananapi-bpi-r4
 
 # Create eMMC image
-./utils/mkimage.sh -odt emmc bananapi-bpi-r4
+./utils/mkimage.sh -b x-bpi-r4-emmc-boot -r x-aarch64 -t emmc bananapi-bpi-r4
 ```
+
+With `-d` instead of `-b`, `mkimage.sh` downloads the bootloader from
+the latest release.
 
 [0]: https://www.kernelkit.org/posts/flashing-sdcard/
 [1]: https://www.kernelkit.org/infix/latest/
