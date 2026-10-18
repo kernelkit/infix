@@ -86,6 +86,9 @@ All notable changes to the project are documented in this file.
   outside the small set allowed since v26.09.0, e.g., `\` in a regular
   expression, failing validation.  Any character except control characters
   is allowed, and `\` and `"` now reach syslogd as written
+- Fix DHCP server static-host `client-id` strings with characters outside
+  the small set allowed since v26.09.0, e.g., a space, failing validation.
+  Any character except control characters is allowed
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition

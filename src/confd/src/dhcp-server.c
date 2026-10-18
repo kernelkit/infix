@@ -142,7 +142,7 @@ static void configure_boot(FILE *fp, struct lyd_node *cfg, const char *tag)
 	fputc('\n', fp);
 }
 
-static const char *host_match(struct lyd_node *match, const char **id)
+static const char *host_match(struct lyd_node *match, const char **id, int *quote)
 {
 	struct {
 		const char *key;
@@ -171,8 +171,10 @@ static const char *host_match(struct lyd_node *match, const char **id)
 
 		/* The client-id setting is has a qualifier */
 		sub = lydx_get_child(node, "str");
-		if (sub)
+		if (sub) {
+			*quote = 1;
 			return lyd_get_value(sub);
+		}
 		sub = lydx_get_child(node, "hex");
 		if (sub)
 			return lyd_get_value(sub);
@@ -187,8 +189,9 @@ static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 	const char *ip = lydx_get_cattr(host, "address");
 	const char *tag = host_tag(NULL, ip);
 	const char *match, *id, *name;
+	int quote = 0;
 
-	match = host_match(lydx_get_child(host, "match"), &id);
+	match = host_match(lydx_get_child(host, "match"), &id, &quote);
 	if (!match)
 		return -1;
 
@@ -204,10 +207,13 @@ static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 	 * also allow options from subnet
 	 */
 	fprintf(fp, "\n# Host %s specific options\n", ip);
-	fprintf(fp, "dhcp-host=%s%s,set:%s,set:%s,%s,%s%s%s\n",
-		id ? id : "", match, tag, subnet, ip,
-		name ?: "", name ? "," : "",
-		lydx_get_cattr(host, "lease-time"));
+	fprintf(fp, "dhcp-host=%s", id ? id : "");
+	if (quote)
+		fputq(match, fp);
+	else
+		fputs(match, fp);
+	fprintf(fp, ",set:%s,set:%s,%s,%s%s%s\n", tag, subnet, ip,
+		name ?: "", name ? "," : "", lydx_get_cattr(host, "lease-time"));
 
 	return 0;
 }
