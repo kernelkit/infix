@@ -79,6 +79,8 @@ All notable changes to the project are documented in this file.
   APNs per modem, SIM PIN configuration, and NMEA routing from modem to
   GPS subsystem.  Not part of the default builds, enable it with the
   `modem` configuration snippet, see the [Modem User's Guide][modem]
+- An MT7615D WiFi card with an unprogrammed EEPROM can run both bands at
+  once with the `force_dbdc` option of the `mt7615_common` kernel module
 
 ### Fixes
 
