@@ -77,6 +77,11 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Fix `startup-config` failing validation on boards with parentheses in
+  their model name, e.g., Banana Pi BPI-R4.  The DHCP client copies the
+  model name to its `vendor-class` option, which v26.09.0 limited to a
+  small character set.  Option values may now contain any character
+  except control characters, quotes, `$`, `` ` ``, and `\`
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition
