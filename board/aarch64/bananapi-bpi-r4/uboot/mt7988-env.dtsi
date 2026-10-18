@@ -4,6 +4,8 @@
                        bootcmd = "run ixboot";
                        boot_targets = "mmc0";
                        ethprime = "eth0";
+                       wifi_eeprom_addr_r = "0x43e00000";
+                       wifi_eeprom_size = "0x5000";
                        fdt_addr_r = "0x43f00000";
                        kernel_addr_r = "0x44000000";
                        fdtoverlay_addr_r = "0x47f00000";

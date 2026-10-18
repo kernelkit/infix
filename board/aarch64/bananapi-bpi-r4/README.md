@@ -87,6 +87,48 @@ Infix ships with the following factory defaults.
 > are bridged into the LAN as access points.  WiFi is not included with the board
 > and is not part of the factory default configuration.
 
+### WiFi Cards Without an EEPROM
+
+Some mPCIe WiFi cards, e.g., the BPI-MT7615, ship with an unprogrammed
+EEPROM.  The card then comes up with a random MAC address and, for an
+MT7615D, with one radio instead of one per band:
+
+```
+mt7615e 0001:01:00.0: Invalid MAC address, using random address 06:0e:56:91:b5:19
+```
+
+Such a card can be given an EEPROM image as `/mnt/aux/wifi-eeprom.bin`,
+which the boot loader hands to the WiFi driver.  This requires:
+
+- The card in mPCIe slot CN14, the slot next to SIM3
+- A boot loader from v26.10.0 or later
+- An image of at most 20 KiB
+
+For an MT7615 card, start from the EEPROM the driver uses today:
+
+```
+admin@bpi:~$ sudo cat /sys/kernel/debug/ieee80211/radio0/mt76/eeprom > wifi-eeprom.bin
+```
+
+On a PC, set a MAC address and, for an MT7615D, both bands with the
+`utils/mt7615-eeprom.sh` script from the source tree:
+
+```
+$ utils/mt7615-eeprom.sh -b dbdc -m 02:00:00:76:15:00 wifi-eeprom.bin
+chip-id : 0x7615
+mac     : 02:00:00:76:15:00
+band    : dbdc
+```
+
+Copy the image back to the board as `/mnt/aux/wifi-eeprom.bin` and
+reboot.  Removing the file returns the card to its own EEPROM at the
+next boot.  The image holds no more calibration data than the card
+has without it, so range and throughput can be lower than with a
+factory programmed EEPROM.
+
+On other boards, an MT7615D gets both radios with the `force_dbdc`
+option of the `mt7615_common` kernel module.
+
 ## SIM Card Installation
 
 The BPI-R4 has three SIM holders, one per PCIe slot:

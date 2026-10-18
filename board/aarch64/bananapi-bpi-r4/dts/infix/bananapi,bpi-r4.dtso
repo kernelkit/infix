@@ -26,3 +26,43 @@
 		};
 	};
 };
+
+/*
+ * EEPROM for a WiFi card in mPCIe CN14, for cards shipped without one.
+ * The boot loader copies /mnt/aux/wifi-eeprom.bin here, or zeroes the
+ * region, which the driver rejects for the card's own EEPROM.
+ */
+&{/reserved-memory} {
+	wifi-eeprom@43e00000 {
+		compatible = "nvmem-rmem";
+		reg = <0 0x43e00000 0 0x5000>;
+		no-map;
+
+		nvmem-layout {
+			compatible = "fixed-layout";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			wifi_eeprom: eeprom@0 {
+				reg = <0x0 0x5000>;
+			};
+		};
+	};
+};
+
+&pcie1 {
+	pcie@0,0 {
+		reg = <0x0000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		ranges;
+
+		wifi@0,0 {
+			compatible = "mediatek,mt76";
+			reg = <0x0000 0 0 0 0>;
+			nvmem-cells = <&wifi_eeprom>;
+			nvmem-cell-names = "eeprom";
+		};
+	};
+};

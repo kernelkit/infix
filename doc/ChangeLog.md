@@ -81,6 +81,9 @@ All notable changes to the project are documented in this file.
   `modem` configuration snippet, see the [Modem User's Guide][modem]
 - An MT7615D WiFi card with an unprogrammed EEPROM can run both bands at
   once with the `force_dbdc` option of the `mt7615_common` kernel module
+- Banana Pi BPI-R4: a WiFi card with an unprogrammed EEPROM, e.g., the
+  BPI-MT7615, can be given an EEPROM image on the aux partition, see the
+  board documentation
 
 ### Fixes
 
