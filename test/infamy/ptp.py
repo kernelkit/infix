@@ -9,6 +9,8 @@ Port state changes are logged as they are seen, and if the test fails the
 PTP state of every DUT queried here is dumped to the test log.
 """
 
+import subprocess
+
 from infamy import ssh, tap
 
 _targets = {}
@@ -178,12 +180,13 @@ rm -f "$a" "$b"
 
 def _counters(target, ifaces):
     """Print ptp4l, switch and kernel counters of target's PTP ports, over SSH."""
-    loc = target.location
-    dut = ssh.Device(target.name,
-                     ssh.Location(loc.host, loc.username, loc.password),
-                     wait=False)
+    dut = ssh.device_for(target)
     script = _COUNTERS_SH.replace("@IFACES@", " ".join(sorted(ifaces)))
-    res = dut.runsh(script, timeout=30)
+    try:
+        res = dut.runsh(script, timeout=30)
+    except subprocess.TimeoutExpired:
+        print(f"{target.name}:   cannot read counters: timed out")
+        return
     if res.returncode:
         print(f"{target.name}:   cannot read counters: {res.stdout.strip()}")
         return
