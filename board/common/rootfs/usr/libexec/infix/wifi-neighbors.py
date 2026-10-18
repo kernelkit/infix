@@ -27,8 +27,8 @@ frame format changes.
 
 What is heard is kept for a few periods and handed to hostapd as
 802.11k neighbors of every access point with the same SSID, for its
-neighbor reports and for the transition requests sent by hostapd.sh and
-wifi-steer.sh, which read the candidate list of a BSS from
+neighbor reports and for the transition requests sent by wifi-handover.sh
+and wifi-steer.sh, which read the candidate list of a BSS from
 /run/wifi-neighbors/<bss>, one bss_tm_req neighbor= argument per line.
 
 The same access points are also the 802.11r key holders a client can
@@ -66,7 +66,7 @@ MAC = re.compile(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$')
 
 
 def log(msg):
-    subprocess.run(['logger', '-t', 'hostapd', '-p', 'daemon.notice', msg],
+    subprocess.run(['logger', '-t', 'wifi-neighbors', '-p', 'daemon.notice', msg],
                    capture_output=True)
 
 
@@ -206,7 +206,7 @@ def parse_announcement(data, keys, seen):
     if head[1] != str(VERSION):
         if head[2] not in seen:
             seen.add(head[2])
-            log(f'wifi-neighbors: {head[2][:64]} announces version {head[1][:8]}, '
+            log(f'{head[2][:64]} announces version {head[1][:8]}, '
                 f'ours is {VERSION}, ignoring it')
         return []
     out = []
@@ -304,7 +304,7 @@ def main():
             except OSError:
                 time.sleep(0.2)
     if not socks:
-        log('wifi-neighbors: no interface to announce on')
+        log('no interface to announce on')
         return
 
     neighbors = {}      # bssid -> (bssid, freq, phy, ssid, last seen)
@@ -353,7 +353,7 @@ def main():
             try:
                 publish(own, {b: n[:4] for b, n in neighbors.items()}, published, holders, bsses)
             except OSError as err:
-                log(f'wifi-neighbors: {err}')
+                log(str(err))
 
 
 if __name__ == '__main__':

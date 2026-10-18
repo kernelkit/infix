@@ -1,6 +1,6 @@
 #!/bin/sh
-# Run hostapd, learn the other nodes' access points, steer dual-band
-# clients to 5 GHz while it runs, and hand the clients over when stopped.
+# Hand the clients over to another access point, then stop hostapd.
+# Called by finit as the stop:script of hostapd, with $MAINPID set.
 #
 # A client with a good signal has no reason to roam, so when its access
 # point goes away it only notices once the beacons stop, and then has to
@@ -18,14 +18,9 @@
 TIMER=50	# beacon intervals (100 ms) until hostapd disassociates a client that stays
 WAIT=7		# seconds to wait for the clients to leave
 
-# The hostapd configs among the arguments, which also carry options
-confs()
+log()
 {
-    for arg in $CONFS; do
-	case $arg in
-	    *.conf) echo "$arg" ;;
-	esac
-    done
+    logger -t wifi-handover -p daemon.notice "$*"
 }
 
 bsses()
@@ -68,7 +63,7 @@ handover()
 {
     # Only clients that do 802.11v can be asked to move, and hostapd only
     # does so with bss_transition on
-    grep -qs '^bss_transition=1' $(confs) || return 0
+    grep -qs '^bss_transition=1' /etc/hostapd-*.conf || return 0
 
     num=0
     for bss in $(bsses); do
@@ -78,7 +73,7 @@ handover()
 	done
     done
     if [ $num -eq 0 ]; then
-	logger -t hostapd -p daemon.notice "stop: no stations on $(bsses | tr '\n' ' ')"
+	log "no stations on $(bsses | tr '\n' ' ')"
 	return 0
     fi
 
@@ -90,75 +85,11 @@ handover()
 
     left=$(stations | grep -c .)
     if [ "$left" -eq 0 ]; then
-	logger -t hostapd -p daemon.notice "stop: asked $num station(s) to move, all left"
+	log "asked $num station(s) to move, all left"
     else
-	logger -t hostapd -p daemon.notice "stop: asked $num station(s) to move, $left still here"
+	log "asked $num station(s) to move, $left still here"
     fi
 }
 
-# Band steering pairs, a 2.4 GHz BSS and the 5/6 GHz twin it defers to,
-# from the no_probe_resp_if_seen_on directives in the radio configs.
-pairs()
-{
-    for conf in "$@"; do
-	case $conf in
-	    *.conf) ;;
-	    *) continue ;;
-	esac
-	awk -F= '/^(interface|bss)=/ { cur = $2 }
-		 /^no_probe_resp_if_seen_on=/ { print cur, $2 }' "$conf"
-    done
-}
-
-# Wait for the control socket of a BSS, up to ten seconds
-wait_bss()
-{
-    i=0
-    while [ ! -S /run/hostapd/$1 ] && [ $i -lt 50 ]; do
-	sleep 0.2
-	i=$((i + 1))
-    done
-    [ -S /run/hostapd/$1 ]
-}
-
-helpers()
-{
-    # Exchange access point lists with the other nodes once hostapd is up
-    for conf in "$@"; do
-	case $conf in *.conf) ;; *) continue ;; esac
-	wait_bss "$(sed -n 's/^interface=//p' "$conf")" || continue
-	/usr/libexec/infix/wifi-neighbors.py "$@" &
-	echo $! >> /run/wifi-steer/pids
-	break
-    done
-
-    # Steer dual-band clients to the higher band, one loop per pair
-    pairs "$@" | while read -r bss twin; do
-	wait_bss "$bss" || continue
-	/usr/libexec/infix/wifi-steer.sh "$bss" "$twin" &
-	echo $! >> /run/wifi-steer/pids
-    done
-}
-
-stop()
-{
-    [ -f /run/wifi-steer/pids ] && kill $(cat /run/wifi-steer/pids) 2>/dev/null
-    rm -rf /run/wifi-steer
-    handover
-    kill -TERM "$pid" 2>/dev/null
-}
-
-CONFS=$*
-rm -rf /run/wifi-steer
-mkdir -p /run/wifi-steer
-trap stop TERM INT
-hostapd "$@" &
-pid=$!
-helpers "$@" &
-echo $! >> /run/wifi-steer/pids
-rc=0
-while kill -0 "$pid" 2>/dev/null; do
-    wait "$pid"
-    rc=$?
-done
-exit $rc
+handover
+kill -TERM "$MAINPID"

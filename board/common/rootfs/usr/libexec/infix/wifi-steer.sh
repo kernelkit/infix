@@ -21,6 +21,7 @@ LONG=3600	# ... for this long
 MIN_SIGNAL=-65	# dBm on 2.4 GHz below which a client is left alone
 
 state=/run/wifi-steer/$bss
+rm -rf "$state"
 mkdir -p "$state"
 
 # Neighbor report candidate for the twin: BSSID, BSSID information,
@@ -91,6 +92,6 @@ while sleep $PERIOD; do
 	hostapd_cli -i "$bss" bss_tm_req "$sta" pref=1 abridged=1 valid_int=255 \
 		    "neighbor=$cand" >/dev/null 2>&1
 	echo "$now $((tries + 1))" > "$state/$sta"
-	logger -t hostapd -p daemon.notice "$bss: asked $sta to move to $twin"
+	logger -t wifi-steer -p daemon.notice "$bss: asked $sta to move to $twin"
     done
 done
