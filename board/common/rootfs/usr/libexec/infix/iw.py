@@ -624,10 +624,12 @@ def network_scan(radio):
         return {'error': str(e)}
 
     try:
+        start = time.monotonic()
         err = trigger_scan(iface, False)
         if err:
             return err
-        return parse_scan_dump(iface[0])
+        # The kernel keeps results for 30 s, report only this scan's
+        return parse_scan_dump(iface[0], (time.monotonic() - start) * 1000)
     finally:
         if tmp:
             subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
@@ -675,10 +677,11 @@ def scan_encryption(rsn, wpa, privacy):
     return ['Open']
 
 
-def parse_scan_dump(ifname):
+def parse_scan_dump(ifname, max_age=None):
     """
     Parse 'iw dev <name> scan dump' into a list of networks, best
-    signal first.  Hidden networks have no ssid.
+    signal first.  Hidden networks have no ssid.  With max_age, in ms,
+    networks last heard before that are left out.
     """
     output = run_iw('dev', ifname, 'scan', 'dump')
     if output is None:
@@ -707,6 +710,10 @@ def parse_scan_dump(ifname):
                 bss['frequency'] = int(float(stripped.split(':', 1)[1].strip()))
             except ValueError:
                 pass
+        elif stripped.startswith('last seen:'):
+            match = re.search(r'(\d+) ms ago', stripped)
+            if match:
+                bss['age'] = int(match.group(1))
         elif stripped.startswith('signal:'):
             match = re.search(r'(-?[0-9.]+) dBm', stripped)
             if match:
@@ -731,6 +738,8 @@ def parse_scan_dump(ifname):
     result = []
     for bss in networks:
         if 'frequency' not in bss:
+            continue
+        if max_age is not None and bss.get('age', 0) > max_age:
             continue
         net = {
             'bssid': bss['bssid'],
