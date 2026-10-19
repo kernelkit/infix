@@ -1008,22 +1008,22 @@ module infix-hardware {
 
       action scan {
         description
-          "Scan for WiFi networks in range of the radio and report what
-           was found.
+          "Scan for WiFi networks in range of the radio.
 
-           The radio leaves its operating channel for the duration of
-           the scan, a few seconds, so traffic on the radio pauses.  A
-           radio without any interface can be scanned too.  Networks are
-           not collected in the background, this action is the only way
-           to find them.";
+           Reports every access point heard.  The radio leaves its
+           operating channel for the duration of the scan, a few
+           seconds, so traffic on the radio pauses.  A radio without any
+           interface can be scanned too.  Networks are not collected in
+           the background, this action is the only way to find them.";
 
         output {
           list network {
             key "bssid";
             description
-              "One access point (BSS) heard during the scan.  Several
-               entries can share an SSID, one per access point of a
-               roaming network.";
+              "Access point (BSS) heard during the scan.
+
+               Several entries can share an SSID, one per access point
+               of a roaming network.";
 
             leaf bssid {
               type yang:mac-address;
@@ -1033,8 +1033,10 @@ module infix-hardware {
             leaf ssid {
               type string;
               description
-                "Network name.  Absent for a hidden network, which
-                 does not announce its name.";
+                "Network name.
+
+                 Absent for a hidden network, which does not announce
+                 its name.";
             }
 
             leaf frequency {
