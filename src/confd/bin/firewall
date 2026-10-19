@@ -7,6 +7,7 @@ DEST="org.fedoraproject.FirewallD1"
 OBJECT="/org/fedoraproject/FirewallD1"
 INTERFACE="org.fedoraproject.FirewallD1"
 ADDRSET_DIR="/run/confd/address-sets"
+DYNAMIC_DIR="/etc/firewalld/dynamic"
 VERBOSE=0
 
 print() {
@@ -119,18 +120,28 @@ ipset_call()
     fi
 }
 
-# Dynamic address-set entries only exist in the runtime config; a reload
-# rebuilds the sets from the generated ipset XML, which holds static
-# entries only.  Re-apply the dynamic entries tracked by confd's
-# add/remove action handlers, so they survive the reload without being
-# baked into the XML (which would resurrect entries removed while the
-# reload was in flight).
+# confd writes the dynamic address-set entries, tracked by the add and
+# remove action handlers in its shadow files, into the generated ipsets so
+# they survive a reload, and lists them in $DYNAMIC_DIR.  Entries removed
+# while the reload was in flight are back now, remove them again, and add
+# the entries added meanwhile.
 #
 # An entry firewalld rejects as invalid, e.g., one now overlapping a
 # static entry, is dropped from the shadow file, or it could never be
 # removed with the remove action again.
 addrset_resync()
 {
+    for baked in "$DYNAMIC_DIR"/*; do
+	[ -f "$baked" ] || continue
+	name=$(basename "$baked")
+
+	while IFS= read -r entry; do
+	    [ -n "$entry" ] || continue
+	    grep -qxF "$entry" "$ADDRSET_DIR/$name" 2>/dev/null && continue
+	    ipset_call removeEntry "$name" "$entry"
+	done < "$baked"
+    done
+
     for file in "$ADDRSET_DIR"/*; do
 	case "$file" in *.resync) continue ;; esac
 	[ -f "$file" ] || continue
@@ -140,7 +151,8 @@ addrset_resync()
 
 	while IFS= read -r entry; do
 	    [ -n "$entry" ] || continue
-	    if ! ipset_call addEntry "$name" "$entry"; then
+	    if ! grep -qxF "$entry" "$DYNAMIC_DIR/$name" 2>/dev/null &&
+	       ! ipset_call addEntry "$name" "$entry"; then
 		case "$output" in
 		    *INVALID_ENTRY*)
 			logger -t firewall -p daemon.warn "ipset $name: dropping rejected dynamic entry $entry"

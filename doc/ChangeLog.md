@@ -297,7 +297,8 @@ All notable changes to the project are documented in this file.
   bridge ports but never reached the bridge itself
 - Firewall: dynamic address-set entries were lost on every configuration
   change on slow systems, where reloading the firewall takes longer than
-  25 seconds
+  25 seconds, and on any system the hosts they allow were blocked until
+  the reload was done, half a minute on a single-core system
 - LAN969x: IGMP did not pass through a bridge.  With IGMP snooping across
   several switches, a group joined behind one switch never reached the
   querier behind another, so the multicast never got there either
