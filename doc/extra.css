@@ -102,6 +102,11 @@ body {
     --md-primary-bg-color: #5c5f5c;
 }
 
+/* Caption numbers in bold: "Figure 1:", "Table 1:" */
+.md-typeset figcaption .caption-prefix {
+    font-weight: 700;
+}
+
 /* Center all Markdown tables, like figures */
 .md-typeset .md-typeset__scrollwrap {
     text-align: center;

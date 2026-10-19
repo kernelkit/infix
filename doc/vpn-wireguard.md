@@ -113,7 +113,9 @@ The `allowed-ips` setting in WireGuard serves two critical purposes:
 Think of `allowed-ips` as a combination of firewall rules and routing table.
 
 ![WireGuard Keys and Allowed IPs](img/wireguard-allowed-ips.svg)
-*Figure: WireGuard key exchange and allowed-ips configuration between two peers*
+/// figure-caption
+WireGuard key exchange and allowed-ips configuration between two peers.
+///
 
 For a simple point-to-point tunnel, you typically allow only the peer's
 tunnel IP address (e.g., `10.0.0.2/32`).  For site-to-site VPNs connecting
@@ -204,7 +206,9 @@ specify per-peer differences.
 ## Site-to-Site VPN
 
 ![Site-to-Site VPN Topology](img/vpn-site-to-site.svg)
-*Figure: Site-to-Site VPN connecting two office networks*
+/// figure-caption
+Site-to-Site VPN connecting two office networks.
+///
 
 A site-to-site VPN connects entire networks across locations, creating a unified
 private network over the internet.  This allows devices in one location to
@@ -218,7 +222,9 @@ then add the remote network to `allowed-ips` and configure static routes.
 ## Road Warrior VPN
 
 ![Road Warrior VPN Topology](img/vpn-roadwarrior.svg)
-*Figure: Mobile clients connecting to corporate network*
+/// figure-caption
+Mobile clients connecting to corporate network.
+///
 
 For mobile clients or peers without fixed IPs, omit the `endpoint` setting.
 WireGuard learns the peer's endpoint from authenticated incoming packets:
@@ -236,7 +242,9 @@ and tracks the mobile client's changing IP address automatically.
 ## Hub-and-Spoke Topology
 
 ![Hub-and-Spoke VPN Topology](img/vpn-hub-spoke.svg)
-*Figure: Hub-and-Spoke topology with central hub routing traffic between spokes*
+/// figure-caption
+Hub-and-Spoke topology with central hub routing traffic between spokes.
+///
 
 WireGuard excels at hub-and-spoke (star) topologies where multiple remote
 sites connect to a central hub.
