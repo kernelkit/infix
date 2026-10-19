@@ -27,6 +27,9 @@ All notable changes to the project are documented in this file.
   with `wds` enabled can be a bridge port, and an access point bridges
   each remote station through a `wds-link` interface, see
   [WDS Backhaul and Repeaters][wds]
+- WiFi station roaming is now configurable with `station roaming`: turn it
+  on or off, and set the signal strength below which the station looks for
+  a stronger access point more often, see [Station Roaming][roaming]
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
@@ -143,6 +146,7 @@ All notable changes to the project are documented in this file.
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
+[roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 
 [v26.09.0][] - 2026-09-30

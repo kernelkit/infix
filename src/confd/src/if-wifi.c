@@ -242,8 +242,9 @@ int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
 int wifi_gen_station(struct lyd_node *cif)
 {
 	const char *ifname, *ssid, *secret_name, *security_mode;
-	struct lyd_node *security, *secret_node, *station, *wifi;
+	struct lyd_node *security, *secret_node, *station, *roaming, *wifi;
 	const char *bssid = NULL;
+	char bgscan[32] = "";
 	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
 	char *security_str = NULL;
@@ -265,6 +266,10 @@ int wifi_gen_station(struct lyd_node *cif)
 
 	ssid = lydx_get_cattr(station, "ssid");
 	bssid = lydx_get_cattr(station, "peer-bssid");
+	roaming = lydx_get_child(station, "roaming");
+	if (!bssid && lydx_is_enabled(roaming, "enabled"))
+		snprintf(bgscan, sizeof(bgscan), "simple:30:%s:600",
+			 lydx_get_cattr(roaming, "signal-threshold"));
 	security = lydx_get_child(station, "security");
 	security_mode = lydx_get_cattr(security, "mode");
 	secret_name = lydx_get_cattr(security, "secret");
@@ -290,8 +295,7 @@ int wifi_gen_station(struct lyd_node *cif)
 		goto out;
 	}
 
-	/* autoscan drives scanning every 10s while unassociated; once
-	 * associated no background scanning runs (bgscan disabled below). */
+	/* autoscan scans every 10s while unassociated, bgscan once associated */
 	fprintf(wpa_supplicant,
 		"ctrl_interface=/run/wpa_supplicant\n"
 		"autoscan=periodic:10\n"
@@ -311,14 +315,11 @@ int wifi_gen_station(struct lyd_node *cif)
 			 "  ieee80211w=1\n"
 			 "  psk=\"%s\"", secret);
 
-	/* bgscan="" disables background scanning once associated: on a
-	 * fixed backhaul link the periodic off-channel sweep stalls
-	 * traffic and buys no roaming benefit. */
 	fprintf(wpa_supplicant,
 		"network={\n"
-		"  bgscan=\"\"\n"
+		"  bgscan=\"%s\"\n"
 		"  scan_ssid=1\n"
-		"  ssid=\"%s\"\n", ssid);
+		"  ssid=\"%s\"\n", bgscan, ssid);
 	if (bssid)
 		fprintf(wpa_supplicant, "  bssid=%s\n", bssid);
 	fprintf(wpa_supplicant,

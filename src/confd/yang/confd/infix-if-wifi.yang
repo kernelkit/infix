@@ -238,6 +238,43 @@ submodule infix-if-wifi {
                  the SSID.";
             }
 
+            container roaming {
+              description
+                "Move to a better access point of the network.
+
+                 While connected, the station scans every 30 seconds
+                 when the signal is below the threshold, otherwise every
+                 10 minutes, and moves to a clearly stronger access
+                 point of the same SSID.  Traffic pauses briefly during
+                 a scan.  Without roaming, the station moves only when
+                 it loses its access point or is asked to move by it.
+
+                 Has no effect with peer-bssid set.";
+
+              leaf enabled {
+                type boolean;
+                default true;
+                description
+                  "Look for a better access point while connected.
+
+                   Disable on a fixed link where no scan may pause
+                   traffic.";
+              }
+
+              leaf signal-threshold {
+                type int8 {
+                  range "-100..-30";
+                }
+                units "dBm";
+                default -75;
+                description
+                  "Signal strength below which the station scans often.
+
+                   A higher value finds a better access point sooner, at
+                   the cost of more frequent scans.";
+              }
+            }
+
             leaf ssid {
               type string {
                 length "1..32";

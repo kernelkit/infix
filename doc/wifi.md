@@ -388,6 +388,8 @@ signal             : -52 dBm (good)
       - `disabled`: open network
 - `station security secret`: Reference to keystore entry, required unless mode
   is `disabled`
+- `station roaming`: Look for a stronger access point while connected, on by
+  default, see [Station Roaming](#station-roaming)
 
 > [!NOTE]
 > The `auto` security mode automatically selects WPA3-SAE or WPA2-PSK based on
@@ -395,6 +397,29 @@ signal             : -52 dBm (good)
 > The station offers management frame protection on every connection, so
 > WPA3-only networks, and any network on 6 GHz, accept it.
 > Certificate-based authentication (802.1X/EAP) is not yet supported.
+
+### Station Roaming
+
+A network with several access points on the same SSID lets the station
+move to a stronger one.  While connected, the station scans every 30
+seconds when its signal is below a threshold, -75 dBm by default, and
+every 10 minutes otherwise.  Traffic pauses for a moment during each
+scan.
+
+Raise the threshold to look for a better access point sooner:
+
+<pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi station roaming signal-threshold -65</b>
+</code></pre>
+
+On a fixed link, such as a point-to-point backhaul, turn roaming off so
+no scan ever pauses traffic:
+
+<pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi station roaming enabled false</b>
+</code></pre>
+
+Without roaming, or with `peer-bssid` set, the station changes access
+point only when it loses the current one or that access point asks it to
+move, see [802.11v](#80211v-bss-transition-management).
 
 ## Access Point Mode
 
