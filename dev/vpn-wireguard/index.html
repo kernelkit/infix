@@ -3004,10 +3004,12 @@ admin@example:/config/interface/…/branch-offices/peer/office-west/&gt; <b>leav
 admin@example:/&gt;
 </code></pre>
 
-<p>In this example:
-- Both peers inherit <code>endpoint-port 51820</code> and <code>persistent-keepalive 25</code> from the bag
-- <code>office-west</code> overrides the keepalive to 10 seconds while <code>office-east</code> uses the default 25
-- Each peer has its own <code>endpoint</code> and <code>allowed-ips</code> configuration</p>
+<p>In this example:</p>
+<ul>
+<li>Both peers inherit <code>endpoint-port 51820</code> and <code>persistent-keepalive 25</code> from the bag</li>
+<li><code>office-west</code> overrides the keepalive to 10 seconds while <code>office-east</code> uses the default 25</li>
+<li>Each peer has its own <code>endpoint</code> and <code>allowed-ips</code> configuration</li>
+</ul>
 <p>This approach simplifies management when you have many peers with similar
 configurations - set the common defaults once at the bag level, then only
 specify per-peer differences.</p>

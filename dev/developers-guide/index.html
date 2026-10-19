@@ -3219,6 +3219,17 @@ go, like this:</p>
 <p>This rebuilds (and installs) <code>foo</code> and <code>bar</code>, the <code>all</code> target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final <code>run</code> argument is explained below.</p>
+<p>Patches in <code>patches/foo/</code>, and kernel patches in <code>patches/linux/&lt;ver&gt;/</code>,
+are applied when the package is extracted.  A new or changed patch is
+therefore only picked up by <code>make foo-dirclean foo</code>, not by
+<code>foo-rebuild</code>.</p>
+<p>To keep a build for a second board, give it its own output directory,
+every target takes <code>O=</code>:</p>
+<div class="highlight"><pre><span></span><code>make O=output_x86 x86_64_defconfig
+make O=output_x86
+</code></pre></div>
+<p>The virtual test environment only boots x86_64 images, see
+<a href="../testing/">Regression Testing</a>.</p>
 <h3 id="configuration-snippets">Configuration Snippets<a class="headerlink" href="#configuration-snippets" title="Permanent link">¶</a></h3>
 <p>Infix ships a set of Kconfig fragments in <code>configs/snippets/</code> that can
 be merged into your active <code>.config</code> on demand.  This avoids polluting
@@ -3251,6 +3262,26 @@ it's best to follow the structure of an existing one.  However, before
 making any changes, <strong>always discuss them with the Infix core team</strong>.
 This helps avoid issues later in development and makes pull request
 reviews smoother.</p>
+<p>Each <code>infix-*.yang</code> model has a companion symlink named after its
+current revision, e.g., <code>infix-system@2025-01-01.yang -&gt; infix-system.yang</code>.
+Add a new revision at most once per release cycle; further changes in
+the same cycle go into that revision.  When you do add one, re-point the
+symlink and update the dated filename in <code>src/confd/yang/confd.inc</code>,
+otherwise the confd package fails to install its modules.  Submodules,
+like <code>infix-if-wifi</code>, are not listed there.</p>
+<p>The CLI help text is the first line of a node's description, so start
+every description with a short, complete sentence, followed by a blank
+line and any details:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">leaf</span><span class="w"> </span><span class="nv">ssid</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nc">string</span><span class="p">;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="k">description</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="s2">"Network name.</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s2">     Absent for a hidden network, which does not announce its name."</span><span class="p">;</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>Descriptions are read by operators, keep daemon and driver names out
+of them.</p>
 <h3 id="configuration-migration">Configuration Migration<a class="headerlink" href="#configuration-migration" title="Permanent link">¶</a></h3>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
@@ -3305,11 +3336,27 @@ this is how you do it:</p>
 <p>Now you can rebuild <code>confd</code>, just as described above, and restart Infix:</p>
 <div class="highlight"><pre><span></span><code>make confd-rebuild all run
 </code></pre></div>
+<p><code>confd</code> owns all configuration: it is the only daemon that creates
+interfaces and writes files in <code>/etc</code>.  A missing or wrong interface is
+therefore a <code>confd</code> bug, while missing or stale operational data is a
+<code>statd</code> bug.  A few things that are easy to get wrong:</p>
+<ul>
+<li>The change diff for a deleted node carries only its keys, so tear
+   down from the running configuration or the system state</li>
+<li>The generated <code>*.ip</code> scripts run with <code>ip -batch</code>, the first failing
+   line skips the rest of that interface's script</li>
+<li>Interfaces are ordered explicitly, a type that needs its parent first
+   gets a <code>&lt;type&gt;_add_deps()</code>, see <code>vlan_add_deps()</code></li>
+</ul>
 <h3 id="statd"><code>statd</code><a class="headerlink" href="#statd" title="Permanent link">¶</a></h3>
 <p>The Infix status daemon, <code>src/statd</code>, is responsible for populating the
 sysrepo <code>operational</code> datastore. Like <code>confd</code>, it uses XPath subscriptions,
 but unlike <code>confd</code>, it relies entirely on <code>yanger</code>, a Python script that
 gathers data from local linux services and feeds it into sysrepo.</p>
+<p>Operational data replaces the running configuration rather than being
+merged with it, so a leaf that exists only in the configuration is absent
+from operational data.  Only add a leaf to a collector when the live
+system can report it.</p>
 <p>To apply changes, rebuild the image:</p>
 <div class="highlight"><pre><span></span><code>make statd-rebuild all
 </code></pre></div>
@@ -3528,12 +3575,12 @@ fork, and then use GitHub to create a <em>Pull Reqeuest</em>.</p>
 <li><a href="https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow">Deactivate the Actions</a> you don't want in your fork</li>
 <li>Please read the <a href="https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md">Contributing Guidelines</a> as well!</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>...
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>...
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>...
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

@@ -3141,19 +3141,23 @@ admin@example:/config/syslog/…/property-filter/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
 
-<p>Available properties:
-- <code>msg</code>: Message body
-- <code>msgid</code>: RFC5424 message identifier
-- <code>programname</code>: Program/tag name
-- <code>hostname</code>: Source hostname
-- <code>source</code>: Alias for hostname
-- <code>data</code>: RFC5424 structured data</p>
-<p>Available operators:
-- <code>contains</code>: Substring match
-- <code>isequal</code>: Exact equality
-- <code>startswith</code>: Prefix match
-- <code>regex</code>: Basic regular expression
-- <code>ereregex</code>: Extended regular expression (POSIX ERE)</p>
+<p>Available properties:</p>
+<ul>
+<li><code>msg</code>: Message body</li>
+<li><code>msgid</code>: RFC5424 message identifier</li>
+<li><code>programname</code>: Program/tag name</li>
+<li><code>hostname</code>: Source hostname</li>
+<li><code>source</code>: Alias for hostname</li>
+<li><code>data</code>: RFC5424 structured data</li>
+</ul>
+<p>Available operators:</p>
+<ul>
+<li><code>contains</code>: Substring match</li>
+<li><code>isequal</code>: Exact equality</li>
+<li><code>startswith</code>: Prefix match</li>
+<li><code>regex</code>: Basic regular expression</li>
+<li><code>ereregex</code>: Extended regular expression (POSIX ERE)</li>
+</ul>
 <p>The comparison can be made case-insensitive:</p>
 <pre class="cli"><code>admin@example:/config/syslog/…/property-filter/&gt; <b>set case-insensitive true</b>
 </code></pre>

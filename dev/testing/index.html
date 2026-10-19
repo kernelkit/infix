@@ -3032,6 +3032,10 @@ for <code>x86_64</code>:</p>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>$ make test
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>...
 </code></pre></div>
+<p>Only x86_64 images can run here.  With an image for another
+architecture no virtual node comes up, and every test times out
+waiting for its DUTs.  Keep a second output directory for x86_64, see
+the <a href="../developers-guide/">Developer's Guide</a>.</p>
 <h3 id="physical-devices">Physical Devices<a class="headerlink" href="#physical-devices" title="Permanent link">¶</a></h3>
 <p>To run the tests on a preexisting topology from the host's network
 namespace, specify the <code>host</code> <code>TEST_MODE</code>:</p>
@@ -3258,6 +3262,17 @@ for example:</p>
 </code></pre></div>
 <p>where <em>dut</em>, <em>cross</em> and the IPv4 address could be found inside the
 logical topology for the test.</p>
+<p>A few rules follow from this:</p>
+<ul>
+<li>One action or one check per step, with the concrete values an
+   operator needs, e.g., <code>Verify ping from host:data to 10.0.0.1</code></li>
+<li>Step strings are literal, an f-string with a variable shows up as
+   <code>{var}</code> in the specification</li>
+<li>A check hidden in the Python body of a step does not exist for the
+   reader, split it into a step of its own</li>
+<li>Keep explanations of ordering or timeouts out of the test, put them
+   in the commit message</li>
+</ul>
 <p>Each test case must begin with the test name followed by a empty line
 and the description of the test. For example:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>"""
@@ -3379,6 +3394,16 @@ specification generation:</p>
 </ul>
 <p>When the <a href="#test-specification">test specification</a> is generated,
 <code>topology.svg</code> and <code>Readme.adoc</code> should also be created.</p>
+<p>Use <code>make test-spec</code> to regenerate them, and commit only the files of
+your own test.</p>
+<p>Read operational data with specific paths rather than whole subtrees,
+NETCONF and RESTCONF do not return the same thing for a whole subtree.</p>
+<p>In the virtual topology, WiFi radios with the same index share one
+cell: every node's <code>radio0</code> hears every other <code>radio0</code>, but no <code>radio1</code>.
+Nodes that should associate must use the same radio index.  Interfaces
+get their MAC address from the node, read it back with
+<code>wifi.phys_address()</code> instead of setting one.  <code>wifi_ap_station_2dut</code>
+and <code>wifi_mesh_roaming</code> are good templates.</p>
 
 
 

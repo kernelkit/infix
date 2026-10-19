@@ -2987,13 +2987,13 @@ Introduction</a> for a background.</p>
 <p>User management, including passwords, SSH keys, remote authentication is
 available in the system authentication configuration context.</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user admin</b>
-admin@example:/config/system/…/user/admin/&gt; <b>change password</b>
+admin@example:/config/system/…/user/admin/&gt; <b>edit password</b>
 New password:
 Retype password:
 admin@example:/config/system/…/user/admin/&gt; <b>leave</b>
 </code></pre>
 
-<p>The <code>change password</code> command starts an interactive dialogue that asks
+<p>The <code>edit password</code> command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
 the password with sha512crypt.</p>
 <p>It is also possible to use the <code>set password ...</code> command.  This allows
@@ -3156,7 +3156,7 @@ For detailed rules, use: show nacm group &lt;name&gt;
 <h3 id="adding-a-user">Adding a User<a class="headerlink" href="#adding-a-user" title="Permanent link">¶</a></h3>
 <p>Creating a new user starts with defining the user account in the system:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user jacky</b>
-admin@example:/config/system/…/user/jacky/&gt; <b>change password</b>
+admin@example:/config/system/…/user/jacky/&gt; <b>edit password</b>
 New password:
 Retype password:
 admin@example:/config/system/…/user/jacky/&gt; <b>leave</b>

@@ -3058,10 +3058,12 @@ admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>set maxpoll 
 admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>end</b>
 </code></pre>
 
-<p>Poll intervals are specified as powers of 2:
-- <code>minpoll 4</code> = poll every 2^4 = 16 seconds (minimum polling rate)
-- <code>maxpoll 10</code> = poll every 2^10 = 1024 seconds (maximum polling rate)
-- Defaults: minpoll 6 (64 seconds), maxpoll 10 (1024 seconds)</p>
+<p>Poll intervals are specified as powers of 2:</p>
+<ul>
+<li><code>minpoll 4</code> = poll every 2^4 = 16 seconds (minimum polling rate)</li>
+<li><code>maxpoll 10</code> = poll every 2^10 = 1024 seconds (maximum polling rate)</li>
+<li>Defaults: minpoll 6 (64 seconds), maxpoll 10 (1024 seconds)</li>
+</ul>
 <p>Use shorter intervals (minpoll 2-4) for faster convergence in test environments
 or peer configurations. Use defaults for production servers.</p>
 <h3 id="fast-initial-synchronization">Fast Initial Synchronization<a class="headerlink" href="#fast-initial-synchronization" title="Permanent link">¶</a></h3>

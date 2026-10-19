@@ -2814,12 +2814,12 @@ the hostname, are restarted when the hostname is changed.</p>
 <h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
 <p>User management, including passwords, is also a part of <code>ietf-system</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@host:/config/&gt; edit system authentication user admin
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/system/authentication/user/admin/&gt; change password
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit password
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>New password:
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Retype password:
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@host:/config/system/authentication/user/admin/&gt; leave
 </code></pre></div>
-<p>The <code>change password</code> command starts an interactive dialogue that asks
+<p>The <code>edit password</code> command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
 the password with sha512crypt.</p>
 <p>It is also possible to use the <code>set password ...</code> command.  This allows
