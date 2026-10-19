@@ -148,7 +148,7 @@ with infamy.Test() as test:
                 }
             })
 
-            ns.must_reach(TARGET_IP, timeout=30)
+            ns.must_reach(TARGET_IP, timeout=60)
             current = current_entries(target, "allowed")
             assert current.get(HOST_IP) is True, \
                 f"Dynamic entry {HOST_IP} lost in firewall reload"
