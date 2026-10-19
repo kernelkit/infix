@@ -67,6 +67,24 @@ make dev ARGS="--restconf https://192.168.0.1/restconf"
 
 This runs `go run .` on port 10000 with `--insecure-tls` already set.
 
+A few things to keep in mind:
+
+- Status pages show operational data only.  When a value is missing
+  there, collect it from the live system, or leave it on the configure
+  page.  Never fill the gap from the running configuration
+- Test forms in a browser, not with curl.  A hidden field that is
+  `required` and empty blocks the submit without any message, and curl
+  skips that validation
+- Parse the whole form before the first write, so a field that fails
+  late does not leave a half-applied edit behind
+- Several files already fail `gofmt -l`.  Do not `gofmt -w` a file you
+  touch, check only your own changes
+- Handler tests render the real templates, see `realTemplates()` in
+  `internal/handlers/wifi_mesh_test.go`, and stub RESTCONF with
+  `testutil.NewMockFetcher()`
+- Whole-tree operational GETs take seconds on real hardware, fetch
+  specific paths
+
 
 ## Architecture
 

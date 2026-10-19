@@ -27,6 +27,11 @@ $ make test
 ...
 ```
 
+Only x86_64 images can run here.  With an image for another
+architecture no virtual node comes up, and every test times out
+waiting for its DUTs.  Keep a second output directory for x86_64, see
+the [Developer's Guide](developers-guide.md).
+
 ### Physical Devices
 
 To run the tests on a preexisting topology from the host's network
@@ -341,6 +346,17 @@ test.step("Verify the IP address is set on dut:cross")
 where *dut*, *cross* and the IPv4 address could be found inside the
 logical topology for the test.
 
+A few rules follow from this:
+
+ - One action or one check per step, with the concrete values an
+   operator needs, e.g., `Verify ping from host:data to 10.0.0.1`
+ - Step strings are literal, an f-string with a variable shows up as
+   `{var}` in the specification
+ - A check hidden in the Python body of a step does not exist for the
+   reader, split it into a step of its own
+ - Keep explanations of ordering or timeouts out of the test, put them
+   in the commit message
+
 Each test case must begin with the test name followed by a empty line
 and the description of the test. For example:
 
@@ -453,6 +469,19 @@ Each test case should have its own directory under,
 
 When the [test specification](#test-specification) is generated,
 `topology.svg` and `Readme.adoc` should also be created.
+
+Use `make test-spec` to regenerate them, and commit only the files of
+your own test.
+
+Read operational data with specific paths rather than whole subtrees,
+NETCONF and RESTCONF do not return the same thing for a whole subtree.
+
+In the virtual topology, WiFi radios with the same index share one
+cell: every node's `radio0` hears every other `radio0`, but no `radio1`.
+Nodes that should associate must use the same radio index.  Interfaces
+get their MAC address from the node, read it back with
+`wifi.phys_address()` instead of setting one.  `wifi_ap_station_2dut`
+and `wifi_mesh_roaming` are good templates.
 
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth

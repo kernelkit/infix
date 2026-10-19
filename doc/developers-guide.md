@@ -173,6 +173,20 @@ This rebuilds (and installs) `foo` and `bar`, the `all` target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
 
+Patches in `patches/foo/`, and kernel patches in `patches/linux/<ver>/`,
+are applied when the package is extracted.  A new or changed patch is
+therefore only picked up by `make foo-dirclean foo`, not by
+`foo-rebuild`.
+
+To keep a build for a second board, give it its own output directory,
+every target takes `O=`:
+
+    make O=output_x86 x86_64_defconfig
+    make O=output_x86
+
+The virtual test environment only boots x86_64 images, see
+[Regression Testing](testing.md).
+
 
 ### Configuration Snippets
 
@@ -215,6 +229,31 @@ it's best to follow the structure of an existing one.  However, before
 making any changes, **always discuss them with the Infix core team**.
 This helps avoid issues later in development and makes pull request
 reviews smoother.
+
+Each `infix-*.yang` model has a companion symlink named after its
+current revision, e.g., `infix-system@2025-01-01.yang -> infix-system.yang`.
+Add a new revision at most once per release cycle; further changes in
+the same cycle go into that revision.  When you do add one, re-point the
+symlink and update the dated filename in `src/confd/yang/confd.inc`,
+otherwise the confd package fails to install its modules.  Submodules,
+like `infix-if-wifi`, are not listed there.
+
+The CLI help text is the first line of a node's description, so start
+every description with a short, complete sentence, followed by a blank
+line and any details:
+
+```yang
+leaf ssid {
+  type string;
+  description
+    "Network name.
+
+     Absent for a hidden network, which does not announce its name.";
+}
+```
+
+Descriptions are read by operators, keep daemon and driver names out
+of them.
 
 ### Configuration Migration
 
@@ -281,6 +320,18 @@ Now you can rebuild `confd`, just as described above, and restart Infix:
 
     make confd-rebuild all run
 
+`confd` owns all configuration: it is the only daemon that creates
+interfaces and writes files in `/etc`.  A missing or wrong interface is
+therefore a `confd` bug, while missing or stale operational data is a
+`statd` bug.  A few things that are easy to get wrong:
+
+ - The change diff for a deleted node carries only its keys, so tear
+   down from the running configuration or the system state
+ - The generated `*.ip` scripts run with `ip -batch`, the first failing
+   line skips the rest of that interface's script
+ - Interfaces are ordered explicitly, a type that needs its parent first
+   gets a `<type>_add_deps()`, see `vlan_add_deps()`
+
 
 ### `statd`
 
@@ -288,6 +339,11 @@ The Infix status daemon, `src/statd`, is responsible for populating the
 sysrepo `operational` datastore. Like `confd`, it uses XPath subscriptions,
 but unlike `confd`, it relies entirely on `yanger`, a Python script that
 gathers data from local linux services and feeds it into sysrepo.
+
+Operational data replaces the running configuration rather than being
+merged with it, so a leaf that exists only in the configuration is absent
+from operational data.  Only add a leaf to a collector when the live
+system can report it.
 
 To apply changes, rebuild the image:
 

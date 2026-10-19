@@ -48,7 +48,9 @@ Before jumping into code, remember to **document new features** and bug
 fixes.  Both the manual and ChangeLog are in the `doc/` sub-directory
 and it is expected that you provide a human-readable summary for the
 release notes (ChangeLog) and at least a configuration example in the
-manual for new features.
+manual for new features.  Both are read by operators: describe what to
+configure and what to expect, not which daemon or kernel feature does
+the work, that goes in the commit message.
 
 > [!TIP]
 > Consider ["Readme driven development"][RDD] for new features.  It is
@@ -64,6 +66,21 @@ We expect code contributions for:
 > **However,** always submit code that follows the style of surrounding
 > code!  Legacy takes precedence, and remember, we read code a lot more
 > than write it, so legibility is important.
+
+In C, declare local variables longest line first, shortest last
+(*reverse Christmas tree*):
+
+```c
+struct sockaddr_in addr;
+const char *ifname;
+int sd;
+```
+
+Comment what the code cannot say itself: a non-obvious reason, an
+invariant, a quirk.  One line is usually enough.  A comment describes
+the code as it is, not how it came to be: the bug hunt, the failure it
+fixes, and any measurements belong in the commit message.  Skip header
+comments that only repeat what a function's name already says.
 
 The ChangeLog deserves a separate mention:
 
@@ -105,7 +122,8 @@ For help getting started with testing, see the following resources:
 
 Commit messages exist to track *why* a change was made.  Try to be as
 clear and concise as possible in your commit messages, and always, be
-proud of your work and set up a proper GIT identity for your commits:
+proud of your work and set up a proper GIT identity for your commits.
+A sentence or two on why is often enough, don't retell the diff:
 
 <img src="../doc/jack.png" width=70 align="right">
 
@@ -116,7 +134,8 @@ $ git config --global user.email jacky.linker@example.com
 
 Example commit message from one of many [online guides][cbeams].  Use
 `git commit -s` to automatically add a `Signed-off-by` for proof of
-origin, see [DCO][] for more info.
+origin, see [DCO][] for more info.  Do not add `Co-Authored-By`
+trailers for AI assistants, such as Claude.
 
 ```text
 subsystem: brief, but clear and concise summary of changes

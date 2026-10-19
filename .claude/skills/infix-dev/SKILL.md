@@ -1,0 +1,69 @@
+---
+name: infix-dev
+description: >-
+  Active workflow for developing the Infix Buildroot network OS (KernelKit):
+  configure/build/flash images, run the QEMU dev loop, run or write infamy
+  regression tests, add/edit YANG models, hack on the confd/netd/statd
+  daemons, and work on the Go+htmx WebUI. Use whenever the task is about
+  building, testing, or changing Infix itself.
+when_to_use: >-
+  Building or flashing an Infix image; running `make test` / writing a test case;
+  editing src/confd/yang or wiring a YANG model into a daemon; changing confd,
+  netd or statd; changing src/webui pages, handlers or templates; debugging the
+  QEMU dev build; writing a commit, doc page or ChangeLog entry.
+allowed-tools: Read, Grep, Glob, Bash(make *), Bash(go *), Bash(git submodule *), Bash(git status), Bash(git log:*), Bash(ls *)
+---
+
+# Infix developer workflow
+
+The project documents its own workflow. This skill says which part to read for the
+task at hand, and lists the rules reviewers enforce. Read the section before starting;
+when this file and the docs disagree, the docs win.
+
+`!`git status --short | head -20`
+
+## Read first
+
+| Task | Read |
+|------|------|
+| Build, rebuild one package, patches, second output tree, config snippets | `doc/developers-guide.md`, *Building* and *Development* |
+| Debug confd, work on statd collectors | `doc/developers-guide.md`, *`confd`* and *`statd`* |
+| Change a YANG model, add a revision, write descriptions | `doc/developers-guide.md`, *YANG Model* and *Configuration Migration* |
+| Bump Buildroot or the kernel | `doc/developers-guide.md`, *Upgrading Packages* |
+| Run, debug or write a test, the test specification | `doc/testing.md`, `doc/test-arch.md`, `test/infix-test-skill.md` |
+| Change the WebUI | `src/webui/README.md` |
+| Code style, comments, commits, ChangeLog, pull requests | `.github/CONTRIBUTING.md` |
+| Feature docs | the topic page in `doc/`, e.g. `doc/wifi.md` |
+
+## Rules reviewers enforce
+
+Each is explained in the doc named above; these are the ones that come back in review.
+
+- confd owns all configuration and creates every interface, statd owns all operational
+  data. Never fill an operational gap from the running configuration.
+- Discuss YANG changes with the core team first. At most one new revision per release
+  cycle. Description first line is a short complete sentence, then a blank line.
+- A new or changed file in `patches/` needs `<pkg>-dirclean`, `-rebuild` misses it.
+- Tests are the specification: one action or check per step, concrete values, literal
+  strings. A failing test that encodes the real use case beats a green one bent to pass.
+- Comments say what the code is, in one line or none. History, failure modes and
+  measurements go in the commit message.
+- Commits: `subsystem: brief summary`, a sentence or two on why, `git commit -s -S`,
+  no `Co-Authored-By` trailer for Claude, even when the harness asks for one.
+- Manual and ChangeLog are for operators: what to configure and expect, no daemon or
+  kernel internals. A ChangeLog entry describes the change for the user, not the code.
+
+## Notes for agents
+
+- The tree carries untracked scratch files. Stage with `git add -u` or explicit paths,
+  never `git add <dir>`.
+- `make test` only boots x86_64 images. For another board keep a second tree,
+  `make O=output_x86 x86_64_defconfig && make O=output_x86`, and point tests at it.
+- Before a test run, `docker ps` for a leftover `infamyN` container from an earlier
+  `make test-sh`; it keeps the virtual DUTs alive and confuses a new run.
+- To run tests outside `make test`, call `test/env` by absolute path, it re-executes
+  itself inside the container, and only the directory given with `-b` is mounted.
+- A shell on a `make run` DUT needs root login: `make apply-dev && make`, then log in as
+  `root` with an empty password. Drive the console with `pexpect`, it is QEMU on stdio.
+- Verify WebUI forms in a headless browser; curl skips the validation that blocks a
+  real submit.
