@@ -1,7 +1,7 @@
 *~
-.claude
+.claude/*
+!.claude/skills/
 .gdb_history
-.claude
 AGENTS.md
 /.backup
 /.ccache
