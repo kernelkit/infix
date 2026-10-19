@@ -209,13 +209,34 @@ def mctl_queriers():
     return HOST.run_json(["mctl", "-p", "show", "igmp", "json"], default={})
 
 
-def mctl(ifname, vid, mctldata):
-    for q in mctldata.get("multicast-queriers", []):
+def mctl(ifname, vid, mctldata, key="multicast-queriers"):
+    for q in mctldata.get(key, []):
         # TODO: Also need to match against VLAN uppers (e.g. br0.1337)
         if q.get("interface") == ifname and q.get("vid") == vid:
             return q
 
     return {}
+
+
+def active_queriers(ifname, vid, mctldata):
+    queriers = []
+    for key in ("multicast-queriers", "mld-queriers"):
+        q = mctl(ifname, vid, mctldata, key)
+        if q.get("state") not in ("up", "proxy"):
+            continue
+
+        querier = {
+            "family": q["family"],
+            "address": q["querier"],
+            "local": "timeout" not in q,
+            "version": q["version"],
+            "query-interval": q["interval"],
+        }
+        if not querier["local"]:
+            querier["timeout"] = q["timeout"]
+        queriers.append(querier)
+
+    return queriers
 
 
 def mctl_router_ports(brname, mctldata):
@@ -297,6 +318,9 @@ def multicast(iplink, info, mctldata):
 
     if ports := mctl_router_ports(iplink["ifname"], mctldata):
         mcast["router-ports"] = ports
+
+    if queriers := active_queriers(iplink["ifname"], info.get("vlan"), mctldata):
+        mcast["active-querier"] = queriers
 
     return mcast
 

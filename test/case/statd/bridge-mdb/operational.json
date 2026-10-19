@@ -333,6 +333,22 @@
             ]
           },
           "multicast": {
+            "active-querier": [
+              {
+                "address": "10.0.0.1",
+                "family": "ipv4",
+                "local": true,
+                "query-interval": 125,
+                "version": 3
+              },
+              {
+                "address": "::",
+                "family": "ipv6",
+                "local": true,
+                "query-interval": 125,
+                "version": 2
+              }
+            ],
             "querier": "auto",
             "query-interval": 125,
             "snooping": true
