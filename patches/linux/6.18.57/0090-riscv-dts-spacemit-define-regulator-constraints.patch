@@ -1,7 +1,7 @@
 From f2b9631efd5b8e96a484f5bbfdd23154f6fd784a Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:56 -0500
-Subject: [PATCH 090/102] riscv: dts: spacemit: define regulator constraints
+Subject: [PATCH 090/107] riscv: dts: spacemit: define regulator constraints
 
 Define basic constraints for the regulators in the SpacemiT P1 PMIC,
 as implemented in the Banana Pi BPI-F3.

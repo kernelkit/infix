@@ -13,7 +13,7 @@ a browser-friendly format.
   with bridge member grouping
 - **Interfaces** -- list with status, addresses, and per-type detail;
   click through to a detail page with live-updating counters, WiFi
-  station and mesh peer tables, scan results, WireGuard peers, and
+  station and mesh peer tables, WireGuard peers, and
   ethernet frame statistics
 - **Firewall** -- zone-to-zone policy matrix
 - **Keystore** -- symmetric and asymmetric key display

@@ -56,7 +56,8 @@ submodule infix-if-wifi {
        key-holder-secret, a key of its own for the access points of a
        mobility domain to hand each other a client's keys with, instead
        of the WiFi password.  Interfaces without a custom-phys-address
-       are no longer limited to one per radio.";
+       are no longer limited to one per radio.  An open access point is
+       rejected on 6 GHz, as the error message always said.";
     reference "internal";
   }
 
@@ -163,7 +164,7 @@ submodule infix-if-wifi {
           error-message "Referenced hardware component must be a WiFi radio (class 'ih:wifi')";
         }
         must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)]) <= 1" {
-          error-message "Only one station or scan interface is allowed per radio";
+          error-message "Only one station interface is allowed per radio";
         }
 
         description
@@ -184,10 +185,10 @@ submodule infix-if-wifi {
         description
           "WiFi interface operating mode.
 
-           When no mode is configured, the interface operates in scan-only
-           mode, allowing discovery of available WiFi networks.
+           An interface without a mode is created but idle.  To find
+           the networks in range, use the scan action on the radio.
 
-           Once you've identified a network, configure either:
+           Configure one of:
            - Station mode: Connect to an existing WiFi network
            - Access Point mode: Create a WiFi network for clients
            - Mesh Point mode: Create an 802.11s mesh link
@@ -235,6 +236,43 @@ submodule infix-if-wifi {
 
                  Without it the station picks any access point advertising
                  the SSID.";
+            }
+
+            container roaming {
+              description
+                "Move to a better access point of the network.
+
+                 While connected, the station scans every 30 seconds
+                 when the signal is below the threshold, otherwise every
+                 10 minutes, and moves to a clearly stronger access
+                 point of the same SSID.  Traffic pauses briefly during
+                 a scan.  Without roaming, the station moves only when
+                 it loses its access point or is asked to move by it.
+
+                 Has no effect with peer-bssid set.";
+
+              leaf enabled {
+                type boolean;
+                default true;
+                description
+                  "Look for a better access point while connected.
+
+                   Disable on a fixed link where no scan may pause
+                   traffic.";
+              }
+
+              leaf signal-threshold {
+                type int8 {
+                  range "-100..-30";
+                }
+                units "dBm";
+                default -75;
+                description
+                  "Signal strength below which the station scans often.
+
+                   A higher value finds a better access point sooner, at
+                   the cost of more frequent scans.";
+              }
             }
 
             leaf ssid {
@@ -354,45 +392,6 @@ submodule infix-if-wifi {
                  - 65 = 6.5 Mbps
                  - 866 = 86.6 Mbps";
             }
-
-            list scan-results {
-              config false;
-              key ssid;
-              description
-                "List of discovered WiFi networks.
-
-                 Updated periodically by background scanning.";
-
-              leaf ssid {
-                type string;
-                description "SSID of the discovered network.";
-              }
-
-              leaf bssid {
-                type yang:mac-address;
-                description "BSSID (MAC address) of the AP.";
-              }
-
-              leaf signal-strength {
-                type int16;
-                units "dBm";
-                description "Signal strength of the network.";
-              }
-
-              leaf channel {
-                type uint16;
-                description "Channel on which the network was detected.";
-              }
-
-              leaf-list encryption {
-                ordered-by user;
-                type string;
-                description
-                  "Human-readable security information.
-
-                   Examples: 'WPA2-Personal', 'WPA3-SAE', 'Open'";
-              }
-            }
           }
         }
 
@@ -492,7 +491,7 @@ submodule infix-if-wifi {
                   }
                 }
                 default auto;
-                must ". = 'auto' or . = 'open' or . = 'wpa3-personal' or "
+                must ". = 'auto' or . = 'wpa3-personal' or "
                    + "/iehw:hardware/iehw:component[iehw:name = current()/../../../radio]/ih:wifi-radio/ih:band != '6GHz'" {
                   error-message "6GHz band requires 'auto' or 'wpa3-personal' security mode.";
                 }

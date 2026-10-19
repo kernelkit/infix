@@ -108,7 +108,7 @@ To configure WiFi as a client, first store your WiFi password in the keystore:
 admin@infix:/> configure
 admin@infix:/config/> edit keystore symmetric-key mywifi
 admin@infix:/config/keystore/…/mywifi/> set key-format passphrase-key-format
-admin@infix:/config/keystore/…/mywifi/> change cleartext-symmetric-key
+admin@infix:/config/keystore/…/mywifi/> edit cleartext-symmetric-key
 Passphrase: ************
 Retype passphrase: ************
 admin@infix:/config/keystore/…/mywifi/> leave
@@ -120,6 +120,7 @@ Then configure the WiFi interface using the keystore reference:
 admin@infix:/> configure
 admin@infix:/config/> set hardware wifi country-code US
 admin@infix:/config/> edit interface wifi0
+admin@infix:/config/interface/wifi0/> set wifi radio radio0
 admin@infix:/config/interface/wifi0/> set ipv4 dhcp-client
 admin@infix:/config/interface/wifi0/> set wifi station ssid YourNetworkName
 admin@infix:/config/interface/wifi0/> set wifi station security secret mywifi

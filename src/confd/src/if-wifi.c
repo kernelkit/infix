@@ -136,8 +136,8 @@ wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 	}
 
 	/*
-	 * Need to return station even if "station" also is false,
-	 * because station is the default scanning mode.
+	 * An interface without a mode is a managed netdev with nothing
+	 * running on it, handled with the stations.
 	 */
 	return wifi_station;
 }
@@ -168,7 +168,7 @@ int wifi_mode_changed(struct lyd_node *wifi)
 	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
 		return 1;
 
-	/* Scan-only <-> station, and the 4-address flag is set at creation */
+	/* No mode <-> station, and the 4-address flag is set at creation */
 	node = lydx_get_child(wifi, "station");
 	if (node)
 		op = lydx_get_op(node);
@@ -195,6 +195,8 @@ static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct da
 
 	switch (wifi_get_mode(cif)) {
 	case wifi_station:
+		if (!lydx_get_descendant(lyd_child(cif), "wifi", "station", NULL))
+			return SR_ERR_OK;
 		svc = "wifi";
 		break;
 	case wifi_mesh:
@@ -240,8 +242,9 @@ int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
 int wifi_gen_station(struct lyd_node *cif)
 {
 	const char *ifname, *ssid, *secret_name, *security_mode;
-	struct lyd_node *security, *secret_node, *station, *wifi;
+	struct lyd_node *security, *secret_node, *station, *roaming, *wifi;
 	const char *bssid = NULL;
+	char bgscan[32] = "";
 	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
 	char *security_str = NULL;
@@ -255,19 +258,21 @@ int wifi_gen_station(struct lyd_node *cif)
 		return SR_ERR_OK;
 
 	station = lydx_get_child(wifi, "station");
-	if (station) {
-		ssid = lydx_get_cattr(station, "ssid");
-		bssid = lydx_get_cattr(station, "peer-bssid");
-		security = lydx_get_child(station, "security");
-		security_mode = lydx_get_cattr(security, "mode");
-		secret_name = lydx_get_cattr(security, "secret");
-	} else {
-		/* If station is NULL, we're in scan-only mode (no station container) */
-		ssid = NULL;
-		security = NULL;
-		security_mode = "disabled";
-		secret_name = NULL;
+	if (!station) {
+		/* No mode configured, nothing for wpa_supplicant to do */
+		erasef(WPA_SUPPLICANT_CONF, ifname);
+		return SR_ERR_OK;
 	}
+
+	ssid = lydx_get_cattr(station, "ssid");
+	bssid = lydx_get_cattr(station, "peer-bssid");
+	roaming = lydx_get_child(station, "roaming");
+	if (!bssid && lydx_is_enabled(roaming, "enabled"))
+		snprintf(bgscan, sizeof(bgscan), "simple:30:%s:600",
+			 lydx_get_cattr(roaming, "signal-threshold"));
+	security = lydx_get_child(station, "security");
+	security_mode = lydx_get_cattr(security, "mode");
+	secret_name = lydx_get_cattr(security, "secret");
 
 	country = lydx_get_cattr(lydx_get_xpathf(cif, "/ietf-hardware:hardware/infix-hardware:wifi"),
 				 "country-code");
@@ -290,8 +295,7 @@ int wifi_gen_station(struct lyd_node *cif)
 		goto out;
 	}
 
-	/* autoscan drives scanning every 10s while unassociated; once
-	 * associated no background scanning runs (bgscan disabled below). */
+	/* autoscan scans every 10s while unassociated, bgscan once associated */
 	fprintf(wpa_supplicant,
 		"ctrl_interface=/run/wpa_supplicant\n"
 		"autoscan=periodic:10\n"
@@ -300,51 +304,28 @@ int wifi_gen_station(struct lyd_node *cif)
 	if (country)
 		fprintf(wpa_supplicant, "country=%s\n", country);
 
-	/* If SSID is present, create network block. Otherwise, scan-only mode */
-	if (ssid) {
-		/* Station mode with network configured */
-		if (!strcmp(security_mode, "disabled"))
-			asprintf(&security_str, "key_mgmt=NONE");
-		else if (secret)
-			/* ieee80211w=1: MFP capable.  WPA3-only APs, and every
-			 * AP on 6 GHz, require it and are skipped as candidates
-			 * without it; WPA2 APs without MFP still work. */
-			asprintf(&security_str,
-				 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
-				 "  ieee80211w=1\n"
-				 "  psk=\"%s\"", secret);
+	if (!strcmp(security_mode, "disabled"))
+		asprintf(&security_str, "key_mgmt=NONE");
+	else if (secret)
+		/* ieee80211w=1: MFP capable.  WPA3-only APs, and every
+		 * AP on 6 GHz, require it and are skipped as candidates
+		 * without it; WPA2 APs without MFP still work. */
+		asprintf(&security_str,
+			 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
+			 "  ieee80211w=1\n"
+			 "  psk=\"%s\"", secret);
 
-		/* bgscan="" disables background scanning once associated: on a
-		 * fixed backhaul link the periodic off-channel sweep stalls
-		 * traffic and buys no roaming benefit. */
-		fprintf(wpa_supplicant,
-			"network={\n"
-			"  bgscan=\"\"\n"
-			"  scan_ssid=1\n"
-			"  ssid=\"%s\"\n", ssid);
-		if (bssid)
-			fprintf(wpa_supplicant, "  bssid=%s\n", bssid);
-		fprintf(wpa_supplicant,
-			"  %s\n"
-			"}\n", security_str);
-		free(security_str);
-	} else {
-		/* Scan-only mode - no station container configured */
-		fprintf(wpa_supplicant, "# Scan-only - need dummy network for state machine\n");
-		/*
-		 * This prevents the daemon from actually trying to associate and fail,
-		 * 'bssid' with a reserved/impossible MAC address prevents it from ever
-		 * actually \"finding\" and joining a random open AP
-		 */
-		fprintf(wpa_supplicant,
-			"network={\n"
-			"  ssid=\"\"\n"
-			"  key_mgmt=NONE\n"
-			"  disabled=0\n"
-			"  bssid=00:00:00:00:00:01\n"
-			"  scan_ssid=1\n"
-			"}\n");
-	}
+	fprintf(wpa_supplicant,
+		"network={\n"
+		"  bgscan=\"%s\"\n"
+		"  scan_ssid=1\n"
+		"  ssid=\"%s\"\n", bgscan, ssid);
+	if (bssid)
+		fprintf(wpa_supplicant, "  bssid=%s\n", bssid);
+	fprintf(wpa_supplicant,
+		"  %s\n"
+		"}\n", security_str);
+	free(security_str);
 
 out:
 	free(secret);
@@ -704,6 +685,8 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		/* iw takes addr before 4addr, whatever its usage text says */
 		fprintf(iw, "iw phy %s interface add %s type managed%s%s\n", radio, ifname,
 			addr, station && lydx_is_enabled(station, "wds") ? " 4addr on" : "");
+		if (!station)
+			break;	/* No mode yet, the netdev is created but idle */
 		wifi_gen_station(cif);
 		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);

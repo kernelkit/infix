@@ -1005,6 +1005,68 @@ module infix-hardware {
           }
         }
       }
+
+      action scan {
+        description
+          "Scan for WiFi networks in range of the radio.
+
+           Reports every access point heard.  The radio leaves its
+           operating channel for the duration of the scan, a few
+           seconds, so traffic on the radio pauses.  A radio without any
+           interface can be scanned too.  Networks are not collected in
+           the background, this action is the only way to find them.";
+
+        output {
+          list network {
+            key "bssid";
+            description
+              "Access point (BSS) heard during the scan.
+
+               Several entries can share an SSID, one per access point
+               of a roaming network.";
+
+            leaf bssid {
+              type yang:mac-address;
+              description "BSSID (MAC address) of the access point.";
+            }
+
+            leaf ssid {
+              type string;
+              description
+                "Network name.
+
+                 Absent for a hidden network, which does not announce
+                 its name.";
+            }
+
+            leaf frequency {
+              type uint32;
+              units "MHz";
+              description "Channel center frequency in MHz.";
+            }
+
+            leaf channel {
+              type uint16;
+              description "Channel number on the network's band.";
+            }
+
+            leaf signal-strength {
+              type int16;
+              units "dBm";
+              description "Signal strength of the access point.";
+            }
+
+            leaf-list encryption {
+              ordered-by user;
+              type string;
+              description
+                "Security offered by the access point.
+
+                 Examples: 'WPA2-Personal', 'WPA3-Personal', 'Open'";
+            }
+          }
+        }
+      }
     }
 
     /*

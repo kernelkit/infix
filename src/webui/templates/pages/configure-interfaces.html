@@ -488,9 +488,9 @@
                                Mesh Point (802.11s)</label>
                       </td>
                     </tr>
-                    {{/* An interface with no mode configured is in scan-only
-                         mode; it shows no mode-specific field until one of
-                         the mode radios is picked. */}}
+                    {{/* An interface with no mode configured yet shows no
+                         mode-specific field until one of the mode radios
+                         is picked. */}}
                     {{$named := or (eq .WifiMode "station") (eq .WifiMode "access-point")}}
                     <tr data-wifi-modes="station access-point" {{if not $named}}hidden{{end}}>
                       <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>

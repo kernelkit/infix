@@ -25,7 +25,14 @@ still answered and works normally.  See doc/wifi.md.
 The test asserts the client associates to "campus", that band steering lands
 it on the 5GHz BSS (not the 2.4GHz one), and that it leases an address -- a
 completed association plus DHCP lease is real bidirectional traffic over the
-(relayed) radio link.
+(relayed) radio link.  A client that got in on 2.4GHz before the 5GHz BSS was
+up is asked to move once it scans and the 5GHz BSS has seen it; real clients
+scan in the background on their own, this one is told to.  With 802.11r on
+both BSSes, a client steered from 2.4GHz to 5GHz moves by a fast transition:
+the 5GHz BSS fetches the client's key from its 2.4GHz sibling, so the client
+is neither rejected nor disconnected on the way.  That is checked with the
+5GHz BSS stopped and started in hostapd alone; a configuration change
+restarts hostapd and with it every BSS, so the client then logs in afresh.
 
 Topology:
 ....
@@ -45,6 +52,10 @@ image::topology.svg[WiFi Band Steering across a dual-band Access Point topology,
 . Verify the client associates to the 'campus' SSID
 . Verify band steering put the client on the 5GHz BSS
 . Verify the client leases an address over 5GHz
+. Stop the 5GHz BSS in hostapd
+. Verify the client falls back to the 2.4GHz BSS and logs in there
+. Start the 5GHz BSS in hostapd again
+. Verify a scanning client is steered to the 5GHz BSS by a fast transition
 . Disable the 5GHz BSS
 . Verify the client falls back to the 2.4GHz BSS
 . Enable the 5GHz BSS again

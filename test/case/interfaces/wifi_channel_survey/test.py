@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 r"""
-WiFi channel survey on a connected radio
+WiFi scan and channel survey on a connected radio
 
-A channel survey tells how busy each channel is.  Collecting it means
-leaving the operating channel, so it is not done in the background but
-on request, with the channel-survey action on the radio.  The action has
-to work on a radio that is in use: here on the ap, which is serving a
-station, and on the station, which is associated to the ap.
+A scan lists the networks in range, a channel survey tells how busy each
+channel is.  Both mean leaving the operating channel, so neither is done
+in the background but on request, with the scan and channel-survey
+actions on the radio.  The actions have to work on a radio that is in
+use: here on the ap, which is serving a station, and on the station,
+which is associated to the ap.
 
 Topology:
 ....
@@ -64,6 +65,16 @@ with infamy.Test() as test:
     with test.step("Verify the station associates to the ap over the wifi link"):
         until(lambda: wifi.associated(station, SSID), attempts=60, interval=2)
 
+    with test.step("Scan for networks on radio0 of the station"):
+        networks = wifi.scan(station, "radio0")
+
+    with test.step("Verify the station's scan lists the ap's SSID on 2412 MHz"):
+        ap_mac = wifi.phys_address(ap, "wifi0")
+        found = [n for n in networks if n.get("bssid", "").lower() == ap_mac]
+        assert found, networks
+        assert found[0].get("ssid") == SSID, found
+        assert int(found[0].get("frequency", 0)) == FREQ, found
+
     with test.step("Run a channel survey on radio0 of the station"):
         channels = wifi.channel_survey(station, "radio0")
 
@@ -79,7 +90,7 @@ with infamy.Test() as test:
     with test.step("Verify the ap's survey reports 2412 MHz as the channel in use"):
         assert wifi.in_use_frequency(channels) == FREQ, channels
 
-    with test.step("Verify the station is still associated to the ap after the surveys"):
+    with test.step("Verify the station is still associated to the ap after the scans"):
         until(lambda: wifi.associated(station, SSID), attempts=30, interval=2)
 
     test.succeed()

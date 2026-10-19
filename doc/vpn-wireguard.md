@@ -192,6 +192,7 @@ admin@example:/>
 </code></pre>
 
 In this example:
+
 - Both peers inherit `endpoint-port 51820` and `persistent-keepalive 25` from the bag
 - `office-west` overrides the keepalive to 10 seconds while `office-east` uses the default 25
 - Each peer has its own `endpoint` and `allowed-ips` configuration

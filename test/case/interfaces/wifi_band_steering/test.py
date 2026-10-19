@@ -23,7 +23,14 @@ still answered and works normally.  See doc/wifi.md.
 The test asserts the client associates to "campus", that band steering lands
 it on the 5GHz BSS (not the 2.4GHz one), and that it leases an address -- a
 completed association plus DHCP lease is real bidirectional traffic over the
-(relayed) radio link.
+(relayed) radio link.  A client that got in on 2.4GHz before the 5GHz BSS was
+up is asked to move once it scans and the 5GHz BSS has seen it; real clients
+scan in the background on their own, this one is told to.  With 802.11r on
+both BSSes, a client steered from 2.4GHz to 5GHz moves by a fast transition:
+the 5GHz BSS fetches the client's key from its 2.4GHz sibling, so the client
+is neither rejected nor disconnected on the way.  That is checked with the
+5GHz BSS stopped and started in hostapd alone; a configuration change
+restarts hostapd and with it every BSS, so the client then logs in afresh.
 
 Topology:
 ....
@@ -48,6 +55,14 @@ AP_IP = "192.168.30.1"
 POOL_START = "192.168.30.100"
 POOL_END = "192.168.30.101"
 
+def steered(ap, client, client_mac):
+    """True once the client is on the 5GHz BSS, else tell it to scan."""
+    if client_mac in wifi.ap_stations(ap, "wifi1"):
+        return True
+    wifi.scan(client, "radio2")
+    return False
+
+
 def ap_bss(name, radio_name):
     """A band-steering AP BSS on the given radio, bridged into br0."""
     return wifi.iface(name, {
@@ -57,7 +72,8 @@ def ap_bss(name, radio_name):
             "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi"},
             # dot11v enables MBO band steering by default; the two BSSes
             # share the SSID so band steering has another band to point at.
-            "roaming": {"dot11v": {}},
+            # dot11r makes the move between them a fast transition.
+            "roaming": {"dot11v": {}, "dot11r": {"mobility-domain": "hash"}},
         },
     }, bridge="br0")
 
@@ -65,9 +81,10 @@ def ap_bss(name, radio_name):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to the ap and the client"):
         env = infamy.Env()
-        ap, client, clientsh = parallel(
+        ap, client, apsh, clientsh = parallel(
             lambda: env.attach("ap", "mgmt"),
             lambda: env.attach("client", "mgmt"),
+            lambda: env.attach("ap", "mgmt", "ssh"),
             lambda: env.attach("client", "mgmt", "ssh"),
         )
         wifi.skip_unless_supported(test, ap, client)
@@ -118,9 +135,8 @@ with infamy.Test() as test:
     with test.step("Verify band steering put the client on the 5GHz BSS"):
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
-        # once it had been seen on 5GHz.
-        until(lambda: client_mac in wifi.ap_stations(ap, "wifi1"),
-              attempts=90, interval=2)
+        # once it had been seen on 5GHz, or asked the client to move there.
+        until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 
@@ -129,6 +145,35 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(client, "wifi0", POOL_START) or
               iface.address_exist(client, "wifi0", POOL_END),
               attempts=60, interval=2)
+
+    # Stopping the 5GHz BSS in hostapd, without a configuration change,
+    # leaves the 2.4GHz BSS running: the client falls back to it and logs
+    # in there, so that BSS now holds its 802.11r key.  Once the 5GHz BSS
+    # is back the client is steered to it again, and the move is a fast
+    # transition only if the 5GHz BSS gets the key from its sibling.
+    with test.step("Stop the 5GHz BSS in hostapd"):
+        apsh.runsh("sudo hostapd_cli -i wifi1 disable")
+
+    with test.step("Verify the client falls back to the 2.4GHz BSS and logs in there"):
+        until(lambda: client_mac in wifi.ap_stations(ap, "wifi0"),
+              attempts=90, interval=2)
+
+    mark = int(clientsh.runsh("wc -l < /var/log/syslog").stdout)
+
+    with test.step("Start the 5GHz BSS in hostapd again"):
+        apsh.runsh("sudo hostapd_cli -i wifi1 enable")
+
+    with test.step("Verify a scanning client is steered to the 5GHz BSS by a fast transition"):
+        def client_log():
+            return clientsh.runsh(f"tail -n +{mark + 1} /var/log/syslog").stdout
+        try:
+            until(lambda: steered(ap, client, client_mac), attempts=25, interval=10)
+        except Exception as err:
+            raise AssertionError(client_log()) from err
+        log = client_log()
+        assert "CTRL-EVENT-AUTH-REJECT" not in log, log
+        assert "CTRL-EVENT-ASSOC-REJECT" not in log, log
+        assert "CTRL-EVENT-DISCONNECTED" not in log, log
 
     # The 5GHz BSS goes away: the client falls back to 2.4GHz once the
     # 5GHz radio has not seen it for a minute.  When the 5GHz BSS comes
@@ -149,12 +194,7 @@ with infamy.Test() as test:
         until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
 
     with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
-        def steered():
-            if client_mac in wifi.ap_stations(ap, "wifi1"):
-                return True
-            clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
-            return False
-        until(steered, attempts=20, interval=10)
+        until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client still associated on 2.4GHz"
 

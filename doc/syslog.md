@@ -325,6 +325,7 @@ admin@example:/>
 </code></pre>
 
 Available properties:
+
 - `msg`: Message body
 - `msgid`: RFC5424 message identifier
 - `programname`: Program/tag name
@@ -333,6 +334,7 @@ Available properties:
 - `data`: RFC5424 structured data
 
 Available operators:
+
 - `contains`: Substring match
 - `isequal`: Exact equality
 - `startswith`: Prefix match

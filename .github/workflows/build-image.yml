@@ -16,7 +16,7 @@ on:
           - bananapi-bpi-r64
           - friendlyarm-nanopi-r2s
           - microchip-sama7g54-ek
-          - acer-connect-vero-w
+          - acer-connect-vero-w6m
         default: 'raspberrypi-rpi64'
 
 jobs:
@@ -93,7 +93,7 @@ jobs:
               bootloader_sdcard=bpi-r64-sd-boot
               bootloader_emmc=bpi-r64-emmc-boot
               ;;
-            acer-connect-vero-w)
+            acer-connect-vero-w6m)
               arch=aarch64
               targets="emmc"
               bootloader_emmc=bpi-r3-emmc-boot

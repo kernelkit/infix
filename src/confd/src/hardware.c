@@ -5,6 +5,7 @@
 #include <jansson.h>
 #include <libgen.h>
 #include <limits.h>
+#include <net/if.h>
 #include <unistd.h>
 #include <openssl/evp.h>
 
@@ -482,8 +483,23 @@ static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const cha
 	}
 }
 
+/* At boot gethostname() is still the default, the hostname is set later */
+static void wifi_nas_hostname(struct confd *confd, struct lyd_node *config, char *hostname, size_t len)
+{
+	struct lyd_node *node;
+
+	node = lydx_get_xpathf(config, "/ietf-system:system/hostname");
+	if (node && !hostnamefmt(confd, lyd_get_value(node), hostname, len, NULL, 0) && hostname[0])
+		return;
+
+	if (gethostname(hostname, len) != 0)
+		strlcpy(hostname, "localhost", len);
+	hostname[len - 1] = '\0';
+}
+
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
-static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
+static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss,
+				 const char *band, struct confd *confd)
 {
 	struct lyd_node *wifi, *ap, *security, *roaming;
 	struct lyd_node *dot11k, *dot11r, *dot11v;
@@ -538,9 +554,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
 		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
 		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
-			if (gethostname(hostname, sizeof(hostname)) != 0)
-				snprintf(hostname, sizeof(hostname), "localhost");
-			hostname[sizeof(hostname) - 1] = '\0';
+			wifi_nas_hostname(confd, config, hostname, sizeof(hostname));
 			snprintf(nas_identifier_default, sizeof(nas_identifier_default),
 				 "%s-%s.%s", ifname, hostname, mobility_domain);
 			nas_identifier_cfg = nas_identifier_default;
@@ -708,8 +722,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		 * GHz: a client the twin has seen lately gets no probe response
 		 * here, so it tends to join the twin instead.  The seen-on list
 		 * is kept per radio, see the radio section.  Clients already
-		 * connected are moved by wifi-steer.sh, which finds the pairs
-		 * by this directive.  Refusing authentication as well would
+		 * connected are moved by a wifi-steer.sh for every pair with
+		 * this directive.  Refusing authentication as well would
 		 * lock a client out when the twin cannot take it, e.g. during
 		 * its radar check, so that is deliberately not done. */
 		twin = wifi_find_higher_band_twin(config, band, ssid);
@@ -1081,6 +1095,9 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
 
+	/* Keep our address on a second BSS, not the primary's plus one */
+	fprintf(hostapd, "use_driver_iface_addr=1\n");
+
 	/*
 	 * 802.11d broadcasts country info in beacons, required for clients
 	 * to know which channels/power levels are legal in this region.
@@ -1268,7 +1285,8 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 /* Generate hostapd config for all APs on a radio (multi-SSID support) */
 static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
-				  struct lyd_node *radio_node, struct lyd_node *config)
+				  struct lyd_node *radio_node, struct lyd_node *config,
+				  struct confd *confd)
 {
 	struct lyd_node *primary_cif, *cif;
 	const char *primary_ifname;
@@ -1326,7 +1344,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
 
 	/* Primary AP SSID and security configuration */
-	wifi_gen_ssid_config(hostapd, primary_cif, config, false, lydx_get_cattr(radio_node, "band"));
+	wifi_gen_ssid_config(hostapd, primary_cif, config, false, lydx_get_cattr(radio_node, "band"), confd);
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
@@ -1351,7 +1369,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 		}
 
 		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
-		wifi_gen_ssid_config(hostapd, bss_cif, config, true, lydx_get_cattr(radio_node, "band"));
+		wifi_gen_ssid_config(hostapd, bss_cif, config, true, lydx_get_cattr(radio_node, "band"), confd);
 	}
 
 	fclose(hostapd);
@@ -1659,6 +1677,43 @@ static int modem_gen_rules(struct lyd_node *config)
 	return unlocked;
 }
 
+static void wifi_gen_helpers(FILE *fp, glob_t *gl)
+{
+	bool neighbors = false;
+	size_t i;
+
+	for (i = 0; i < gl->gl_pathc; i++) {
+		char line[256], bss[IFNAMSIZ] = "", twin[IFNAMSIZ];
+		FILE *conf;
+
+		conf = fopen(gl->gl_pathv[i], "r");
+		if (!conf)
+			continue;
+		while (fgets(line, sizeof(line), conf)) {
+			if (sscanf(line, "interface=%15s", bss) == 1 ||
+			    sscanf(line, "bss=%15s", bss) == 1)
+				continue;
+			if (!strncmp(line, "ft_iface=", 9))
+				neighbors = true;
+			if (bss[0] && sscanf(line, "no_probe_resp_if_seen_on=%15s", twin) == 1) {
+				fprintf(fp, "\nservice <!pid/hostapd> name:wifi-steer :%s \\\n", bss);
+				fprintf(fp, "\t[2345] /usr/libexec/infix/wifi-steer.sh %s %s \\\n", bss, twin);
+				fprintf(fp, "\t-- Wi-Fi band steering %s\n", bss);
+			}
+		}
+		fclose(conf);
+	}
+
+	if (!neighbors)
+		return;
+
+	fprintf(fp, "\nservice <!pid/hostapd> name:wifi-neighbors \\\n");
+	fprintf(fp, "\t[2345] /usr/libexec/infix/wifi-neighbors.py");
+	for (i = 0; i < gl->gl_pathc; i++)
+		fprintf(fp, " %s", gl->gl_pathv[i]);
+	fprintf(fp, " \\\n\t-- Wi-Fi neighbor exchange\n");
+}
+
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
 		    sr_event_t event, struct confd *confd)
 {
@@ -1766,7 +1821,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (wifi_iface_list) {
 				if (wifi_iface_count) {
 					/* Generate AP config (hostapd) for all APs on this radio */
-					rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
+					rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config, confd);
 					if (rc != SR_ERR_OK)
 						ERROR("Failed to generate AP config for radio %s", name);
 				}
@@ -1970,14 +2025,14 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 				rc = SR_ERR_INTERNAL;
 			} else {
 				fprintf(fp, "# Generated by confd, do not edit.\n");
-				/* The wrapper hands the clients over to another
-				 * access point before hostapd stops, give it time. */
-				fprintf(fp, "service <!> name:hostapd kill:10 \\\n");
-				fprintf(fp, "\t[2345] /usr/libexec/infix/hostapd.sh"
-					" -g /run/hostapd.global -P /run/hostapd.pid");
+				/* kill:10 gives the stop script time to hand over clients */
+				fprintf(fp, "service <!> name:hostapd pid:!/run/hostapd.pid kill:10"
+					" stop:/usr/libexec/infix/wifi-handover.sh \\\n");
+				fprintf(fp, "\t[2345] hostapd -g /run/hostapd.global -P /run/hostapd.pid");
 				for (i = 0; i < gl.gl_pathc; i++)
 					fprintf(fp, " %s", gl.gl_pathv[i]);
 				fprintf(fp, " \\\n\t-- Wi-Fi Access Points\n");
+				wifi_gen_helpers(fp, &gl);
 				fclose(fp);
 
 				finit_enable("hostapd");
@@ -2079,7 +2134,91 @@ static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const
 	return SR_ERR_OK;
 }
 
-/* The action only exists when the wifi feature is enabled, see wifi.inc */
+static int wifi_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+		     const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+		     struct lyd_node *output, void *priv)
+{
+	static const struct { const char *json, *yang; } nums[] = {
+		{ "frequency", "frequency"       },
+		{ "channel",   "channel"         },
+		{ "signal",    "signal-strength" },
+	};
+	struct lyd_node *component, *net;
+	json_t *root, *entry;
+	const char *radio;
+	json_error_t jerr;
+	size_t index;
+	FILE *pp;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	component = lyd_parent(lyd_parent(input));
+	radio = component ? lydx_get_cattr(component, "name") : NULL;
+	if (!radio)
+		return rpc_failed(session, "Cannot tell which radio to scan");
+
+	pp = popenf("r", "/usr/libexec/infix/iw.py scan %s", radio);
+	if (!pp)
+		return rpc_failed(session, "Failed starting scan");
+
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!root)
+		return rpc_failed(session, "Scan returned no data");
+
+	if (!json_is_array(root)) {
+		json_t *err = json_object_get(root, "error");
+		char msg[256];
+
+		snprintf(msg, sizeof(msg), "Scan failed: %s",
+			 json_is_string(err) ? json_string_value(err) : "unknown error");
+		json_decref(root);
+		return rpc_failed(session, msg);
+	}
+
+	json_array_foreach(root, index, entry) {
+		json_t *bssid = json_object_get(entry, "bssid");
+		json_t *val, *enc;
+		char buf[32];
+		size_t i;
+
+		if (!json_is_string(bssid))
+			continue;
+
+		if (lyd_new_list(output, NULL, "network", LYD_NEW_VAL_OUTPUT, &net,
+				 json_string_value(bssid))) {
+			ERROR("scan: failed adding network %s", json_string_value(bssid));
+			continue;
+		}
+
+		val = json_object_get(entry, "ssid");
+		if (json_is_string(val))
+			lyd_new_term(net, NULL, "ssid", json_string_value(val),
+				     LYD_NEW_VAL_OUTPUT, NULL);
+
+		for (i = 0; i < NELEMS(nums); i++) {
+			val = json_object_get(entry, nums[i].json);
+			if (!json_is_integer(val))
+				continue;
+
+			snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
+			lyd_new_term(net, NULL, nums[i].yang, buf, LYD_NEW_VAL_OUTPUT, NULL);
+		}
+
+		enc = json_object_get(entry, "encryption");
+		json_array_foreach(enc, i, val) {
+			if (json_is_string(val))
+				lyd_new_term(net, NULL, "encryption", json_string_value(val),
+					     LYD_NEW_VAL_OUTPUT, NULL);
+		}
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+/* The actions only exist when the wifi feature is enabled, see wifi.inc */
 static bool wifi_feature_enabled(struct confd *confd)
 {
 	const struct lys_module *mod;
@@ -2107,6 +2246,8 @@ int hardware_rpc_init(struct confd *confd)
 
 	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/channel-survey",
 			  wifi_channel_survey, NULL, &confd->sub);
+	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/scan",
+			  wifi_scan, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

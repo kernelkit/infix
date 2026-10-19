@@ -19,6 +19,7 @@ sr_subscription_ctx_t *sub = NULL;
 sr_conn_ctx_t *conn;
 
 #define TEST_CONFIG_PATH "/etc/test-config.cfg"
+#define DNSMASQ_LEASES   "/var/lib/misc/dnsmasq.leases"
 
 static int test_reset(sr_session_ctx_t *session, uint32_t sub_id, const char *path,
 		    const sr_val_t *input, const size_t input_cnt,
@@ -55,6 +56,9 @@ static int test_reset(sr_session_ctx_t *session, uint32_t sub_id, const char *pa
 		ERROR("Failed to replace configuration: %s", sr_strerror(rc));
 		goto release_ctx;
 	}
+
+	/* The DHCP server leases survive reconfiguration on purpose */
+	erase(DNSMASQ_LEASES);
 release_ctx:
 	sr_release_context(conn);
 	return rc;
