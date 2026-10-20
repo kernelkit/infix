@@ -16,3 +16,23 @@ def get_usb_state(target, name):
     for component in hardware["component"]:
         if component.get("name") == name and component.get("class") == "infix-hardware:usb":
             return component["state"]["admin-state"]
+
+def get_usb_devices(target):
+    hardware=_get_hardware(target)
+    devices=[]
+    for component in hardware["component"]:
+        if component.get("class") != "infix-hardware:usb-device":
+            continue
+        usb_device=component.get("usb-device", {})
+        devices.append({"name": component["name"],
+                        "parent": component.get("parent"),
+                        "authorized": usb_device.get("authorized"),
+                        "classes": [i.get("class") for i in usb_device.get("interface", [])]})
+
+    return devices
+
+def get_usb_device(target, name):
+    for device in get_usb_devices(target):
+        if device["name"] == name:
+            return device
+    return {}

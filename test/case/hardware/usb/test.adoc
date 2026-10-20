@@ -11,6 +11,10 @@ this behavior during reboot. This test does not involve the actual use of
 the USB port; it only ensures the configured state is consistent with the
 hardware state.  Removing the configuration of a port locks it.
 
+The target has a USB stick plugged in.  It is expected to be listed
+under its port the whole time: not authorized while the port is
+locked, authorized as mass storage once the port is unlocked.
+
 If this pass you can be certain that the configuration of the USB
 port is handled correctly.
 
@@ -23,8 +27,10 @@ image::topology.svg[USB Configuration topology, align=center, scaledwidth=75%]
 . Set up topology and attach to target DUT
 . Unlock all USB ports
 . Verify that all USB ports are unlocked
+. Verify that the USB stick is authorized
 . Lock all USB ports
 . Verify that all USB ports are locked
+. Verify that the USB stick is still listed, not authorized
 . Unlock all USB ports again
 . Verify that all USB ports are unlocked
 . Remove all hardware configuration
