@@ -168,18 +168,18 @@ def usb_port_components(systemjson):
     return components
 
 
-def usb_tty_device(dev):
-    """usb-<busid> of the device behind a tty, e.g. /dev/gps0 -> usb-1-1.2"""
+def usb_tty_busid(dev):
+    """Bus id of the USB device behind a tty, e.g. /dev/gps0 -> 1-1.2"""
     if not dev:
         return None
     tty = os.path.basename(HOST.run(("readlink", "-f", dev), default="").strip())
     if not tty:
         return None
     path = HOST.run(("readlink", "-f", f"/sys/class/tty/{tty}/device"), default="").strip()
-    interface = os.path.basename(path)
-    if ":" not in interface:
-        return None
-    return f"usb-{interface.split(':')[0]}"
+    for part in reversed(path.split("/")):
+        if re.fullmatch(r"\d+-[\d.]+:\d+\.\d+", part):
+            return part.split(":")[0]
+    return None
 
 
 def usb_device_parents(components):
@@ -207,7 +207,10 @@ def usb_device_parents(components):
                 if uri.startswith("usb:"):
                     parent = f"usb-{os.path.basename(uri)}"
         elif component.get("class") == "infix-hardware:gps":
-            parent = usb_tty_device(component["infix-hardware:gps-receiver"].get("device"))
+            busid = usb_tty_busid(component["infix-hardware:gps-receiver"].get("device"))
+            if busid:
+                parent = f"usb-{busid}"
+                component.setdefault("uri", [f"usb://{USB_DEVICES}/{busid}"])
         if parent in devices:
             component["parent"] = parent
 

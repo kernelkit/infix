@@ -105,6 +105,30 @@ admin@example:/config/> <b>set hardware component gps0</b>
 admin@example:/config/> <b>leave</b>
 </code></pre>
 
+### Anchor a GPS receiver to a USB port
+
+Receivers are numbered in the order they are found, so with more than
+one the names can swap between boots.  Anchor each receiver to the USB
+device it is plugged into and it keeps its name.  The detail view of a
+receiver shows the URI of its device, copy it into the configuration:
+
+<pre class="cli"><code>admin@example:/> <b>show hardware gps0</b>
+<span class="header">COMPONENT: gps0                                               </span>
+  Name                : gps0
+  Class               : gps
+  Parent              : usb-1-1.2
+  URI                 : usb:///sys/bus/usb/devices/1-1.2
+admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit hardware component gps0</b>
+admin@example:/config/hardware/component/gps0/> <b>set uri usb:///sys/bus/usb/devices/1-1.2</b>
+admin@example:/config/hardware/component/gps0/> <b>leave</b>
+</code></pre>
+
+A device with several serial ports, e.g. a cellular modem with an NMEA
+port, is anchored by that port's interface: append the interface
+number to the URI, `usb:///sys/bus/usb/devices/1-1.2:1.1` for
+interface 1.
+
 To use a GPS receiver as an NTP reference clock source, see
 [NTP — GPS Reference Clock](ntp.md#gps-reference-clock).
 

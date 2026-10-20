@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: BSD-2-clause
 
 SUBSYSTEM!="tty", GOTO="gpsd_rules_end"
+# A receiver anchored to a USB port in the configuration is named by its own rule
+ENV{INFIX_GPS}!="", GOTO="gpsd_rules_end"
 
 # Prolific Technology, Inc. PL2303 Serial Port [linux module: pl2303]
 # !!! rule disabled in Debian as it matches too many other devices

@@ -97,6 +97,9 @@ All notable changes to the project are documented in this file.
   MAC of a `/mnt/aux/vpd.bin`, see [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
 - USB ports are named `usb`, `usb1`, `usb2` ..., lowercase like every
   other hardware component.  Existing configurations are migrated
+- A GPS receiver can be anchored to its USB device with `set uri`, like
+  a modem, so `gps0` stays `gps0` whatever order the receivers come up
+  in, see [GPS receivers][gps]
 - `show hardware` lists the devices plugged into each USB port, also
   behind a hub or on a locked port: ID, speed, maker and model, and
   whether the device may be used, see [USB Ports][usb]
@@ -159,6 +162,7 @@ All notable changes to the project are documented in this file.
 [roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
+[gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 
 [v26.09.0][] - 2026-09-30
 -------------------------
