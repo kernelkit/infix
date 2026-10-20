@@ -19,7 +19,7 @@
 			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
 			vpds = <&vpd>;
 			usb-ports = <&ssusb>;
-			usb-port-names = "USB";
+			usb-port-names = "usb";
 		};
 	};
 };

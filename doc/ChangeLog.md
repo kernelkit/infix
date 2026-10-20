@@ -95,6 +95,8 @@ All notable changes to the project are documented in this file.
   board documentation
 - Banana Pi BPI-R4: ports get permanent addresses derived from the chassis
   MAC of a `/mnt/aux/vpd.bin`, see [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
+- USB ports are named `usb`, `usb1`, `usb2` ..., lowercase like every
+  other hardware component.  Existing configurations are migrated
 - `show hardware` lists the devices plugged into each USB port, also
   behind a hub or on a locked port: ID, speed, maker and model, and
   whether the device may be used, see [USB Ports][usb]

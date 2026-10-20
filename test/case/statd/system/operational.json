@@ -18,7 +18,7 @@
       },
       {
         "class": "infix-hardware:usb",
-        "name": "USB1",
+        "name": "usb1",
         "state": {
           "admin-state": "locked",
           "oper-state": "enabled",
@@ -44,7 +44,7 @@
         "mfg-name": "GenesysLogic",
         "model-name": "USB2.1 Hub",
         "name": "usb-1-1",
-        "parent": "USB1",
+        "parent": "usb1",
         "uri": [
           "usb:///sys/bus/usb/devices/1-1"
         ]
@@ -68,7 +68,7 @@
         "mfg-name": "SanDisk",
         "model-name": "Ultra",
         "name": "usb-1-1.2",
-        "parent": "USB1",
+        "parent": "usb1",
         "serial-num": "4C530001230920115031",
         "uri": [
           "usb:///sys/bus/usb/devices/1-1.2"
@@ -76,7 +76,7 @@
       },
       {
         "class": "infix-hardware:usb",
-        "name": "USB2",
+        "name": "usb2",
         "state": {
           "admin-state": "locked",
           "oper-state": "enabled",

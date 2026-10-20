@@ -16,5 +16,5 @@
 &{/chosen/infix} {
 	/* Expose only the external USB 2.0 port for user management */
 	usb-ports = <&usb_host0_ehci>;
-	usb-port-names = "USB";
+	usb-port-names = "usb";
 };

@@ -26,7 +26,7 @@
 		infix {
 			vpds = <&vpd_cpu &vpd_product &vpd_power>;
 			usb-ports = <&cp0_usb3_1>;
-			usb-port-names = "USB";
+			usb-port-names = "usb";
 		};
 	};
 

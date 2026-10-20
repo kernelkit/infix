@@ -246,10 +246,10 @@ class QEMUSystem:
 
     def usb_ports(self):
         ports = [{
-            "name": "USB1",
+            "name": "usb1",
             "paths": ["/sys/bus/usb/devices/usb1"]
         }, {
-            "name": "USB2",
+            "name": "usb2",
             "paths": ["/sys/bus/usb/devices/usb2"]
         }]
         return ports
@@ -454,11 +454,11 @@ def generic_usb_ports(out):
     if not ports:
         return
 
-    # Single bus → "USB"; multiple → "USB1", "USB2", ... (by bus number)
+    # Single bus → "usb"; multiple → "usb1", "usb2", ... (by bus number)
     if len(ports) == 1:
-        out["usb-ports"] = [{"name": "USB", "paths": [ports[0]["path"]]}]
+        out["usb-ports"] = [{"name": "usb", "paths": [ports[0]["path"]]}]
     else:
-        out["usb-ports"] = [{"name": f"USB{p['num']}", "paths": [p["path"]]}
+        out["usb-ports"] = [{"name": f"usb{p['num']}", "paths": [p["path"]]}
                             for p in ports]
 
 

@@ -17,7 +17,7 @@
         "infix-hardware:vpd-data": {}
       },
       {
-        "name": "USB1",
+        "name": "usb1",
         "class": "infix-hardware:usb",
         "state": {
           "admin-state": "locked",
@@ -28,7 +28,7 @@
       {
         "name": "usb-1-1",
         "class": "infix-hardware:usb-device",
-        "parent": "USB1",
+        "parent": "usb1",
         "uri": [
           "usb:///sys/bus/usb/devices/1-1"
         ],
@@ -52,7 +52,7 @@
       {
         "name": "usb-1-1.2",
         "class": "infix-hardware:usb-device",
-        "parent": "USB1",
+        "parent": "usb1",
         "uri": [
           "usb:///sys/bus/usb/devices/1-1.2"
         ],
@@ -75,7 +75,7 @@
         }
       },
       {
-        "name": "USB2",
+        "name": "usb2",
         "class": "infix-hardware:usb",
         "state": {
           "admin-state": "locked",

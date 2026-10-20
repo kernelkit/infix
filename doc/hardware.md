@@ -118,7 +118,7 @@ is needed (see _alder.dtsi_ for full example).
  chosen {
    infix {
      usb-ports = <&cp0_usb3_1>;
-	 usb-port-names = "USB";
+	 usb-port-names = "usb";
    };
  };
 ```
@@ -155,12 +155,12 @@ Base MAC Address    : 4a:dc:d8:20:0d:85
 ──────────────────────────────────────────────────────────────
 <span class="title">USB Ports                                                    </span>
 <span class="header">NAME                                         STATE     OPER   </span>
-USB                                          unlocked  enabled
+usb                                          unlocked  enabled
 ──────────────────────────────────────────────────────────────
 <span class="title">Attached USB Devices                                         </span>
 <span class="header">PORT  BUS    VID:PID    SPEED  AUTHORIZED  DESCRIPTION           </span>
-USB   1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
-USB   1-1.2  0781:5581  5G     yes         SanDisk Ultra
+usb   1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+usb   1-1.2  0781:5581  5G     yes         SanDisk Ultra
 ──────────────────────────────────────────────────────────────
 <span class="title">Sensors                                                      </span>
 <span class="header">NAME                          VALUE                 STATUS    </span>
@@ -185,9 +185,9 @@ about them.  The URI of a device is its attachment point, which is
 what a component configuration, e.g. a modem, is anchored to with
 `set uri`:
 
-<pre class="cli"><code>admin@example:/> <b>show hardware USB</b>
-<span class="header">COMPONENT: USB                                                </span>
-  Name                : USB
+<pre class="cli"><code>admin@example:/> <b>show hardware usb</b>
+<span class="header">COMPONENT: usb                                                </span>
+  Name                : usb
   Class               : usb
   Admin State         : unlocked
   Oper State          : enabled
@@ -202,7 +202,7 @@ admin@example:/> <b>show hardware usb-1-1.2</b>
 <span class="header">COMPONENT: usb-1-1.2                                          </span>
   Name                : usb-1-1.2
   Class               : usb-device
-  Parent              : USB
+  Parent              : usb
   Model               : Ultra
   Manufacturer        : SanDisk
   Serial Number       : 4C530001230920115031
@@ -232,7 +232,7 @@ device it lives on as its `parent`.
 > configure context.)
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set hardware component USB state admin-state unlocked</b>
+admin@example:/config/> <b>set hardware component usb state admin-state unlocked</b>
 admin@example:/config/> <b>leave</b>
 admin@example:/>
 </code></pre>
