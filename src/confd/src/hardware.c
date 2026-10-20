@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+#include <ctype.h>
 #include <fnmatch.h>
 #include <ftw.h>
 #include <glob.h>
@@ -50,6 +51,43 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 	return 0;
 }
 
+/* Hubs stay authorized so the devices behind them stay listed */
+static int is_hub(const char *dir)
+{
+	char class[8] = "";
+	FILE *fp;
+
+	fp = fopenf("r", "%s/bDeviceClass", dir);
+	if (!fp)
+		return 0;
+	if (!fgets(class, sizeof(class), fp))
+		class[0] = 0;
+	fclose(fp);
+
+	return !strncmp(class, "09", 2);
+}
+
+/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hubs or the root hub (usb1) */
+static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+	char dir[PATH_MAX];
+	const char *dev;
+
+	if (typeflag != FTW_F || strcmp(basename((char *)fpath), "authorized"))
+		return 0;
+
+	strlcpy(dir, fpath, sizeof(dir));
+	dirname(dir);
+	dev = basename(dir);
+	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hub(dir))
+		return 0;
+
+	if (writedf(0, "w", "%s", fpath))
+		ERROR("Failed to deauthorize %s", fpath);
+
+	return 0;
+}
+
 static int usb_authorize_bus(const char *path, int enabled)
 {
 	char apath[PATH_MAX];
@@ -61,6 +99,8 @@ static int usb_authorize_bus(const char *path, int enabled)
 			ERROR("Failed to unauthorize %s", apath);
 			return 1;
 		}
+		if (realpath(path, apath))
+			nftw(apath, deauth_cb, 20, FTW_DEPTH | FTW_PHYS);
 		return 0;
 	}
 

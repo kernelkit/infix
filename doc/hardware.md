@@ -175,7 +175,9 @@ Linux to use.
 Every device plugged into a port is listed under *Attached USB Devices*, also
 when it sits behind a hub, and also when the port is locked.  On a
 locked port the device shows `no` in the AUTHORIZED column: the system
-sees it, but it cannot be used.  BUS is the device's position:
+sees it, but it cannot be used.  The exception is a hub plugged into a
+port that is already locked: the hub is listed, the devices behind it
+only once the port is unlocked.  BUS is the device's position:
 `1-1.2` is port 2 of the hub plugged into the USB port.
 
 The port and each device have a detail view with everything known

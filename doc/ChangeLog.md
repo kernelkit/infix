@@ -104,6 +104,8 @@ All notable changes to the project are documented in this file.
 - On boards with a USB 3 port, e.g., Banana Pi R3, R4 and R64, every
   port was listed twice, `USB` and `USB2`, or `USB1` and `USB12` with
   two ports.  Locking `USB` left the port usable by USB 3 devices
+- Locking a USB port left a device that was already plugged in and
+  authorized usable.  Locking now cuts it off, as the manual says
 - Fix `startup-config` failing validation on boards with parentheses in
   their model name, e.g., Banana Pi BPI-R4.  The DHCP client copies the
   model name to its `vendor-class` option, which v26.09.0 limited to a
