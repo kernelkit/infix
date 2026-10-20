@@ -98,9 +98,8 @@ class DTSystem:
         if data != {}:
             out["usb-ports"] = []
 
-        name_counts = {}  # Track how many times each name has been used
-
         for name, ph in data.items():
+            paths = []
             for dev in self.devices_from_ph(ph):
                 # Filter to only USB bus devices (usbN) that have authorized_default
                 # This avoids duplicate entries for platform devices and hub interfaces
@@ -124,18 +123,12 @@ class DTSystem:
                 except:
                     pass  # Fall back to original path if resolution fails
 
-                # Handle name deduplication: first use gets bare name, subsequent get numbers
-                if name not in name_counts:
-                    name_counts[name] = 1
-                    final_name = name
-                else:
-                    name_counts[name] += 1
-                    final_name = f"{name}{name_counts[name]}"
+                if usb_path not in paths:
+                    paths.append(usb_path)
 
-                out["usb-ports"].append({
-                    "name": final_name,
-                    "path": usb_path
-                })
+            # One port per name, a USB 3 controller has a root hub per speed
+            if paths:
+                out["usb-ports"].append({"name": name, "paths": sorted(paths)})
 
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
@@ -254,10 +247,10 @@ class QEMUSystem:
     def usb_ports(self):
         ports = [{
             "name": "USB1",
-            "path": "/sys/bus/usb/devices/usb1"
+            "paths": ["/sys/bus/usb/devices/usb1"]
         }, {
             "name": "USB2",
-            "path": "/sys/bus/usb/devices/usb2"
+            "paths": ["/sys/bus/usb/devices/usb2"]
         }]
         return ports
 
@@ -463,9 +456,10 @@ def generic_usb_ports(out):
 
     # Single bus → "USB"; multiple → "USB1", "USB2", ... (by bus number)
     if len(ports) == 1:
-        out["usb-ports"] = [{"name": "USB", "path": ports[0]["path"]}]
+        out["usb-ports"] = [{"name": "USB", "paths": [ports[0]["path"]]}]
     else:
-        out["usb-ports"] = [{"name": f"USB{p['num']}", "path": p["path"]} for p in ports]
+        out["usb-ports"] = [{"name": f"USB{p['num']}", "paths": [p["path"]]}
+                            for p in ports]
 
 
 def probe_dmisystem(out):

@@ -50,10 +50,41 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 	return 0;
 }
 
+static int usb_authorize_bus(const char *path, int enabled)
+{
+	char apath[PATH_MAX];
+
+	snprintf(apath, sizeof(apath), "%s/authorized_default", path);
+
+	if (!enabled) {
+		if (fexist(apath) && writedf(0, "w", "%s", apath)) {
+			ERROR("Failed to unauthorize %s", apath);
+			return 1;
+		}
+		return 0;
+	}
+
+	/*
+	 * Set authorized_default=1 on the bus BEFORE nftw
+	 * authorizes individual devices.  With FTW_DEPTH,
+	 * nftw visits children before the root-hub entry, so
+	 * without this a hub would be authorized first while
+	 * authorized_default is still 2.  Setting it here
+	 * ensures devices appearing behind an intermediate
+	 * hub are auto-authorized by the kernel as they probe.
+	 */
+	if (fexist(apath))
+		writedf(1, "w", "%s", apath);
+	if (realpath(path, apath))
+		nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
+
+	return 0;
+}
+
 static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 {
-	json_t *port, *ports;
-	int index;
+	json_t *port, *ports, *paths, *path;
+	size_t index, i;
 
 	ports = json_object_get(root, "usb-ports");
 	if (!ports)
@@ -68,41 +99,20 @@ static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 			continue;
 		}
 
-		if (!strcmp(name, json_string_value(obj))) {
-			char apath[PATH_MAX];
-			const char *path;
+		if (strcmp(name, json_string_value(obj)))
+			continue;
 
-			obj = json_object_get(port, "path");
-			if (!obj || !json_is_string(obj)) {
-				ERROR("Did not find USB hardware port (path) for %s", name);
+		paths = json_object_get(port, "paths");
+		if (!paths || !json_is_array(paths)) {
+			ERROR("Did not find USB hardware port (paths) for %s", name);
+			continue;
+		}
+
+		json_array_foreach(paths, i, path) {
+			if (!json_is_string(path))
 				continue;
-			}
-
-			path = json_string_value(obj);
-			snprintf(apath, sizeof(apath), "%s/authorized_default", path);
-
-			if (!enabled) {
-				if (fexist(apath)) {
-					if (writedf(0, "w", "%s", apath)) {
-						ERROR("Failed to unauthorize %s", apath);
-						return 1;
-					}
-				}
-			} else {
-				/*
-				 * Set authorized_default=1 on the bus BEFORE nftw
-				 * authorizes individual devices.  With FTW_DEPTH,
-				 * nftw visits children before the root-hub entry, so
-				 * without this a hub would be authorized first while
-				 * authorized_default is still 2.  Setting it here
-				 * ensures devices appearing behind an intermediate
-				 * hub are auto-authorized by the kernel as they probe.
-				 */
-				if (fexist(apath))
-					writedf(1, "w", "%s", apath);
-				if (realpath(path, apath))
-					nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
-			}
+			if (usb_authorize_bus(json_string_value(path), enabled))
+				return 1;
 		}
 	}
 
