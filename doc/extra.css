@@ -102,14 +102,26 @@ body {
     --md-primary-bg-color: #5c5f5c;
 }
 
-/* Center Markdown Tables (requires md_in_html extension) */
-.center-table {
+/* Caption numbers in bold: "Figure 1:", "Table 1:" */
+.md-typeset figcaption .caption-prefix {
+    font-weight: 700;
+}
+
+/* Center all Markdown tables, like figures */
+.md-typeset .md-typeset__scrollwrap {
     text-align: center;
 }
 
-.md-typeset .center-table :is(td,th):not([align]) {
-    /* Reset alignment for table cells */
-    text-align: initial;
+/* Material forces a 5rem minimum width on header cells, which makes
+ * narrow numeric tables sprawl past the page.  Fit headers to content. */
+.md-typeset table:not([class]) th {
+    min-width: 0;
+}
+
+/* Material's 1.4 line height leaves gaps between box-drawing characters
+ * in CLI output and diagrams.  Applies to code blocks as a whole. */
+.md-typeset pre {
+    line-height: 1.15;
 }
 
 /* CLI terminal output styling */
@@ -121,4 +133,61 @@ body {
     background-color: #e0e0e0;
     color: #1a1a1a;
     font-weight: bold;
+}
+
+/* ---- Print ----------------------------------------------------------------
+ * Material hides the chrome when printing; the rest is page layout. */
+@page {
+  size: A4;
+  margin: 18mm 16mm;
+}
+
+@media print {
+  /* Keep tables, figures, code and admonitions in one piece.  Caption
+   * blocks wrap the table in a figure, so the caption stays with it. */
+  .md-typeset figure,
+  .md-typeset .md-typeset__table,
+  .md-typeset pre,
+  .md-typeset .admonition {
+    break-inside: avoid;
+  }
+
+  /* Headings travel with what follows them, see print-keep.js */
+  .md-typeset h1,
+  .md-typeset h2,
+  .md-typeset h3,
+  .md-typeset h4 {
+    break-after: avoid;
+  }
+
+  .print-keep {
+    break-inside: avoid;
+  }
+
+  .md-typeset pre.cli .header {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Material's palette only switches colours on screen, so a reader on
+   * the dark palette would print light grey text on white paper. */
+  [data-md-color-scheme="slate"] {
+    --md-default-bg-color: #fff;
+    --md-default-fg-color: #34343c;
+    --md-default-fg-color--light: #54545c;
+    --md-default-fg-color--lighter: rgb(0 0 0 / 32%);
+    --md-default-fg-color--lightest: rgb(0 0 0 / 7%);
+    --md-typeset-color: #34343c;
+    --md-typeset-a-color: #0056b2;
+    --md-code-bg-color: #f6f8fa;
+    --md-code-fg-color: #3a3a3a;
+    color-scheme: light;
+  }
+
+  [data-md-color-scheme="slate"] .md-typeset h1,
+  [data-md-color-scheme="slate"] .md-typeset h2,
+  [data-md-color-scheme="slate"] .md-typeset h3,
+  [data-md-color-scheme="slate"] .md-typeset h4 {
+    color: #2a2a2a;
+  }
 }
