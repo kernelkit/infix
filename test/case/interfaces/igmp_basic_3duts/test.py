@@ -21,11 +21,16 @@ its own host port.
                           HOST
 ....
 
+Only dut1 has an IPv4 address, so it must win the IGMP querier
+election on all three DUTs.  All bridges have IPv6 enabled, so the MLD
+querier election is won by the DUT with the lowest link-local address.
+
 With no membership the group 224.1.1.1 is flooded to both `!memb` and
 `mrecv`.  Once `mrecv` joins, dut2 and dut1 learn the group on their
 links toward dut3, and `!memb` no longer receives it.
 """
 
+import ipaddress
 import infamy
 import infamy.iface as iface
 import infamy.multicast as mcast
@@ -39,6 +44,7 @@ def bridge(ports, address=None):
         "name": "br0",
         "enabled": True,
         "type": "infix-if-type:bridge",
+        "ipv6": {"enabled": True},
         "bridge": {
             "multicast": {
                 "snooping": True,
@@ -62,6 +68,32 @@ def bridge(ports, address=None):
     }
 
 
+def elected(duts, family):
+    """Return (index of the local querier, its address) if all DUTs agree"""
+    queriers = parallel(*(lambda dut=dut: iface.get_bridge_queriers(dut, "br0").get(family)
+                          for dut in duts))
+    if not all(queriers):
+        return None
+
+    addresses = {ipaddress.ip_address(q["address"]) for q in queriers}
+    if len(addresses) != 1:
+        return None
+
+    local = [i for i, q in enumerate(queriers) if q["local"]]
+    if len(local) != 1:
+        return None
+
+    return local[0], addresses.pop()
+
+
+def link_local(dut):
+    for addr in iface.get_ipv6_address(dut, "br0") or []:
+        ip = ipaddress.IPv6Address(addr["ip"])
+        if ip.is_link_local:
+            return ip
+    return None
+
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
@@ -80,10 +112,20 @@ with infamy.Test() as test:
         hnojoin = env["host"]["data2"]
         hreceive = env["host"]["data3"]
 
-    with test.step("Configure bridges with IGMP snooping on all DUTs, querier on dut1 with 10.0.0.1/24"):
+    with test.step("Configure bridges with multicast snooping and IPv6 on all DUTs, 10.0.0.1/24 on dut1"):
         parallel(lambda: dut1.put_config_dicts(bridge([d1data, d1link], "10.0.0.1")),
                  lambda: dut2.put_config_dicts(bridge([d2data, d2west, d2east])),
                  lambda: dut3.put_config_dicts(bridge([d3data, d3link])))
+
+    duts = [dut1, dut2, dut3]
+
+    with test.step("Verify dut1 is the IGMP querier on all DUTs"):
+        until(lambda: elected(duts, "ipv4") == (0, ipaddress.ip_address("10.0.0.1")), attempts=30)
+
+    with test.step("Verify the DUT with the lowest link-local address is the MLD querier on all DUTs"):
+        lladdrs = parallel(*(lambda dut=dut: until(lambda: link_local(dut)) for dut in duts))
+        lowest = min(lladdrs)
+        until(lambda: elected(duts, "ipv6") == (lladdrs.index(lowest), lowest), attempts=30)
 
     with infamy.IsolatedMacVlan(hsend) as send_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns, \

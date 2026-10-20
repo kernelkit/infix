@@ -183,3 +183,14 @@ def bridge_vlan_members(target, bridge, vid, tagging="untagged"):
         if vlan.get("vid") == vid:
             return set(vlan.get(tagging) or [])
     return set()
+
+
+def get_bridge_queriers(target, bridge):
+    """Fetch the active IGMP/MLD queriers of a bridge, keyed by family"""
+    interface = target.get_iface(bridge)
+    if interface is None:
+        return {}
+
+    brif = interface.get("bridge") or interface.get("infix-interfaces:bridge") or {}
+    queriers = brif.get("multicast", {}).get("active-querier", [])
+    return {q["family"]: q for q in queriers}
