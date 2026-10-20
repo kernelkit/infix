@@ -136,9 +136,8 @@ func validCSRF(r *http.Request, token string) bool {
 	if hdr := r.Header.Get("X-CSRF-Token"); hdr != "" {
 		return subtleConstantTimeEquals(hdr, token)
 	}
-	if err := r.ParseForm(); err != nil {
-		return false
-	}
+	// FormValue parses both urlencoded and multipart bodies; a prior
+	// ParseForm would make it skip the multipart (FormData) case.
 	return subtleConstantTimeEquals(r.FormValue("csrf"), token)
 }
 
