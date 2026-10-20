@@ -28,7 +28,8 @@ module infix-hardware {
                  identities, modem and sim configuration, modem-state and
                  sim-state operational data including location and
                  last-change, restart/reset/send-sms actions and
-                 status-update notification.";
+                 status-update notification.  Add usb-device class and
+                 operational data for devices detected on USB ports.";
     reference "internal";
   }
 
@@ -481,6 +482,10 @@ module infix-hardware {
     base iahw:hardware-class;
     description "This identity is used to describe a USB port";
   }
+  identity usb-device {
+    base iahw:hardware-class;
+    description "This identity is used to describe a device on a USB port";
+  }
   identity vpd {
     base iahw:hardware-class;
     description "This identity is used to a VPD memory on the device.";
@@ -550,7 +555,7 @@ module infix-hardware {
    *
    *   uri "usb:///sys/bus/usb/devices/3-1.2.1"
    *
-   * binds the component to that USB port.  Other URI schemes (CLEI
+   * binds the component to that USB device.  Other URI schemes (CLEI
    * URNs, ...) may coexist in the leaf-list and are ignored by the
    * system.  Values are validated at apply time, not by the model.
    */
@@ -656,6 +661,65 @@ module infix-hardware {
 	leaf extension-data {
 	  type string;
 	}
+      }
+    }
+
+    container usb-device {
+      when "derived-from-or-self(../iehw:class, 'ih:usb-device')";
+      config false;
+      description
+        "Device detected on a USB port.
+
+         The component's parent is the USB port the device is attached
+         to, also when the device sits behind a hub.  The component name
+         is the device's position on the bus, e.g. 'usb-1-1.2' is port 2
+         of the hub on port 1 of bus 1.";
+
+      leaf vendor-id {
+        type string {
+          pattern '[0-9a-f]{4}';
+        }
+        description "USB vendor ID.";
+      }
+      leaf product-id {
+        type string {
+          pattern '[0-9a-f]{4}';
+        }
+        description "USB product ID.";
+      }
+      leaf usb-version {
+        type string;
+        description "USB specification version the device reports, e.g. '3.20'.";
+      }
+      leaf speed {
+        type decimal64 {
+          fraction-digits 1;
+        }
+        units "Mbit/s";
+        description "Negotiated link speed, e.g. 480 or 5000.";
+      }
+      leaf authorized {
+        type boolean;
+        description
+          "The device is allowed to be used.
+
+           A device plugged into a locked port is detected but not
+           authorized.";
+      }
+      list interface {
+        key number;
+        description
+          "Function offered by the device.
+
+           Only known once the device is authorized.";
+        leaf number {
+          type uint8;
+          description "Interface number.";
+        }
+        leaf class {
+          type string;
+          description "USB interface class, e.g. 'mass-storage' or 'wireless'.";
+        }
       }
     }
 

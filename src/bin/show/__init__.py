@@ -102,11 +102,15 @@ def hardware(args: List[str]) -> None:
         if not comps:
             print(f"No hardware component named {args[0]}.")
             return
-        # A modem gets the detail view, with the URI to anchor it by
-        if not RAW_OUTPUT and comps[0].get("class") == "infix-hardware:modem":
+        # Modems and USB get the detail view, with the URI to anchor by
+        if not RAW_OUTPUT and comps[0].get("class") in ("infix-hardware:modem",
+                                                         "infix-hardware:usb",
+                                                         "infix-hardware:usb-device"):
             cli_pretty(data, "show-hardware-detail", args[0])
             return
-        hw["component"] = comps
+        # The component and what sits on it: devices on a USB port, sensors on a radio
+        hw["component"] = comps + [c for c in hw.get("component", [])
+                                   if c.get("parent") == args[0]]
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))

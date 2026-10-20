@@ -9,3 +9,8 @@ Base MAC Address    : 00:a0:85:00:03:00
 [7mNAME                                           STATE   OPER   [0m
 USB1                                           locked  enabled
 USB2                                           locked  enabled
+──────────────────────────────────────────────────────────────
+[1mAttached USB Devices[0m
+[7mPORT  BUS    VID:PID    SPEED  AUTHORIZED  DESCRIPTION            [0m
+USB1  1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+USB1  1-1.2  0781:5581  480M   no          SanDisk Ultra

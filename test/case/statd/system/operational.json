@@ -21,15 +21,66 @@
         "name": "USB1",
         "state": {
           "admin-state": "locked",
-          "oper-state": "enabled"
+          "oper-state": "enabled",
+          "usage-state": "active"
         }
+      },
+      {
+        "class": "infix-hardware:usb-device",
+        "hardware-rev": "6.63",
+        "infix-hardware:usb-device": {
+          "authorized": true,
+          "interface": [
+            {
+              "class": "hub",
+              "number": 0
+            }
+          ],
+          "product-id": "0610",
+          "speed": "480",
+          "usb-version": "2.00",
+          "vendor-id": "05e3"
+        },
+        "mfg-name": "GenesysLogic",
+        "model-name": "USB2.1 Hub",
+        "name": "usb-1-1",
+        "parent": "USB1",
+        "uri": [
+          "usb:///sys/bus/usb/devices/1-1"
+        ]
+      },
+      {
+        "class": "infix-hardware:usb-device",
+        "hardware-rev": "1.00",
+        "infix-hardware:usb-device": {
+          "authorized": false,
+          "interface": [
+            {
+              "class": "mass-storage",
+              "number": 0
+            }
+          ],
+          "product-id": "5581",
+          "speed": "480",
+          "usb-version": "3.20",
+          "vendor-id": "0781"
+        },
+        "mfg-name": "SanDisk",
+        "model-name": "Ultra",
+        "name": "usb-1-1.2",
+        "parent": "USB1",
+        "serial-num": "4C530001230920115031",
+        "uri": [
+          "usb:///sys/bus/usb/devices/1-1.2"
+        ]
       },
       {
         "class": "infix-hardware:usb",
         "name": "USB2",
         "state": {
           "admin-state": "locked",
-          "oper-state": "enabled"
+          "oper-state": "enabled",
+          "usage-state": "idle"
         }
       }
     ]
@@ -38,9 +89,9 @@
     "authentication": {
       "user": [
         {
+          "infix-system:shell": "infix-system:bash",
           "name": "admin",
-          "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A",
-          "infix-system:shell": "infix-system:bash"
+          "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
         }
       ]
     },

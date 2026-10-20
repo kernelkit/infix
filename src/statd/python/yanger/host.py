@@ -151,6 +151,16 @@ class Remotehost(Localhost):
             for subdir in ("rootfs", "run"):
                 os.makedirs(os.path.join(capdir, subdir), exist_ok=True)
 
+    def _capdir(self, path):
+        """Create path in the capture, replacing listdir() placeholders."""
+        dirname = os.path.join(self.capdir, "rootfs")
+        for part in path[1:].split("/"):
+            dirname = os.path.join(dirname, part)
+            if os.path.isfile(dirname):
+                os.unlink(dirname)
+        os.makedirs(dirname, exist_ok=True)
+        return dirname
+
     def now(self):
         timestamp = self._run(["date", "-u", "+%s"], default=None, log=True)
         if self.capdir:
@@ -189,10 +199,10 @@ class Remotehost(Localhost):
             return False
 
         if self.capdir:
-            dirname = os.path.join(self.capdir, "rootfs", os.path.dirname(path[1:]))
-            filname = os.path.join(self.capdir, "rootfs", path[1:])
-            os.makedirs(dirname, exist_ok=True)
-            open(filname, "w", encoding='utf-8').close()  # Create empty file
+            filname = os.path.join(self._capdir(os.path.dirname(path)),
+                                   os.path.basename(path))
+            if not os.path.exists(filname):
+                open(filname, "w", encoding='utf-8').close()  # Create empty file
 
         return True
 
@@ -200,9 +210,8 @@ class Remotehost(Localhost):
         out = self._run(("cat", path), default="", log=False)
 
         if self.capdir:
-            dirname = os.path.join(self.capdir, "rootfs", os.path.dirname(path[1:]))
-            filname = os.path.join(self.capdir, "rootfs", path[1:])
-            os.makedirs(dirname, exist_ok=True)
+            filname = os.path.join(self._capdir(os.path.dirname(path)),
+                                   os.path.basename(path))
             with open(filname, "w", encoding='utf-8') as f:
                 f.write(out)
 
@@ -212,10 +221,10 @@ class Remotehost(Localhost):
         entries = self._run(("ls", path), default="", log=False).split()
 
         if self.capdir:
-            dirname = os.path.join(self.capdir, "rootfs", path[1:])
-            os.makedirs(dirname, exist_ok=True)
+            dirname = self._capdir(path)
             for entry in entries:
-                open(os.path.join(dirname, entry), "a", encoding='utf-8').close()
+                if not os.path.exists(os.path.join(dirname, entry)):
+                    open(os.path.join(dirname, entry), "a", encoding='utf-8').close()
 
         return entries
 
