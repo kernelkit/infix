@@ -30,6 +30,9 @@ All notable changes to the project are documented in this file.
 - WiFi station roaming is now configurable with `station roaming`: turn it
   on or off, and set the signal strength below which the station looks for
   a stronger access point more often, see [Station Roaming][roaming]
+- WiFi access points now deliver buffered traffic to power-saving clients
+  on every beacon and offer them U-APSD, cutting the round-trip latency
+  of idle phones and laptops from hundreds of milliseconds to a few
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family

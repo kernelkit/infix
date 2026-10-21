@@ -1164,6 +1164,12 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 	fprintf(hostapd, "beacon_int=100\n");
 
+	/* Dozing clients wake on every beacon, bounds buffered reply latency to one beacon interval */
+	fprintf(hostapd, "dtim_period=1\n");
+
+	/* Let power-saving clients trigger delivery instead of waiting for a DTIM beacon */
+	fprintf(hostapd, "uapsd_advertisement_enabled=1\n");
+
 	/* Use short preamble for better throughput on modern clients */
 	fprintf(hostapd, "preamble=1\n");
 
