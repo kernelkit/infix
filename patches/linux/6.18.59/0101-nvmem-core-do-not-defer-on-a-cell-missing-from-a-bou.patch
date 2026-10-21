@@ -1,7 +1,7 @@
 From 1cedd4f515d32a445773f483f793f33117177855 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 13 Oct 2026 10:52:54 +0200
-Subject: [PATCH 101/128] nvmem: core: do not defer on a cell missing from a
+Subject: [PATCH 101/129] nvmem: core: do not defer on a cell missing from a
  bound layout
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

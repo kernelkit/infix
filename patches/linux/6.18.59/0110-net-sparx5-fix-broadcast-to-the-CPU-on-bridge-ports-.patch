@@ -1,7 +1,7 @@
 From 16c5c0ef246c191840948793fa90d6541b3ee549 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 8 Oct 2026 13:48:05 +0200
-Subject: [PATCH 110/128] net: sparx5: fix broadcast to the CPU on bridge ports
+Subject: [PATCH 110/129] net: sparx5: fix broadcast to the CPU on bridge ports
  without a PVID
 
 Ports of a bridge created with vlan_default_pvid 0 never deliver

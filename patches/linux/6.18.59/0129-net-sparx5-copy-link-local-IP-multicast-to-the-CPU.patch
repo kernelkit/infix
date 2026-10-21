@@ -1,0 +1,43 @@
+From ed9e476555217dd3aab8b3243f70b62df6992167 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 21 Oct 2026 11:00:08 +0200
+Subject: [PATCH 129/129] net: sparx5: copy link-local IP multicast to the CPU
+
+OSPF neighbours never come up over a bridge of LAN969x ports.  Hellos
+to 224.0.0.5 and ff02::5 are flooded to the other bridge ports, but no
+copy reaches the bridge itself.
+
+Link-local IP multicast is flooded with the PGID_IPV4_MC_CTRL and
+PGID_IPV6_MC_CTRL masks.  Neither has CPU copy enabled, and the bridge
+adds no MDB entry with the CPU for 224.0.0.x, nor for any group when
+snooping is disabled.
+
+Enable CPU copy on both flood PGIDs.  Frames from bridged ports carry
+offload_fwd_mark, so the bridge does not forward them again.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+index af63b982b6f5..6bfacc3af86f 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+@@ -720,11 +720,15 @@ static int sparx5_start(struct sparx5 *sparx5)
+ 	     pgid <= sparx5_get_pgid(sparx5, PGID_BCAST); pgid++)
+ 		sparx5_pgid_clear(sparx5, pgid);
+ 
+-	/* CPU copy CPU pgids */
++	/* CPU copy CPU pgids and link-local IP multicast */
+ 	spx5_wr(ANA_AC_PGID_MISC_CFG_PGID_CPU_COPY_ENA_SET(1), sparx5,
+ 		ANA_AC_PGID_MISC_CFG(sparx5_get_pgid(sparx5, PGID_CPU)));
+ 	spx5_wr(ANA_AC_PGID_MISC_CFG_PGID_CPU_COPY_ENA_SET(1), sparx5,
+ 		ANA_AC_PGID_MISC_CFG(sparx5_get_pgid(sparx5, PGID_BCAST)));
++	spx5_wr(ANA_AC_PGID_MISC_CFG_PGID_CPU_COPY_ENA_SET(1), sparx5,
++		ANA_AC_PGID_MISC_CFG(sparx5_get_pgid(sparx5, PGID_IPV4_MC_CTRL)));
++	spx5_wr(ANA_AC_PGID_MISC_CFG_PGID_CPU_COPY_ENA_SET(1), sparx5,
++		ANA_AC_PGID_MISC_CFG(sparx5_get_pgid(sparx5, PGID_IPV6_MC_CTRL)));
+ 
+ 	/* Recalc injected frame FCS */
+ 	for (idx = sparx5_get_internal_port(sparx5, SPX5_PORT_CPU_0);
