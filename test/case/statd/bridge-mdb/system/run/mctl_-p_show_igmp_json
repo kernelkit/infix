@@ -6,16 +6,38 @@
   "robustness": 2,
   "router-timeout": 255,
   "router-alert": true,
+  "topology-query": true,
+  "mrd-interval": 20,
   "fast-leave-ports": [ ],
-  "multicast-router-ports": [ ],
+  "multicast-router-ports": [
+    {
+      "bridge": "br0",
+      "ports": [ ]
+    }
+  ],
   "multicast-flood-ports": [ "e2", "e3", "e4" ],
   "multicast-queriers": [
     {
       "interface": "br0",
+      "family": "ipv4",
       "state": "up",
       "querier": "10.0.0.1",
       "interval": 125,
+      "router-timeout": 255,
+      "mrd": false,
       "version": 3
+    }
+  ],
+  "mld-queriers": [
+    {
+      "interface": "br0",
+      "family": "ipv6",
+      "state": "up",
+      "querier": "::",
+      "interval": 125,
+      "router-timeout": 255,
+      "mrd": false,
+      "version": 2
     }
   ],
   "multicast-groups": [

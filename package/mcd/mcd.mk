@@ -4,11 +4,15 @@
 #
 ################################################################################
 
-MCD_VERSION = 2.4
+MCD_VERSION = 3.1
 MCD_SITE    = https://github.com/kernelkit/mcd/releases/download/v$(MCD_VERSION)
 MCD_LICENSE = BSD-3-Clause
 MCD_LICENSE_FILES = LICENSE
-MCD_CONF_OPTS = --disable-silent-rules --with-group=wheel
+MCD_CONF_OPTS = --disable-silent-rules --with-group=wheel --without-zsh-completion-dir
+
+ifeq ($(BR2_PACKAGE_BASH_COMPLETION),)
+MCD_CONF_OPTS += --without-bash-completion-dir
+endif
 
 define MCD_INSTALL_CONFIG
 	$(INSTALL) -D -m 0644 $(@D)/mcd.conf $(TARGET_DIR)/etc/mcd.conf
