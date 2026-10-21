@@ -44,7 +44,6 @@ test:
 		           $(test-dir)/.log/last/xpath_coverage.log \
 		           $(test-dir)/.log/last/xpath_coverage_report.md \
 		           2>/dev/null || true; \
-		       chmod -R 777 $(test-dir)/.log; \
 		       exit $$rc'
 
 test-sh:
