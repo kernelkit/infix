@@ -544,15 +544,19 @@ admin@example:/config/interface/wifi2/> <b>leave</b>
 
 > [!NOTE]
 > Each WiFi interface gets its own MAC address, derived from the chassis
-> MAC by changing only the first octet: the locally administered bit is
-> set and the interface number plus one is stored in the upper bits.  On
-> a device with chassis MAC `00:53:00:c0:ff:ee`, `wifi0` becomes
-> `06:53:00:c0:ff:ee` and `wifi1` becomes `0a:53:00:c0:ff:ee`.  An
-> interface whose name has no number, such as `backhaul`, gets its number
-> from a hash of the name.  Several APs on one radio therefore never
-> share an address, and two devices of the same model never collide.  To
-> use a specific address instead, set `custom-phys-address` on the
-> interface, see [Common Interface Settings](iface.md#custom-mac-address).
+> MAC and numbered per radio.  Only the first two octets change, so it
+> never meets a port address: the locally administered bit is set and
+> the interface's position among the interfaces on its radio, sorted by
+> name, plus one is stored in the upper bits of the first octet, and
+> the radio's index is added to the second.  On a device with chassis
+> MAC `00:53:00:c0:ff:ee`, `wifi0` and `wifi1` on `radio0` become
+> `06:53:00:c0:ff:ee` and `0a:53:00:c0:ff:ee`, and the first interface
+> on `radio1` becomes `06:54:00:c0:ff:ee`.  Several APs on one radio
+> therefore never share an address, and two devices of the same model
+> never collide.  Adding or removing an interface on a radio moves the
+> others on that radio, which then restart.  To use a fixed address
+> instead, set `custom-phys-address` on the interface, see
+> [Common Interface Settings](iface.md#custom-mac-address).
 
 **Result:** Three SSIDs broadcasting simultaneously on radio0:
 

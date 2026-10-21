@@ -571,38 +571,56 @@ int wifi_add_deps(struct lyd_node *cif)
  * on a radio would otherwise inherit the radio's own address, and on
  * boards without a per-unit EEPROM that address is the vendor default,
  * shared by every unit of the model.  Derive from the chassis MAC
- * instead, encoded in the first octet so it never meets the port
- * addresses, which are chassis + N: set the locally administered bit
- * and add the interface number plus one in bits 2-7, e.g. wifi0 on
- * chassis 00:53:00:c0:ff:ee becomes 06:53:00:c0:ff:ee and wifi1
- * 0a:53:00:c0:ff:ee.  Names without a number use a hash of the name.
+ * instead, numbered per radio the way hostapd numbers its BSSes.  The
+ * port addresses are chassis + N in the low octets, and the chassis
+ * may already be locally administered, so keep to the high octets:
+ * the interface's position among those on its radio, sorted by name,
+ * plus one goes in bits 2-7 of the first octet along with the locally
+ * administered bit, the radio's index is added to the second.  On
+ * chassis 00:53:00:c0:ff:ee, wifi0 and wifi1 on radio0 become
+ * 06:53:00:c0:ff:ee and 0a:53:00:c0:ff:ee, the first interface on
+ * radio1 06:54:00:c0:ff:ee.
+ *
+ * The position moves when an interface is added to or removed from
+ * the radio, so dep_wifi_interfaces() has the others on that radio
+ * recreated then.  hostapd restarts all of them anyway.
  */
-static int wifi_default_addr(const char *ifname, char *buf, size_t len)
+static int wifi_default_addr(struct lyd_node *cif, char *buf, size_t len)
 {
+	const char *ifname = lydx_get_cattr(cif, "name");
+	const char *radio = lydx_get_cattr(lydx_get_child(cif, "wifi"), "radio");
 	const char *chassis = get_chassis_addr();
-	unsigned int n = 0;
+	unsigned int pos = 1, idx = 0;
+	struct lyd_node *sib;
+	struct ly_set *set;
 	uint8_t mac[6];
-	const char *p;
+	uint32_t i;
 
-	if (!chassis)
+	if (!chassis || !radio)
 		return -1;
 
 	if (sscanf(chassis, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
 		   &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6)
 		return -1;
 
-	for (p = ifname; *p && !isdigit((unsigned char)*p); p++)
-		;
-	if (*p) {
-		n = strtoul(p, NULL, 10);
-	} else {
-		for (p = ifname; *p; p++)
-			n = n * 33 + (unsigned char)*p;
+	set = lydx_find_xpathf(cif, "/ietf-hardware:hardware/component[class='infix-hardware:wifi']/name");
+	for (i = 0; set && i < set->count; i++) {
+		if (strcmp(lyd_get_value(set->dnodes[i]), radio) < 0)
+			idx++;
 	}
-	n = (n + 1) & 0x3f;
+	ly_set_free(set, NULL);
+
+	LYX_LIST_FOR_EACH(lyd_child(lyd_parent(cif)), sib, "interface") {
+		const char *r = lydx_get_cattr(lydx_get_child(sib, "wifi"), "radio");
+
+		if (r && !strcmp(r, radio) &&
+		    strcmp(lydx_get_cattr(sib, "name"), ifname) < 0)
+			pos++;
+	}
 
 	/* Locally administered, unicast whatever the chassis says */
-	mac[0] = 0x02 | (n << 2);
+	mac[0] = 0x02 | ((pos & 0x3f) << 2);
+	mac[1] += idx;
 
 	snprintf(buf, len, " addr %02x:%02x:%02x:%02x:%02x:%02x",
 		 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -676,7 +694,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 
 	/* A WDS link is created with its AP's address, see below */
 	if (mode != wifi_wds && interface_get_phys_addr(cif, custom))
-		wifi_default_addr(ifname, addr, sizeof(addr));
+		wifi_default_addr(cif, addr, sizeof(addr));
 
 	switch(mode) {
 	case wifi_station: {
