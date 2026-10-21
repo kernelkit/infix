@@ -53,28 +53,168 @@ def vpd_components(systemjson):
     return [vpd_component(vpd) for vpd in systemjson.get("vpd", {}).values()]
 
 
+USB_DEVICES = "/sys/bus/usb/devices"
+
+USB_CLASSES = {
+    "01": "audio",
+    "02": "communications",
+    "03": "hid",
+    "05": "physical",
+    "06": "image",
+    "07": "printer",
+    "08": "mass-storage",
+    "09": "hub",
+    "0a": "cdc-data",
+    "0b": "smart-card",
+    "0d": "content-security",
+    "0e": "video",
+    "0f": "personal-healthcare",
+    "10": "audio-video",
+    "dc": "diagnostic",
+    "e0": "wireless",
+    "ef": "miscellaneous",
+    "fe": "application-specific",
+    "ff": "vendor-specific",
+}
+
+
+def usb_read(path, attr):
+    data = HOST.read(os.path.join(path, attr))
+    return data.strip() if data else None
+
+
+def usb_interfaces(busid, entries):
+    interfaces = []
+    for entry in sorted(e for e in entries if e.startswith(f"{busid}:")):
+        path = os.path.join(USB_DEVICES, entry)
+        number = usb_read(path, "bInterfaceNumber")
+        if number is None:
+            continue
+        interface = {"number": int(number, 16)}
+        code = usb_read(path, "bInterfaceClass")
+        if code:
+            interface["class"] = USB_CLASSES.get(code, code)
+        interfaces.append(interface)
+
+    return interfaces
+
+
+def usb_device_component(port, busid, entries):
+    path = os.path.join(USB_DEVICES, busid)
+    component = {
+        "name": f"usb-{busid}",
+        "class": "infix-hardware:usb-device",
+        "parent": port,
+        "uri": [f"usb://{path}"],
+    }
+
+    for attr, leaf in (("manufacturer", "mfg-name"),
+                       ("product", "model-name"),
+                       ("serial", "serial-num")):
+        data = usb_read(path, attr)
+        if data:
+            component[leaf] = data
+
+    bcd = usb_read(path, "bcdDevice")
+    if bcd and len(bcd) == 4 and bcd.isdigit():
+        component["hardware-rev"] = f"{int(bcd[:2])}.{bcd[2:]}"
+
+    device = {}
+    for attr, leaf in (("idVendor", "vendor-id"), ("idProduct", "product-id"),
+                       ("version", "usb-version"), ("speed", "speed")):
+        data = usb_read(path, attr)
+        if data:
+            device[leaf] = data.lower() if leaf.endswith("-id") else data
+
+    authorized = usb_read(path, "authorized")
+    if authorized is not None:
+        device["authorized"] = authorized == "1"
+
+    interfaces = usb_interfaces(busid, entries)
+    if interfaces:
+        device["interface"] = interfaces
+
+    component["infix-hardware:usb-device"] = device
+    return component
+
+
 def usb_port_components(systemjson):
-    usb_ports = systemjson.get("usb-ports", [])
+    entries = HOST.listdir(USB_DEVICES)
+    devices = [e for e in entries if re.fullmatch(r"\d+-[\d.]+", e)]
 
-    ports = []
-    for usb_port in usb_ports:
-        port = {}
-        if usb_port.get("path"):
-            # Path now points to the USB device directory, not the attribute
-            base_path = usb_port["path"]
-            authorized_default_path = os.path.join(base_path, "authorized_default")
+    components = []
+    for usb_port in systemjson.get("usb-ports", []):
+        buses = [os.path.basename(p) for p in usb_port.get("paths", [])]
+        admin = [HOST.read(os.path.join(USB_DEVICES, bus, "authorized_default"))
+                 for bus in buses]
+        admin = [a.strip() for a in admin if a]
+        if not admin:
+            continue
 
-            if HOST.exists(authorized_default_path):
-                data = int(HOST.read(authorized_default_path))
-                enabled = "unlocked" if data == 1 else "locked"
-                port["state"] = {}
-                port["state"]["admin-state"] = enabled
-                port["name"] = usb_port["name"]
-                port["class"] = "infix-hardware:usb"
-                port["state"]["oper-state"] = "enabled"
-                ports.append(port)
+        name = usb_port["name"]
+        attached = sorted((d for d in devices if f"usb{d.split('-')[0]}" in buses),
+                          key=lambda d: [int(n) for n in re.split(r"[-.]", d)])
+        components.append({
+            "name": name,
+            "class": "infix-hardware:usb",
+            "state": {
+                "admin-state": "unlocked" if all(a == "1" for a in admin) else "locked",
+                "oper-state": "enabled",
+                "usage-state": "active" if attached else "idle",
+            },
+        })
+        components += [usb_device_component(name, d, entries) for d in attached]
 
-    return ports
+    return components
+
+
+def usb_tty_busid(dev):
+    """Bus id of the USB device behind a tty, e.g. /dev/gps0 -> 1-1.2"""
+    if not dev:
+        return None
+    tty = os.path.basename(HOST.run(("readlink", "-f", dev), default="").strip())
+    if not tty:
+        return None
+    path = HOST.run(("readlink", "-f", f"/sys/class/tty/{tty}/device"), default="").strip()
+    for part in reversed(path.split("/")):
+        if re.fullmatch(r"\d+-[\d.]+:\d+\.\d+", part):
+            return part.split(":")[0]
+    return None
+
+
+def usb_device_parents(components):
+    """Point WiFi radios and modems at the USB device they live on."""
+    devices = {c["name"] for c in components
+               if c.get("class") == "infix-hardware:usb-device"}
+    if not devices:
+        return components
+
+    entries = HOST.listdir(USB_DEVICES)
+
+    phys = {}
+    for entry in entries:
+        if ":" not in entry:
+            continue
+        for phy in HOST.listdir(os.path.join(USB_DEVICES, entry, "ieee80211")):
+            phys[phy] = f"usb-{entry.split(':')[0]}"
+
+    for component in components:
+        parent = None
+        if component.get("class") == "infix-hardware:wifi":
+            parent = phys.get(component["name"])
+        elif component.get("class") == "infix-hardware:modem":
+            for uri in component.get("uri", []):
+                if uri.startswith("usb:"):
+                    parent = f"usb-{os.path.basename(uri)}"
+        elif component.get("class") == "infix-hardware:gps":
+            busid = usb_tty_busid(component["infix-hardware:gps-receiver"].get("device"))
+            if busid:
+                parent = f"usb-{busid}"
+                component.setdefault("uri", [f"usb://{USB_DEVICES}/{busid}"])
+        if parent in devices:
+            component["parent"] = parent
+
+    return components
 
 
 def motherboard_component(systemjson):
@@ -942,13 +1082,13 @@ def operational():
 
     return {
         "ietf-hardware:hardware": {
-            "component": unique_names(
+            "component": usb_device_parents(unique_names(
                 inventory +
                 cpu_component(sensors) +
                 sensors +
                 wifi_radio_components() +
                 gps_receiver_components() +
                 modem_components()
-            ),
+            )),
         },
     }

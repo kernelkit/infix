@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+#include <ctype.h>
 #include <fnmatch.h>
 #include <ftw.h>
 #include <glob.h>
@@ -27,6 +28,8 @@
 #define GPSD_CONF                "/etc/finit.d/available/gpsd.conf"
 #define GPSD_CONF_NEXT           GPSD_CONF"+"
 #define GPSD_MAX_DEVICES         4
+#define GPS_RULES                "/run/udev/rules.d/20-gps-%s.rules"
+#define GPS_RULES_GLOB           "/run/udev/rules.d/20-gps-*.rules"
 #define MODEM_RULES              "/run/udev/rules.d/95-modem-%s.rules"
 #define MODEM_RULES_GLOB         "/run/udev/rules.d/95-modem-*.rules"
 #define MODEM_MANAGER_ENV        "/etc/default/modem-manager"
@@ -50,10 +53,80 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 	return 0;
 }
 
+/* Hubs stay authorized so the devices behind them stay listed */
+static int is_hub(const char *dir)
+{
+	char class[8] = "";
+	FILE *fp;
+
+	fp = fopenf("r", "%s/bDeviceClass", dir);
+	if (!fp)
+		return 0;
+	if (!fgets(class, sizeof(class), fp))
+		class[0] = 0;
+	fclose(fp);
+
+	return !strncmp(class, "09", 2);
+}
+
+/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hubs or the root hub (usb1) */
+static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+	char dir[PATH_MAX];
+	const char *dev;
+
+	if (typeflag != FTW_F || strcmp(basename((char *)fpath), "authorized"))
+		return 0;
+
+	strlcpy(dir, fpath, sizeof(dir));
+	dirname(dir);
+	dev = basename(dir);
+	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hub(dir))
+		return 0;
+
+	if (writedf(0, "w", "%s", fpath))
+		ERROR("Failed to deauthorize %s", fpath);
+
+	return 0;
+}
+
+static int usb_authorize_bus(const char *path, int enabled)
+{
+	char apath[PATH_MAX];
+
+	snprintf(apath, sizeof(apath), "%s/authorized_default", path);
+
+	if (!enabled) {
+		if (fexist(apath) && writedf(0, "w", "%s", apath)) {
+			ERROR("Failed to unauthorize %s", apath);
+			return 1;
+		}
+		if (realpath(path, apath))
+			nftw(apath, deauth_cb, 20, FTW_DEPTH | FTW_PHYS);
+		return 0;
+	}
+
+	/*
+	 * Set authorized_default=1 on the bus BEFORE nftw
+	 * authorizes individual devices.  With FTW_DEPTH,
+	 * nftw visits children before the root-hub entry, so
+	 * without this a hub would be authorized first while
+	 * authorized_default is still 2.  Setting it here
+	 * ensures devices appearing behind an intermediate
+	 * hub are auto-authorized by the kernel as they probe.
+	 */
+	if (fexist(apath))
+		writedf(1, "w", "%s", apath);
+	if (realpath(path, apath))
+		nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
+
+	return 0;
+}
+
 static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 {
-	json_t *port, *ports;
-	int index;
+	json_t *port, *ports, *paths, *path;
+	size_t index, i;
 
 	ports = json_object_get(root, "usb-ports");
 	if (!ports)
@@ -68,41 +141,20 @@ static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 			continue;
 		}
 
-		if (!strcmp(name, json_string_value(obj))) {
-			char apath[PATH_MAX];
-			const char *path;
+		if (strcmp(name, json_string_value(obj)))
+			continue;
 
-			obj = json_object_get(port, "path");
-			if (!obj || !json_is_string(obj)) {
-				ERROR("Did not find USB hardware port (path) for %s", name);
+		paths = json_object_get(port, "paths");
+		if (!paths || !json_is_array(paths)) {
+			ERROR("Did not find USB hardware port (paths) for %s", name);
+			continue;
+		}
+
+		json_array_foreach(paths, i, path) {
+			if (!json_is_string(path))
 				continue;
-			}
-
-			path = json_string_value(obj);
-			snprintf(apath, sizeof(apath), "%s/authorized_default", path);
-
-			if (!enabled) {
-				if (fexist(apath)) {
-					if (writedf(0, "w", "%s", apath)) {
-						ERROR("Failed to unauthorize %s", apath);
-						return 1;
-					}
-				}
-			} else {
-				/*
-				 * Set authorized_default=1 on the bus BEFORE nftw
-				 * authorizes individual devices.  With FTW_DEPTH,
-				 * nftw visits children before the root-hub entry, so
-				 * without this a hub would be authorized first while
-				 * authorized_default is still 2.  Setting it here
-				 * ensures devices appearing behind an intermediate
-				 * hub are auto-authorized by the kernel as they probe.
-				 */
-				if (fexist(apath))
-					writedf(1, "w", "%s", apath);
-				if (realpath(path, apath))
-					nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
-			}
+			if (usb_authorize_bus(json_string_value(path), enabled))
+				return 1;
 		}
 	}
 
@@ -1510,12 +1562,15 @@ static int modem_rule_port(const char *path, char *buf, size_t len)
 		return -1;
 
 	while (fgets(line, sizeof(line), fp)) {
-		char *ptr = strstr(line, "KERNEL==\"");
+		char *ptr = strstr(line, "KERNELS==\"");
 		char *end;
 
-		if (!ptr)
+		if (ptr)
+			ptr += strlen("KERNELS==\"");
+		else if ((ptr = strstr(line, "KERNEL==\"")))
+			ptr += strlen("KERNEL==\"");
+		else
 			continue;
-		ptr += strlen("KERNEL==\"");
 		end = strchr(ptr, '"');
 		if (!end)
 			continue;
@@ -1553,6 +1608,73 @@ static int modem_port_find(char (*ports)[64], int num, const char *port)
 	}
 
 	return -1;
+}
+
+/*
+ * A GPS receiver anchored with a usb: URI gets a rules file naming its
+ * tty /dev/<name>, and the gpsd rules leave it alone, so the name no
+ * longer depends on enumeration order.
+ */
+static void gps_gen_rules(struct lyd_node *config)
+{
+	char trig[GPSD_MAX_DEVICES * 2][64];
+	char used[GPSD_MAX_DEVICES][64];
+	int num_trig = 0, num_used = 0;
+	struct lyd_node *cifs, *comp;
+	glob_t gl = { 0 };
+	size_t i;
+	int p;
+
+	if (glob(GPS_RULES_GLOB, 0, NULL, &gl) == 0) {
+		for (i = 0; i < gl.gl_pathc; i++) {
+			if (num_trig < GPSD_MAX_DEVICES &&
+			    !modem_rule_port(gl.gl_pathv[i], trig[num_trig], sizeof(trig[0])))
+				num_trig++;
+			unlink(gl.gl_pathv[i]);
+		}
+	}
+	globfree(&gl);
+
+	cifs = lydx_get_descendant(config, "hardware", "component", NULL);
+	LYX_LIST_FOR_EACH(cifs, comp, "component") {
+		const char *cls = lydx_get_cattr(comp, "class");
+		const char *name;
+		char port[64];
+		FILE *fp;
+
+		if (!cls || strcmp(cls, "infix-hardware:gps"))
+			continue;
+		if (!modem_usb_port(comp, port, sizeof(port)))
+			continue;
+
+		name = lydx_get_cattr(comp, "name");
+		if (modem_port_find(used, num_used, port) >= 0) {
+			ERROR("GPS %s: USB port %s already claimed, ignoring", name, port);
+			continue;
+		}
+		if (num_used < GPSD_MAX_DEVICES)
+			strlcpy(used[num_used++], port, sizeof(used[0]));
+		if (num_trig < GPSD_MAX_DEVICES * 2 &&
+		    modem_port_find(trig, num_trig, port) < 0)
+			strlcpy(trig[num_trig++], port, sizeof(trig[0]));
+
+		if (!fexistf("/sys/bus/usb/devices/%s", port))
+			NOTE("GPS %s: no device at USB port %s (yet)", name, port);
+
+		fp = fopenf("w", GPS_RULES, name);
+		if (!fp) {
+			ERRNO("Failed creating udev rules for %s", name);
+			continue;
+		}
+
+		fprintf(fp, "# Generated by confd, do not edit.\n");
+		fprintf(fp, "SUBSYSTEM==\"tty\", KERNELS==\"%s\", ENV{INFIX_GPS}=\"%s\", "
+			"SYMLINK+=\"%s\", OPTIONS+=\"link_priority=100\"\n", port, name, name);
+		fclose(fp);
+	}
+
+	for (p = 0; p < num_trig; p++)
+		modem_trigger_port(trig[p]);
 }
 
 /*
@@ -1771,6 +1893,8 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			}
 			if (class && !strcmp(class, "infix-hardware:modem"))
 				modem_changed = 1;
+			if (class && !strcmp(class, "infix-hardware:gps"))
+				gps_changed = 1;
 			continue;
 		}
 
@@ -1889,6 +2013,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			break;
 
 		case SR_EV_DONE:
+			gps_gen_rules(config);
 			if (fexist(GPSD_CONF_NEXT)) {
 				unlink(GPSD_CONF);
 				rename(GPSD_CONF_NEXT, GPSD_CONF);

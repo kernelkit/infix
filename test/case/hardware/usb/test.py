@@ -8,6 +8,10 @@ this behavior during reboot. This test does not involve the actual use of
 the USB port; it only ensures the configured state is consistent with the
 hardware state.  Removing the configuration of a port locks it.
 
+The target has a USB stick plugged in.  It is expected to be listed
+under its port the whole time: not authorized while the port is
+locked, authorized as mass storage once the port is unlocked.
+
 If this pass you can be certain that the configuration of the USB
 port is handled correctly.
 
@@ -29,14 +33,28 @@ def verify_usb_state(target, ports, state):
         until(lambda: usb.get_usb_state(target, port) == state)
 
 
+def verify_usb_devices(target, devices, authorized):
+    for name in devices:
+        until(lambda: usb.get_usb_device(target, name).get("authorized") is authorized)
+
+
+def verify_usb_stick(target, devices):
+    until(lambda: any("mass-storage" in usb.get_usb_device(target, name).get("classes", [])
+                      for name in devices))
+
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         available = usb.get_usb_ports(target)
+        devices = [d["name"] for d in usb.get_usb_devices(target)
+                   if d["parent"] in available]
 
         if len(available) < 1:
             test.skip()
+        if not devices:
+            test.fail()
 
     with test.step("Unlock all USB ports"):
         set_usb_state(target, available, "unlocked")
@@ -44,11 +62,18 @@ with infamy.Test() as test:
     with test.step("Verify that all USB ports are unlocked"):
         verify_usb_state(target, available, "unlocked")
 
+    with test.step("Verify that the USB stick is authorized"):
+        verify_usb_devices(target, devices, True)
+        verify_usb_stick(target, devices)
+
     with test.step("Lock all USB ports"):
         set_usb_state(target, available, "locked")
 
     with test.step("Verify that all USB ports are locked"):
         verify_usb_state(target, available, "locked")
+
+    with test.step("Verify that the USB stick is still listed, not authorized"):
+        verify_usb_devices(target, devices, False)
 
     with test.step("Unlock all USB ports again"):
         set_usb_state(target, available, "unlocked")

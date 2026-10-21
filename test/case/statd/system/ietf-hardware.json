@@ -17,20 +17,71 @@
         "infix-hardware:vpd-data": {}
       },
       {
+        "name": "usb1",
+        "class": "infix-hardware:usb",
         "state": {
           "admin-state": "locked",
-          "oper-state": "enabled"
-        },
-        "name": "USB1",
-        "class": "infix-hardware:usb"
+          "oper-state": "enabled",
+          "usage-state": "active"
+        }
       },
       {
+        "name": "usb-1-1",
+        "class": "infix-hardware:usb-device",
+        "parent": "usb1",
+        "uri": [
+          "usb:///sys/bus/usb/devices/1-1"
+        ],
+        "mfg-name": "GenesysLogic",
+        "model-name": "USB2.1 Hub",
+        "hardware-rev": "6.63",
+        "infix-hardware:usb-device": {
+          "vendor-id": "05e3",
+          "product-id": "0610",
+          "usb-version": "2.00",
+          "speed": "480",
+          "authorized": true,
+          "interface": [
+            {
+              "number": 0,
+              "class": "hub"
+            }
+          ]
+        }
+      },
+      {
+        "name": "usb-1-1.2",
+        "class": "infix-hardware:usb-device",
+        "parent": "usb1",
+        "uri": [
+          "usb:///sys/bus/usb/devices/1-1.2"
+        ],
+        "mfg-name": "SanDisk",
+        "model-name": "Ultra",
+        "serial-num": "4C530001230920115031",
+        "hardware-rev": "1.00",
+        "infix-hardware:usb-device": {
+          "vendor-id": "0781",
+          "product-id": "5581",
+          "usb-version": "3.20",
+          "speed": "480",
+          "authorized": false,
+          "interface": [
+            {
+              "number": 0,
+              "class": "mass-storage"
+            }
+          ]
+        }
+      },
+      {
+        "name": "usb2",
+        "class": "infix-hardware:usb",
         "state": {
           "admin-state": "locked",
-          "oper-state": "enabled"
-        },
-        "name": "USB2",
-        "class": "infix-hardware:usb"
+          "oper-state": "enabled",
+          "usage-state": "idle"
+        }
       }
     ]
   }

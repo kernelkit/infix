@@ -136,6 +136,7 @@
     <ACTION sym="script">
       ls /sys/class/ieee80211/ 2>/dev/null
       jq -r '(.["usb-ports"][]?.name), (.modem[]?.name)' /run/system.json 2>/dev/null
+      ls /sys/bus/usb/devices/ 2>/dev/null | grep -E '^[0-9]+-[0-9.]+$' | sed 's/^/usb-/'
     </ACTION>
   </COMPL>
   <ACTION sym="STRING"/>

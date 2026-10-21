@@ -866,6 +866,35 @@ class USBport:
         self.oper = get_json_data('', self.data, 'state', 'oper-state')
 
 
+class USBdevice:
+    def __init__(self, data):
+        dev = data.get('infix-hardware:usb-device', {})
+        self.port = data.get('parent', '')
+        self.name = data.get('name', '').removeprefix('usb-')
+        self.uri = next(iter(data.get('uri', [])), '')
+        vid, pid = dev.get('vendor-id'), dev.get('product-id')
+        self.id = f"{vid}:{pid}" if vid and pid else ''
+        self.speed = self._speed(dev.get('speed'))
+        self.authorized = {True: 'yes', False: 'no'}.get(dev.get('authorized'), '')
+        mfg, model = data.get('mfg-name', ''), data.get('model-name', '')
+        if mfg and model.lower().startswith(mfg.split()[0].lower()):
+            mfg = ''
+        self.description = " ".join(filter(None, (mfg, model)))
+        if len(self.description) > 32:
+            self.description = model or mfg
+        if len(self.description) > 32:
+            self.description = self.description[:31] + "…"
+
+    @staticmethod
+    def _speed(speed):
+        if speed is None:
+            return ''
+        mbps = float(speed)
+        if mbps >= 1000:
+            return f"{mbps / 1000:g}G"
+        return f"{mbps:g}M"
+
+
 class Sensor:
     def __init__(self, data):
         self.data = data
@@ -2543,6 +2572,7 @@ def show_hardware(json):
 
     motherboard = [c for c in components if c.get("class") == "iana-hardware:chassis"]
     usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
+    usb_devices = [c for c in components if c.get("class") == "infix-hardware:usb-device"]
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
     gps_receivers = [c for c in components if c.get("class") == "infix-hardware:gps"]
@@ -2686,6 +2716,25 @@ def show_hardware(json):
 
         usb_table.print()
 
+    if usb_devices:
+        Decore.title("Attached USB Devices", width)
+
+        dev_table = SimpleTable([
+            Column('PORT'),
+            Column('BUS'),
+            Column('VID:PID'),
+            Column('SPEED'),
+            Column('AUTHORIZED'),
+            Column('DESCRIPTION', flexible=True)
+        ], min_width=width)
+
+        for component in usb_devices:
+            dev = USBdevice(component)
+            dev_table.row(dev.port, dev.name, dev.id, dev.speed, dev.authorized,
+                          dev.description)
+
+        dev_table.print()
+
     if modem_table:
         Decore.title("Cellular Modems", width)
         modem_table.adjust_padding(width)
@@ -2753,24 +2802,59 @@ def show_hardware_detail(json, ref):
     cls = comp.get("class", "")
     state = comp.get("state", {})
     ms = comp.get("infix-hardware:modem-state", {})
+    usb = comp.get("infix-hardware:usb-device", {})
+    dev = USBdevice(comp)
 
     for label, val in (
-        ("Name",         comp.get("name", "")),
-        ("Class",        cls.split(":")[-1]),
-        ("Model",        comp.get("model-name", "") or ms.get("model", "")),
-        ("Manufacturer", comp.get("mfg-name", "") or ms.get("manufacturer", "")),
-        ("USB ID",       _usb_id(ms)),
-        ("URI",          ", ".join(comp.get("uri", []))),
-        ("Admin State",  state.get("admin-state", "")),
-        ("Oper State",   state.get("oper-state", "")),
-        ("Alarm State",  state.get("alarm-state", "")),
+        ("Name",          comp.get("name", "")),
+        ("Class",         cls.split(":")[-1]),
+        ("Description",   comp.get("description", "")),
+        ("Parent",        comp.get("parent", "")),
+        ("Model",         comp.get("model-name", "") or ms.get("model", "")),
+        ("Manufacturer",  comp.get("mfg-name", "") or ms.get("manufacturer", "")),
+        ("Serial Number", comp.get("serial-num", "")),
+        ("Hardware Rev",  comp.get("hardware-rev", "")),
+        ("USB ID",        _usb_id(ms) or dev.id),
+        ("USB Version",   usb.get("usb-version", "")),
+        ("Speed",         f"{usb['speed']} Mbit/s" if usb.get("speed") else ""),
+        ("Authorized",    dev.authorized),
+        ("URI",           ", ".join(comp.get("uri", []))),
+        ("Admin State",   state.get("admin-state", "")),
+        ("Oper State",    state.get("oper-state", "")),
+        ("Usage State",   state.get("usage-state", "")),
+        ("Alarm State",   state.get("alarm-state", "")),
     ):
         if val:
             print(f"  {label:<20}: {val}")
 
+    for interface in usb.get("interface", []):
+        print(f"  {'Interface ' + str(interface.get('number', '')):<20}: "
+              f"{interface.get('class', '')}")
+
     if cls == "infix-hardware:modem":
         print()
         print(f"See 'show modem {ref}' for cellular status.")
+
+    devices = [c for c in components if c.get("parent") == ref
+               and c.get("class") == "infix-hardware:usb-device"]
+    if cls == "infix-hardware:usb":
+        print()
+        Decore.title("Attached USB Devices", width)
+        if not devices:
+            print("  none")
+            return
+
+        dev_table = SimpleTable([
+            Column('URI'),
+            Column('VID:PID'),
+            Column('SPEED'),
+            Column('AUTHORIZED'),
+            Column('DESCRIPTION', flexible=True)
+        ], min_width=width)
+        for component in devices:
+            dev = USBdevice(component)
+            dev_table.row(dev.uri, dev.id, dev.speed, dev.authorized, dev.description)
+        dev_table.print()
 
 
 def resolve_container_network(network, all_ifaces):

@@ -437,7 +437,7 @@ YANG models.
         }
       },
       {
-        "name": "USB",
+        "name": "usb",
         "class": "infix-hardware:usb",
         "state": {
           "admin-state": "unlocked",

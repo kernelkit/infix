@@ -95,9 +95,22 @@ All notable changes to the project are documented in this file.
   board documentation
 - Banana Pi BPI-R4: ports get permanent addresses derived from the chassis
   MAC of a `/mnt/aux/vpd.bin`, see [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
+- USB ports are named `usb`, `usb1`, `usb2` ..., lowercase like every
+  other hardware component.  Existing configurations are migrated
+- A GPS receiver can be anchored to its USB device with `set uri`, like
+  a modem, so `gps0` stays `gps0` whatever order the receivers come up
+  in, see [GPS receivers][gps]
+- `show hardware` lists the devices plugged into each USB port, also
+  behind a hub or on a locked port: ID, speed, maker and model, and
+  whether the device may be used, see [USB Ports][usb]
 
 ### Fixes
 
+- On boards with a USB 3 port, e.g., Banana Pi R3, R4 and R64, every
+  port was listed twice, `USB` and `USB2`, or `USB1` and `USB12` with
+  two ports.  Locking `USB` left the port usable by USB 3 devices
+- Locking a USB port left a device that was already plugged in and
+  authorized usable.  Locking now cuts it off, as the manual says
 - Fix `startup-config` failing validation on boards with parentheses in
   their model name, e.g., Banana Pi BPI-R4.  The DHCP client copies the
   model name to its `vendor-class` option, which v26.09.0 limited to a
@@ -148,6 +161,8 @@ All notable changes to the project are documented in this file.
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 [roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming
 [modem]: https://www.kernelkit.org/infix/latest/modem/
+[usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
+[gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 
 [v26.09.0][] - 2026-09-30
 -------------------------

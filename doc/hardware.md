@@ -105,6 +105,30 @@ admin@example:/config/> <b>set hardware component gps0</b>
 admin@example:/config/> <b>leave</b>
 </code></pre>
 
+### Anchor a GPS receiver to a USB port
+
+Receivers are numbered in the order they are found, so with more than
+one the names can swap between boots.  Anchor each receiver to the USB
+device it is plugged into and it keeps its name.  The detail view of a
+receiver shows the URI of its device, copy it into the configuration:
+
+<pre class="cli"><code>admin@example:/> <b>show hardware gps0</b>
+<span class="header">COMPONENT: gps0                                               </span>
+  Name                : gps0
+  Class               : gps
+  Parent              : usb-1-1.2
+  URI                 : usb:///sys/bus/usb/devices/1-1.2
+admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit hardware component gps0</b>
+admin@example:/config/hardware/component/gps0/> <b>set uri usb:///sys/bus/usb/devices/1-1.2</b>
+admin@example:/config/hardware/component/gps0/> <b>leave</b>
+</code></pre>
+
+A device with several serial ports, e.g. a cellular modem with an NMEA
+port, is anchored by that port's interface: append the interface
+number to the URI, `usb:///sys/bus/usb/devices/1-1.2:1.1` for
+interface 1.
+
 To use a GPS receiver as an NTP reference clock source, see
 [NTP — GPS Reference Clock](ntp.md#gps-reference-clock).
 
@@ -118,7 +142,7 @@ is needed (see _alder.dtsi_ for full example).
  chosen {
    infix {
      usb-ports = <&cp0_usb3_1>;
-	 usb-port-names = "USB";
+	 usb-port-names = "usb";
    };
  };
 ```
@@ -155,7 +179,12 @@ Base MAC Address    : 4a:dc:d8:20:0d:85
 ──────────────────────────────────────────────────────────────
 <span class="title">USB Ports                                                    </span>
 <span class="header">NAME                                         STATE     OPER   </span>
-USB                                          unlocked  enabled
+usb                                          unlocked  enabled
+──────────────────────────────────────────────────────────────
+<span class="title">Attached USB Devices                                         </span>
+<span class="header">PORT  BUS    VID:PID    SPEED  AUTHORIZED  DESCRIPTION           </span>
+usb   1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+usb   1-1.2  0781:5581  5G     yes         SanDisk Ultra
 ──────────────────────────────────────────────────────────────
 <span class="title">Sensors                                                      </span>
 <span class="header">NAME                          VALUE                 STATUS    </span>
@@ -167,6 +196,58 @@ An USB port can be in two states _unlocked_ and _locked_. When a port is
 locked, all connected devices will get power, but never authorized by
 Linux to use.
 
+Every device plugged into a port is listed under *Attached USB Devices*, also
+when it sits behind a hub, and also when the port is locked.  On a
+locked port the device shows `no` in the AUTHORIZED column: the system
+sees it, but it cannot be used.  The exception is a hub plugged into a
+port that is already locked: the hub is listed, the devices behind it
+only once the port is unlocked.  BUS is the device's position:
+`1-1.2` is port 2 of the hub plugged into the USB port.
+
+The port and each device have a detail view with everything known
+about them.  The URI of a device is its attachment point, which is
+what a component configuration, e.g. a modem, is anchored to with
+`set uri`:
+
+<pre class="cli"><code>admin@example:/> <b>show hardware usb</b>
+<span class="header">COMPONENT: usb                                                </span>
+  Name                : usb
+  Class               : usb
+  Admin State         : unlocked
+  Oper State          : enabled
+  Usage State         : active
+
+──────────────────────────────────────────────────────────────
+<span class="title">Attached USB Devices                                         </span>
+<span class="header">URI                               VID:PID    SPEED  AUTHORIZED  DESCRIPTION            </span>
+usb:///sys/bus/usb/devices/1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+usb:///sys/bus/usb/devices/1-1.2  0781:5581  5G     yes         SanDisk Ultra
+admin@example:/> <b>show hardware usb-1-1.2</b>
+<span class="header">COMPONENT: usb-1-1.2                                          </span>
+  Name                : usb-1-1.2
+  Class               : usb-device
+  Parent              : usb
+  Model               : Ultra
+  Manufacturer        : SanDisk
+  Serial Number       : 4C530001230920115031
+  Hardware Rev        : 1.00
+  USB ID              : 0781:5581
+  USB Version         : 3.20
+  Speed               : 5000 Mbit/s
+  Authorized          : yes
+  URI                 : usb:///sys/bus/usb/devices/1-1.2
+  Interface 0         : mass-storage
+</code></pre>
+
+A USB 3 port is one port, whether the device runs at USB 2 or USB 3
+speed.  Locking it locks both.
+
+The same information is available over NETCONF and RESTCONF.  Each
+device is a hardware component of class `infix-hardware:usb-device`
+whose `parent` is the USB port and whose `uri` is the attachment
+point.  A WiFi radio, GPS receiver or cellular modem on USB has the
+device it lives on as its `parent`.
+
 ### Configure USB port
 
 > [!NOTE]
@@ -175,7 +256,7 @@ Linux to use.
 > configure context.)
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set hardware component USB state admin-state unlocked</b>
+admin@example:/config/> <b>set hardware component usb state admin-state unlocked</b>
 admin@example:/config/> <b>leave</b>
 admin@example:/>
 </code></pre>
