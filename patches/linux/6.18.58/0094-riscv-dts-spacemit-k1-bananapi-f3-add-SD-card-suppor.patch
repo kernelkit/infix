@@ -1,0 +1,88 @@
+From eebdee62bcfcd2e11b34f2b205d527b26259a380 Mon Sep 17 00:00:00 2001
+From: Iker Pedrosa <ikerpedrosam@gmail.com>
+Date: Fri, 15 May 2026 12:49:01 +0200
+Subject: [PATCH 094/107] riscv: dts: spacemit: k1-bananapi-f3: add SD card
+ support with UHS modes
+
+Add complete SD card controller support with UHS high-speed modes.
+
+- Enable sdhci0 controller with 4-bit bus width
+- Configure card detect GPIO with GPIO_ACTIVE_LOW and internal pull-up
+  support
+- Connect vmmc-supply to buck4 for 3.3V card power
+- Connect vqmmc-supply to aldo1 for 1.8V/3.3V I/O switching
+- Add dual pinctrl states for voltage-dependent pin configuration
+- Support UHS-I SDR25, SDR50, and SDR104 modes
+- Add stable MMC device aliases (mmc0 = eMMC, mmc1 = SD card)
+
+This enables full SD card functionality including high-speed UHS modes
+for improved performance.
+
+Suggested-by: Anand Moon <linux.amoon@gmail.com>
+Tested-by: Anand Moon <linux.amoon@gmail.com>
+Tested-by: Margherita Milani <margherita.milani@amarulasolutions.com>
+Tested-by: Aurelien Jarno <aurelien@aurel32.net>
+Reviewed-by: Aurelien Jarno <aurelien@aurel32.net>
+Signed-off-by: Iker Pedrosa <ikerpedrosam@gmail.com>
+Link: https://patch.msgid.link/20260515-orangepi-sd-card-uhs-v10-3-094af27e310d@gmail.com
+Signed-off-by: Yixun Lan <dlan@kernel.org>
+[ backport: only the sdhci0 node and its aliases, USB3 hub and SPI parts dropped ]
+(cherry picked from commit c76e2f058cbcab84e4a703f26857a58bdf6a0042)
+---
+ .../boot/dts/spacemit/k1-bananapi-f3.dts      | 25 +++++++++++++++++--
+ 1 file changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
+index a1ba3f212690..a9588f3a3dbe 100644
+--- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
++++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
+@@ -14,6 +14,9 @@ aliases {
+ 		ethernet0 = &eth0;
+ 		ethernet1 = &eth1;
+ 		serial0 = &uart0;
++		i2c8 = &i2c8;
++		mmc0 = &emmc;
++		mmc1 = &sdhci0;
+ 	};
+ 
+ 	chosen {
+@@ -152,7 +155,7 @@ buck3 {
+ 				regulator-always-on;
+ 			};
+ 
+-			buck4 {
++			buck4: buck4 {
+ 				regulator-min-microvolt = <500000>;
+ 				regulator-max-microvolt = <3300000>;
+ 				regulator-ramp-delay = <5000>;
+@@ -173,7 +176,7 @@ buck6 {
+ 				regulator-always-on;
+ 			};
+ 
+-			aldo1 {
++			aldo1: aldo1 {
+ 				regulator-min-microvolt = <500000>;
+ 				regulator-max-microvolt = <3400000>;
+ 				regulator-boot-on;
+@@ -240,3 +243,21 @@ &uart0 {
+ 	pinctrl-0 = <&uart0_2_cfg>;
+ 	status = "okay";
+ };
++
++&sdhci0 {
++	pinctrl-names = "default", "uhs";
++	pinctrl-0 = <&mmc1_cfg>;
++	pinctrl-1 = <&mmc1_uhs_cfg>;
++	bus-width = <4>;
++	cd-gpios = <&gpio K1_GPIO(80) (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
++	no-mmc;
++	no-sdio;
++	disable-wp;
++	cap-sd-highspeed;
++	vmmc-supply = <&buck4>;
++	vqmmc-supply = <&aldo1>;
++	sd-uhs-sdr25;
++	sd-uhs-sdr50;
++	sd-uhs-sdr104;
++	status = "okay";
++};
