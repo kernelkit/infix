@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.57 (LTS)
+- Upgrade Linux kernel to 6.18.58 (LTS)
 - Switch boards advertise one of their port addresses as the LLDP chassis
   ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
