@@ -20,10 +20,14 @@ The host behind the root reaches both stations on their VLANs.
 Taking the backhaul down and up again shows it is a transparent bridge
 port: the stations lose and regain reach without re-associating.
 
-Finally the guest access point gets a new MAC address, which recreates
-its netdev.  The home access point on the same radio must not be
-disturbed, and the guest access point has to come back at the new
-address with its client.
+The repeater's interfaces get addresses derived from the chassis MAC,
+by position on the radio.  Adding a third access point that sorts
+between the two moves the guest access point one up, and removing it
+moves it back; the guest station follows and the backhaul comes back
+each time.  Finally the guest access point gets a fixed MAC address,
+which recreates its netdev.  The home access point on the same radio
+must not be disturbed, and the guest access point has to come back at
+the new address with its client.
 
 Topology:
 ....
@@ -41,6 +45,7 @@ image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS)
 . Set up topology and attach to the root, the repeater, home and guest
 . Configure home as a DHCP station for 'infix-home' and guest as a DHCP station for 'infix-guest'
 . Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20
+. Verify the repeater's wifi0, wifi1 and wifi2 got the first three addresses derived from its chassis MAC
 . Configure the root with access point 'infix-backhaul', WDS port wds0 for the repeater's station and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN with fixed addresses for home and guest
 . Verify the repeater's wifi0 associates to 'infix-backhaul'
 . Verify wds0 on the root is up
@@ -54,6 +59,12 @@ image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS)
 . Verify home at 10.10.0.9 and guest at 10.20.0.9 are no longer reachable from the host
 . Enable the repeater's backhaul station wifi0 again
 . Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 again
+. Add access point 'infix-iot' as wifi10 on the repeater, sorting between wifi1 and wifi2
+. Verify wifi2 on the repeater moved to the fourth derived address and guest followed it
+. Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point added
+. Remove access point wifi10 from the repeater
+. Verify wifi2 on the repeater is back at the third derived address and guest followed it
+. Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point removed
 . Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12
 . Verify wifi2 on the repeater reports the new address and both access points are up
 . Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12

@@ -18,10 +18,14 @@ The host behind the root reaches both stations on their VLANs.
 Taking the backhaul down and up again shows it is a transparent bridge
 port: the stations lose and regain reach without re-associating.
 
-Finally the guest access point gets a new MAC address, which recreates
-its netdev.  The home access point on the same radio must not be
-disturbed, and the guest access point has to come back at the new
-address with its client.
+The repeater's interfaces get addresses derived from the chassis MAC,
+by position on the radio.  Adding a third access point that sorts
+between the two moves the guest access point one up, and removing it
+moves it back; the guest station follows and the backhaul comes back
+each time.  Finally the guest access point gets a fixed MAC address,
+which recreates its netdev.  The home access point on the same radio
+must not be disturbed, and the guest access point has to come back at
+the new address with its client.
 
 Topology:
 ....
@@ -177,6 +181,12 @@ with infamy.Test() as test:
         home_ap_mac = wifi.phys_address(repeater, "wifi1")
         guest_ap_mac = wifi.phys_address(repeater, "wifi2")
 
+    with test.step("Verify the repeater's wifi0, wifi1 and wifi2 got the first three addresses derived from its chassis MAC"):
+        chassis = wifi.chassis_address(repeater)
+        assert wifi.phys_address(repeater, "wifi0") == wifi.derived_address(chassis, 1)
+        assert home_ap_mac == wifi.derived_address(chassis, 2)
+        assert guest_ap_mac == wifi.derived_address(chassis, 3)
+
     with test.step("Configure the root with access point 'infix-backhaul', WDS port wds0 for the repeater's station and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN with fixed addresses for home and guest"):
         uplink = root["uplink"]
         root.put_config_dicts(root_config(uplink, wifi.phys_address(repeater, "wifi0"),
@@ -232,6 +242,39 @@ with infamy.Test() as test:
             until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
             until(lambda: reaches(ns, HOME_IP), attempts=30, interval=2)
             until(lambda: reaches(ns, GUEST_IP), attempts=30, interval=2)
+
+        with test.step("Add access point 'infix-iot' as wifi10 on the repeater, sorting between wifi1 and wifi2"):
+            repeater.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [
+                wifi.iface("wifi10", {
+                    "radio": "radio0",
+                    "access-point": {
+                        "ssid": "infix-iot",
+                        "security": {"mode": "wpa2-wpa3-personal", "secret": "guest"},
+                    },
+                }),
+            ]}}})
+
+        with test.step("Verify wifi2 on the repeater moved to the fourth derived address and guest followed it"):
+            until(lambda: wifi.phys_address(repeater, "wifi2") == wifi.derived_address(chassis, 4),
+                  attempts=30, interval=2)
+            until(lambda: wifi.station_bssid(guest) == wifi.derived_address(chassis, 4), attempts=60, interval=2)
+
+        with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point added"):
+            until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
+            until(lambda: reaches(ns, HOME_IP), attempts=60, interval=2)
+            until(lambda: reaches(ns, GUEST_IP), attempts=60, interval=2)
+
+        with test.step("Remove access point wifi10 from the repeater"):
+            repeater.delete_xpath("/ietf-interfaces:interfaces/interface[name='wifi10']")
+
+        with test.step("Verify wifi2 on the repeater is back at the third derived address and guest followed it"):
+            until(lambda: wifi.phys_address(repeater, "wifi2") == guest_ap_mac, attempts=30, interval=2)
+            until(lambda: wifi.station_bssid(guest) == guest_ap_mac, attempts=60, interval=2)
+
+        with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point removed"):
+            until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
+            until(lambda: reaches(ns, HOME_IP), attempts=60, interval=2)
+            until(lambda: reaches(ns, GUEST_IP), attempts=60, interval=2)
 
         with test.step("Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12"):
             repeater.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [{

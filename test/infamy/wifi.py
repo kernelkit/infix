@@ -136,6 +136,21 @@ def phys_address(target, ifname="wifi0"):
                  attempts=30, interval=1).lower()
 
 
+def chassis_address(target):
+    """Chassis MAC of target, lowercase."""
+    data = target.get_data("/ietf-hardware:hardware/component[name='mainboard']")
+    return data["hardware"]["component"]["mainboard"]["phys-address"].lower()
+
+
+def derived_address(chassis, pos, radio=0):
+    """Address a box derives from chassis for the interface at position
+    pos (from 1) on its radio number radio (from 0), see doc/wifi.md."""
+    mac = [int(x, 16) for x in chassis.split(":")]
+    mac[0] = 0x02 | ((pos & 0x3f) << 2)
+    mac[1] = (mac[1] + radio) & 0xff
+    return ":".join(f"{x:02x}" for x in mac)
+
+
 def station(target, ifname="wifi0"):
     """Operational station state on ifname, {} when not associated."""
     return _wifi(target.get_iface(ifname)).get("station", {})
