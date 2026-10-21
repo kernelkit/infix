@@ -1752,6 +1752,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#anchor-a-gps-receiver-to-a-usb-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anchor a GPS receiver to a USB port
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2656,6 +2667,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#anchor-a-gps-receiver-to-a-usb-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anchor a GPS receiver to a USB port
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2893,6 +2915,27 @@ admin@example:/config/&gt; <b>set hardware component gps0</b>
 admin@example:/config/&gt; <b>leave</b>
 </code></pre>
 
+<h3 id="anchor-a-gps-receiver-to-a-usb-port">Anchor a GPS receiver to a USB port<a class="headerlink" href="#anchor-a-gps-receiver-to-a-usb-port" title="Permanent link">¶</a></h3>
+<p>Receivers are numbered in the order they are found, so with more than
+one the names can swap between boots.  Anchor each receiver to the USB
+device it is plugged into and it keeps its name.  The detail view of a
+receiver shows the URI of its device, copy it into the configuration:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware gps0</b>
+<span class="header">COMPONENT: gps0                                               </span>
+  Name                : gps0
+  Class               : gps
+  Parent              : usb-1-1.2
+  URI                 : usb:///sys/bus/usb/devices/1-1.2
+admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit hardware component gps0</b>
+admin@example:/config/hardware/component/gps0/&gt; <b>set uri usb:///sys/bus/usb/devices/1-1.2</b>
+admin@example:/config/hardware/component/gps0/&gt; <b>leave</b>
+</code></pre>
+
+<p>A device with several serial ports, e.g. a cellular modem with an NMEA
+port, is anchored by that port's interface: append the interface
+number to the URI, <code>usb:///sys/bus/usb/devices/1-1.2:1.1</code> for
+interface 1.</p>
 <p>To use a GPS receiver as an NTP reference clock source, see
 <a href="../ntp/#gps-reference-clock">NTP — GPS Reference Clock</a>.</p>
 <h2 id="usb-ports">USB Ports<a class="headerlink" href="#usb-ports" title="Permanent link">¶</a></h2>
@@ -2901,7 +2944,7 @@ is needed (see <em>alder.dtsi</em> for full example).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="w"> </span><span class="err">chose</span><span class="kc">n</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">   </span><span class="err">i</span><span class="kc">nf</span><span class="err">ix</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">ts</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">&lt;&amp;cp</span><span class="mi">0</span><span class="err">_usb</span><span class="mi">3</span><span class="err">_</span><span class="mi">1</span><span class="err">&gt;;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">t</span><span class="mi">-</span><span class="kc">na</span><span class="err">mes</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="s2">"USB"</span><span class="err">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">t</span><span class="mi">-</span><span class="kc">na</span><span class="err">mes</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="s2">"usb"</span><span class="err">;</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">   </span><span class="p">}</span><span class="err">;</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w"> </span><span class="p">}</span><span class="err">;</span>
 </code></pre></div>
@@ -2929,7 +2972,12 @@ Base MAC Address    : 4a:dc:d8:20:0d:85
 ──────────────────────────────────────────────────────────────
 <span class="title">USB Ports                                                    </span>
 <span class="header">NAME                                         STATE     OPER   </span>
-USB                                          unlocked  enabled
+usb                                          unlocked  enabled
+──────────────────────────────────────────────────────────────
+<span class="title">Attached USB Devices                                         </span>
+<span class="header">PORT  BUS    VID:PID    SPEED  AUTHORIZED  DESCRIPTION           </span>
+usb   1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+usb   1-1.2  0781:5581  5G     yes         SanDisk Ultra
 ──────────────────────────────────────────────────────────────
 <span class="title">Sensors                                                      </span>
 <span class="header">NAME                          VALUE                 STATUS    </span>
@@ -2940,6 +2988,54 @@ soc                           44.5 °C               ok
 <p>An USB port can be in two states <em>unlocked</em> and <em>locked</em>. When a port is
 locked, all connected devices will get power, but never authorized by
 Linux to use.</p>
+<p>Every device plugged into a port is listed under <em>Attached USB Devices</em>, also
+when it sits behind a hub, and also when the port is locked.  On a
+locked port the device shows <code>no</code> in the AUTHORIZED column: the system
+sees it, but it cannot be used.  The exception is a hub plugged into a
+port that is already locked: the hub is listed, the devices behind it
+only once the port is unlocked.  BUS is the device's position:
+<code>1-1.2</code> is port 2 of the hub plugged into the USB port.</p>
+<p>The port and each device have a detail view with everything known
+about them.  The URI of a device is its attachment point, which is
+what a component configuration, e.g. a modem, is anchored to with
+<code>set uri</code>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware usb</b>
+<span class="header">COMPONENT: usb                                                </span>
+  Name                : usb
+  Class               : usb
+  Admin State         : unlocked
+  Oper State          : enabled
+  Usage State         : active
+
+──────────────────────────────────────────────────────────────
+<span class="title">Attached USB Devices                                         </span>
+<span class="header">URI                               VID:PID    SPEED  AUTHORIZED  DESCRIPTION            </span>
+usb:///sys/bus/usb/devices/1-1    05e3:0610  480M   yes         GenesysLogic USB2.1 Hub
+usb:///sys/bus/usb/devices/1-1.2  0781:5581  5G     yes         SanDisk Ultra
+admin@example:/&gt; <b>show hardware usb-1-1.2</b>
+<span class="header">COMPONENT: usb-1-1.2                                          </span>
+  Name                : usb-1-1.2
+  Class               : usb-device
+  Parent              : usb
+  Model               : Ultra
+  Manufacturer        : SanDisk
+  Serial Number       : 4C530001230920115031
+  Hardware Rev        : 1.00
+  USB ID              : 0781:5581
+  USB Version         : 3.20
+  Speed               : 5000 Mbit/s
+  Authorized          : yes
+  URI                 : usb:///sys/bus/usb/devices/1-1.2
+  Interface 0         : mass-storage
+</code></pre>
+
+<p>A USB 3 port is one port, whether the device runs at USB 2 or USB 3
+speed.  Locking it locks both.</p>
+<p>The same information is available over NETCONF and RESTCONF.  Each
+device is a hardware component of class <code>infix-hardware:usb-device</code>
+whose <code>parent</code> is the USB port and whose <code>uri</code> is the attachment
+point.  A WiFi radio, GPS receiver or cellular modem on USB has the
+device it lives on as its <code>parent</code>.</p>
 <h3 id="configure-usb-port">Configure USB port<a class="headerlink" href="#configure-usb-port" title="Permanent link">¶</a></h3>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -2948,7 +3044,7 @@ command <code>show hardware</code> in admin-exec context.  (Use <code>do</code> 
 configure context.)</p>
 </div>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>set hardware component USB state admin-state unlocked</b>
+admin@example:/config/&gt; <b>set hardware component usb state admin-state unlocked</b>
 admin@example:/config/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
