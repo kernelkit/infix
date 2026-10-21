@@ -162,14 +162,7 @@ def wds_connected(target, ifname):
     return _wifi(target.get_iface(ifname)).get("wds-link", {}).get("connected") is True
 
 
-def bridge_vlan_members(target, bridge, vid, tagging="untagged"):
-    """Ports listed as tagged/untagged members of vid on bridge, from operational."""
-    ifc = target.get_iface(bridge) or {}
-    br = ifc.get("bridge") or ifc.get("infix-interfaces:bridge") or {}
-    for vlan in (br.get("vlans") or {}).get("vlan") or []:
-        if vlan.get("vid") == vid:
-            return set(vlan.get(tagging) or [])
-    return set()
+bridge_vlan_members = _iface.bridge_vlan_members
 
 
 def ap_stations(target, ifname="wifi0"):

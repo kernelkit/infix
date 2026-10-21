@@ -23,3 +23,6 @@
 
 - name: Bridge VLAN
   case: bridge_vlan/test.py
+
+- name: Bridge port keeps its VLANs when recreated
+  case: bridge_vlan_port_recreate/test.py

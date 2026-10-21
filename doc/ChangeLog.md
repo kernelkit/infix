@@ -106,6 +106,8 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- A bridge port recreated with a new address lost the VLANs it was tagged
+  in, only its PVID VLAN came back
 - On boards with a USB 3 port, e.g., Banana Pi R3, R4 and R64, every
   port was listed twice, `USB` and `USB2`, or `USB1` and `USB12` with
   two ports.  Locking `USB` left the port usable by USB 3 devices
