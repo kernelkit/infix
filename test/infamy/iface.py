@@ -1,6 +1,7 @@
 """
 Fetch interface status from remote device.
 """
+import ipaddress
 from datetime import datetime
 
 
@@ -154,20 +155,23 @@ def bridge_fdb_entry(target, bridge, vid, address):
     return None
 
 
-def exist_bridge_multicast_filter(target, group, iface, bridge):
-    """Check if a bridge has a multicast filter for group with iface"""
-    # The interface array is different in restconf/netconf, netconf has
-    # a keyed list but restconf has a numbered list, i think i read that
-    # this was a bug in rousette, but have not found it.
-    interface = target.get_iface(bridge)
-    if interface is None:
-        raise "Interface not found"
+def _get_bridge_mcast(target, bridge, vid=None):
+    """Fetch the multicast settings of a bridge, or of one of its VLANs"""
+    brif = get_bridge(target, bridge)
+    if vid is None:
+        return brif
 
-    brif = interface.get("bridge") or interface.get("infix-interfaces:bridge")
-    if brif is None:
-        return False
+    for vlan in brif.get("vlans", {}).get("vlan", []):
+        if vlan.get("vid") == vid:
+            return vlan
 
-    for f in brif.get("multicast-filters", {}).get("multicast-filter", {}):
+    return {}
+
+
+def exist_bridge_multicast_filter(target, group, iface, bridge, vid=None):
+    """Check if a bridge, or bridge VLAN, has a multicast filter for group with iface"""
+    mcast = _get_bridge_mcast(target, bridge, vid)
+    for f in mcast.get("multicast-filters", {}).get("multicast-filter", []):
         if f.get("group") == group:
             for p in f.get("ports"):
                 if p["port"] == iface:
@@ -185,12 +189,28 @@ def bridge_vlan_members(target, bridge, vid, tagging="untagged"):
     return set()
 
 
-def get_bridge_queriers(target, bridge):
-    """Fetch the active IGMP/MLD queriers of a bridge, keyed by family"""
-    interface = target.get_iface(bridge)
-    if interface is None:
-        return {}
-
-    brif = interface.get("bridge") or interface.get("infix-interfaces:bridge") or {}
-    queriers = brif.get("multicast", {}).get("active-querier", [])
+def get_bridge_queriers(target, bridge, vid=None):
+    """Fetch the active IGMP/MLD queriers of a bridge, or bridge VLAN, keyed by family"""
+    mcast = _get_bridge_mcast(target, bridge, vid)
+    queriers = mcast.get("multicast", {}).get("active-querier", [])
     return {q["family"]: q for q in queriers}
+
+
+def get_bridge_querier_election(targets, family, bridge="br0", vid=None):
+    """Return (index of the local querier, its address) if all targets agree"""
+    from .util import parallel  # circular: util -> netconf -> transport -> iface
+
+    queriers = parallel(*(lambda t=t: get_bridge_queriers(t, bridge, vid).get(family)
+                          for t in targets))
+    if not all(queriers):
+        return None
+
+    addresses = {ipaddress.ip_address(q["address"]) for q in queriers}
+    if len(addresses) != 1:
+        return None
+
+    local = [i for i, q in enumerate(queriers) if q["local"]]
+    if len(local) != 1:
+        return None
+
+    return local[0], addresses.pop()

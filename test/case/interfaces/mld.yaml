@@ -1,0 +1,6 @@
+---
+- name: MLD Basic
+  case: mld_basic/test.py
+
+- name: MLD VLAN
+  case: mld_vlan/test.py

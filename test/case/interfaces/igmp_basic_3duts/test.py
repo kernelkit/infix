@@ -68,24 +68,6 @@ def bridge(ports, address=None):
     }
 
 
-def elected(duts, family):
-    """Return (index of the local querier, its address) if all DUTs agree"""
-    queriers = parallel(*(lambda dut=dut: iface.get_bridge_queriers(dut, "br0").get(family)
-                          for dut in duts))
-    if not all(queriers):
-        return None
-
-    addresses = {ipaddress.ip_address(q["address"]) for q in queriers}
-    if len(addresses) != 1:
-        return None
-
-    local = [i for i, q in enumerate(queriers) if q["local"]]
-    if len(local) != 1:
-        return None
-
-    return local[0], addresses.pop()
-
-
 def link_local(dut):
     for addr in iface.get_ipv6_address(dut, "br0") or []:
         ip = ipaddress.IPv6Address(addr["ip"])
@@ -120,12 +102,12 @@ with infamy.Test() as test:
     duts = [dut1, dut2, dut3]
 
     with test.step("Verify dut1 is the IGMP querier on all DUTs"):
-        until(lambda: elected(duts, "ipv4") == (0, ipaddress.ip_address("10.0.0.1")), attempts=30)
+        until(lambda: iface.get_bridge_querier_election(duts, "ipv4") == (0, ipaddress.ip_address("10.0.0.1")), attempts=30)
 
     with test.step("Verify the DUT with the lowest link-local address is the MLD querier on all DUTs"):
         lladdrs = parallel(*(lambda dut=dut: until(lambda: link_local(dut)) for dut in duts))
         lowest = min(lladdrs)
-        until(lambda: elected(duts, "ipv6") == (lladdrs.index(lowest), lowest), attempts=30)
+        until(lambda: iface.get_bridge_querier_election(duts, "ipv6") == (lladdrs.index(lowest), lowest), attempts=30)
 
     with infamy.IsolatedMacVlan(hsend) as send_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns, \

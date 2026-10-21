@@ -13,13 +13,19 @@ class _MCastService(NetnsService):
         super().__init__(netns)
         self.group = group
 
-class MCastSender(_MCastService):
-    def argv(self):
-        return f"msend -I iface -g {self.group}".split(" ")
+class _IPMCastService(_MCastService):
+    """msend and mreceive need -6 for an IPv6 group"""
+    def __init__(self, netns, group):
+        super().__init__(netns, group)
+        self.family = "-6" if ":" in group else "-4"
 
-class MCastReceiver(_MCastService):
+class MCastSender(_IPMCastService):
     def argv(self):
-        return f"mreceive -I iface -g {self.group}".split(" ")
+        return f"msend {self.family} -I iface -g {self.group}".split(" ")
+
+class MCastReceiver(_IPMCastService):
+    def argv(self):
+        return f"mreceive {self.family} -I iface -g {self.group}".split(" ")
 
 class MacMCastSender(_MCastService):
     def argv(self):
