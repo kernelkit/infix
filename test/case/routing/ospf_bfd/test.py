@@ -30,13 +30,15 @@ class ArgumentParser(infamy.ArgumentParser):
         self.add_argument("--version", type=str.lower, choices=["ospfv2", "ospfv3"])
 
 
+# Generous OSPF dead interval, so that a fail-over completing well within
+# it can only have been triggered by BFD.  Also the ospf6d wait timer, so
+# OSPFv3 DR election takes this long.
+DEAD = 60
+
 PARAM = {
     "ospfv2": {
         "af":   "ipv4",
         "len":  {"data": 24, "link": 30},
-        # Generous OSPF dead interval, so that a fail-over completing well
-        # within it can only have been triggered by BFD.
-        "dead": 60,
         "R1":   {"rid": "192.168.1.1", "data": "192.168.10.1",
                  "fast": "192.168.100.1", "slow": "192.168.200.1"},
         "R2":   {"rid": "192.168.1.2", "data": "192.168.20.1",
@@ -49,9 +51,6 @@ PARAM = {
     "ospfv3": {
         "af":   "ipv6",
         "len":  {"data": 64, "link": 64},
-        # ospf6d only starts DR election once its wait timer, one dead
-        # interval, has expired, so keep the dead interval down.
-        "dead": 10,
         "R1":   {"rid": "192.168.1.1", "data": "2001:db8:10::1",
                  "fast": "2001:db8:100::1", "slow": "2001:db8:200::1"},
         "R2":   {"rid": "192.168.1.2", "data": "2001:db8:20::1",
@@ -87,7 +86,7 @@ def config(target, name, links, p):
             },
             "name": ifname,
             "hello-interval": 1,
-            "dead-interval": p["dead"],
+            "dead-interval": DEAD,
             "cost": cost,
         }
 
@@ -236,9 +235,9 @@ with infamy.Test() as test:
         start = time.monotonic()
         until(failed_over, attempts=30)
         took = time.monotonic() - start
-        assert took < param["dead"] / 2, \
-            f"Fail-over took {took:.1f}s, too slow for BFD; " \
-            f"OSPF dead interval ({param['dead']}s) suspected"
+        print(f"Fail-over took {took:.1f}s")
+        assert took < DEAD / 2, \
+            f"Fail-over too slow for BFD, OSPF dead interval ({DEAD}s) suspected"
 
     with test.step("Verify connectivity from PC:src to PC:dst via slow link"):
         h1net.must_reach(param["h2"])
