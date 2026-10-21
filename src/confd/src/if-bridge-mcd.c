@@ -22,7 +22,7 @@ static void warn_mcast_flood_port(struct lyd_node *port_cif)
 
 	flood = lydx_get_child(bp, "flood");
 	if (!lydx_is_enabled(flood, "multicast"))
-		WARN("%s: multicast flood disabled, topology changes will black-hole multicast until IGMP/MLD rejoin",
+		WARN("%s: multicast flood disabled, multicast may stop after a topology change until hosts rejoin",
 		     lydx_get_cattr(port_cif, "name"));
 }
 
