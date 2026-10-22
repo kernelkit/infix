@@ -82,6 +82,12 @@ bridge fdb show 2>/dev/null | awk '$0 ~ / master / && $0 !~ /permanent|^33:33|^0
     for (i = 1; i < NF; i++) if ($i == "dev") d[$1] = $(i + 1)
     if ($0 ~ /offload/) hw[$1] = 1 }
     END { for (m in d) printf "%s@%s%s ", m, d[m], (m in hw ? "" : "(sw)"); if (length(d)) print "" }'
+{ ip -4 route; ip -6 route | grep -v "^fe80::/64"; } | sed 's/^/route /'
+pidof ospfd >/dev/null && vtysh -c "show ip ospf neighbor" | grep . | sed 's/^/ospf /'
+pidof ospf6d >/dev/null && vtysh -c "show ipv6 ospf6 neighbor" | grep . | sed 's/^/ospf6 /'
+pidof ripd >/dev/null && vtysh -c "show ip rip status" | sed -n '/Gateway/,$p' | sed 's/^/rip /'
+pidof ripngd >/dev/null && vtysh -c "show ipv6 ripng status" | sed -n '/Gateway/,$p' | sed 's/^/ripng /'
+true
 """
 _attached = {}
 
