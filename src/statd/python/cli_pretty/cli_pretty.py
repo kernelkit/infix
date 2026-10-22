@@ -1139,6 +1139,7 @@ class Iface:
         self.phys_address = data.get('phys-address', '')
 
         self.br_mdb = get_json_data({}, self.data, 'infix-interfaces:bridge', 'multicast-filters')
+        self.br_fdb = get_json_data({}, self.data, 'infix-interfaces:bridge', 'forwarding-database')
         self.br_vlans = get_json_data({}, self.data, 'infix-interfaces:bridge', 'vlans', "vlan")
         self.bridge = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'bridge')
         self.pvid = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'pvid')
@@ -1838,6 +1839,17 @@ class Iface:
                 row += f"{ports}"
                 print(row)
 
+    def fdb_entries(self, vid=None):
+        """Yield (vid, entry) for FDB entries, vid is None on VLAN unaware bridges"""
+        if vid is None:
+            for entry in self.br_fdb.get("entry", []):
+                yield None, entry
+        for vlan in self.br_vlans:
+            if vid is not None and vlan["vid"] != vid:
+                continue
+            for entry in vlan.get("forwarding-database", {}).get("entry", []):
+                yield vlan["vid"], entry
+
     def pr_stp(self):
         if not (stp := get_json_data({}, self.data, 'infix-interfaces:bridge', 'stp')):
             return
@@ -2009,6 +2021,41 @@ def show_bridge_mdb(json):
             header_printed = True
         iface.pr_mdb(iface.name)
         iface.pr_vlans_mdb(iface.name)
+
+
+def show_bridge_fdb(json, vid=None, port=None, address=None):
+    if not json.get("ietf-interfaces:interfaces"):
+        print("Error, top level \"ietf-interfaces:interface\" missing")
+        sys.exit(1)
+
+    if address:
+        address = address.lower()
+
+    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
+                    key=ifname_sort)
+    bridges = [Iface(data) for data in ifaces
+               if data.get("type") == "infix-if-type:bridge"]
+    if not bridges:
+        return
+
+    table = SimpleTable([
+        Column('BRIDGE'),
+        Column('VID', 'right'),
+        Column('ADDRESS'),
+        Column('PORT'),
+        Column('STATE'),
+        Column('AGE', 'right'),
+        Column('FLAGS'),
+    ])
+    for iface in bridges:
+        rows = [(evid, entry) for evid, entry in iface.fdb_entries(vid)
+                if (not port or entry["port"] == port)
+                and (not address or entry["address"] == address)]
+        for evid, entry in sorted(rows, key=lambda r: (r[0] or 0, r[1]["address"])):
+            table.row(iface.name, evid or "", entry["address"], entry["port"],
+                      entry.get("state", ""), entry.get("age", ""),
+                      "offload" if entry.get("offloaded") else "")
+    table.print()
 
 
 def show_bridge_stp_port(ifname, brport):
@@ -6613,6 +6660,11 @@ def main():
 
     subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
 
+    pfdb = subparsers.add_parser('show-bridge-fdb', help='Show bridge FDB')
+    pfdb.add_argument('-v', '--vid', type=int, help='Only entries in VLAN')
+    pfdb.add_argument('-p', '--port', help='Only entries on port')
+    pfdb.add_argument('-a', '--address', help='Only entries for MAC address')
+
     subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
@@ -6701,6 +6753,8 @@ def main():
 
     if args.command == "show-bridge-mdb":
         show_bridge_mdb(json_data)
+    elif args.command == "show-bridge-fdb":
+        show_bridge_fdb(json_data, args.vid, args.port, args.address)
     elif args.command == "show-bridge-stp":
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":

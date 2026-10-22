@@ -289,6 +289,49 @@
         },
         "if-index": 9,
         "infix-interfaces:bridge": {
+          "aging-time": 300,
+          "forwarding-database": {
+            "entry": [
+              {
+                "address": "02:00:00:00:00:02",
+                "age": 4,
+                "offloaded": false,
+                "port": "e2",
+                "state": "dynamic"
+              },
+              {
+                "address": "00:a0:85:00:03:02",
+                "offloaded": false,
+                "port": "e2",
+                "state": "local"
+              },
+              {
+                "address": "02:00:00:00:00:03",
+                "age": 37,
+                "offloaded": false,
+                "port": "e3",
+                "state": "dynamic"
+              },
+              {
+                "address": "00:a0:85:00:03:03",
+                "offloaded": false,
+                "port": "e3",
+                "state": "local"
+              },
+              {
+                "address": "00:a0:85:00:03:04",
+                "offloaded": false,
+                "port": "e4",
+                "state": "local"
+              },
+              {
+                "address": "00:a0:85:00:03:00",
+                "offloaded": false,
+                "port": "br0",
+                "state": "local"
+              }
+            ]
+          },
           "multicast": {
             "querier": "auto",
             "query-interval": 125,

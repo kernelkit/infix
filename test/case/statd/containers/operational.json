@@ -360,6 +360,7 @@
         },
         "if-index": 14,
         "infix-interfaces:bridge": {
+          "aging-time": 300,
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
             "vlan": [
@@ -468,6 +469,7 @@
         },
         "if-index": 19,
         "infix-interfaces:bridge": {
+          "aging-time": 300,
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
             "vlan": [

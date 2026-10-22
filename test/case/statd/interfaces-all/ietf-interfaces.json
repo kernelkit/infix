@@ -278,7 +278,8 @@
           },
           "multicast-filters": {
             "multicast-filter": []
-          }
+          },
+          "aging-time": 300
         }
       },
       {
@@ -346,7 +347,8 @@
           },
           "multicast-filters": {
             "multicast-filter": []
-          }
+          },
+          "aging-time": 300
         }
       },
       {
@@ -509,7 +511,8 @@
           },
           "multicast-filters": {
             "multicast-filter": []
-          }
+          },
+          "aging-time": 300
         }
       },
       {
@@ -590,7 +593,8 @@
                 }
               }
             ]
-          }
+          },
+          "aging-time": 300
         }
       },
       {

@@ -249,6 +249,41 @@ def multicast_filters(iplink, vid):
     return { "multicast-filter": list(mdb.values()) }
 
 
+def fdb_state(entry):
+    return {
+        "permanent": "local",
+        "static": "static",
+    }.get(entry.get("state"), "dynamic")
+
+
+def forwarding_database(iplink):
+    """Bridge FDB containers, keyed by VID (None on VLAN unaware bridges)"""
+    brname = iplink["ifname"]
+    brfdb = HOST.run_json(["bridge", "-s", "-j", "fdb", "show", "br", brname], [])
+
+    fdb = {}
+    for brentry in brfdb:
+        # Skip the ports' own address lists, only bridge entries have a master
+        if brentry.get("master") != brname:
+            continue
+        # Group addresses belong in the MDB, the model only allows unicast
+        if int(brentry["mac"][:2], 16) & 1:
+            continue
+
+        entry = {
+            "address": brentry["mac"],
+            "port": brentry["ifname"],
+            "state": fdb_state(brentry),
+            "offloaded": "offload" in brentry.get("flags", []),
+        }
+        if entry["state"] == "dynamic" and "updated" in brentry:
+            entry["age"] = brentry["updated"]
+
+        fdb.setdefault(brentry.get("vlan"), {"entry": []})["entry"].append(entry)
+
+    return fdb
+
+
 def multicast(iplink, info, mctldata):
     mctlq = mctl(iplink["ifname"], info.get("vlan"), mctldata)
 
@@ -291,6 +326,7 @@ def vlans(iplink):
         return []
 
     mctldata = mctl_queriers()
+    fdb = forwarding_database(iplink)
 
     vlans = {}
     for v in brgvlans[0]["vlans"]:
@@ -304,6 +340,8 @@ def vlans(iplink):
                 "multicast": multicast(iplink, v, mctldata),
                 "multicast-filters": multicast_filters(iplink, vid),
             }
+            if vfdb := fdb.get(vid):
+                vlans[vid]["forwarding-database"] = vfdb
 
     vlans_add_memberships(iplink, vlans)
     return list(vlans.values())
@@ -323,10 +361,14 @@ def qbridge(iplink):
 def dbridge(iplink):
     info = iplink["linkinfo"]["info_data"]
 
-    return {
+    br = {
         "multicast": multicast(iplink, info, mctl_queriers()),
         "multicast-filters": multicast_filters(iplink, None),
     }
+    if fdb := forwarding_database(iplink).get(None):
+        br["forwarding-database"] = fdb
+
+    return br
 
 
 def bridge(iplink):
@@ -336,6 +378,8 @@ def bridge(iplink):
         br = qbridge(iplink)
     else:
         br = dbridge(iplink)
+
+    br["aging-time"] = info["ageing_time"] // 100
 
     if info.get("stp_state"):
         br["stp"] = stp(iplink)

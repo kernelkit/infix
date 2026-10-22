@@ -501,8 +501,29 @@ echo "Public:  $pub"
 
     <SWITCH name="optional" min="0">
       <COMMAND name="fdb" help="Show unicast forwarding database">
+        <SWITCH name="optional" min="0" max="3">
+          <COMMAND name="vlan" help="Only entries in VLAN">
+            <PARAM name="vid" ptype="/UINT" help="VLAN ID"/>
+          </COMMAND>
+          <COMMAND name="port" help="Only entries on port">
+            <PARAM name="port" ptype="/IFACES" help="Port name"/>
+          </COMMAND>
+          <COMMAND name="address" help="Only entries for MAC address">
+            <PARAM name="address" ptype="/STRING" help="MAC address, e.g., 00:11:22:33:44:55"/>
+          </COMMAND>
+          <COMMAND name="detailed" help="Detailed (full) output">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              bridge -d fdb show ${KLISH_PARAM_vid:+vlan "$KLISH_PARAM_vid"} \
+                ${KLISH_PARAM_port:+brport "$KLISH_PARAM_port"} \
+                | grep -i "^${KLISH_PARAM_address}" |pager
+            </ACTION>
+          </COMMAND>
+        </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          bridge -color fdb |pager
+          show --raw interface | /usr/libexec/statd/cli-pretty show-bridge-fdb \
+            ${KLISH_PARAM_vid:+-v "$KLISH_PARAM_vid"} \
+            ${KLISH_PARAM_port:+-p "$KLISH_PARAM_port"} \
+            ${KLISH_PARAM_address:+-a "$KLISH_PARAM_address"} |pager
         </ACTION>
       </COMMAND>
       <COMMAND name="mdb" help="Show mulficast forwarding database">
