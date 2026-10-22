@@ -1,0 +1,82 @@
+From 015fd88b395b73adcb5541325bc604e4f828b2ff Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Thu, 22 Oct 2026 13:45:56 +0200
+Subject: [PATCH] script: wait for the stopped hook before exiting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The hook is forked and main returns straight away, so a supervisor that
+kills the process group when the daemon exits takes the hook with it
+before it has undone the lease.  Wait for it, bounded so a stuck script
+cannot hold up the exit.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/odhcp6c.c |  1 +
+ src/odhcp6c.h |  1 +
+ src/script.c  | 20 ++++++++++++++++++++
+ 3 files changed, 22 insertions(+)
+
+diff --git a/src/odhcp6c.c b/src/odhcp6c.c
+index dbe15ff..f1013e4 100644
+--- a/src/odhcp6c.c
++++ b/src/odhcp6c.c
+@@ -592,6 +592,7 @@ int main(_unused int argc, char* const argv[])
+ 	}
+ 
+ 	script_call("stopped", 0, true);
++	script_wait(5);
+ 
+ 	return 0;
+ }
+diff --git a/src/odhcp6c.h b/src/odhcp6c.h
+index 14d0017..3bc5bbc 100644
+--- a/src/odhcp6c.h
++++ b/src/odhcp6c.h
+@@ -411,6 +411,7 @@ int ra_get_retransmit(void);
+ int script_init(const char *path, const char *ifname);
+ ssize_t script_unhexlify(uint8_t *dst, size_t len, const char *src);
+ void script_call(const char *status, int delay, bool resume);
++void script_wait(int timeout);
+ 
+ bool odhcp6c_signal_process(void);
+ uint64_t odhcp6c_get_milli_time(void);
+diff --git a/src/script.c b/src/script.c
+index f32d4e2..68f1258 100644
+--- a/src/script.c
++++ b/src/script.c
+@@ -13,6 +13,7 @@
+  *
+  */
+ 
++#include <errno.h>
+ #include <stdio.h>
+ #include <netdb.h>
+ #include <resolv.h>
+@@ -56,6 +57,25 @@ static void script_sighandle(int signal)
+ 	}
+ }
+ 
++void script_wait(int timeout)
++{
++	uint64_t deadline = odhcp6c_get_milli_time() + timeout * 1000;
++
++	while (running > 0) {
++		pid_t pid = waitpid(running, NULL, WNOHANG);
++
++		if (pid > 0 || (pid < 0 && errno != EINTR)) {
++			running = 0;
++			break;
++		}
++
++		if (odhcp6c_get_milli_time() >= deadline)
++			break;
++
++		usleep(10000);
++	}
++}
++
+ int script_init(const char *path, const char *ifname)
+ {
+ 	argv[0] = (char*)path;

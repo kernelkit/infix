@@ -142,9 +142,8 @@ static void del_v6(const char *ifname)
 	finit_deletef("dhcpv6-client-%s", ifname);
 
 	/*
-	 * odhcp6c runs its "stopped" hook in the background and exits,
-	 * so the hook does not survive the service being stopped.  Drop
-	 * the client's routes here, and let the kernel learn the default
+	 * The client's stop hook drops its routes too, but only once Finit
+	 * gets to it.  Drop them now, and let the kernel learn the default
 	 * route from router advertisements again.
 	 */
 	erasef("/etc/net.d/%s-dhcpv6.conf", ifname);

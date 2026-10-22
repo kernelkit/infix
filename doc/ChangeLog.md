@@ -30,6 +30,9 @@ All notable changes to the project are documented in this file.
 - WiFi station roaming is now configurable with `station roaming`: turn it
   on or off, and set the signal strength below which the station looks for
   a stronger access point more often, see [Station Roaming][roaming]
+- WiFi access points now deliver buffered traffic to power-saving clients
+  on every beacon and offer them U-APSD, cutting the round-trip latency
+  of idle phones and laptops from hundreds of milliseconds to a few
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
@@ -112,6 +115,8 @@ All notable changes to the project are documented in this file.
 
 - A bridge port recreated with a new address lost the VLANs it was tagged
   in, only its PVID VLAN came back
+- Removing the DHCPv6 client from an interface could leave its routes
+  behind when a lease update arrived while the client was being stopped
 - On boards with a USB 3 port, e.g., Banana Pi R3, R4 and R64, every
   port was listed twice, `USB` and `USB2`, or `USB1` and `USB12` with
   two ports.  Locking `USB` left the port usable by USB 3 devices
