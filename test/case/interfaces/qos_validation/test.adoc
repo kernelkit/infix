@@ -9,8 +9,7 @@ at commit time, with the running configuration left untouched:
 
  - a strict-priority class below a weighted class
  - weighted shares that do not sum to 100 percent
- - a transmission selection algorithm outside strict-priority and
-   enhanced-transmission-selection
+ - a credit-based-shaper class with no reservation for it
  - a traffic class beyond the port's class count
  - a priority mapped to a class beyond the port's class count
 
@@ -26,7 +25,7 @@ image::topology.svg[QoS Configuration Validation topology, align=center, scaledw
 . Set up topology and attach to target DUT
 . Reject strict-priority class below a weighted class
 . Reject weighted shares that do not sum to 100
-. Reject credit-based-shaper algorithm
+. Reject credit-based-shaper class without a reservation
 . Reject traffic class beyond the port's class count
 . Reject priority mapped beyond the port's class count
 . Accept a valid layout with strict classes above weighted

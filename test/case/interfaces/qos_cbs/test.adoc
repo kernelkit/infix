@@ -1,0 +1,33 @@
+=== QoS Credit-Based Shaper
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_cbs]
+
+==== Description
+
+Reserve 10 Mbit/s for the top traffic class with the IEEE 802.1Qav
+credit-based shaper and offer three times that through it: what
+arrives at the listener must be the reservation, within a fifth, since
+the shaper bounds the class to its idle slope.  The port reports the
+reservation back as the operational idle slope, and that the shaper
+runs in the fabric where it forwards in hardware.
+
+Turning the shaper on takes two nodes in two modules, the algorithm on
+the traffic class and the idle slope in the cbsa table, and one without
+the other is rejected.  Skipped on a product without the TSN modules,
+and on a switch fabric whose driver does not offload the shaper.
+
+==== Topology
+
+image::topology.svg[QoS Credit-Based Shaper topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Reject a credit-based-shaper class without a reservation
+. Reject a reservation on a class that is not credit-based-shaper
+. Bridge the two ports, reserve 10 Mbit/s for the top class on the egress port
+. Verify the port reports the reservation as its operational idle slope
+. Set up the talker and listener namespaces
+. One EF flow in the shaped class at three times the reservation, expect the reservation through
+
+
