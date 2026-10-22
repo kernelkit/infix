@@ -54,6 +54,10 @@ include::bridge_basic/Readme.adoc[]
 
 <<<
 
+include::bridge_fdb_basic/Readme.adoc[]
+
+<<<
+
 include::bridge_fwd_dual_dut/Readme.adoc[]
 
 <<<
