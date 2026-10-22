@@ -7,8 +7,7 @@ at commit time, with the running configuration left untouched:
 
  - a strict-priority class below a weighted class
  - weighted shares that do not sum to 100 percent
- - a transmission selection algorithm outside strict-priority and
-   enhanced-transmission-selection
+ - a credit-based-shaper class with no reservation for it
  - a traffic class beyond the port's class count
  - a priority mapped to a class beyond the port's class count
 
@@ -64,7 +63,7 @@ with infamy.Test() as test:
                 {"id": top - 1, "algorithm": STRICT},
             ]
         }, "strict class below weighted class",
-           "strict-priority classes must be the highest-numbered")
+           "then strict-priority, then weighted")
 
     with test.step("Reject weighted shares that do not sum to 100"):
         # A must in the model, not the daemon: NETCONF relays the model's
@@ -76,10 +75,11 @@ with infamy.Test() as test:
             ]
         }, "shares summing to 90", "must sum to 100", "Validation failed")
 
-    with test.step("Reject credit-based-shaper algorithm"):
+    with test.step("Reject credit-based-shaper class without a reservation"):
         must_reject(target, port, {
             "traffic-class": [{"id": top, "algorithm": CBS}]
-        }, "credit-based-shaper", "not supported, use strict-priority")
+        }, "credit-based-shaper without admin-idle-slope",
+           "needs an admin-idle-slope")
 
     if num_tc < 8:
         with test.step("Reject traffic class beyond the port's class count"):
