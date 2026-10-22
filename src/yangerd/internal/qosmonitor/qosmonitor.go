@@ -1,7 +1,8 @@
-// Package qosmonitor keeps the QoS operational state of each port, its
-// capabilities.  The qdisc tree is read through a long-lived `tc` batch
-// process and the DCB tables over rtnetlink, one query per port, on
-// rtnetlink TC and DCB events and on link events.
+// Package qosmonitor keeps the QoS operational state of each port: its
+// capabilities and the shapers in effect.  The qdisc tree is read
+// through a long-lived `tc` batch process and the DCB tables over
+// rtnetlink, one query per port, on rtnetlink TC and DCB events and on
+// link events.
 package qosmonitor
 
 import (
@@ -53,6 +54,7 @@ type link struct {
 type Monitor struct {
 	tc       Querier
 	dcb      DCBReader
+	mods     Modules
 	links    func() json.RawMessage
 	log      *slog.Logger
 	onUpdate func(map[string]json.RawMessage)
@@ -69,10 +71,11 @@ type Monitor struct {
 // New creates a Monitor reading qdiscs through tc and DCB tables through
 // dcb, see DCB, for the interfaces in links, an `ip -json -d link show`
 // dump.
-func New(tc Querier, dcb DCBReader, links func() json.RawMessage, log *slog.Logger) *Monitor {
+func New(tc Querier, dcb DCBReader, mods Modules, links func() json.RawMessage, log *slog.Logger) *Monitor {
 	return &Monitor{
 		tc:         tc,
 		dcb:        dcb,
+		mods:       mods,
 		links:      links,
 		log:        log,
 		sysfs:      "/sys/class/net",
@@ -236,7 +239,7 @@ func (m *Monitor) drain() {
 	for name := range names {
 		var raw json.RawMessage
 		if l, ok := links[name]; ok {
-			if members := build(m.read(l)); members != nil {
+			if members := build(m.read(l), m.mods); members != nil {
 				var err error
 				if raw, err = json.Marshal(members); err != nil {
 					m.log.Warn("qosmonitor: marshal", "ifname", name, "err", err)
