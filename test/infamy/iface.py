@@ -137,6 +137,23 @@ def neighbor_exist(target, iface, address, lladdr=None, origin=None):
     return False
 
 
+def get_bridge(target, bridge):
+    """Operational bridge container of bridge, empty if not (yet) there"""
+    interface = target.get_iface(bridge) or {}
+    return interface.get("bridge") or interface.get("infix-interfaces:bridge") or {}
+
+
+def bridge_fdb_entry(target, bridge, vid, address):
+    """FDB entry for address in VLAN vid of bridge, None if missing"""
+    for vlan in get_bridge(target, bridge).get("vlans", {}).get("vlan", []):
+        if vlan["vid"] != vid:
+            continue
+        for entry in vlan.get("forwarding-database", {}).get("entry", []):
+            if entry["address"] == address:
+                return entry
+    return None
+
+
 def exist_bridge_multicast_filter(target, group, iface, bridge):
     """Check if a bridge has a multicast filter for group with iface"""
     # The interface array is different in restconf/netconf, netconf has
@@ -161,8 +178,7 @@ def exist_bridge_multicast_filter(target, group, iface, bridge):
 
 def bridge_vlan_members(target, bridge, vid, tagging="untagged"):
     """Ports listed as tagged/untagged members of vid on bridge, from operational."""
-    ifc = target.get_iface(bridge) or {}
-    br = ifc.get("bridge") or ifc.get("infix-interfaces:bridge") or {}
+    br = get_bridge(target, bridge)
     for vlan in (br.get("vlans") or {}).get("vlan") or []:
         if vlan.get("vid") == vid:
             return set(vlan.get(tagging) or [])
