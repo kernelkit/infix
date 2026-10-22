@@ -1,0 +1,8 @@
+config BR2_PACKAGE_FEATURE_TSN
+	bool "Feature TSN"
+	help
+	  Time-sensitive networking shapers on switch ports: the IEEE
+	  802.1Qav credit-based shaper and the IEEE 802.1Qbv time-aware
+	  shaper, modelled by the IEEE 802.1DC interface modules.  Select
+	  on products whose switch driver offloads the cbs and taprio
+	  queueing disciplines.
