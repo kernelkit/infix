@@ -13,6 +13,8 @@
 #define ETS_QUANTUM_UNIT 1514	/* one frame of bytes per percent of share */
 #define MAX_TC     8
 #define FRAME_OVERHEAD 22	/* Ethernet header, VLAN tag and FCS beyond the MTU */
+#define MAX_GATE_ENTRIES 64
+#define NSEC_PER_SEC 1000000000ULL
 
 /*
  * IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class
@@ -64,6 +66,19 @@ enum tsa {
 	TSA_UNSUPPORTED,
 };
 
+/* The IEEE 802.1Qbv gate control list, times in nanoseconds. */
+struct qos_gates {
+	bool     enabled;
+	int      num;
+	uint32_t index[MAX_GATE_ENTRIES];
+	uint8_t  mask[MAX_GATE_ENTRIES];
+	uint32_t interval[MAX_GATE_ENTRIES];
+	uint64_t cycle;		/* 0 = the sum of the intervals */
+	uint32_t extension;
+	uint64_t base;
+	uint32_t max_sdu[MAX_TC];
+};
+
 struct qos_egress {
 	int      num_tc;
 	uint8_t  map[NUM_PRIO];
@@ -72,6 +87,7 @@ struct qos_egress {
 	uint64_t idle[MAX_TC];		/* bits/s, CBS classes only */
 	uint64_t rate;		/* bits/s, 0 = no rate limit */
 	uint32_t burst;		/* bytes */
+	struct qos_gates gates;
 };
 
 /*
@@ -124,12 +140,8 @@ static const struct {
 	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true },
 };
 
-/*
- * One class per transmit queue, at most eight.  A single queue has no
- * queue structure to respect, so the kernel's eight classes apply.
- * Interfaces that do not exist yet get eight as well.
- */
-static int qos_num_tc(const char *ifname)
+/* Transmit queues of a port, 0 for one that does not exist yet. */
+static int qos_num_txq(const char *ifname)
 {
 	char path[PATH_MAX];
 	struct dirent *d;
@@ -139,12 +151,24 @@ static int qos_num_tc(const char *ifname)
 	snprintf(path, sizeof(path), "/sys/class/net/%s/queues", ifname);
 	dir = opendir(path);
 	if (!dir)
-		return MAX_TC;
+		return 0;
 
 	while ((d = readdir(dir)))
 		if (!strncmp(d->d_name, "tx-", 3))
 			n++;
 	closedir(dir);
+
+	return n;
+}
+
+/*
+ * One class per transmit queue, at most eight.  A single queue has no
+ * queue structure to respect, so the kernel's eight classes apply.
+ * Interfaces that do not exist yet get eight as well.
+ */
+static int qos_num_tc(const char *ifname)
+{
+	int n = qos_num_txq(ifname);
 
 	return n > 1 ? MIN(n, MAX_TC) : MAX_TC;
 }
@@ -355,6 +379,100 @@ static void qos_parse_cbsa(struct lyd_node *cif, struct qos_egress *eg)
 	}
 }
 
+static uint64_t qos_get_u64(struct lyd_node *parent, const char *name)
+{
+	const char *val = parent ? lydx_get_cattr(parent, name) : NULL;
+
+	return val ? strtoull(val, NULL, 10) : 0;
+}
+
+/*
+ * The IEEE 802.1Qbv schedule, ieee802-dot1dc-sched-if beside qos.  The
+ * cycle is a rational number of seconds and the base time a PTP
+ * timestamp; both become nanoseconds here.  Entries are kept in index
+ * order, whatever order the list arrives in.
+ */
+static int qos_parse_gates(struct lyd_node *cif, struct qos_gates *gates)
+{
+	struct lyd_node *table, *list, *entry;
+	uint64_t num, den;
+
+	table = lydx_get_child(cif, "gate-parameter-table");
+	if (!table)
+		return 0;
+
+	gates->enabled = lydx_get_bool(table, "gate-enabled");
+
+	num = qos_get_u64(lydx_get_child(table, "admin-cycle-time"), "numerator");
+	den = qos_get_u64(lydx_get_child(table, "admin-cycle-time"), "denominator");
+	if (num && den)
+		gates->cycle = num * NSEC_PER_SEC / den;
+	gates->extension = qos_get_u64(table, "admin-cycle-time-extension");
+
+	gates->base = qos_get_u64(lydx_get_child(table, "admin-base-time"), "seconds") * NSEC_PER_SEC
+		+ qos_get_u64(lydx_get_child(table, "admin-base-time"), "nanoseconds");
+
+	LYX_LIST_FOR_EACH(lyd_child(table), entry, "queue-max-sdu-table") {
+		int tc = atoi(lydx_get_cattr(entry, "traffic-class"));
+
+		if (tc >= 0 && tc < MAX_TC)
+			gates->max_sdu[tc] = qos_get_u64(entry, "queue-max-sdu");
+	}
+
+	list = lydx_get_child(table, "admin-control-list");
+	LYX_LIST_FOR_EACH(lyd_child(list), entry, "gate-control-entry") {
+		uint64_t index = qos_get_u64(entry, "index");
+		const char *op = lydx_get_cattr(entry, "operation-name");
+		int i;
+
+		if (index >= MAX_GATE_ENTRIES)
+			return -E2BIG;
+		if (!op || !strstr(op, "set-gate-states"))
+			return -EOPNOTSUPP;
+
+		/* Insert sorted by index */
+		for (i = gates->num; i > 0 && gates->index[i - 1] > index; i--)
+			;
+		memmove(&gates->index[i + 1], &gates->index[i], (gates->num - i) * sizeof(gates->index[0]));
+		memmove(&gates->mask[i + 1], &gates->mask[i], (gates->num - i) * sizeof(gates->mask[0]));
+		memmove(&gates->interval[i + 1], &gates->interval[i],
+			(gates->num - i) * sizeof(gates->interval[0]));
+		gates->index[i] = index;
+		gates->mask[i] = qos_get_u64(entry, "gate-states-value");
+		gates->interval[i] = qos_get_u64(entry, "time-interval-value");
+		gates->num++;
+	}
+
+	return 0;
+}
+
+/* Total time per cycle that the gate of a class stands open. */
+static uint64_t qos_gate_open(const struct qos_gates *gates, int tc)
+{
+	uint64_t open = 0;
+	int i;
+
+	for (i = 0; i < gates->num; i++)
+		if (gates->mask[i] & (1 << tc))
+			open += gates->interval[i];
+
+	return open;
+}
+
+static uint64_t qos_gate_cycle(const struct qos_gates *gates)
+{
+	uint64_t sum = 0;
+	int i;
+
+	if (gates->cycle)
+		return gates->cycle;
+
+	for (i = 0; i < gates->num; i++)
+		sum += gates->interval[i];
+
+	return sum;
+}
+
 static int qos_parse(struct lyd_node *cif, struct lyd_node *qos, struct qos_egress *eg)
 {
 	int err;
@@ -365,7 +483,7 @@ static int qos_parse(struct lyd_node *cif, struct lyd_node *qos, struct qos_egre
 
 	qos_parse_cbsa(cif, eg);
 
-	return 0;
+	return qos_parse_gates(cif, &eg->gates);
 }
 
 static long qos_sysfs_long(const char *ifname, const char *attr, long dflt)
@@ -442,6 +560,64 @@ static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname,
 		below = eg->algo[i];
 	}
 
+	if (!eg->gates.enabled)
+		return 0;
+
+	/*
+	 * Gates: taprio takes the root with nothing above it and has no
+	 * weights, and a shaped class earns credit only while its gate is
+	 * open, so its slope scaled up to the cycle must still fit the link.
+	 */
+	if (!eg->gates.num) {
+		sr_session_set_error_message(session, "%s: gate-enabled with an empty "
+					     "admin-control-list", ifname);
+		return -EINVAL;
+	}
+	if (eg->rate) {
+		sr_session_set_error_message(session, "%s: rate-limit and gate-enabled exclude "
+					     "each other", ifname);
+		return -EINVAL;
+	}
+	for (i = 0; i < eg->gates.num; i++) {
+		if (!eg->gates.interval[i]) {
+			sr_session_set_error_message(session, "%s: gate-control-entry %u: time-"
+						     "interval-value must be above zero", ifname,
+						     eg->gates.index[i]);
+			return -EINVAL;
+		}
+	}
+	for (i = 0; i < eg->num_tc; i++) {
+		uint64_t open = qos_gate_open(&eg->gates, i);
+
+		if (eg->algo[i] == TSA_ETS) {
+			sr_session_set_error_message(session, "%s: traffic class %d: enhanced-"
+						     "transmission-selection cannot be gated, "
+						     "use strict-priority", ifname, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] != TSA_CBS)
+			continue;
+		if (!open) {
+			sr_session_set_error_message(session, "%s: traffic class %d: credit-based-"
+						     "shaper on a gate that never opens", ifname, i);
+			return -EINVAL;
+		}
+		if ((double)eg->idle[i] * qos_gate_cycle(&eg->gates) / open > (double)link) {
+			sr_session_set_error_message(session, "%s: traffic class %d: admin-idle-slope "
+						     "%" PRIu64 " over the gate's share of the "
+						     "cycle exceeds the link rate %" PRIu64,
+						     ifname, i, eg->idle[i], link);
+			return -EINVAL;
+		}
+	}
+
+	if (qos_num_txq(ifname) < eg->num_tc) {
+		sr_session_set_error_message(session, "%s: scheduled traffic needs a transmit "
+					     "queue per traffic class, port has %d", ifname,
+					     qos_num_txq(ifname));
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
@@ -468,7 +644,18 @@ static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct 
 	}
 
 	egress = lydx_get_child(qos, "egress");
-	if (qos_parse(cif, qos, &eg)) {
+	switch (qos_parse(cif, qos, &eg)) {
+	case 0:
+		break;
+	case -E2BIG:
+		sr_session_set_error_message(session, "%s: gate control list longer than %d "
+					     "entries", ifname, MAX_GATE_ENTRIES);
+		return -EINVAL;
+	case -EOPNOTSUPP:
+		sr_session_set_error_message(session, "%s: gate-control-entry operation must "
+					     "be set-gate-states", ifname);
+		return -EINVAL;
+	default:
 		sr_session_set_error_message(session, "%s: invalid traffic class table", ifname);
 		return -EINVAL;
 	}
@@ -802,17 +989,63 @@ static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int han
 
 	for (tc = 0; tc < eg->num_tc; tc++) {
 		uint64_t idle, send;
+		int band;
 
 		if (eg->algo[tc] != TSA_CBS)
 			continue;
 
+		/*
+		 * A gated class earns credit only while its gate is open, so
+		 * the slope is scaled by the cycle over the open time to keep
+		 * the reservation, IEEE 802.1Q-2022 8.6.8.2.  taprio numbers
+		 * its classes as the standard does, ets inverts them.
+		 */
 		idle = eg->idle[tc] / 1000;
+		if (eg->gates.enabled) {
+			idle = idle * qos_gate_cycle(&eg->gates) / qos_gate_open(&eg->gates, tc);
+			band = tc + 1;
+		} else {
+			band = eg->num_tc - tc;
+		}
 		send = link - idle;
 		fprintf(fp, "qdisc replace dev %s parent %d:%d handle %d: cbs idleslope %" PRIu64
 			" sendslope -%" PRIu64 " hicredit %" PRIu64 " locredit -%" PRIu64
-			" offload %d\n", ifname, handle, eg->num_tc - tc, 0x10 + tc, idle, send,
+			" offload %d\n", ifname, handle, band, 0x10 + tc, idle, send,
 			(frame * idle + link / 2) / link, (frame * send + link / 2) / link, offload);
 	}
+}
+
+/*
+ * The gate control list as a taprio root: one class per queue in
+ * standard numbering, the gate masks and intervals as given, offloaded
+ * on a switch port and run against TAI in software elsewhere.
+ */
+static void gen_taprio(FILE *fp, const char *ifname, struct qos_egress *eg)
+{
+	struct qos_gates *gates = &eg->gates;
+	int i;
+
+	fprintf(fp, "qdisc replace dev %s root handle 1: taprio num_tc %d map", ifname, eg->num_tc);
+	for (i = 0; i < NUM_PRIO; i++)
+		fprintf(fp, " %d", eg->map[i]);
+	fputs(" queues", fp);
+	for (i = 0; i < eg->num_tc; i++)
+		fprintf(fp, " 1@%d", i);
+	fprintf(fp, " base-time %" PRIu64, gates->base);
+	if (gates->cycle)
+		fprintf(fp, " cycle-time %" PRIu64, gates->cycle);
+	if (gates->extension)
+		fprintf(fp, " cycle-time-extension %u", gates->extension);
+	for (i = 0; i < gates->num; i++)
+		fprintf(fp, " sched-entry S %02x %u", gates->mask[i], gates->interval[i]);
+	for (i = 0; i < eg->num_tc && !gates->max_sdu[i]; i++)
+		;
+	if (i < eg->num_tc) {
+		fputs(" max-sdu", fp);
+		for (i = 0; i < eg->num_tc; i++)
+			fprintf(fp, " %u", gates->max_sdu[i]);
+	}
+	fputs(qos_is_dsa(ifname) ? " flags 0x2\n" : " clockid CLOCK_TAI\n", fp);
 }
 
 /*
@@ -864,7 +1097,10 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	}
 
 	if (eg->num_tc >= 2) {
-		gen_ets(fp, ifname, eg, attach);
+		if (eg->gates.enabled)
+			gen_taprio(fp, ifname, eg);
+		else
+			gen_ets(fp, ifname, eg, attach);
 		gen_cbs(fp, ifname, eg, handle);
 	}
 	fputs("EOF\n", fp);
@@ -935,6 +1171,8 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	struct lyd_node *qos, *dqos, *ingress, *remark;
 	struct lyd_node *cbsa = lydx_get_child(cif, "cbsa");
 	struct lyd_node *dcbsa = lydx_get_child(dif, "cbsa");
+	struct lyd_node *gates = lydx_get_child(cif, "gate-parameter-table");
+	struct lyd_node *dgates = lydx_get_child(dif, "gate-parameter-table");
 	struct qos_egress eg;
 	FILE *fp;
 	int err;
@@ -948,11 +1186,13 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	 * beside it change.  Virtual interfaces get one only when
 	 * configured; removing it there resets the interface.
 	 */
-	if (!qos_has_change(dqos) && !qos_has_change(dcbsa) && lydx_get_op(dif) != LYDX_OP_CREATE)
+	if (!qos_has_change(dqos) && !qos_has_change(dcbsa) && !qos_has_change(dgates) &&
+	    lydx_get_op(dif) != LYDX_OP_CREATE)
 		return 0;
 
-	if (!qos_is_explicit(qos) && !qos_is_explicit(cbsa) && !qos_is_port(ifname)) {
-		if (qos_has_change(dqos) || qos_has_change(dcbsa))
+	if (!qos_is_explicit(qos) && !qos_is_explicit(cbsa) && !qos_is_explicit(gates) &&
+	    !qos_is_port(ifname)) {
+		if (qos_has_change(dqos) || qos_has_change(dcbsa) || qos_has_change(dgates))
 			return gen_reset(net, ifname);
 		return 0;
 	}
@@ -986,7 +1226,7 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class-table", NULL)) ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class", NULL)) ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "rate-limit", NULL)) ||
-	    qos_has_change(dcbsa))
+	    qos_has_change(dcbsa) || qos_has_change(dgates))
 		gen_egress(fp, ifname, &eg);
 	fclose(fp);
 
