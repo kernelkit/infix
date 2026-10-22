@@ -147,6 +147,7 @@ IX_HOME="https://github.com/kernelkit/infix/"
 IX_DOC="https://www.kernelkit.org/infix/"
 IX_SUPPORT="mailto:kernelkit@googlegroups.com"
 BR2_PACKAGE_FEATURE_GPS=y
+BR2_PACKAGE_FEATURE_TSN=y
 BR2_PACKAGE_FEATURE_WIFI=y
 BR2_PACKAGE_FEATURE_WIFI_HWSIM=y
 BR2_PACKAGE_FEATURE_WIFI_MEDIATEK=y
