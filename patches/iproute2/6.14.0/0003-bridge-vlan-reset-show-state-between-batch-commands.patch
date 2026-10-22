@@ -1,4 +1,4 @@
-From a95ceaed805a6383dfeb60c468f6a08f70e806d1 Mon Sep 17 00:00:00 2001
+From 0799301d2405851ef0565679722d506676c592e4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 14 Oct 2026 09:10:29 +0200
 Subject: [PATCH] bridge: vlan: reset show state between batch commands
@@ -25,7 +25,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 10 insertions(+)
 
 diff --git a/bridge/vlan.c b/bridge/vlan.c
-index ea4aff9..19f2a9f 100644
+index ea4aff93..19f2a9f7 100644
 --- a/bridge/vlan.c
 +++ b/bridge/vlan.c
 @@ -594,6 +594,7 @@ static void close_vlan_port(void)

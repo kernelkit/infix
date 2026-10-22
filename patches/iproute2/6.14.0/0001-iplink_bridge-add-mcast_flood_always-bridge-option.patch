@@ -1,8 +1,7 @@
-From 392735fcb41b303b6dbe3517fab9ba734ff2e288 Mon Sep 17 00:00:00 2001
+From 8de400e578740e3e3ed3e34be8ccc28ea36ebea2 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 09:41:46 +0100
-Subject: [PATCH 1/2] iplink_bridge: add mcast_flood_always bridge option
-Organization: Addiva Elektronik
+Subject: [PATCH] iplink_bridge: add mcast_flood_always bridge option
 
  - Break out boolopt handling to simplify parsing and setting
  - Add set/get support for mcast_flood_always
@@ -17,7 +16,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  3 files changed, 32 insertions(+)
 
 diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
-index c206cf6..84ef423 100644
+index c206cf6d..84ef4233 100644
 --- a/include/uapi/linux/if_bridge.h
 +++ b/include/uapi/linux/if_bridge.h
 @@ -830,6 +830,7 @@ enum br_boolopt_id {
@@ -29,7 +28,7 @@ index c206cf6..84ef423 100644
  };
  
 diff --git a/ip/iplink_bridge.c b/ip/iplink_bridge.c
-index 1fe8955..d4f2c80 100644
+index 1fe89551..d4f2c80b 100644
 --- a/ip/iplink_bridge.c
 +++ b/ip/iplink_bridge.c
 @@ -41,6 +41,7 @@ static void print_explain(FILE *f)
@@ -80,7 +79,7 @@ index 1fe8955..d4f2c80 100644
  
  	if (tb[IFLA_BR_MCAST_ROUTER])
 diff --git a/man/man8/ip-link.8.in b/man/man8/ip-link.8.in
-index efb6248..2308835 100644
+index efb62481..23088352 100644
 --- a/man/man8/ip-link.8.in
 +++ b/man/man8/ip-link.8.in
 @@ -1712,6 +1712,8 @@ the following additional arguments are supported:
