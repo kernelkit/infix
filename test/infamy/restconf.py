@@ -6,6 +6,7 @@ import sys
 import libyang
 import re
 import time
+import urllib.parse
 
 from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
@@ -37,10 +38,9 @@ def xpath_to_uri(xpath, extra=None):
     uri_path = xpath
     if matches:
         for key, value in matches:
-            # A key value is one path segment, a slash in it has to be
-            # escaped, e.g. the prefix in subnet[subnet='10.0.0.0/24'],
-            # RFC 8040 sec. 3.5.3
-            value_uri = value.replace('/', '%2F')
+            # A key value is one path segment, so it is percent-encoded,
+            # e.g. 10.0.0.0/24 or a MAC address, RFC 8040 sec. 3.5.3
+            value_uri = urllib.parse.quote(value, safe='')
 
             # replace [key=value] with =value
             uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value_uri}', uri_path)
@@ -61,8 +61,11 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
     request = requests.Request(method, url, json=json, headers=headers,
                                auth=auth)
     prepared_request = session.prepare_request(request)
-    prepared_request.url = re.sub(r'%25', '%', prepared_request.url)
-    prepared_request.url = re.sub(r'%3a', ':', prepared_request.url, flags=re.IGNORECASE)
+    # Undo the escaping of the IPv6 host and zone, but not of the path
+    parts = urllib.parse.urlsplit(prepared_request.url)
+    netloc = re.sub(r'%25', '%', parts.netloc)
+    netloc = re.sub(r'%3a', ':', netloc, flags=re.IGNORECASE)
+    prepared_request.url = urllib.parse.urlunsplit(parts._replace(netloc=netloc))
     response = session.send(prepared_request, verify=verify, timeout=TIMEOUT)
     try:
         # Raise exceptions for HTTP errors
