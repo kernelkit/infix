@@ -6,5 +6,5 @@ Reserved facilities for logging in various subsystems:
  - local3: 
  - local5: 
  - local6: reserved 
- - local7: nginx
+ - local7: web server (nginx)
 
