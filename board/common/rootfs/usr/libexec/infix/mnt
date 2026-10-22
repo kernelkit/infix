@@ -403,6 +403,9 @@ mount_overlay home "$cfgsrc" /home
 mount_overlay root "$cfgsrc" /root
 mount_bind         "$varsrc" /var
 
+# nginx logs to syslog, drop the unrotated error.log from older releases
+rm -rf /var/log/nginx
+
 [ -n "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
 
 for tag in $(ls /sys/bus/virtio/devices/*/mount_tag 2>/dev/null); do
