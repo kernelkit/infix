@@ -278,6 +278,68 @@ fabric forwards as well, and `offload` under `capabilities` then lists
 `rate-limit`.
 
 
+### Credit-Based Shaper
+
+On products built with the TSN feature, a traffic class can reserve
+bandwidth with the IEEE 802.1Qav credit-based shaper.  Turning it on
+takes two settings in two places, as the standard splits them: the
+class's `algorithm` under `qos egress`, and the reservation as
+`admin-idle-slope`, in bits per second, in the `cbsa` table beside
+`qos` on the interface.  One without the other is rejected.
+
+Reserve 20 Mbit/s for class 7 on a port:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1</b>
+admin@example:/config/interface/e1/> <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
+admin@example:/config/interface/e1/> <b>set cbsa cbsa-parameter-table 7 admin-idle-slope 20000000</b>
+admin@example:/config/interface/e1/> <b>leave</b>
+</code></pre>
+
+The class sends at most its reservation on average, and credit earned
+while it waits lets it burst by about one frame.  Shaped classes must
+be the highest-numbered ones, above the strict classes, as IEEE
+802.1Q-2022 34.5 lays a port out, and the reservation may not exceed
+the link rate.  A port with a `rate-limit` cannot shape per class.
+The reservation in force is reported as `oper-idle-slope`.
+
+
+### Time-Aware Shaper
+
+On products built with the TSN feature, a port can run the IEEE
+802.1Qbv time-aware shaper: a repeating cycle in which each traffic
+class's gate is open only in defined windows, so a reserved window
+stays quiet whatever else is queued.  The schedule needs synchronised
+time across the network, see [PTP](ptp.md).
+
+The gate control list lives in `gate-parameter-table` beside `qos` on
+the interface.  Each entry opens the gates in `gate-states-value`, a
+bit per traffic class with bit 0 for class 0, for `time-interval-value`
+nanoseconds.  `admin-cycle-time` is a fraction of a second, unset it is
+the sum of the entries, and `admin-base-time` anchors the cycle to the
+clock.  A 100 µs cycle with class 7 alone for 20 µs, classes 7 and 5
+for 20 µs, and the rest for 60 µs:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set gate-enabled true</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-cycle-time numerator 1 denominator 10000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-base-time seconds 0 nanoseconds 200</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 0 operation-name set-gate-states gate-states-value 128 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 1 operation-name set-gate-states gate-states-value 160 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 2 operation-name set-gate-states gate-states-value 95 time-interval-value 60000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
+</code></pre>
+
+The list applies at commit.  Gated classes are served strictly, so a
+gated port rejects weighted classes, and the schedule takes the whole
+port, so it rejects a `rate-limit` as well.  A shaped class under gates
+keeps its reservation: credit is earned only while its gate is open,
+and the shaper is set up with the slope raised by the cycle over the
+class's open time, as 802.1Q-2022 8.6.8.2 specifies.  A shaped class
+whose gate never opens is rejected.  The list, cycle and base time the
+port runs are reported as `oper-control-list`, `oper-cycle-time` and
+`oper-base-time`.
+
+
 ### Egress Remarking
 
 Configured under `qos egress remark`, both leaves default to `none`:
@@ -390,20 +452,23 @@ QoS capabilities a port reports.
 ///
 
 `supported-trust-order` is absent when the driver has no ingress
-classification support.  `offload` lists `classification`, `remarking`, `transmission-selection`
-and `rate-limit` as the driver takes them; a stage not listed runs in
-the kernel.
+classification support.  `offload` lists `classification`, `remarking`,
+`transmission-selection`, `rate-limit`, `credit-based-shaper` and
+`time-aware-shaper` as the driver takes them; a stage not listed runs
+in the kernel.
 
 Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:
 
-| Feature                | Linux tool     | Driver hook          | Fallback              |
-|------------------------|----------------|----------------------|-----------------------|
-| Ingress classification | `dcb app`      | `dcbnl` app ops      | `tc flower`, software |
-| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`  | Rule order, software  |
-| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`      | DSCP only, software   |
-| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS` | software              |
-| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF` | software              |
+| Feature                | Linux tool     | Driver hook             | Fallback              |
+|------------------------|----------------|-------------------------|-----------------------|
+| Ingress classification | `dcb app`      | `dcbnl` app ops         | `tc flower`, software |
+| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`     | Rule order, software  |
+| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`         | DSCP only, software   |
+| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS`    | software              |
+| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF`    | software              |
+| Credit-based shaper    | `tc cbs`       | `TC_SETUP_QDISC_CBS`    | software              |
+| Time-aware shaper      | `tc taprio`    | `TC_SETUP_QDISC_TAPRIO` | software              |
 /// table-caption
 QoS features and their Linux backends.
 ///

@@ -1,6 +1,5 @@
 Change Log
-==========
-
+===
 All notable changes to the project are documented in this file.
 
 [v26.11.0][UNRELEASED]
@@ -40,6 +39,10 @@ All notable changes to the project are documented in this file.
   `detailed` keywords are removed
 - Interfaces now report their multicast, discard and error counters,
   not only the octet counters
+- QoS changes, see [QoS][qos]:
+  - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
+    products built with the TSN feature, configured and read back with
+    the IEEE 802.1DC interface modules
 
 ### Fixes
 
@@ -2698,6 +2701,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.10.0...HEAD
+[v26.11.0]:   https://github.com/kernelkit/infix/compare/v26.10.0...v26.11.0
 [v26.10.0]:   https://github.com/kernelkit/infix/compare/v26.09.0...v26.10.0
 [v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
