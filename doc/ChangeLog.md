@@ -175,6 +175,11 @@ All notable changes to the project are documented in this file.
 - Transmission selection uses the `ets` scheduler on every
   port, so drivers that offload it take the class algorithms and weights
   into the switch fabric, not only the priority to class map
+- Add the IEEE 802.1Qav credit-based shaper and the IEEE 802.1Qbv
+  time-aware shaper on products built with the TSN feature, modelled by
+  the IEEE 802.1DC interface modules: a per-class bandwidth reservation
+  as an idle slope, and a gate control list with cycle and base time,
+  both read back as operational state, see [QoS][]
 - Marvell LinkStreet 88E6390 and 88E6393X switch ports offload QoS
   classification, trust order, remarking, transmission selection and the
   egress rate limit to the switch, so they apply to hardware forwarded
