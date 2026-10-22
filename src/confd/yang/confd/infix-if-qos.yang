@@ -190,6 +190,12 @@ submodule infix-if-qos {
             enum rate-limit {
               description "The port rate limit runs in the switch fabric.";
             }
+            enum credit-based-shaper {
+              description "The credit-based shaper runs in the switch fabric.";
+            }
+            enum time-aware-shaper {
+              description "The gate control list runs in the switch fabric.";
+            }
           }
           description "Pipeline stages the driver has taken into
              hardware.  A stage not listed runs in the kernel, which on
