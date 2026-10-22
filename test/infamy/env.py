@@ -160,11 +160,10 @@ class Env(object):
         """Attach to node on port using protocol."""
 
         name = node
-        if self.ltop:
+        mapping = None
+        if self.ltop and node in self.ltop.mapping:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
-        else:
-            mapping = None
 
         # Precedence:
         # 1. Caller specifies `protocol`
