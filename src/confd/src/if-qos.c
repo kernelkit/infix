@@ -12,6 +12,7 @@
 #define NUM_PRIO   8
 #define ETS_QUANTUM_UNIT 1514	/* one frame of bytes per percent of share */
 #define MAX_TC     8
+#define FRAME_OVERHEAD 22	/* Ethernet header, VLAN tag and FCS beyond the MTU */
 
 /*
  * IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class
@@ -55,9 +56,11 @@ static const uint8_t dscp_ietf[][2] = {
 	{ 56, 7 },
 };
 
+/* In rank order: a port lays its classes out shaped, strict, weighted from the top. */
 enum tsa {
-	TSA_STRICT,
 	TSA_ETS,
+	TSA_STRICT,
+	TSA_CBS,
 	TSA_UNSUPPORTED,
 };
 
@@ -66,6 +69,7 @@ struct qos_egress {
 	uint8_t  map[NUM_PRIO];
 	enum tsa algo[MAX_TC];
 	uint8_t  bandwidth[MAX_TC];	/* percent, ETS classes only */
+	uint64_t idle[MAX_TC];		/* bits/s, CBS classes only */
 	uint64_t rate;		/* bits/s, 0 = no rate limit */
 	uint32_t burst;		/* bytes */
 };
@@ -251,6 +255,8 @@ static enum tsa tsa_from_str(const char *val)
 		return TSA_STRICT;
 	if (!strcmp(id, "enhanced-transmission-selection"))
 		return TSA_ETS;
+	if (!strcmp(id, "credit-based-shaper"))
+		return TSA_CBS;
 
 	return TSA_UNSUPPORTED;
 }
@@ -331,6 +337,114 @@ static int qos_parse_egress(struct lyd_node *egress, const char *ifname, struct 
 	return 0;
 }
 
+/* The IEEE 802.1Qav reservations, ieee802-dot1dc-cbsa-if beside qos. */
+static void qos_parse_cbsa(struct lyd_node *cif, struct qos_egress *eg)
+{
+	struct lyd_node *cbsa, *entry;
+
+	cbsa = lydx_get_child(cif, "cbsa");
+	if (!cbsa)
+		return;
+
+	LYX_LIST_FOR_EACH(lyd_child(cbsa), entry, "cbsa-parameter-table") {
+		int tc = atoi(lydx_get_cattr(entry, "traffic-class"));
+		const char *val = lydx_get_cattr(entry, "admin-idle-slope");
+
+		if (tc >= 0 && tc < MAX_TC && val)
+			eg->idle[tc] = strtoull(val, NULL, 10);
+	}
+}
+
+static int qos_parse(struct lyd_node *cif, struct lyd_node *qos, struct qos_egress *eg)
+{
+	int err;
+
+	err = qos_parse_egress(lydx_get_child(qos, "egress"), lydx_get_cattr(cif, "name"), eg);
+	if (err)
+		return err;
+
+	qos_parse_cbsa(cif, eg);
+
+	return 0;
+}
+
+static long qos_sysfs_long(const char *ifname, const char *attr, long dflt)
+{
+	char path[PATH_MAX];
+	long val = dflt;
+	FILE *fp;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/%s", ifname, attr);
+	fp = fopen(path, "r");
+	if (!fp)
+		return dflt;
+	if (fscanf(fp, "%ld", &val) != 1 || val <= 0)
+		val = dflt;
+	fclose(fp);
+
+	return val;
+}
+
+/* Link rate in bits per second, a gigabit when the link is down or virtual. */
+static uint64_t qos_link_rate(const char *ifname)
+{
+	return (uint64_t)qos_sysfs_long(ifname, "speed", 1000) * 1000000;
+}
+
+/*
+ * Turning CBS on takes the algorithm in qos and the reservation in
+ * cbsa, so the two are checked against each other here.  The layout
+ * is the one tc ets accepts, strict bands first, with the shaped
+ * classes on top as IEEE 802.1Q-2022 34.5 has it.
+ */
+static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname,
+				struct qos_egress *eg)
+{
+	uint64_t link = qos_link_rate(ifname);
+	enum tsa below = TSA_CBS;
+	int i;
+
+	for (i = 0; i < MAX_TC; i++) {
+		if (eg->algo[i] == TSA_CBS && !eg->idle[i]) {
+			sr_session_set_error_message(session, "%s: traffic class %d: credit-based-"
+						     "shaper needs an admin-idle-slope in cbsa",
+						     ifname, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] != TSA_CBS && eg->idle[i]) {
+			sr_session_set_error_message(session, "%s: cbsa traffic class %d has an "
+						     "admin-idle-slope but its algorithm is not "
+						     "credit-based-shaper", ifname, i);
+			return -EINVAL;
+		}
+		if (eg->idle[i] > link) {
+			sr_session_set_error_message(session, "%s: traffic class %d: admin-idle-slope "
+						     "%" PRIu64 " exceeds the link rate %" PRIu64,
+						     ifname, i, eg->idle[i], link);
+			return -EINVAL;
+		}
+		if (eg->algo[i] == TSA_CBS && eg->rate) {
+			sr_session_set_error_message(session, "%s: rate-limit and credit-based "
+						     "shaping exclude each other", ifname);
+			return -EINVAL;
+		}
+	}
+
+	/* Walk from the top: shaped classes, then strict, then weighted, never back. */
+	for (i = eg->num_tc - 1; i >= 0; i--) {
+		if (eg->algo[i] > below) {
+			sr_session_set_error_message(session, "%s: traffic class %d: classes must be "
+						     "laid out credit-based-shaper, then strict-"
+						     "priority, then weighted, from the top",
+						     ifname, i);
+			return -EINVAL;
+		}
+		below = eg->algo[i];
+	}
+
+	return 0;
+}
+
 /*
  * Checks the YANG model cannot express: map values and class ids
  * against the port's class count, the algorithms in use today, and
@@ -344,7 +458,6 @@ static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct 
 	struct qos_egress eg;
 	struct lyd_node *ingress = lydx_get_child(qos, "ingress");
 	const char *trust;
-	bool ets = false;
 	int i;
 
 	trust = ingress ? lydx_get_cattr(ingress, "trust") : NULL;
@@ -355,7 +468,7 @@ static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct 
 	}
 
 	egress = lydx_get_child(qos, "egress");
-	if (qos_parse_egress(egress, ifname, &eg)) {
+	if (qos_parse(cif, qos, &eg)) {
 		sr_session_set_error_message(session, "%s: invalid traffic class table", ifname);
 		return -EINVAL;
 	}
@@ -383,26 +496,15 @@ static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct 
 
 		if (eg.algo[id] == TSA_UNSUPPORTED) {
 			sr_session_set_error_message(session, "%s: traffic class %d: algorithm %s "
-						     "not supported, use strict-priority or "
-						     "enhanced-transmission-selection", ifname, id,
+						     "not supported, use strict-priority, "
+						     "enhanced-transmission-selection or "
+						     "credit-based-shaper", ifname, id,
 						     lydx_get_cattr(tc, "algorithm"));
 			return -EINVAL;
 		}
 	}
 
-	/* Walk from the top: strict classes, then weighted, never back. */
-	for (i = eg.num_tc - 1; i >= 0; i--) {
-		if (eg.algo[i] == TSA_ETS)
-			ets = true;
-		else if (ets) {
-			sr_session_set_error_message(session, "%s: traffic class %d: strict-priority "
-						     "classes must be the highest-numbered ones, "
-						     "above all weighted classes", ifname, i);
-			return -EINVAL;
-		}
-	}
-
-	return 0;
+	return qos_validate_shapers(session, ifname, &eg);
 }
 
 enum trust {
@@ -684,6 +786,36 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
 }
 
 /*
+ * One cbs child per shaped class, on its band.  The operator gives the
+ * idle slope; the send slope and the credits follow IEEE 802.1Q-2022
+ * Annex L from it and the link rate, with one maximum frame as the
+ * interfering burst.  tc takes the slopes in kbit/s.  The shaper is
+ * offloaded on a switch port, where frames never pass the kernel, and
+ * is the real thing in software elsewhere.
+ */
+static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int handle)
+{
+	uint64_t link = qos_link_rate(ifname) / 1000;
+	long frame = qos_sysfs_long(ifname, "mtu", 1500) + FRAME_OVERHEAD;
+	bool offload = qos_is_dsa(ifname);
+	int tc;
+
+	for (tc = 0; tc < eg->num_tc; tc++) {
+		uint64_t idle, send;
+
+		if (eg->algo[tc] != TSA_CBS)
+			continue;
+
+		idle = eg->idle[tc] / 1000;
+		send = link - idle;
+		fprintf(fp, "qdisc replace dev %s parent %d:%d handle %d: cbs idleslope %" PRIu64
+			" sendslope -%" PRIu64 " hicredit %" PRIu64 " locredit -%" PRIu64
+			" offload %d\n", ifname, handle, eg->num_tc - tc, 0x10 + tc, idle, send,
+			(frame * idle + link / 2) / link, (frame * send + link / 2) / link, offload);
+	}
+}
+
+/*
  * tc ets carries the whole layout, and a driver that offloads it says
  * so in the qdisc: band 0 is dequeued first, so class N-1 is band 0,
  * strict bands come first, and quanta are listed for the weighted
@@ -694,7 +826,7 @@ static void gen_ets(FILE *fp, const char *ifname, struct qos_egress *eg, const c
 {
 	int i, nstrict = 0;
 
-	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] == TSA_STRICT; i--)
+	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] != TSA_ETS; i--)
 		nstrict++;
 
 	fprintf(fp, "qdisc add dev %s %s ets bands %d strict %d", ifname, attach, eg->num_tc, nstrict);
@@ -711,7 +843,8 @@ static void gen_ets(FILE *fp, const char *ifname, struct qos_egress *eg, const c
 
 static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 {
-	const char *attach = "root";
+	const char *attach = "root handle 1:";
+	int handle = 1;
 
 	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
 	if (!eg->rate && eg->num_tc < 2)
@@ -727,10 +860,13 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 		fprintf(fp, "qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
 			" latency 100ms\n", ifname, eg->rate, eg->burst);
 		attach = "parent 1:1 handle 2:";
+		handle = 2;
 	}
 
-	if (eg->num_tc >= 2)
+	if (eg->num_tc >= 2) {
 		gen_ets(fp, ifname, eg, attach);
+		gen_cbs(fp, ifname, eg, handle);
+	}
 	fputs("EOF\n", fp);
 }
 
@@ -797,6 +933,8 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
 	struct lyd_node *qos, *dqos, *ingress, *remark;
+	struct lyd_node *cbsa = lydx_get_child(cif, "cbsa");
+	struct lyd_node *dcbsa = lydx_get_child(dif, "cbsa");
 	struct qos_egress eg;
 	FILE *fp;
 	int err;
@@ -806,15 +944,15 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 
 	/*
 	 * The defaults are a complete pipeline and apply on every
-	 * physical port, at creation and whenever qos changes.  Virtual
-	 * interfaces get one only when configured; removing it there
-	 * resets the interface.
+	 * physical port, at creation and whenever qos or the shapers
+	 * beside it change.  Virtual interfaces get one only when
+	 * configured; removing it there resets the interface.
 	 */
-	if (!qos_has_change(dqos) && lydx_get_op(dif) != LYDX_OP_CREATE)
+	if (!qos_has_change(dqos) && !qos_has_change(dcbsa) && lydx_get_op(dif) != LYDX_OP_CREATE)
 		return 0;
 
-	if (!qos_is_explicit(qos) && !qos_is_port(ifname)) {
-		if (qos_has_change(dqos))
+	if (!qos_is_explicit(qos) && !qos_is_explicit(cbsa) && !qos_is_port(ifname)) {
+		if (qos_has_change(dqos) || qos_has_change(dcbsa))
 			return gen_reset(net, ifname);
 		return 0;
 	}
@@ -823,7 +961,7 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	if (err)
 		return err;
 
-	err = qos_parse_egress(lydx_get_child(qos, "egress"), ifname, &eg);
+	err = qos_parse(cif, qos, &eg);
 	if (err)
 		return err;
 
@@ -847,7 +985,8 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	if (lydx_get_op(dif) == LYDX_OP_CREATE ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class-table", NULL)) ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class", NULL)) ||
-	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "rate-limit", NULL)))
+	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "rate-limit", NULL)) ||
+	    qos_has_change(dcbsa))
 		gen_egress(fp, ifname, &eg);
 	fclose(fp);
 
