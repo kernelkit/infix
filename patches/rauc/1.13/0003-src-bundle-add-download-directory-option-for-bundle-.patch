@@ -1,0 +1,138 @@
+From f2aef5c0fdd44bcbd896b6ac1114a2ad567bcbf4 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Mon, 12 Oct 2026 07:27:09 +0000
+Subject: [PATCH 3/3] src/bundle: add download-directory option for bundle
+ downloads
+Organization: Wires
+
+On boards where /tmp is too small to hold a bundle, but disk is
+available, allow bundles to be downloaded to a user-configurable
+location instead.
+
+Therefore, add a 'download-directory' option to system.conf which will
+be used instead of the system default temporary directory, when set.
+
+Signed-off-by: Tobias Waldekranz <tobias.waldekranz@wires.se>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ docs/reference.rst    | 10 ++++++++++
+ include/config_file.h |  2 ++
+ src/bundle.c          | 24 +++++++++++++++++++-----
+ src/config_file.c     |  4 ++++
+ test/config_file.c    |  2 ++
+ 5 files changed, 37 insertions(+), 5 deletions(-)
+
+diff --git a/docs/reference.rst b/docs/reference.rst
+index 5504661c..88d5ae28 100644
+--- a/docs/reference.rst
++++ b/docs/reference.rst
+@@ -212,6 +212,16 @@ Example configuration:
+   If RAUC is configured with streaming support, this has no effect, as the
+   bundle is not downloaded as a whole.
+ 
++``download-directory`` (optional)
++  Directory in which RAUC creates a temporary subdirectory to store
++  downloaded bundles.
++  Defaults to the system's temporary directory (``$TMPDIR`` or ``/tmp``).
++  Use this if the default location is too small to hold a full bundle
++  (see ``max-bundle-download-size``).
++  The directory must already exist.
++  If RAUC is configured with streaming support, this has no effect, as the
++  bundle is not downloaded as a whole.
++
+ ``variant-name`` (optional)
+   String to be used as variant name for this board.
+   If set, neither ``variant-file`` nor ``variant-dtb`` must be set.
+diff --git a/include/config_file.h b/include/config_file.h
+index ecb962c2..8312d4ce 100644
+--- a/include/config_file.h
++++ b/include/config_file.h
+@@ -51,6 +51,8 @@ typedef struct {
+ 	gboolean efi_use_bootnext;
+ 	/* maximum filesize to download in bytes */
+ 	guint64 max_bundle_download_size;
++	/* directory in which to place downloaded bundles (NULL: use default tmp dir) */
++	gchar *download_directory;
+ 	/* path prefix where rauc may create mount directories */
+ 	gchar *mount_prefix;
+ 	gchar *store_path;
+diff --git a/src/bundle.c b/src/bundle.c
+index 7a27f6b4..ea7c92b5 100644
+--- a/src/bundle.c
++++ b/src/bundle.c
+@@ -2249,11 +2249,25 @@ gboolean check_bundle(const gchar *bundlename, RaucBundle **bundle, CheckBundleP
+ 			goto out;
+ 		}
+ #elif ENABLE_NETWORK
+-		g_autofree gchar *tmpdir = g_dir_make_tmp("rauc-XXXXXX", &ierror);
+-		if (tmpdir == NULL) {
+-			g_propagate_prefixed_error(error, ierror, "Failed to create tmp dir: ");
+-			res = FALSE;
+-			goto out;
++		g_autofree gchar *tmpdir = NULL;
++
++		if (r_context()->config->download_directory) {
++			tmpdir = g_build_filename(r_context()->config->download_directory, "rauc-XXXXXX", NULL);
++			if (g_mkdtemp(tmpdir) == NULL) {
++				int err = errno;
++				g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
++						"Failed to create tmp dir in %s: %s",
++						r_context()->config->download_directory, g_strerror(err));
++				res = FALSE;
++				goto out;
++			}
++		} else {
++			tmpdir = g_dir_make_tmp("rauc-XXXXXX", &ierror);
++			if (tmpdir == NULL) {
++				g_propagate_prefixed_error(error, ierror, "Failed to create tmp dir: ");
++				res = FALSE;
++				goto out;
++			}
+ 		}
+ 
+ 		ibundle->origpath = g_strdup(bundlename);
+diff --git a/src/config_file.c b/src/config_file.c
+index 03f7d20a..1be569b8 100644
+--- a/src/config_file.c
++++ b/src/config_file.c
+@@ -903,6 +903,9 @@ gboolean load_config(const gchar *filename, RaucConfig **config, GError **error)
+ 	}
+ 	g_key_file_remove_key(key_file, "system", "max-bundle-download-size", NULL);
+ 
++	c->download_directory = resolve_path_take(filename,
++			key_file_consume_string(key_file, "system", "download-directory", NULL));
++
+ 	c->mount_prefix = key_file_consume_string(key_file, "system", "mountprefix", NULL);
+ 	if (!c->mount_prefix) {
+ 		g_debug("No mount prefix provided, using /mnt/rauc/ as default");
+@@ -1274,6 +1277,7 @@ void free_config(RaucConfig *config)
+ 	g_free(config->system_bootloader);
+ 	g_free(config->system_bb_statename);
+ 	g_free(config->system_bb_dtbpath);
++	g_free(config->download_directory);
+ 	g_free(config->mount_prefix);
+ 	g_free(config->store_path);
+ 	g_free(config->tmp_path);
+diff --git a/test/config_file.c b/test/config_file.c
+index d6b0be43..9a3df7d1 100644
+--- a/test/config_file.c
++++ b/test/config_file.c
+@@ -50,6 +50,7 @@ bootloader=barebox\n\
+ mountprefix=/mnt/myrauc/\n\
+ statusfile=/mnt/persistent-rw-fs/system.raucs\n\
+ max-bundle-download-size=42\n\
++download-directory=/data/tmp\n\
+ bundle-formats=verity\n\
+ \n\
+ [keyring]\n\
+@@ -118,6 +119,7 @@ type=trees\n\
+ 	g_assert_true(config->activate_installed);
+ 	g_assert_cmpstr(config->statusfile_path, ==, "/mnt/persistent-rw-fs/system.raucs");
+ 	g_assert_cmpint(config->max_bundle_download_size, ==, 42);
++	g_assert_cmpstr(config->download_directory, ==, "/data/tmp");
+ 	g_assert_cmphex(config->bundle_formats_mask, ==, 0x2);
+ 	g_assert_cmpstr(config->store_path, ==, "/var/lib/default.castr/");
+ 	g_assert_cmpstr(config->tmp_path, ==, "/tmp/");
+-- 
+2.43.0
+

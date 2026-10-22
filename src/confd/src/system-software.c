@@ -80,9 +80,9 @@ static int infix_system_sw_set_boot_order(sr_session_ctx_t *session, uint32_t su
 			 ERROR("Set-boot-order: Failed to set boot order in U-Boot");
 			 return SR_ERR_INTERNAL;
 		 }
-	 } else if (fexist("/mnt/aux/grub/grubenv")) {
-		 if (systemf("grub-editenv /mnt/aux/grub/grubenv set ORDER=\"%s\"", boot_order)) {
-			 ERROR("Set-boot-order: Failed to set boot order in Grub");
+	 } else if (!systemf("/usr/libexec/confd/bareboxcfg --available")) {
+		 if (systemf("/usr/libexec/confd/bareboxcfg --set-order %s", boot_order)) {
+			 ERROR("Set-boot-order: Failed to set boot order in Barebox");
 			 return SR_ERR_INTERNAL;
 		 }
 	 } else {

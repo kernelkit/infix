@@ -54,7 +54,7 @@
 #define MIGRATED_PATH "/run/confd-migrated.cfg"
 
 /* Set when startup-config fails, next boot goes to fail-secure, issue #1637 */
-#define FAILED_PATH   "/mnt/aux/startup-config.failed"
+#define FAILED_PATH  MARKER_DIR"/startup-config.failed"
 
 /*
  * Set a finit condition in the usr/ namespace, e.g.
@@ -603,7 +603,7 @@ static void handle_startup_failure(sr_session_ctx_t *sess, const char *failure_p
  */
 static void maybe_enable_test_mode(void)
 {
-	if (fexist("/mnt/aux/test-mode")) {
+	if (fexist(MARKER_DIR "/test-mode")) {
 		int rc;
 
 		conout(3, "Enabling test mode");
@@ -635,9 +635,9 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	}
 
 	/* Test mode support */
-	if (fexist("/mnt/aux/test-mode")) {
-		if (fexist("/mnt/aux/test-override-startup")) {
-			unlink("/mnt/aux/test-override-startup");
+	if (fexist(MARKER_DIR "/test-mode")) {
+		if (fexist(MARKER_DIR "/test-override-startup")) {
+			unlink(MARKER_DIR "/test-override-startup");
 			config_path = startup_path;
 		} else {
 			NOTE("Test mode detected, switching to test-config");

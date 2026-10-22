@@ -13,13 +13,8 @@ def uboot_get_boot_order():
 
     raise Exception
 
-def grub_get_boot_order():
-    data = HOST.run_multiline("grub-editenv /mnt/aux/grub/grubenv list".split(), [])
-    for line in data:
-        if "ORDER" in line:
-            return line.split("=")[1].strip().split()
-
-    raise Exception
+def barebox_get_boot_order():
+    return HOST.run_multiline("/usr/libexec/confd/bareboxcfg --get-order".split())[0].split()
 
 def get_boot_order():
     order = None
@@ -29,7 +24,7 @@ def get_boot_order():
         pass
     try:
         if order is None:
-            order = grub_get_boot_order()
+            order = barebox_get_boot_order()
     except:
         pass
 
@@ -158,7 +153,7 @@ def add_software_slots(out, data):
         for key, value in slot.items():
             new = {}
             new["name"] = key
-            new["bootname"] = slot[key].get("bootname")
+            new["bootname"] = slot[key].get("bootname").replace("internal-", "")
             new["class"] = slot[key].get("class")
             new["state"] = slot[key].get("state")
             new["bundle"] = {}
@@ -256,7 +251,7 @@ def add_software(out):
         data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"], {})
         software["compatible"] = data.get("compatible", "")
         software["variant"] = data.get("variant", "")
-        software["booted"] = data.get("booted", "")
+        software["booted"] = data.get("booted", "").replace("internal-", "")
         boot_order = get_boot_order()
         if not boot_order is None:
             software["boot-order"] = boot_order
