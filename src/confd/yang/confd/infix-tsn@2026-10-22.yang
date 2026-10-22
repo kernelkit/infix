@@ -1,0 +1,88 @@
+module infix-tsn {
+  yang-version 1.1;
+  namespace "urn:infix:tsn:ns:yang:1.0";
+  prefix infix-tsn;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ieee802-dot1dc-sched-if {
+    prefix sched-if;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Deviations to the IEEE 802.1DC time-sensitive networking
+     modules.
+
+     The scheduled traffic capability leaves are read-only here, as the
+     standard allows, and the constraints that compare configuration
+     against them are removed: a comparison with a leaf the operator
+     cannot set fails on every interface, configured or not.  The daemon
+     checks the list against what the port supports instead.";
+
+  revision 2026-10-22 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:supported-list-max" {
+    deviate add {
+      config false;
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:supported-cycle-max" {
+    deviate add {
+      config false;
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:supported-interval-max" {
+    deviate add {
+      config false;
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:admin-control-list" {
+    deviate delete {
+      must "(count(./gate-control-entry) <= ../supported-list-max)";
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:oper-control-list" {
+    deviate delete {
+      must "(count(./gate-control-entry) <= ../supported-list-max)";
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:admin-control-list/sched-if:gate-control-entry"
+          + "/sched-if:time-interval-value" {
+    deviate delete {
+      must "(. <= ../../../supported-interval-max )";
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:oper-control-list/sched-if:gate-control-entry"
+          + "/sched-if:time-interval-value" {
+    deviate delete {
+      must "(. <= ../../../supported-interval-max )";
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/sched-if:gate-parameter-table"
+          + "/sched-if:admin-cycle-time" {
+    deviate delete {
+      must "(./numerator div ./denominator <= "
+         + "../supported-cycle-max/numerator div "
+         + "../supported-cycle-max/denominator )";
+    }
+  }
+}
