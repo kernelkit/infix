@@ -24,8 +24,10 @@ struct ixif_br {
 		struct snippet vlan;
 		struct snippet mcast;
 		struct snippet mdb;
+		struct snippet fdb;
 	} init;
 	struct {
+		struct snippet fdb;
 		struct snippet mdb;
 		struct snippet mcast;
 		struct snippet vlan;
@@ -59,13 +61,13 @@ static int gen_mdb_filter(struct ixif_br *br, struct lyd_node *filter,
 				 */
 				goto delete;
 
-			fprintf(br->init.mdb.fp, "mdb replace dev %s port %s grp %s %s %s",
+			fprintf(br->init.mdb.fp, "mdb replace dev %s port %s grp %s %s %s\n",
 				br->name, iface, group, vidstr ? : "",
 				lydx_get_cattr(port, "state"));
 			break;
 		case LYDX_OP_DELETE:
 		delete:
-			fprintf(br->exit.mdb.fp, "mdb del dev %s port %s grp %s %s",
+			fprintf(br->exit.mdb.fp, "mdb del dev %s port %s grp %s %s\n",
 				br->name, iface, group, vidstr ? : "");
 			break;
 		}
@@ -101,6 +103,44 @@ static int gen_mdb(struct ixif_br *br, struct lyd_node *ctx)
 }
 
 /* MDB */
+
+/* FDB */
+
+static void gen_fdb_entry(struct ixif_br *br, struct lyd_node *entry,
+			  const char *vid)
+{
+	const char *addr, *port;
+	bool self;
+
+	addr = lydx_get_cattr(entry, "address");
+	port = lydx_get_cattr(entry, "port");
+	self = !strcmp(br->name, port);
+
+	switch (lydx_get_op(entry)) {
+	case LYDX_OP_NONE:
+	case LYDX_OP_CREATE:
+	case LYDX_OP_REPLACE:
+		fprintf(br->init.fdb.fp, "fdb replace %s dev %s %s%s%s\n", addr, port,
+			self ? "self local" : "master static", vid ? " vlan " : "", vid ? : "");
+		break;
+	case LYDX_OP_DELETE:
+		fprintf(br->exit.fdb.fp, "fdb del %s dev %s %s%s%s\n", addr, port,
+			self ? "self" : "master", vid ? " vlan " : "", vid ? : "");
+		break;
+	}
+}
+
+static void gen_fdb(struct ixif_br *br, struct lyd_node *ctx)
+{
+	struct lyd_node *entry;
+	const char *vid;
+
+	vid = lydx_get_cattr(ctx, "vid");
+	LYX_LIST_FOR_EACH(lyd_child(lydx_get_child(ctx, "forwarding-database")), entry, "entry")
+		gen_fdb_entry(br, entry, vid);
+}
+
+/* FDB */
 
 /* MCAST */
 
@@ -301,6 +341,8 @@ static int gen_vlan(struct ixif_br *br)
 		err = gen_mdb(br, vlan);
 		if (err)
 			return err;
+
+		gen_fdb(br, vlan);
 	}
 
 	return 0;
@@ -431,6 +473,8 @@ static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_no
 	err = err ? : snippet_open(&br->init.vlan);
 	err = err ? : snippet_open(&br->init.mcast);
 	err = err ? : snippet_open(&br->init.mdb);
+	err = err ? : snippet_open(&br->init.fdb);
+	err = err ? : snippet_open(&br->exit.fdb);
 	err = err ? : snippet_open(&br->exit.mdb);
 	err = err ? : snippet_open(&br->exit.mcast);
 	err = err ? : snippet_open(&br->exit.vlan);
@@ -438,6 +482,8 @@ static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_no
 		snippet_close(&br->exit.vlan, NULL);
 		snippet_close(&br->exit.mcast, NULL);
 		snippet_close(&br->exit.mdb, NULL);
+		snippet_close(&br->exit.fdb, NULL);
+		snippet_close(&br->init.fdb, NULL);
 		snippet_close(&br->init.mdb, NULL);
 		snippet_close(&br->init.mcast, NULL);
 		snippet_close(&br->init.vlan, NULL);
@@ -466,7 +512,9 @@ static int collect_snippets(struct ixif_br *br)
 	err = err ? : snippet_close(&br->init.vlan, init);
 	err = err ? : snippet_close(&br->init.mcast, init);
 	err = err ? : snippet_close(&br->init.mdb, init);
+	err = err ? : snippet_close(&br->init.fdb, init);
 
+	err = err ? : snippet_close(&br->exit.fdb, exit);
 	err = err ? : snippet_close(&br->exit.mdb, exit);
 	err = err ? : snippet_close(&br->exit.mcast, exit);
 	err = err ? : snippet_close(&br->exit.vlan, exit);
@@ -496,6 +544,8 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 
 	fputs(" mcast_flood_always 1", br.bropts.fp);
 	fputs(" vlan_default_pvid 0", br.bropts.fp);
+	fprintf(br.bropts.fp, " ageing_time %d",
+		atoi(lydx_get_cattr(lydx_get_child(cif, "bridge"), "aging-time")) * 100);
 
 	err = gen_stp(&br);
 	if (err)
@@ -512,6 +562,8 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 	err = gen_mdb(&br, lydx_get_child(dif, "bridge"));
 	if (err)
 		goto out;
+
+	gen_fdb(&br, lydx_get_child(dif, "bridge"));
 
 	fprintf(br.ip, "link %s dev %s", op, br.name);
 	if (add)
