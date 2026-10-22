@@ -46,6 +46,7 @@ var logSources = []logSource{
 	{"upgrade", "Upgrade", "/var/log/upgrade.log"},
 	{"debug", "Debug", "/var/log/debug"},
 	{"container", "Container", "/var/log/container"},
+	{"web", "Web", "/var/log/web"},
 	{"mail", "Mail", "/var/log/mail.log"},
 }
 
