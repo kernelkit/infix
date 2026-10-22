@@ -159,7 +159,8 @@ All notable changes to the project are documented in this file.
 - Some web server errors were logged to a file that nothing rotated,
   which could eventually fill up the disk.  All web server logs now go
   to syslog and to their own file, `/var/log/web`, which is rotated like
-  the other logs
+  the other logs.  The old log directory, `/var/log/nginx`, is removed
+  at boot
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
