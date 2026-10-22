@@ -390,7 +390,8 @@
                 }
               }
             ]
-          }
+          },
+          "aging-time": 300
         },
         "infix-interfaces:bridge-port": {
           "pvid": 1
@@ -493,7 +494,8 @@
                 }
               }
             ]
-          }
+          },
+          "aging-time": 300
         }
       },
       {

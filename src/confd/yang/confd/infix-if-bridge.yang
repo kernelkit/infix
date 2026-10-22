@@ -29,6 +29,13 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2026-10-22 {
+    description
+      "Add unicast forwarding database, with static entries, and the
+       bridge aging time.";
+    reference "internal";
+  }
+
   revision 2026-10-02 {
     description
       "Allow WDS link interfaces and 4-address stations as bridge ports.";
@@ -152,6 +159,15 @@ submodule infix-if-bridge {
     description "Valid multicast address.";
     type string {
       pattern "[0-9A-Fa-f][13579BbDdFf](:[0-9A-Fa-f]{2}){5}";
+    }
+  }
+
+  typedef mac-unicast-address {
+    description "Valid unicast address.";
+    type yang:mac-address {
+      pattern "[0-9A-Fa-f][02468AaCcEe](:[0-9A-Fa-f]{2}){5}" {
+        error-message "Must be a unicast MAC address (multicast bit must not be set).";
+      }
     }
   }
 
@@ -346,6 +362,26 @@ submodule infix-if-bridge {
     }
   }
 
+  typedef fdb-state {
+    description "Origin of fdb entry.";
+    type enumeration {
+      enum dynamic {
+        value 0;
+        description "Learned from the source address of received frames,
+                     removed when it has not been seen for aging-time.";
+      }
+      enum static {
+        value 1;
+        description "Static entry, from configuration, never ages out.";
+      }
+      enum local {
+        value 2;
+        description "Address of the bridge or one of its ports, frames
+                     are delivered to the host.";
+      }
+    }
+  }
+
 
   /*
    * Shared settings
@@ -445,6 +481,55 @@ submodule infix-if-bridge {
             type mdb-state;
             default permanent;
           }
+        }
+      }
+    }
+  }
+
+  grouping forwarding-database {
+    container forwarding-database {
+      description "Bridge unicast forwarding database (FDB).";
+      reference "IEEE 802.1Q-2018 8.8";
+
+      list entry {
+        description "Unicast forwarding entry.  Configured entries are static.";
+        key "address";
+
+        leaf address {
+          description "Unicast MAC address.";
+          type mac-unicast-address;
+        }
+
+        leaf port {
+          description "Port the address is reachable through.  For local
+                       entries, and static entries to the host, this is
+                       the bridge itself.";
+          type if:interface-ref;
+          must "current() = ancestor::if:interface/if:name
+            or /if:interfaces/if:interface[if:name = current()]/bridge-port/bridge = ancestor::if:interface/if:name" {
+            error-message "Port is not member of bridge";
+          }
+          mandatory true;
+        }
+
+        leaf state {
+          config false;
+          description "Origin of entry, static, dynamic, or local.";
+          type fdb-state;
+        }
+
+        leaf age {
+          config false;
+          description "Time since the address was last seen as source
+                       address on the port.  Only for dynamic entries.";
+          type uint32;
+          units seconds;
+        }
+
+        leaf offloaded {
+          config false;
+          description "Entry is installed in switch hardware.";
+          type boolean;
         }
       }
     }
@@ -602,10 +687,22 @@ submodule infix-if-bridge {
         description
           "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
       }
+      leaf aging-time {
+        description "Time a dynamic FDB entry is kept after its address
+                     was last seen as source address on a port.";
+        type uint32 {
+          range "10..1000000";
+        }
+        units seconds;
+        default 300;
+        reference "IEEE 802.1Q-2018 8.8.3";
+      }
+
       choice  type {
         case ieee8021d {
           uses multicast;
           uses multicast-filters;
+          uses forwarding-database;
         }
         case ieee8021q {
           container vlans {
@@ -630,6 +727,13 @@ submodule infix-if-bridge {
 
               uses multicast;
               uses multicast-filters;
+              uses forwarding-database {
+                refine "forwarding-database/entry/port" {
+                  must "../../../untagged = current() or ../../../tagged = current()" {
+                    error-message "Port is not member of VLAN";
+                  }
+                }
+              }
 
               leaf-list untagged {
                 type if:interface-ref;
