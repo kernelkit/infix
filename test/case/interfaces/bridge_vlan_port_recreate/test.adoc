@@ -1,0 +1,26 @@
+=== Bridge port keeps its VLANs when recreated
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_vlan_port_recreate]
+
+==== Description
+
+A VLAN filtering bridge with two ports in VLAN 10: the physical port
+untagged with PVID 10, and a GRETAP tunnel tagged only.  A change of
+the tunnel's TTL recreates its interface.  The port has to come back
+as a tagged member of VLAN 10, the membership a port holds without a
+PVID is the one that is easy to lose.
+
+==== Topology
+
+image::topology.svg[Bridge port keeps its VLANs when recreated topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure br0 with VLAN 10: target:data untagged with PVID 10, gretap0 tagged
+. Verify gretap0 is a tagged and target:data an untagged member of VLAN 10
+. Set the TTL of gretap0 to 32
+. Verify gretap0 was recreated with a new if-index
+. Verify gretap0 is still a tagged member of VLAN 10
+
+

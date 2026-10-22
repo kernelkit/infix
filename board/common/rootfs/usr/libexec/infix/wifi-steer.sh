@@ -8,7 +8,8 @@
 # range of the twin, so ask it to move with an 802.11v BSS transition
 # request naming the twin.  Clients that ignore the request stay: a
 # client is asked again only after a cooldown, and one that has shrugged
-# off a couple of requests is left alone for an hour.  A client with a
+# off a couple of requests is left alone for an hour; one that did move
+# starts over should it come back.  A client with a
 # weak 2.4 GHz signal is left alone too, 5 GHz would be worse, and
 # nobody is sent to a twin that is down or still checking for radar.
 bss=$1
@@ -69,6 +70,18 @@ candidate()
 
 while sleep $PERIOD; do
     stas=$(hostapd_cli -i "$bss" list_sta 2>/dev/null)
+    moved=$(hostapd_cli -i "$twin" list_sta 2>/dev/null)
+    # A client on the twin, or gone, starts over; this BSS lists a moved
+    # client until it times out.  The cooldown stays.
+    for f in "$state"/*; do
+	[ -f "$f" ] || continue
+	sta=${f##*/}
+	if echo "$stas" | grep -qi "^$sta\$" && ! echo "$moved" | grep -qi "^$sta\$"; then
+	    continue
+	fi
+	read -r last tries < "$f"
+	[ "${tries:-0}" -gt 0 ] && echo "$last 0" > "$f"
+    done
     [ -n "$stas" ] || continue
     # Nothing to move to while the twin is down or checking for radar
     hostapd_cli -i "$twin" status 2>/dev/null | grep -q '^state=ENABLED' || continue
@@ -79,6 +92,7 @@ while sleep $PERIOD; do
     now=$(date +%s)
 
     for sta in $stas; do
+	echo "$moved" | grep -qi "^$sta\$" && continue
 	echo "$seen" | grep -qi "^$sta " || continue
 	read -r last tries < "$state/$sta" 2>/dev/null || { last=0; tries=0; }
 	wait=$COOLDOWN

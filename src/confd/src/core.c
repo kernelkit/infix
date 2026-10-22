@@ -509,6 +509,7 @@ static confd_dependency_t dep_wifi_interfaces(struct lyd_node **diff, struct lyd
 		struct lyd_node *radio_node, *cif;
 		const char *ifname, *radio_name;
 		enum iftype type;
+		enum lydx_op op;
 		char xpath[256];
 
 		ifname = lydx_get_cattr(dif, "name");
@@ -521,6 +522,42 @@ static confd_dependency_t dep_wifi_interfaces(struct lyd_node **diff, struct lyd
 
 		if (type != IFT_WIFI)
 			continue;
+
+		/* A derived address is the interface's position on its
+		 * radio, see wifi_default_addr(), so adding or removing one
+		 * moves the others.  Flag those without a fixed address the
+		 * way a custom-phys-address change is, netdag then recreates
+		 * them.  A deleted interface is only in the diff, so take the
+		 * radio from there. */
+		op = lydx_get_op(dif);
+		radio_node = lydx_get_descendant(lyd_child(dif), "wifi", "radio", NULL);
+		if ((op == LYDX_OP_CREATE || op == LYDX_OP_DELETE) && radio_node) {
+			struct ly_set *ifaces;
+			uint32_t i;
+
+			radio_name = lyd_get_value(radio_node);
+			ifaces = lydx_find_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/radio='%s']",
+				radio_name);
+			for (i = 0; ifaces && i < ifaces->count; i++) {
+				const char *name = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char mac[18];
+
+				if (!strcmp(name, ifname) ||
+				    !interface_get_phys_addr(ifaces->dnodes[i], mac))
+					continue;
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:custom-phys-address", name);
+				result = add_dependencies(diff, xpath, NULL);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add %s to diff for WiFi interface %s", name, ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+			ly_set_free(ifaces, NULL);
+		}
 
 		radio_node = lydx_get_xpathf(config,
 			"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio", ifname);
@@ -667,6 +704,63 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 	return result;
 }
 
+/*
+ * A bridge generates the VLAN memberships of its ports from its own
+ * diff, but netdag may recreate a port that is in the diff, e.g. for
+ * a new address or tunnel setting.  Pull the port's entries in the
+ * bridge's VLAN list into the diff so the bridge adds them again; for
+ * a port that is only modified the repeated add changes nothing.
+ */
+static confd_dependency_t dep_bridge_port_vlans(struct lyd_node **diff, struct lyd_node *config)
+{
+	static const char *modes[] = { "tagged", "untagged", NULL };
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *difs, *dif;
+
+	difs = lydx_get_descendant(*diff, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(difs, dif, "interface") {
+		const char *ifname = lydx_get_cattr(dif, "name");
+		struct lyd_node *bridge;
+		const char **mode;
+
+		if (lydx_get_op(dif) == LYDX_OP_DELETE)
+			continue;
+
+		bridge = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']"
+					 "/infix-interfaces:bridge-port/bridge", ifname);
+		if (!bridge)
+			continue;
+
+		for (mode = modes; *mode; mode++) {
+			struct ly_set *ports;
+			uint32_t i;
+
+			ports = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']"
+						 "/infix-interfaces:bridge/vlans/vlan/%s[.='%s']",
+						 lyd_get_value(bridge), *mode, ifname);
+			for (i = 0; ports && i < ports->count; i++) {
+				const char *vid = lydx_get_cattr(lyd_parent(ports->dnodes[i]), "vid");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']"
+					 "/infix-interfaces:bridge/vlans/vlan[vid='%s']/%s[.='%s']",
+					 lyd_get_value(bridge), vid, *mode, ifname);
+				result = add_dependencies(diff, xpath, NULL);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add VLAN %s of %s to diff for bridge port %s",
+					      vid, lyd_get_value(bridge), ifname);
+					ly_set_free(ports, NULL);
+					return result;
+				}
+			}
+			ly_set_free(ports, NULL);
+		}
+	}
+
+	return result;
+}
+
 static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result = CONFD_DEP_DONE;
@@ -726,6 +820,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_bridge_port_vlans(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 
