@@ -334,6 +334,13 @@ class IsolatedMacVlan(IsolatedMacVlans):
         return super().__init__(ifmap={parent: ifname}, lo=lo, set_up=set_up,
                                 mode=mode)
 
+    @property
+    def mac(self):
+        """MAC address of the MACVLAN, in passthru mode the parent's"""
+        link = self.run(["ip", "-j", "link", "show", "dev", self._ifname],
+                        stdout=subprocess.PIPE, check=True)
+        return json.loads(link.stdout)[0]["address"]
+
     def addip(self, addr, prefix_length=24, proto="ipv4"):
         return super().addip(ifname=self._ifname, addr=addr,
                              prefix_length=prefix_length, proto=proto)
