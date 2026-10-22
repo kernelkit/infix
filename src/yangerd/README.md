@@ -90,7 +90,7 @@ build vendors them from `go.sum`.
 |---|---|---|---|
 | `ietf-interfaces:interfaces` | links, addresses, neighbours, bridge MDB, VLANs, LAG | event | rtnetlink, re-read with `ip`/`bridge` batch |
 | | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start |
-| | QoS capabilities | event | rtnetlink TC and DCB, re-read with `tc` batch and DCB over rtnetlink |
+| | QoS capabilities, shapers | event | rtnetlink TC and DCB, re-read with `tc` batch and DCB over rtnetlink |
 | | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
