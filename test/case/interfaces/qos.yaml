@@ -31,3 +31,9 @@
 
 - name: QoS Mixed Selection
   case: qos_mixed_selection/test.py
+
+- name: QoS Credit-Based Shaper
+  case: qos_cbs/test.py
+
+- name: QoS Time-Aware Shaper
+  case: qos_tas/test.py

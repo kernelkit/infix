@@ -22,6 +22,7 @@ class Port:
         self.ssh = ssh
         self._switched = None
         self._driver = None
+        self._tx_queues = None
 
     @property
     def caps(self):
@@ -61,6 +62,15 @@ class Port:
             ).stdout.strip()
 
         return self._driver or None
+
+    @property
+    def tx_queues(self):
+        """How many transmit queues the port has"""
+        if self._tx_queues is None:
+            self._tx_queues = int(self.ssh.runsh(
+                f"ls -d /sys/class/net/{self.name}/queues/tx-* | wc -l").stdout)
+
+        return self._tx_queues
 
     @property
     def offload(self):
