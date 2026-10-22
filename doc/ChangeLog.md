@@ -103,6 +103,10 @@ All notable changes to the project are documented in this file.
 - `show hardware` lists the devices plugged into each USB port, also
   behind a hub or on a locked port: ID, speed, maker and model, and
   whether the device may be used, see [USB Ports][usb]
+- Bridge unicast forwarding database (FDB) in the operational datastore,
+  with static entries and a configurable aging time.  `show bridge fdb`
+  can list one VLAN, one port, or one address, and shows the age of each
+  learned entry and whether it is offloaded to the switch, see [FDB][fdb]
 
 ### Fixes
 
@@ -170,6 +174,7 @@ All notable changes to the project are documented in this file.
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
+[fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
 
 [v26.09.0][] - 2026-09-30
 -------------------------

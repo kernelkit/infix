@@ -119,6 +119,48 @@ admin@example:/>
 </code></pre>
 
 
+## Unicast Forwarding Database
+
+The bridge learns which port each host is on from the source address
+of frames it receives, and stores it in the unicast forwarding database
+(FDB).  Frames to a known address go only to that port, frames to an
+unknown address are flooded.  A VLAN filtering bridge keeps one FDB per
+VLAN, so the same address can be on different ports in different VLANs.
+
+| State     | Description                                                |
+|-----------|------------------------------------------------------------|
+| `dynamic` | Learned, removed when not seen for `aging-time` seconds    |
+| `static`  | From configuration, never ages out                         |
+| `local`   | Address of the bridge or one of its ports, for the host    |
+
+The aging time is set per bridge, default 300 seconds:
+
+<pre class="cli"><code>admin@example:/config/interface/br0/> <b>set bridge aging-time 600</b>
+</code></pre>
+
+Static entries pin an address to a port.  On a VLAN filtering bridge
+they are set per VLAN, and the port must be a member of that VLAN:
+
+<pre class="cli"><code>admin@example:/config/interface/br0/> <b>set bridge forwarding-database entry 00:11:22:33:44:55 port e2</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 forwarding-database entry 00:11:22:33:44:66 port e5</b>
+</code></pre>
+
+Use the bridge itself as port for an address that should be delivered
+to the host instead of forwarded.  Such an entry is shown as `local`.
+
+The FDB can be listed per VLAN, per port, or for a single address.
+`AGE` is the number of seconds since a dynamic entry was last seen, and
+`offload` in `FLAGS` means the entry is installed in switch hardware:
+
+<pre class="cli"><code>admin@example:/> <b>show bridge fdb port e2</b>
+<span class="header">BRIDGE  VID  ADDRESS            PORT  STATE    AGE  FLAGS  </span>
+br0          00:11:22:33:44:55  e2    static        offload
+br0          02:00:00:00:00:02  e2    dynamic    4  offload
+admin@example:/> <b>show bridge fdb vlan 10</b>
+admin@example:/> <b>show bridge fdb address 02:00:00:00:00:02</b>
+</code></pre>
+
+
 ## Multicast Filtering and Snooping
 
 Multicast filtering in the bridge is handled by the bridge itself.  It
