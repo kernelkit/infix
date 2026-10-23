@@ -270,6 +270,13 @@ important, not only when digging though logs to understand why a piece
 of code exists, but also when bisecting a problem -- each single commit
 should also compile and be possible to run.
 
+Consolidate the series before opening the PR, and again after review:
+fold fixups into the commit they fix (`git commit --fixup`, then
+`git rebase -i --autosquash`), so no commit says "fix review comments"
+or undoes an earlier one in the same series, i.e., force push is
+permitted to developer branches.  The series is read as the record of
+the change, not of how it was made.
+
 If you've worked on projects that send patches, like the Linux kernel or
 Buildroot, consider the pull request message body similar to the cover
 letter for a series of patches -- it's a summary of changes, and it is
