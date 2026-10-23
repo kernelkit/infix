@@ -218,9 +218,7 @@ if [ "$containerize" ]; then
     volumes="--volume $basedir:$basedir --workdir=$ixdir/test"
     case "$(runner)" in
 	docker)
-	    volumes="$volumes --env HOST_CHOWN_PATH=$ixdir/test"
-	    volumes="$volumes --env HOST_CHOWN_UID=$(id -u)"
-	    volumes="$volumes --env HOST_CHOWN_GID=$(id -g)"
+	    volumes="$volumes --env INFAMY_UID=$(id -u) --env INFAMY_GID=$(id -g)"
 	    ;;
 	podman)
 	    ;;
@@ -235,7 +233,7 @@ if [ "$containerize" ]; then
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env PYTHONHASHSEED=${PYTHONHASHSEED:-$(shuf -i 0-$(((1 << 32) - 1)) -n 1)} \
-	 --env PYTHONPYCACHEDIR=/tmp/__pycache__ \
+	 --env PYTHONPYCACHEPREFIX=/tmp/__pycache__ \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
 	 --env INFAMY_ARGS="$INFAMY_ARGS" \
 	 --env INFAMY_EXTRA_ARGS="$INFAMY_EXTRA_ARGS" \
@@ -246,7 +244,7 @@ if [ "$containerize" ]; then
 	 --env VERSION="$version" \
 	 $extra_env \
 	 --expose 9001-9010 --publish-all \
-	 -v "$HOME/.infix/.ash_history":/root/.ash_history \
+	 -v "$HOME/.infix/.ash_history":/home/infamy/.ash_history \
 	 $(name) \
 	 $interactive \
 	 --rm \
