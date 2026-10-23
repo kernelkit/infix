@@ -2,7 +2,7 @@
 name: "\U0001F6E0️ Feature request"
 description: Suggest a new feature, idea or improvement of the OS
 labels:
-  - "feature"
+  - "enhancement"
   - "triage"
 
 body:
