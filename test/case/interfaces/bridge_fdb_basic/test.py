@@ -102,8 +102,9 @@ with infamy.Test() as test:
 
             mac = ns1.mac
             entry = until(lambda: iface.bridge_fdb_entry(target, "br0", VID, mac))
+            # A switch has no age for the addresses it learns itself
             if entry["port"] != tport1 or entry["state"] != "dynamic" \
-               or "age" not in entry:
+               or ("age" not in entry and not entry["offloaded"]):
                 test.fail(f"Unexpected learned entry: {entry}")
 
     with test.step("Remove the static FDB entry and verify it is gone"):

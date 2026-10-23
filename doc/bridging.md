@@ -150,7 +150,9 @@ to the host instead of forwarded.  Such an entry is shown as `local`.
 
 The FDB can be listed per VLAN, per port, or for a single address.
 `AGE` is the number of seconds since a dynamic entry was last seen, and
-`offload` in `FLAGS` means the entry is installed in switch hardware:
+`offload` in `FLAGS` means the entry is installed in switch hardware.
+Addresses that a switch learns on its own are also listed, as `dynamic`
+and `offload`, but without an age:
 
 <pre class="cli"><code>admin@example:/> <b>show bridge fdb port e2</b>
 <span class="header">BRIDGE  VID  ADDRESS            PORT  STATE    AGE  FLAGS  </span>

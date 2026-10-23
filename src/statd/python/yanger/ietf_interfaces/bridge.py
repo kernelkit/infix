@@ -293,29 +293,37 @@ def fdb_state(entry):
 def forwarding_database(iplink):
     """Bridge FDB containers, keyed by VID (None on VLAN unaware bridges)"""
     brname = iplink["ifname"]
+    swports = {name for name, link in iplinks_lower_of(brname).items()
+               if "phys_switch_id" in link}
     brfdb = HOST.run_json(["bridge", "-s", "-j", "fdb", "show", "br", brname], [])
 
     fdb = {}
     for brentry in brfdb:
-        # Skip the ports' own address lists, only bridge entries have a master
-        if brentry.get("master") != brname:
-            continue
         # Group addresses belong in the MDB, the model only allows unicast
         if int(brentry["mac"][:2], 16) & 1:
+            continue
+
+        bridged = brentry.get("master") == brname
+        # A switch port's self entries are its hardware FDB
+        if not bridged and (brentry["ifname"] not in swports
+                            or brentry.get("state") == "permanent"):
             continue
 
         entry = {
             "address": brentry["mac"],
             "port": brentry["ifname"],
             "state": fdb_state(brentry),
-            "offloaded": "offload" in brentry.get("flags", []),
+            "offloaded": not bridged or "offload" in brentry.get("flags", []),
         }
         if entry["state"] == "dynamic" and "updated" in brentry:
             entry["age"] = brentry["updated"]
 
-        fdb.setdefault(brentry.get("vlan"), {"entry": []})["entry"].append(entry)
+        # The bridge's own entry wins over the switch's copy of it
+        entries = fdb.setdefault(brentry.get("vlan"), {})
+        if bridged or entry["address"] not in entries:
+            entries[entry["address"]] = entry
 
-    return fdb
+    return {vid: {"entry": list(entries.values())} for vid, entries in fdb.items()}
 
 
 def multicast(iplink, info, mctldata, upper=None):
