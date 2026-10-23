@@ -61,11 +61,9 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
     request = requests.Request(method, url, json=json, headers=headers,
                                auth=auth)
     prepared_request = session.prepare_request(request)
-    # Undo the escaping of the IPv6 host and zone, but not of the path
-    parts = urllib.parse.urlsplit(prepared_request.url)
-    netloc = re.sub(r'%25', '%', parts.netloc)
-    netloc = re.sub(r'%3a', ':', netloc, flags=re.IGNORECASE)
-    prepared_request.url = urllib.parse.urlunsplit(parts._replace(netloc=netloc))
+    # A zone id like %sw2p2 is not a valid escape, which makes requests
+    # re-quote every '%' in the URL, mangling percent-encoded list keys
+    prepared_request.url = url
     response = session.send(prepared_request, verify=verify, timeout=TIMEOUT)
     try:
         # Raise exceptions for HTTP errors
