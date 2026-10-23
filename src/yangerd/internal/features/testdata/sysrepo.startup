@@ -1,0 +1,53 @@
+{
+  "sysrepo:sysrepo-modules": {
+    "module": [
+      {
+        "name": "ietf-interfaces",
+        "revision": "2018-02-20",
+        "enabled-feature": [
+          "if-mib"
+        ]
+      },
+      {
+        "name": "ietf-ospf",
+        "revision": "2022-10-19",
+        "enabled-feature": [
+          "explicit-router-id",
+          "auto-cost",
+          "bfd",
+          "hybrid-interface"
+        ]
+      },
+      {
+        "name": "ietf-rip",
+        "revision": "2020-02-20"
+      },
+      {
+        "name": "infix-hardware",
+        "revision": "2026-10-11",
+        "enabled-feature": [
+          "wifi",
+          "gps"
+        ]
+      },
+      {
+        "name": "ieee802-dot1ab-lldp",
+        "revision": "2022-03-15"
+      },
+      {
+        "name": "infix-interfaces",
+        "revision": "2026-10-11",
+        "enabled-feature": [
+          "vlan-filtering",
+          "containers",
+          "ppp",
+          "wifi"
+        ]
+      },
+      {
+        "name": "infix-containers",
+        "revision": "2026-04-20"
+      }
+    ]
+  }
+}

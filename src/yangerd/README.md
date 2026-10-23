@@ -177,8 +177,8 @@ in mind:
 
 ## Configuration
 
-`/etc/default/yangerd`, written by `package/yangerd/yangerd.mk` from the
-Buildroot selection.
+Environment from `/etc/default/yangerd`, installed from
+`package/yangerd/yangerd.default`.
 
 | Variable | Default |
 |---|---|
@@ -188,14 +188,17 @@ Buildroot selection.
 | `YANGERD_POLL_INTERVAL_NTP` | `60s`, presence and port only |
 | `YANGERD_POLL_INTERVAL_HARDWARE` | `10s`, GPS only |
 | `YANGERD_POLL_INTERVAL_STP` | `5s` |
-| `YANGERD_ENABLE_WIFI` | `false` |
-| `YANGERD_ENABLE_LLDP` | `true` |
-| `YANGERD_ENABLE_FIREWALL` | `true` |
-| `YANGERD_ENABLE_DHCP` | `true` |
-| `YANGERD_ENABLE_CONTAINERS` | `false` |
-| `YANGERD_ENABLE_GPS` | `false` |
 
-A disabled feature's monitor is not started at all.
+Which optional parts run is not configured, it follows the YANG model:
+WiFi, containers and GPS are features of `infix-interfaces` and
+`infix-hardware`, and the routing protocol modules are installed only
+with FRR.  confd enables them at build time from the same Buildroot
+options that build the daemons, and `ietf-yang-library` reports them
+to clients, so yangerd reads the list sysrepo keeps at
+`/etc/sysrepo/data/sysrepo.startup` once at start (`internal/features`)
+and does not start the monitors of what is not there.  The WebUI keys
+its optional pages on the same features.  Without the file every
+monitor runs; each copes with an absent daemon on its own.
 
 
 ## Adding a data source
