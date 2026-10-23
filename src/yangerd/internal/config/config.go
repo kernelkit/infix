@@ -9,37 +9,23 @@ import (
 // Config holds all yangerd runtime configuration, populated from
 // environment variables with sensible defaults.
 type Config struct {
-	Socket           string
-	LogLevel         string
-	PollRouting      time.Duration
-	PollNTP          time.Duration
-	PollHardware     time.Duration
-	PollSTP          time.Duration
-	EnableWifi       bool
-	EnableLLDP       bool
-	EnableFirewall   bool
-	EnableDHCP       bool
-	EnableContainers bool
-	EnableGPS        bool
-	EnableFRR        bool
+	Socket       string
+	LogLevel     string
+	PollRouting  time.Duration
+	PollNTP      time.Duration
+	PollHardware time.Duration
+	PollSTP      time.Duration
 }
 
 // Load reads configuration from the environment.
 func Load() *Config {
 	return &Config{
-		Socket:           envStr("YANGERD_SOCKET", "/run/yangerd.sock"),
-		LogLevel:         envStr("YANGERD_LOG_LEVEL", "info"),
-		PollRouting:      envDur("YANGERD_POLL_INTERVAL_ROUTING", 10*time.Second),
-		PollNTP:          envDur("YANGERD_POLL_INTERVAL_NTP", 60*time.Second),
-		PollHardware:     envDur("YANGERD_POLL_INTERVAL_HARDWARE", 10*time.Second),
-		PollSTP:          envDur("YANGERD_POLL_INTERVAL_STP", 5*time.Second),
-		EnableWifi:       envBool("YANGERD_ENABLE_WIFI", false),
-		EnableLLDP:       envBool("YANGERD_ENABLE_LLDP", true),
-		EnableFirewall:   envBool("YANGERD_ENABLE_FIREWALL", true),
-		EnableDHCP:       envBool("YANGERD_ENABLE_DHCP", true),
-		EnableContainers: envBool("YANGERD_ENABLE_CONTAINERS", false),
-		EnableGPS:        envBool("YANGERD_ENABLE_GPS", false),
-		EnableFRR:        envBool("YANGERD_ENABLE_FRR", true),
+		Socket:       envStr("YANGERD_SOCKET", "/run/yangerd.sock"),
+		LogLevel:     envStr("YANGERD_LOG_LEVEL", "info"),
+		PollRouting:  envDur("YANGERD_POLL_INTERVAL_ROUTING", 10*time.Second),
+		PollNTP:      envDur("YANGERD_POLL_INTERVAL_NTP", 60*time.Second),
+		PollHardware: envDur("YANGERD_POLL_INTERVAL_HARDWARE", 10*time.Second),
+		PollSTP:      envDur("YANGERD_POLL_INTERVAL_STP", 5*time.Second),
 	}
 }
 

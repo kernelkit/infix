@@ -20,6 +20,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/containermonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/dbusmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ethmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/features"
 	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
 	"github.com/kernelkit/infix/src/yangerd/internal/fswatcher"
 	"github.com/kernelkit/infix/src/yangerd/internal/ipbatch"
@@ -69,6 +70,13 @@ func main() {
 	cfg := config.Load()
 	log.SetFlags(0)
 
+	// What the model carries is what is built in, see internal/features.
+	feat, err := features.Load(features.ModulesPath)
+	if err != nil {
+		log.Printf("%v, assuming every feature", err)
+		feat = features.All()
+	}
+
 	t := tree.New()
 	ready := &atomic.Bool{}
 
@@ -97,7 +105,7 @@ func main() {
 	}
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
-	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, cfg.EnableWifi, cfg.EnableGPS)
+	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, feat.WiFi(), feat.GPS())
 	ntp := collector.NewNTPCollector(cmd, cfg.PollNTP)
 	t.RegisterProvider("ietf-ntp:ntp", ntp.Live)
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
@@ -105,7 +113,7 @@ func main() {
 		ntp,
 		hardware,
 	}
-	if cfg.EnableFRR {
+	if feat.FRR() {
 		collectors = append(collectors, collector.NewRoutingCollector(cfg.PollRouting))
 	}
 	pokes := collector.RunAll(ctx, &wg, t, collectors)
@@ -194,7 +202,7 @@ func main() {
 		return backoff.Retry(ctx, slogLog, "nlmonitor", nlmon.Run)
 	})
 
-	if cfg.EnableWifi {
+	if feat.WiFi() {
 		iwmon := iwmonitor.New(slogLog)
 		iwmon.SetOnUpdate(nlmon.SetWifiData)
 		iwmon.SetOnRadioChange(hardware.RequestRadioRefresh)
@@ -203,12 +211,10 @@ func main() {
 
 	spawn("radios", hardware.RunRadios)
 
-	if cfg.EnableLLDP {
-		lldpmon := lldpmonitor.New(t, slogLog)
-		spawn("lldpmonitor", lldpmon.Run)
-	}
+	lldpmon := lldpmonitor.New(t, slogLog)
+	spawn("lldpmonitor", lldpmon.Run)
 
-	if cfg.EnableContainers {
+	if feat.Containers() {
 		ctrmon := containermonitor.New(t, cmd, fs, slogLog)
 		spawn("containermonitor", ctrmon.Run)
 	}
@@ -221,7 +227,7 @@ func main() {
 
 	// The RIB comes from zebra when built with FRR, otherwise straight
 	// from the kernel table that netd installs into.
-	if cfg.EnableFRR {
+	if feat.FRR() {
 		zapi := zapiwatcher.New(t, frrvty.New(""), slogLog)
 		zapi.SetOnChange(func() { pokes.Poke("routing") })
 		spawn("zapiwatcher", zapi.Run)
@@ -230,10 +236,8 @@ func main() {
 		spawn("kernelrib", rib.Run)
 	}
 
-	if cfg.EnableDHCP || cfg.EnableFirewall {
-		dbusMon := dbusmonitor.New(t, slogLog)
-		spawn("dbusmonitor", dbusMon.Run)
-	}
+	dbusMon := dbusmonitor.New(t, slogLog)
+	spawn("dbusmonitor", dbusMon.Run)
 
 	fsw, err := fswatcher.New(t, slogLog)
 	if err != nil {
