@@ -43,6 +43,12 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-10-22 {
+    description "Add bridge unicast forwarding database and aging time, and
+                 operational state for the active IGMP and MLD querier.";
+    reference "internal";
+  }
+
   revision 2026-10-11 {
     description "Include infix-if-modem submodule for cellular wwan interfaces.";
     reference "internal";

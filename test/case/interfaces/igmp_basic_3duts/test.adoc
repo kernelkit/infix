@@ -24,6 +24,10 @@ its own host port.
                           HOST
 ....
 
+Only dut1 has an IPv4 address, so it must win the IGMP querier
+election on all three DUTs.  All bridges have IPv6 enabled, so the MLD
+querier election is won by the DUT with the lowest link-local address.
+
 With no membership the group 224.1.1.1 is flooded to both `!memb` and
 `mrecv`.  Once `mrecv` joins, dut2 and dut1 learn the group on their
 links toward dut3, and `!memb` no longer receives it.
@@ -35,7 +39,9 @@ image::topology.svg[IGMP Basic 3 DUTs topology, align=center, scaledwidth=75%]
 ==== Sequence
 
 . Set up topology and attach to target DUTs
-. Configure bridges with IGMP snooping on all DUTs, querier on dut1 with 10.0.0.1/24
+. Configure bridges with multicast snooping and IPv6 on all DUTs, 10.0.0.1/24 on dut1
+. Verify dut1 is the IGMP querier on all DUTs
+. Verify the DUT with the lowest link-local address is the MLD querier on all DUTs
 . Verify host:data1, host:data2 and host:data3 can reach 10.0.0.1
 . Start multicast sender on host:data1, group 224.1.1.1
 . Verify group 224.1.1.1 is flooded to host:data2 and host:data3

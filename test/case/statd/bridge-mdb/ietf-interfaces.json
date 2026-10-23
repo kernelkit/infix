@@ -300,7 +300,23 @@
           "multicast": {
             "snooping": true,
             "querier": "auto",
-            "query-interval": 125
+            "query-interval": 125,
+            "active-querier": [
+              {
+                "family": "ipv4",
+                "address": "10.0.0.1",
+                "local": true,
+                "version": 3,
+                "query-interval": 125
+              },
+              {
+                "family": "ipv6",
+                "address": "::",
+                "local": true,
+                "version": 2,
+                "query-interval": 125
+              }
+            ]
           },
           "multicast-filters": {
             "multicast-filter": [

@@ -150,7 +150,9 @@ to the host instead of forwarded.  Such an entry is shown as `local`.
 
 The FDB can be listed per VLAN, per port, or for a single address.
 `AGE` is the number of seconds since a dynamic entry was last seen, and
-`offload` in `FLAGS` means the entry is installed in switch hardware:
+`offload` in `FLAGS` means the entry is installed in switch hardware.
+Addresses that a switch learns on its own are also listed, as `dynamic`
+and `offload`, but without an age:
 
 <pre class="cli"><code>admin@example:/> <b>show bridge fdb port e2</b>
 <span class="header">BRIDGE  VID  ADDRESS            PORT  STATE    AGE  FLAGS  </span>
@@ -188,24 +190,28 @@ filtering.  We focus on the multicast specific settings:
 admin@example:/config/> <b>edit interface br0</b>
 admin@example:/config/interface/br0/> <b>set bridge multicast snooping</b>
 admin@example:/config/interface/br0/> <b>set ipv4 address 192.168.2.1 prefix-length 24</b>
+admin@example:/config/interface/br0/> <b>set ipv6 enabled</b>
 admin@example:/config/interface/br0/> <b>leave</b>
 admin@example:/> <b>copy running-config startup-config</b>
 </code></pre>
 
-Here we enable snooping and set a static IPv4 address so that the switch
-can take part in IGMP querier elections.  (MLD querier election
-currently not supported.)  We can inspect the current state:
+Here we enable snooping, set a static IPv4 address, and enable IPv6 so
+that the switch can take part in both IGMP and MLD querier elections.
+MLD queries are always sent from the IPv6 link-local address of the
+interface.  Without one the switch can only send proxy queries, from
+`::`, which hosts ignore.  We can inspect the current state:
 
 <pre class="cli"><code>admin@example:/> <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
-Router Timeout          : 255
+Router Timeout (default): 255 sec
 Fast Leave Ports        :
 Router Ports            :
 Flood Ports             : e0, e1, e2, e3, e4, e5, e6, e7
 
-<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
-br0                  192.168.2.1                    Up       125     None    3
+<span class="header">Interface       VID  Proto  Querier                         State  Interval  Timeout  MRD  Ver</span>
+br0                  IGMP   192.168.2.1                        Up       125     None  off    3
+br0                  MLD    fe80::7a4c:9bff:fe12:3456          Up       125     None  off    2
 
 <span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e3, e2
@@ -213,10 +219,16 @@ br0                  ff02::6a              br0
 </code></pre>
 
 This is a rather small LAN, so our bridge has already become the elected
-IGMP querier.  We see it is ours because the timeout is `None`, and we
+IGMP and MLD querier.  We see it is ours because the timeout is `None`, and we
 recognize the IP address the system has detected, as ours.  We can also
 see two ports that have joined the same IPv4 multicast group, 224.1.1.1,
 and one join from the system itself for the IPv6 group ff02::6a.
+
+The active IGMP and MLD querier, with its address, version and timeout,
+is also in the operational datastore, under
+`/interfaces/interface[name='br0']/bridge/multicast/active-querier`.  On
+a VLAN filtering bridge it is per VLAN, under
+`/interfaces/interface[name='br1']/bridge/vlans/vlan[vid='1']/multicast/active-querier`.
 
 Now, let us see what happens when we add another bridge, this time with
 VLAN filtering enabled.  We skip the boring parts about how to move
@@ -236,15 +248,18 @@ Let us see what we get:
 <pre class="cli"><code>admin@example:/> <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
-Router Timeout          : 255
+Router Timeout (default): 255 sec
 Fast Leave Ports        : e5
 Router Ports            : e1, e2, e5, e6, e7
 Flood Ports             : e1, e2, e3, e4, e5, e6, e7, e8
 
-<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
-br0                  192.168.2.1                    Up       125     None    3
-br1               1  0.0.0.0                        Up       125     None    3
-br1               2  0.0.0.0                        Up       125     None    3
+<span class="header">Interface       VID  Proto  Querier                         State  Interval  Timeout  MRD  Ver</span>
+br0                  IGMP   192.168.2.1                        Up       125     None  off    3
+br0                  MLD    fe80::7a4c:9bff:fe12:3456          Up       125     None  off    2
+br1               1  IGMP   0.0.0.0                            Up       125     None  off    3
+br1               1  MLD    ::                                 Up       125     None  off    2
+br1               2  IGMP   0.0.0.0                            Up       125     None  off    3
+br1               2  MLD    ::                                 Up       125     None  off    2
 
 <span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e2
@@ -328,7 +343,7 @@ br0           01:00:5e:01:01:01     e2
    also only support filtering on the MAC level[^2]
  - **Querier election**: the process of determining who is the elected
    IGMP/MLD querier on a LAN.  Lowest numerical IP address wins, the
-   special address 0.0.0.0 (proxy querier) never wins
+   special addresses 0.0.0.0 and :: (proxy querier) never win
  - **Proxy querier**: when no better querier exists on a LAN, one or
    more devices can send proxy queries with source address 0.0.0.0 (or
    :: for IPv6).  See **Query Interval**, below, why this is a good
@@ -347,9 +362,12 @@ br0           01:00:5e:01:01:01     e2
  - **Flood port**: set on a bridge port (default: enabled) to ensure
    all *unknown* multicast is forwarded
  - **Router timeout**: the time in seconds until a querier is deemed to
-   have been lost and another device (switch/router) takes over.  In the
+   have been lost and another device (switch/router) takes over.  It is
+   derived from the query interval of the bridge, or VLAN.  In the
    tables shown above, a *None* timeout is declared when the current
    device is the active querier
+ - **MRD**: Multicast Router Discovery, [RFC 4286][RFC4286], is not
+   used, so the MRD column in the tables above is always *off*
 
 > [!TIP]
 > The reason why multicast flooding is enabled by default is to ensure
@@ -362,6 +380,12 @@ br0           01:00:5e:01:01:01     e2
 > the group is added to the kernel MDB and forwarding to other ports
 > stop.  The only exception to this rule is multicast router ports.
 >
+> With flooding disabled on a port, a topology change can leave hosts
+> without multicast until they report their memberships again.  When the system
+> is the active querier it sends a query as soon as a bridge port starts
+> forwarding, so hosts rejoin within the query response interval, 10
+> seconds, instead of at the next periodic query.
+>
 > If your MAC multicast forwarding is not working properly, it may be
 > because an IP multicast group maps to the same MAC address.  Please
 > see [RFC 1112][RFC1112] for details.  Use static multicast router
@@ -370,6 +394,7 @@ br0           01:00:5e:01:01:01     e2
 [RFC1112]: https://www.rfc-editor.org/rfc/rfc1112.html
 [RFC3376]: https://www.rfc-editor.org/rfc/rfc3376.html
 [RFC3810]: https://www.rfc-editor.org/rfc/rfc3810.html
+[RFC4286]: https://www.rfc-editor.org/rfc/rfc4286.html
 
 ## Forwarding of IEEE Reserved Group Addresses
 

@@ -22,7 +22,7 @@ static void warn_mcast_flood_port(struct lyd_node *port_cif)
 
 	flood = lydx_get_child(bp, "flood");
 	if (!lydx_is_enabled(flood, "multicast"))
-		WARN("%s: multicast flood disabled, topology changes will black-hole multicast until IGMP/MLD rejoin",
+		WARN("%s: multicast flood disabled, multicast may stop after a topology change until hosts rejoin",
 		     lydx_get_cattr(port_cif, "name"));
 }
 
@@ -62,6 +62,12 @@ static void warn_mcast_flood_vlan(struct lyd_node *cif, struct lyd_node *vlan)
 	}
 }
 
+static void gen_enable(FILE *conf, const char *querier, int interval)
+{
+	fprintf(conf, " enable %s igmpv3 mldv2 query-interval %d\n",
+		!strcmp(querier, "proxy") ? "proxy-queries" : "", interval);
+}
+
 static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 {
 	const char *iface, *querier, *upper;
@@ -96,8 +102,7 @@ static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 	else
 		fprintf(conf, "iface %s vlan %d", iface, vid);
 
-	fprintf(conf, " enable %s igmpv3 query-interval %d\n",
-		!strcmp(querier, "proxy") ? "proxy-queries" : "", interval);
+	gen_enable(conf, querier, interval);
 
 	return 0;
 }
@@ -120,9 +125,8 @@ static int gen_bridge(struct lyd_node *cif, FILE *conf)
 
 		warn_mcast_flood_bridge(cif, iface);
 
-		fprintf(conf, "iface %s enable %s igmpv3 query-interval %d\n",
-			iface, !strcmp(querier, "proxy") ? "proxy-queries" : "",
-			interval);
+		fprintf(conf, "iface %s", iface);
+		gen_enable(conf, querier, interval);
 		return 0;
 	}
 

@@ -209,13 +209,47 @@ def mctl_queriers():
     return HOST.run_json(["mctl", "-p", "show", "igmp", "json"], default={})
 
 
-def mctl(ifname, vid, mctldata):
-    for q in mctldata.get("multicast-queriers", []):
-        # TODO: Also need to match against VLAN uppers (e.g. br0.1337)
+def mctl(ifname, vid, mctldata, key="multicast-queriers", upper=None):
+    """Querier of a bridge, or bridge VLAN, also when run on its VLAN upper"""
+    for q in mctldata.get(key, []):
         if q.get("interface") == ifname and q.get("vid") == vid:
+            return q
+        if upper and q.get("interface") == upper and q.get("vid") is None:
             return q
 
     return {}
+
+
+def vlan_uppers(brname):
+    """Map VID to the VLAN interface on top of the bridge"""
+    uppers = {}
+    for link in iplinks().values():
+        info = link.get("linkinfo", {})
+        if link.get("link") == brname and info.get("info_kind") == "vlan":
+            uppers[info["info_data"]["id"]] = link["ifname"]
+
+    return uppers
+
+
+def active_queriers(ifname, vid, mctldata, upper=None):
+    queriers = []
+    for key in ("multicast-queriers", "mld-queriers"):
+        q = mctl(ifname, vid, mctldata, key, upper)
+        if q.get("state") not in ("up", "proxy"):
+            continue
+
+        querier = {
+            "family": q["family"],
+            "address": q["querier"],
+            "local": "timeout" not in q,
+            "version": q["version"],
+            "query-interval": q["interval"],
+        }
+        if not querier["local"]:
+            querier["timeout"] = q["timeout"]
+        queriers.append(querier)
+
+    return queriers
 
 
 def mctl_router_ports(brname, mctldata):
@@ -259,33 +293,41 @@ def fdb_state(entry):
 def forwarding_database(iplink):
     """Bridge FDB containers, keyed by VID (None on VLAN unaware bridges)"""
     brname = iplink["ifname"]
+    swports = {name for name, link in iplinks_lower_of(brname).items()
+               if "phys_switch_id" in link}
     brfdb = HOST.run_json(["bridge", "-s", "-j", "fdb", "show", "br", brname], [])
 
     fdb = {}
     for brentry in brfdb:
-        # Skip the ports' own address lists, only bridge entries have a master
-        if brentry.get("master") != brname:
-            continue
         # Group addresses belong in the MDB, the model only allows unicast
         if int(brentry["mac"][:2], 16) & 1:
+            continue
+
+        bridged = brentry.get("master") == brname
+        # A switch port's self entries are its hardware FDB
+        if not bridged and (brentry["ifname"] not in swports
+                            or brentry.get("state") == "permanent"):
             continue
 
         entry = {
             "address": brentry["mac"],
             "port": brentry["ifname"],
             "state": fdb_state(brentry),
-            "offloaded": "offload" in brentry.get("flags", []),
+            "offloaded": not bridged or "offload" in brentry.get("flags", []),
         }
         if entry["state"] == "dynamic" and "updated" in brentry:
             entry["age"] = brentry["updated"]
 
-        fdb.setdefault(brentry.get("vlan"), {"entry": []})["entry"].append(entry)
+        # The bridge's own entry wins over the switch's copy of it
+        entries = fdb.setdefault(brentry.get("vlan"), {})
+        if bridged or entry["address"] not in entries:
+            entries[entry["address"]] = entry
 
-    return fdb
+    return {vid: {"entry": list(entries.values())} for vid, entries in fdb.items()}
 
 
-def multicast(iplink, info, mctldata):
-    mctlq = mctl(iplink["ifname"], info.get("vlan"), mctldata)
+def multicast(iplink, info, mctldata, upper=None):
+    mctlq = mctl(iplink["ifname"], info.get("vlan"), mctldata, upper=upper)
 
     mcast = {
         "snooping": bool(info.get("mcast_snooping")),
@@ -297,6 +339,9 @@ def multicast(iplink, info, mctldata):
 
     if ports := mctl_router_ports(iplink["ifname"], mctldata):
         mcast["router-ports"] = ports
+
+    if queriers := active_queriers(iplink["ifname"], info.get("vlan"), mctldata, upper):
+        mcast["active-querier"] = queriers
 
     return mcast
 
@@ -327,6 +372,7 @@ def vlans(iplink):
 
     mctldata = mctl_queriers()
     fdb = forwarding_database(iplink)
+    uppers = vlan_uppers(iplink["ifname"])
 
     vlans = {}
     for v in brgvlans[0]["vlans"]:
@@ -337,7 +383,7 @@ def vlans(iplink):
                 "vid": vid,
                 "untagged": [],
                 "tagged": [],
-                "multicast": multicast(iplink, v, mctldata),
+                "multicast": multicast(iplink, v, mctldata, uppers.get(vid)),
                 "multicast-filters": multicast_filters(iplink, vid),
             }
             if vfdb := fdb.get(vid):

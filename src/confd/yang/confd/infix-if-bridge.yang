@@ -6,6 +6,9 @@ submodule infix-if-bridge {
   import ietf-yang-types {
     prefix yang;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -32,7 +35,9 @@ submodule infix-if-bridge {
   revision 2026-10-22 {
     description
       "Add unicast forwarding database, with static entries, and the
-       bridge aging time.";
+       bridge aging time.
+
+       Add operational state for the active IGMP and MLD querier.";
     reference "internal";
   }
 
@@ -416,8 +421,9 @@ submodule infix-if-bridge {
                    For a fully working multicast setup the LAN needs a querier.
                    If multiple queriers exist, a simple election is made -- the
                    device with the numerically lowest IP address is the winner,
-                   execpt for source address 0.0.0.0 (IPv4), which is reserved
-                   for 'proxy' queries and must never win an election.  Proxy
+                   except for source address 0.0.0.0 (IPv4) or :: (IPv6), which
+                   are reserved for 'proxy' queries and must never win an
+                   election.  Proxy
                    queries are like a stand-in for the real thing and mostly
                    work fine in all setups.
 
@@ -441,6 +447,63 @@ submodule infix-if-bridge {
         config false;
         description "Ports with detected multicast routers, learned by IGMP/MLD snooping.";
         type if:interface-ref;
+      }
+
+      list active-querier {
+        config false;
+        key family;
+        description "The active IGMP (IPv4) and MLD (IPv6) querier on the LAN.
+
+                     Either the system itself, or another device that won
+                     the querier election.";
+
+        leaf family {
+          description "Address family of the querier.";
+          type enumeration {
+            enum ipv4 {
+              description "IGMP querier.";
+            }
+            enum ipv6 {
+              description "MLD querier.";
+            }
+          }
+        }
+
+        leaf address {
+          description "Source address of the active querier.
+
+                       When the system is the active querier and sends proxy
+                       queries, this is 0.0.0.0 (IPv4) or :: (IPv6).";
+          type inet:ip-address-no-zone;
+        }
+
+        leaf local {
+          description "The system itself is the active querier.";
+          type boolean;
+        }
+
+        leaf version {
+          description "IGMP version (1-3) or MLD version (1-2) in use.
+
+                       Lower than the default when older hosts or queriers
+                       are detected on the LAN.";
+          type uint8 {
+            range "1..3";
+          }
+        }
+
+        leaf query-interval {
+          description "Query interval of the active querier.";
+          type uint16;
+          units seconds;
+        }
+
+        leaf timeout {
+          description "Time until another device acting as querier is
+                       considered lost, and the system may take over.";
+          type uint16;
+          units seconds;
+        }
       }
     }
   }
