@@ -1,6 +1,7 @@
 import os
 
 from .container import Container
+from .dutlog import Capture
 from .env import Env
 from .env import ArgumentParser
 from .env import test_argument

@@ -160,3 +160,12 @@ jobs:
         with:
           name: ${{ inputs.name && inputs.name != 'infix' && format('xpath-coverage-report-{0}', inputs.name) || 'xpath-coverage-report' }}
           path: output/images/xpath-coverage-report.pdf
+
+      - name: Upload DUT Syslog as Artifact
+        # Only when enabled with TEST_SYSLOG_CAPTURE=y
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dut-syslog
+          path: ${{ env.TEST_PATH }}/.log/last/logs.tar.gz
+          if-no-files-found: ignore
