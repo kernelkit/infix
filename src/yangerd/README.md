@@ -195,7 +195,7 @@ WiFi, containers and GPS are features of `infix-interfaces` and
 with FRR.  confd enables them at build time from the same Buildroot
 options that build the daemons, and `ietf-yang-library` reports them
 to clients, so yangerd reads the list sysrepo keeps at
-`/etc/sysrepo/data/sysrepo.startup` once at start (`internal/features`)
+`/etc/sysrepo/data/sysrepo.startup` once at start (`src/features`, shared with the WebUI)
 and does not start the monitors of what is not there.  The WebUI keys
 its optional pages on the same features.  Without the file every
 monitor runs; each copes with an absent daemon on its own.
