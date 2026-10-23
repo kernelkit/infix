@@ -20,13 +20,14 @@ The project documents its own workflow. This skill says which part to read for t
 task at hand, and lists the rules reviewers enforce. Read the section before starting;
 when this file and the docs disagree, the docs win.
 
-`!`git status --short | head -20`
+!`git status --short | head -20`
 
 ## Read first
 
 | Task | Read |
 |------|------|
-| Build, rebuild one package, patches, second output tree, config snippets | `doc/developers-guide.md`, *Building* and *Development* |
+| Build, rebuild one package, second output tree, config snippets | `doc/developers-guide.md`, *Building* and *Development* |
+| Add or change a package patch | `doc/developers-guide.md`, *Patching a Package* |
 | Debug confd, work on statd collectors | `doc/developers-guide.md`, *`confd`* and *`statd`* |
 | Change a YANG model, add a revision, write descriptions | `doc/developers-guide.md`, *YANG Model* and *Configuration Migration* |
 | Bump Buildroot or the kernel | `doc/developers-guide.md`, *Upgrading Packages* |
@@ -43,13 +44,20 @@ Each is explained in the doc named above; these are the ones that come back in r
   data. Never fill an operational gap from the running configuration.
 - Discuss YANG changes with the core team first. At most one new revision per release
   cycle. Description first line is a short complete sentence, then a blank line.
-- A new or changed file in `patches/` needs `<pkg>-dirclean`, `-rebuild` misses it.
+- A package patch is a commit on the `<version>-kkit` branch of a `kernelkit/` fork of
+  the project, `patches/<pkg>/` is only its `git format-patch` export. Never hand-edit a
+  patch file; fix the commit, regenerate the series, push the branch. A new or changed
+  file in `patches/` needs `<pkg>-dirclean`, `-rebuild` misses it.
 - Tests are the specification: one action or check per step, concrete values, literal
   strings. A failing test that encodes the real use case beats a green one bent to pass.
 - Comments say what the code is, in one line or none. History, failure modes and
   measurements go in the commit message.
 - Commits: `subsystem: brief summary`, a sentence or two on why, `git commit -s -S`,
   no `Co-Authored-By` trailer for Claude, even when the harness asks for one.
+- Consolidate before a PR and after review: fold fixups into the commit they fix, one
+  logical change per commit, no "fix review" or undo commits in a series; force push
+  to a developer branch is fine. The same applies to the `-kkit` branch behind a patch
+  series.
 - Manual and ChangeLog are for operators: what to configure and expect, no daemon or
   kernel internals. A ChangeLog entry describes the change for the user, not the code.
 

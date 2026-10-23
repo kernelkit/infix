@@ -173,11 +173,6 @@ This rebuilds (and installs) `foo` and `bar`, the `all` target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
 
-Patches in `patches/foo/`, and kernel patches in `patches/linux/<ver>/`,
-are applied when the package is extracted.  A new or changed patch is
-therefore only picked up by `make foo-dirclean foo`, not by
-`foo-rebuild`.
-
 To keep a build for a second board, give it its own output directory,
 every target takes `O=`:
 
@@ -186,6 +181,50 @@ every target takes `O=`:
 
 The virtual test environment only boots x86_64 images, see
 [Regression Testing](testing.md).
+
+#### Patching a Package
+
+Patches in `patches/foo/`, and kernel patches in `patches/linux/<ver>/`,
+are applied when the package is extracted.  A new or changed patch is
+therefore only picked up by `make foo-dirclean foo`, not by
+`foo-rebuild`.
+
+Every patch series is maintained as commits on a branch in a Kernelkit
+[fork][12] of the upstream project, never as hand-edited files in
+`patches/`.  The branch is based on the exact version the package pins
+and named after it with a `-kkit` suffix, e.g. `v4.4-kkit` in
+`kernelkit/linuxptp`.  Forks of projects we already track, the kernel,
+Buildroot and FRR, have their own naming, see below.
+
+To add or change a patch:
+
+1. Fork the project under the `kernelkit` organization if it is not
+   there yet, and add the fork as a remote in your clone
+
+1. Check out the `-kkit` branch, or create it from the pinned version
+   tag when the package has no patches yet
+
+        git checkout -b v4.4-kkit v4.4
+
+1. Make the change as one commit per fix, with a commit message that
+   says why, as for any other commit.  Fold fixes to an earlier patch
+   into that commit rather than adding a patch on top
+
+1. Regenerate the whole series, then push the branch
+
+        rm patches/linuxptp/*.patch
+        git -C ../linuxptp format-patch --no-signoff --no-encode-email-headers \
+            --no-cover-letter --no-signature -o patches/linuxptp v4.4..v4.4-kkit
+        git -C ../linuxptp push kkit v4.4-kkit
+
+1. Rebuild from scratch and commit the new series in Infix
+
+        make linuxptp-dirclean linuxptp
+
+When the package is bumped, rebase the `-kkit` branch onto the new
+version, drop patches that landed upstream, and push it under the new
+name.  The patches `patches/` holds are then always a plain export of
+the branch, so a reviewer can read the series as commits on GitHub.
 
 
 ### Configuration Snippets
@@ -616,3 +655,4 @@ minimal images are built and the default tests run.
 [9]: https://github.com/kernelkit/buildroot
 [10]: https://github.com/kernelkit/linux
 [11]: https://squidfunk.github.io/mkdocs-material/
+[12]: https://github.com/kernelkit
