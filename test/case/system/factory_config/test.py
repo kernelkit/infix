@@ -5,6 +5,11 @@ Verify that the device boots cleanly from its factory-config and stays
 usable, i.e. it does not fall back to the fail-secure failure-config.
 Clearing the startup-config makes confd bootstrap running from the
 factory-config on the next boot, as on a factory-fresh device.
+
+A factory-config may bridge the management port with the links to the
+other devices, so every non-management port of every device in the
+physical topology is disabled first, leaving the device alone on the
+host's management port.
 """
 
 import infamy
@@ -17,6 +22,24 @@ def factory_hostname(target):
     """Read the hostname the factory-config will boot with."""
     factory = target.get_factory("/ietf-system:system/hostname")
     return factory.print_dict().get("system", {}).get("hostname")
+
+def isolate(env):
+    """Disable every non-management port of every DUT in the physical topology."""
+    ptop = env.ptop
+    ctrl = ptop.get_ctrl()
+
+    def down(node):
+        _, mgmt = ptop.get_mgmt_link(ctrl, node)
+        ports = {e[node] for _, _, e in ptop.g.edges(node, data=True)} - {mgmt}
+        dev = env.attach(node, test_reset=False)
+        ifaces = dev.get_config_dict("/ietf-interfaces:interfaces")
+        ports &= {i["name"] for i in ifaces["interfaces"]["interface"]}
+        dev.put_config_dicts({"ietf-interfaces": {"interfaces": {
+            "interface": [{"name": p, "enabled": False} for p in sorted(ports)]
+        }}})
+
+    nodes = sorted(ptop.get_infixen())
+    parallel(*(lambda n=n: down(n) for n in nodes))
 
 def cleanup(env):
     """Restore the rig to the clean per-test baseline for the next test."""
@@ -36,6 +59,9 @@ with infamy.Test() as test:
         expected = factory_hostname(target)
         assert expected, "Could not read hostname from factory-config"
         print(f"Factory config hostname is {expected!r}")
+
+    with test.step("Disable all non-management ports on every DUT in the physical topology"):
+        isolate(env)
 
     with test.step("Clear startup-config so the device boots from factory"):
         # No startup-config on the startup boot path -> confd bootstraps
