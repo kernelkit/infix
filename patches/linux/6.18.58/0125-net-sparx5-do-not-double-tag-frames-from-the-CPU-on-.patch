@@ -1,0 +1,42 @@
+From abb5cb04baabc97261e82653633388ca5a1c028d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 14 Oct 2026 15:21:35 +0200
+Subject: [PATCH 125/131] net: sparx5: do not double tag frames from the CPU on
+ trunk ports
+
+A frame the CPU sends out a VLAN-aware bridge port without an untagged
+VLAN leaves the switch with two tags, an outer one with VID 0 around the
+frame's own:
+
+  802.1Q vlan 0, 802.1Q vlan 55, ARP who-has 10.0.1.2
+
+The CPU injects frames with their VLAN tag in the frame and VID 0 in
+the frame header, and the rewriter on such a port tags every frame,
+VID 0 included.  A VLAN interface on the bridge cannot reach anything
+over a trunk.
+
+Tag all frames except VID 0 instead.  Frames forwarded by the switch
+are always classified to a VLAN in a VLAN-aware bridge, so they are
+still tagged.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+index c12e90f7a4ee..55dd02b53d01 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+@@ -249,7 +249,10 @@ void sparx5_vlan_port_apply(struct sparx5 *sparx5,
+ 			/* Tag all frames except when VID == DEFAULT_VLAN */
+ 			val |= REW_TAG_CTRL_TAG_CFG_SET(1);
+ 		else
+-			val |= REW_TAG_CTRL_TAG_CFG_SET(3);
++			/* Tag all frames except when VID == 0, frames from
++			 * the CPU carry their own tag and have VID 0.
++			 */
++			val |= REW_TAG_CTRL_TAG_CFG_SET(2);
+ 	}
+ 	spx5_wr(val, sparx5, REW_TAG_CTRL(port->portno));
+ 

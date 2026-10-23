@@ -1,7 +1,7 @@
 From ed0c1e7050f00050b959245f126d957fc7861c5e Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 14 Oct 2026 19:56:12 +0200
-Subject: [PATCH 105/107] net: phy: mediatek-ge: break the MT7531 master/slave
+Subject: [PATCH 105/131] net: phy: mediatek-ge: break the MT7531 master/slave
  tie after a resume
 
 Two MT7531 PHYs connected back to back fail to link up again when both

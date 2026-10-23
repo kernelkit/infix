@@ -1,0 +1,193 @@
+From 0ec1b9df1f29cd72f255733d1e6db673c1f8dd07 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 14 Oct 2026 15:18:34 +0200
+Subject: [PATCH 124/131] net: sparx5: terminate VLAN uppers of bridged ports
+
+A VLAN interface on top of a port in a VLAN-aware bridge never receives
+anything, unless the bridge also has that VLAN on the port:
+
+  ip link add link eth0 name eth0.10 type vlan id 10
+
+The switch classifies the tagged frames to VID 10, where nothing sends
+the port's address or broadcast to the CPU, so they are dropped.  The
+driver has no ndo_vlan_rx_add_vid and never learns about the upper.
+
+Implement ndo_vlan_rx_add_vid and ndo_vlan_rx_kill_vid: add CPU entries
+for the port address and broadcast in the VID, and move them along when
+the port address changes.  The port does not join the VLAN, so the VID
+stays local to the port and is not bridged, as in software.  Broadcast
+goes to the flood PGID, so it still reaches ports that are members of
+the VID in the bridge.
+
+The bridge adds the same broadcast entry for each of its own VLANs, so
+it now takes a reference on the shared entry too, instead of removing
+it from under a VLAN upper.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_mactable.c        |  5 +-
+ .../ethernet/microchip/sparx5/sparx5_netdev.c | 70 ++++++++++++++++++-
+ .../microchip/sparx5/sparx5_switchdev.c       | 11 +--
+ 3 files changed, 79 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index cf222736eff9..c90595cb481e 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -188,8 +188,11 @@ int sparx5_cpu_entry_get(struct sparx5 *sparx5, const unsigned char *addr,
+ 			goto out;
+ 		}
+ 
++		/* Broadcast also floods to the VLAN's member ports */
+ 		ret = sparx5_mact_learn(sparx5,
+-					sparx5_get_pgid(sparx5, PGID_CPU),
++					sparx5_get_pgid(sparx5,
++							is_broadcast_ether_addr(addr) ?
++							PGID_BCAST : PGID_CPU),
+ 					addr, vid);
+ 		if (ret) {
+ 			kfree(e);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+index 963957bef6b0..c1c4b027eb1c 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+@@ -9,6 +9,8 @@
+ #include "sparx5_port.h"
+ #include "sparx5_tc.h"
+ 
++#include <linux/if_vlan.h>
++
+ /* The IFH bit position of the first VSTAX bit. This is because the
+  * VSTAX bit positions in Data sheet is starting from zero.
+  */
+@@ -184,6 +186,25 @@ static int sparx5_port_get_phys_port_name(struct net_device *dev,
+ 	return 0;
+ }
+ 
++struct sparx5_addr_move {
++	struct sparx5 *sparx5;
++	const unsigned char *from;
++	const unsigned char *to;
++};
++
++/* Called for every VID in the filter, also those without a VLAN device */
++static int sparx5_vlan_move_addr(struct net_device *vlan_dev, int vid,
++				 void *arg)
++{
++	struct sparx5_addr_move *move = arg;
++
++	if (!vid)
++		return 0;
++
++	sparx5_cpu_entry_put(move->sparx5, move->from, vid);
++	return sparx5_cpu_entry_get(move->sparx5, move->to, vid);
++}
++
+ static int sparx5_set_mac_address(struct net_device *dev, void *p)
+ {
+ 	struct sparx5_port *port = netdev_priv(dev);
+@@ -202,12 +223,57 @@ static int sparx5_set_mac_address(struct net_device *dev, void *p)
+ 		sparx5_cpu_entry_get(sparx5, addr->sa_data, port->pvid);
+ 	}
+ 
++	/* Frames to VLAN uppers are delivered by address and VID */
++	vlan_for_each(dev, sparx5_vlan_move_addr,
++		      &(struct sparx5_addr_move){ sparx5, dev->dev_addr,
++						  addr->sa_data });
++
+ 	/* Record the address */
+ 	eth_hw_addr_set(dev, addr->sa_data);
+ 
+ 	return 0;
+ }
+ 
++/* A VLAN upper terminates its VID locally, also on a bridged port: its
++ * traffic goes to the CPU without the port joining the VLAN.
++ */
++static int sparx5_vlan_rx_add_vid(struct net_device *dev, __be16 proto,
++				  u16 vid)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	struct sparx5 *sparx5 = port->sparx5;
++	int err;
++
++	if (!vid)
++		return 0;
++
++	err = sparx5_cpu_entry_get(sparx5, dev->dev_addr, vid);
++	if (err || vid == UNAWARE_VID)
++		return err;
++
++	err = sparx5_cpu_entry_get(sparx5, dev->broadcast, vid);
++	if (err)
++		sparx5_cpu_entry_put(sparx5, dev->dev_addr, vid);
++
++	return err;
++}
++
++static int sparx5_vlan_rx_kill_vid(struct net_device *dev, __be16 proto,
++				   u16 vid)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	struct sparx5 *sparx5 = port->sparx5;
++
++	if (!vid)
++		return 0;
++
++	if (vid != UNAWARE_VID)
++		sparx5_cpu_entry_put(sparx5, dev->broadcast, vid);
++	sparx5_cpu_entry_put(sparx5, dev->dev_addr, vid);
++
++	return 0;
++}
++
+ static int sparx5_get_port_parent_id(struct net_device *dev,
+ 				     struct netdev_phys_item_id *ppid)
+ {
+@@ -254,6 +320,8 @@ static const struct net_device_ops sparx5_port_netdev_ops = {
+ 	.ndo_set_rx_mode        = sparx5_set_rx_mode,
+ 	.ndo_get_phys_port_name = sparx5_port_get_phys_port_name,
+ 	.ndo_set_mac_address    = sparx5_set_mac_address,
++	.ndo_vlan_rx_add_vid    = sparx5_vlan_rx_add_vid,
++	.ndo_vlan_rx_kill_vid   = sparx5_vlan_rx_kill_vid,
+ 	.ndo_validate_addr      = eth_validate_addr,
+ 	.ndo_get_stats64        = sparx5_get_stats64,
+ 	.ndo_get_port_parent_id = sparx5_get_port_parent_id,
+@@ -279,7 +347,7 @@ struct net_device *sparx5_create_netdev(struct sparx5 *sparx5, u32 portno)
+ 		return ERR_PTR(-ENOMEM);
+ 
+ 	ndev->hw_features |= NETIF_F_HW_TC;
+-	ndev->features |= NETIF_F_HW_TC;
++	ndev->features |= NETIF_F_HW_TC | NETIF_F_HW_VLAN_CTAG_FILTER;
+ 
+ 	SET_NETDEV_DEV(ndev, sparx5->dev);
+ 	spx5_port = netdev_priv(ndev);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index 15cbc5ba2842..e87a343e150c 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -437,10 +437,11 @@ static int sparx5_handle_port_vlan_add(struct net_device *dev,
+ 			container_of(nb, struct sparx5,
+ 				     switchdev_blocking_nb);
+ 
+-		/* Flood broadcast to CPU */
+-		sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_BCAST),
+-				  dev->broadcast, v->vid);
+-		return 0;
++		/* Flood broadcast to CPU, UNAWARE_VID has it already */
++		if (v->vid == UNAWARE_VID)
++			return 0;
++
++		return sparx5_cpu_entry_get(sparx5, dev->broadcast, v->vid);
+ 	}
+ 
+ 	if (!sparx5_netdevice_check(dev))
+@@ -676,7 +677,7 @@ static int sparx5_handle_port_vlan_del(struct net_device *dev,
+ 
+ 		/* Kept for the bridged ports without a PVID */
+ 		if (vid != UNAWARE_VID)
+-			sparx5_mact_forget(sparx5, dev->broadcast, vid);
++			sparx5_cpu_entry_put(sparx5, dev->broadcast, vid);
+ 		return 0;
+ 	}
+ 

@@ -69,6 +69,13 @@ def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, c
         except OSError as e:
             print(f"Error removing fetched file {local_file}: {e}")
 
+def device_for(target):
+    """SSH Device on the management address of a NETCONF/RESTCONF target"""
+    loc = target.location
+    return Device(target.name, Location(loc.host, loc.username, loc.password),
+                  wait=False)
+
+
 class Device(object):
     def __init__(self, name: str, location: Location, wait: bool=True):
         self.name = name

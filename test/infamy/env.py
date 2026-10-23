@@ -2,6 +2,7 @@ import argparse
 import os
 import pydot
 import shlex
+import subprocess
 import sys
 import random
 import inspect
@@ -62,6 +63,61 @@ def test_argument(option, **kwargs):
         cls.__init__ = new_init
         return cls
     return decorator
+
+
+# Bridge port states, link events, per-port packet counts and learned
+# unicast addresses of every attached DUT, logged when a test fails.
+_DUT_STATE_SH = r"""
+echo "uptime $(cut -d' ' -f1 /proc/uptime)"
+bridge link show 2>/dev/null | awk '{ s = m = "-"
+    for (i = 1; i < NF; i++) { if ($i == "state") s = $(i + 1); if ($i == "master") m = $(i + 1) }
+    sub(":", "", $2); printf "%s:%s:%s ", $2, m, s } END { if (NR) print "" }'
+for d in /sys/class/net/*; do
+    [ -e $d/device ] && [ "$(cat $d/operstate)" = up ] || continue
+    printf "%s rx=%s tx=%s txdrop=%s  " ${d##*/} $(cat $d/statistics/rx_packets \
+        $d/statistics/tx_packets $d/statistics/tx_dropped)
+done; echo
+dmesg | grep -E "Link is (Up|Down)" | tail -10 | sed 's/sparx5-switch [^ ]* //'
+bridge fdb show 2>/dev/null | awk '$0 ~ / master / && $0 !~ /permanent|^33:33|^01:00:5e/ {
+    for (i = 1; i < NF; i++) if ($i == "dev") d[$1] = $(i + 1)
+    if ($0 ~ /offload/) hw[$1] = 1 }
+    END { for (m in d) printf "%s@%s%s ", m, d[m], (m in hw ? "" : "(sw)"); if (length(d)) print "" }'
+{ ip -4 route; ip -6 route | grep -v "^fe80::/64"; } | sed 's/^/route /'
+pidof ospfd >/dev/null && vtysh -c "show ip ospf neighbor" | grep . | sed 's/^/ospf /'
+pidof ospf6d >/dev/null && vtysh -c "show ipv6 ospf6 neighbor" | grep . | sed 's/^/ospf6 /'
+pidof ripd >/dev/null && vtysh -c "show ip rip status" | sed -n '/Gateway/,$p' | sed 's/^/rip /'
+pidof ripngd >/dev/null && vtysh -c "show ipv6 ripng status" | sed -n '/Gateway/,$p' | sed 's/^/ripng /'
+true
+"""
+_attached = {}
+
+
+def _dump_duts():
+    if not _attached:
+        return
+
+    def state(dev):
+        try:
+            if not isinstance(dev, ssh.Device):
+                dev = ssh.device_for(dev)
+            res = dev.runsh(_DUT_STATE_SH, timeout=30)
+        except subprocess.TimeoutExpired:
+            return "cannot read state: timed out"
+        except Exception as e:
+            return f"cannot read state: {type(e).__name__}"
+        if res.returncode == ssh.TRANSPORT_ERROR:
+            return "cannot read state: unreachable"
+        return res.stdout
+
+    duts = list(_attached.items())
+    out = util.parallel(*[lambda d=d: state(d) for _, d in duts])
+    print("State of the DUTs at failure, bridge ports as port:bridge:state:")
+    for (name, _), text in zip(duts, out):
+        for line in text.strip().splitlines():
+            print(f"{name}: {line}")
+
+
+tap.on_failure(_dump_duts)
 
 
 class Env(object):
@@ -158,7 +214,13 @@ class Env(object):
 
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
+        dev = self._attach(node, port, protocol, test_reset, username, password)
+        if username in (None, "admin"):
+            phys = self.ltop.xlate(node) if self.ltop else node
+            _attached[f"{node} ({phys})"] = dev
+        return dev
 
+    def _attach(self, node, port, protocol, test_reset, username, password):
         name = node
         mapping = None
         if self.ltop and node in self.ltop.mapping:
@@ -202,7 +264,8 @@ class Env(object):
             return dev
 
         if protocol == "ssh":
-            return ssh.Device(name, ssh.Location(mgmtip, username, password))
+            dev = ssh.Device(name, ssh.Location(mgmtip, username, password))
+            return dev
 
         if protocol == "restconf":
             dev = restconf.Device(name,

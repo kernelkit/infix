@@ -1,0 +1,1562 @@
+From eb6345dfbc54cd2f1b73d335a1ee9c852b9513bb Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 16 Oct 2026 10:14:44 +0200
+Subject: [PATCH 130/131] net: sparx5: add LAG offload
+
+A bond in a bridge does not forward on LAN969x.  The driver does not
+offload link aggregation, so the bond is a software port in an
+offloaded bridge, and the switch never hands its traffic to the CPU:
+unknown unicast from the other bridge ports stays in hardware, and
+frames for the bridge arriving on the bond members are dropped.
+
+Offload the bond instead.  Ports enslaved to a bond join the bridge
+through it, the bond's members share an aggregation mask and a logical
+port, MAC table entries for the bond point to its lowest numbered
+member, and frames are not sent back out the aggregate they came in on.
+MDB entries and VLANs on the bond are applied to each member, and FDB
+entries for foreign bridge ports are installed towards the CPU.
+
+Based on the LAG support by Daniel Machon in Microchip's BSP kernel,
+branch bsp-6.12-2025:
+
+  commit 5fd9c90023a0 ("net: sparx5/lan969x: add registers required to configure LAG")
+  commit 684893932384 ("net: sparx5/lan969x: expose sparx5_mac_entry struct")
+  commit 9b7df456732a ("net: sparx5/lan969x: pass sparx5_port in sparx5_fdb_call_notifiers()")
+  commit 5e7ca258ec39 ("net: sparx5/lan969x: add function to set the destination PGID's")
+  commit 33d523ead729 ("net: sparx5/lan969x: use switchdev_handle_fdb_event_to_device helper")
+  commit 94f4b8667c48 ("net: sparx5/lan969x: move unoffloading to PRECHANGEUPPER")
+  commit 5baa99df9a9d ("net: sparx5/lan969x: add new brport_dev argument")
+  commit 9cfbe0dee25d ("net: sparx5/lan969x: add LAG support")
+  commit d17f1c4c4bce ("net: sparx5/lan969x: do not send frames back on LAG ports")
+  commit 64054ae42e82 ("net: sparx5: handle foreign device FDB events")
+  commit c92187b2b2a5 ("net: sparx5: allow foreign devices in bridge")
+
+and the MDB fix for LAG interfaces by Horatiu Vultur:
+
+  commit 7beaccf08da5 ("net: sparx5: Fix for MDB")
+
+Adapted to the mainline 6.18 driver: registers in its regs->gaddr form,
+with ANA_CL_PORT_ID_CFG added, the source and destination masks folded
+into sparx5_update_fwd(), the MDB fix applied to the MDB code in
+sparx5_switchdev.c, and the HSR, MRP, XDP and QoS parts of those
+commits left out.  Switchdev attributes of the bond are accepted on its
+member ports, and the bridge's own addresses are still installed for the
+CPU when the bridge gets them before any port joins, as before the
+switch to switchdev_handle_fdb_event_to_device().
+
+Signed-off-by: Daniel Machon <daniel.machon@microchip.com>
+Signed-off-by: Horatiu Vultur <horatiu.vultur@microchip.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../net/ethernet/microchip/sparx5/Makefile    |   2 +-
+ .../microchip/sparx5/lan969x/lan969x_regs.c   |   2 +
+ .../ethernet/microchip/sparx5/sparx5_lag.c    | 418 ++++++++++++++++++
+ .../microchip/sparx5/sparx5_mactable.c        |  51 ++-
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  40 ++
+ .../microchip/sparx5/sparx5_main_regs.h       | 124 ++++++
+ .../ethernet/microchip/sparx5/sparx5_regs.c   |   2 +
+ .../ethernet/microchip/sparx5/sparx5_regs.h   |   2 +
+ .../microchip/sparx5/sparx5_switchdev.c       | 396 +++++++++++++++--
+ .../ethernet/microchip/sparx5/sparx5_vlan.c   |  43 ++
+ 10 files changed, 1015 insertions(+), 65 deletions(-)
+ create mode 100644 drivers/net/ethernet/microchip/sparx5/sparx5_lag.c
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/Makefile b/drivers/net/ethernet/microchip/sparx5/Makefile
+index d447f9e84d92..03313e51f79d 100644
+--- a/drivers/net/ethernet/microchip/sparx5/Makefile
++++ b/drivers/net/ethernet/microchip/sparx5/Makefile
+@@ -11,7 +11,7 @@ sparx5-switch-y  := sparx5_main.o sparx5_packet.o \
+  sparx5_ptp.o sparx5_pgid.o sparx5_tc.o sparx5_qos.o \
+  sparx5_vcap_impl.o sparx5_vcap_ag_api.o sparx5_tc_flower.o \
+  sparx5_tc_matchall.o sparx5_pool.o sparx5_sdlb.o sparx5_police.o \
+- sparx5_psfp.o sparx5_mirror.o sparx5_regs.o
++ sparx5_psfp.o sparx5_mirror.o sparx5_regs.o sparx5_lag.o
+ 
+ sparx5-switch-$(CONFIG_SPARX5_DCB) += sparx5_dcb.o
+ sparx5-switch-$(CONFIG_DEBUG_FS) += sparx5_vcap_debugfs.o
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+index ace4ba21eec4..8722aec120f7 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+@@ -53,6 +53,7 @@ const unsigned int lan969x_gaddr[GADDR_LAST] = {
+ 	[GA_ANA_AC_RAM_CTRL] = 202000,
+ 	[GA_ANA_AC_PS_COMMON] = 202880,
+ 	[GA_ANA_AC_MIRROR_PROBE] = 203232,
++	[GA_ANA_AC_AGGR] = 202240,
+ 	[GA_ANA_AC_SRC] = 201728,
+ 	[GA_ANA_AC_PGID] = 131072,
+ 	[GA_ANA_AC_TSN_SF] = 202028,
+@@ -219,4 +220,5 @@ const unsigned int lan969x_fsize[FSIZE_LAST] = {
+ 	[FW_XQS_QLIMIT_SHR_ATOP_CFG_QLIMIT_SHR_ATOP] = 14,
+ 	[FW_XQS_QLIMIT_SHR_CTOP_CFG_QLIMIT_SHR_CTOP] = 14,
+ 	[FW_XQS_QLIMIT_SHR_QLIM_CFG_QLIMIT_SHR_QLIM] = 14,
++	[FW_ANA_CL_PORT_ID_CFG_LPORT_NUM] = 6,
+ };
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_lag.c b/drivers/net/ethernet/microchip/sparx5/sparx5_lag.c
+new file mode 100644
+index 000000000000..c574a28d6307
+--- /dev/null
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_lag.c
+@@ -0,0 +1,418 @@
++// SPDX-License-Identifier: GPL-2.0+
++/* Microchip Sparx5 Switch driver
++ *
++ * Copyright (c) 2025 Microchip Technology Inc. and its subsidiaries.
++ */
++
++#include <linux/if_bridge.h>
++#include <linux/netdevice.h>
++
++#include <net/switchdev.h>
++
++#include "sparx5_main.h"
++
++#define LAG_MASKS_CNT 16
++
++static void sparx5_lag_add(struct sparx5_port *port,
++			   struct net_device *lag_master)
++{
++	lockdep_assert_held(&port->sparx5->lock);
++
++	port->lag_master = lag_master;
++}
++
++static void sparx5_lag_del(struct sparx5_port *port)
++{
++	lockdep_assert_held(&port->sparx5->lock);
++
++	port->lag_master = NULL;
++}
++
++static void sparx5_lag_add_locked(struct sparx5_port *port,
++				  struct net_device *lag_master)
++{
++	struct sparx5 *sparx5 = port->sparx5;
++
++	spin_lock(&sparx5->lock);
++	sparx5_lag_add(port, lag_master);
++	spin_unlock(&sparx5->lock);
++}
++
++static void sparx5_lag_del_locked(struct sparx5_port *port)
++{
++	struct sparx5 *sparx5 = port->sparx5;
++
++	spin_lock(&sparx5->lock);
++	sparx5_lag_del(port);
++	spin_unlock(&sparx5->lock);
++}
++
++void sparx5_lag_mask_get(struct sparx5 *sparx5, struct net_device *lag_master,
++			 unsigned long *lag_mask)
++{
++	struct sparx5_port *port;
++
++	bitmap_zero(lag_mask, SPX5_PORTS);
++
++	if (!lag_master)
++		return;
++
++	for (int i = 0; i < sparx5->data->consts->n_ports; i++) {
++		port = sparx5->ports[i];
++		if (!port)
++			continue;
++
++		if (port->lag_master == lag_master)
++			set_bit(i, lag_mask);
++	}
++}
++
++bool sparx5_lag_is_first(struct net_device *lag_master, struct net_device *dev)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	struct sparx5 *sparx5 = port->sparx5;
++	DECLARE_BITMAP(lag_mask, SPX5_PORTS);
++
++	if (port->lag_master != lag_master)
++		return false;
++
++	sparx5_lag_mask_get(sparx5, lag_master, lag_mask);
++
++	return port->portno == find_first_bit(lag_mask, SPX5_PORTS);
++}
++
++/* The LAG id is the lowest physical port number within the LAG. */
++static int sparx5_lag_id_get(struct sparx5 *sparx5,
++			     struct net_device *lag_master)
++{
++	DECLARE_BITMAP(lag_mask, SPX5_PORTS);
++
++	sparx5_lag_mask_get(sparx5, lag_master, lag_mask);
++
++	if (bitmap_empty(lag_mask, SPX5_PORTS))
++		return -EINVAL;
++
++	return find_first_bit(lag_mask, SPX5_PORTS);
++}
++
++static bool sparx5_lag_hash_type_check(struct sparx5 *sparx5,
++				       enum netdev_lag_hash hash_type)
++{
++	for (int i = 0; i < sparx5->data->consts->n_ports; i++) {
++		struct sparx5_port *port = sparx5->ports[i];
++
++		if (!port || !port->lag_master)
++			continue;
++
++		if (port->lag_hash_type != hash_type)
++			return false;
++	}
++
++	return true;
++}
++
++int sparx5_lag_aggr_code_set(struct net_device *dev,
++			     struct netdev_notifier_changeupper_info *info)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	struct netdev_lag_upper_info *upper_info;
++	struct sparx5 *sparx5 = port->sparx5;
++	struct netlink_ext_ack *extack;
++
++	extack = netdev_notifier_info_to_extack(&info->info);
++
++	upper_info = info->upper_info;
++	if (!upper_info) {
++		port->lag_hash_type = NETDEV_LAG_HASH_NONE;
++		return NOTIFY_DONE;
++	}
++
++	if (upper_info->tx_type != NETDEV_LAG_TX_TYPE_HASH) {
++		NL_SET_ERR_MSG_MOD(extack,
++				   "LAG device using unsupported TX type");
++		return -EINVAL;
++	}
++
++	if (!sparx5_lag_hash_type_check(sparx5, upper_info->hash_type)) {
++		NL_SET_ERR_MSG_MOD(extack, "LAG devices must have the same hash_type");
++		return -EINVAL;
++	}
++
++	switch (upper_info->hash_type) {
++	case NETDEV_LAG_HASH_L2:
++				/* L2 */
++		spx5_wr(ANA_CL_AGGR_CFG_AGGR_DMAC_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_SMAC_ENA_SET(1),
++			sparx5, ANA_CL_AGGR_CFG);
++		break;
++	case NETDEV_LAG_HASH_L34:
++				/* L3 */
++		spx5_wr(ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA_SET(1) |
++				/* L4 */
++				ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA_SET(1),
++			sparx5, ANA_CL_AGGR_CFG);
++		break;
++	case NETDEV_LAG_HASH_L23:
++				/* L2 */
++		spx5_wr(ANA_CL_AGGR_CFG_AGGR_DMAC_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_SMAC_ENA_SET(1) |
++				/* L3 */
++				ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA_SET(1) |
++				ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA_SET(1),
++			sparx5, ANA_CL_AGGR_CFG);
++		break;
++	default:
++		NL_SET_ERR_MSG_MOD(extack,
++				   "LAG device using unsupported hash type");
++		return -EINVAL;
++	}
++
++	port->lag_hash_type = upper_info->hash_type;
++
++	return NOTIFY_OK;
++}
++
++static void sparx5_lag_map_logical_ports(struct sparx5 *sparx5)
++{
++	struct sparx5_port *port;
++	int logical_port;
++
++	for (int i = 0; i < sparx5->data->consts->n_ports; i++) {
++		port = sparx5->ports[i];
++		if (!port)
++			continue;
++
++		if (port->lag_master) {
++			/* If this port is part of a LAG, the logical port
++			 * number is the physical port number of the port with
++			 * the lowest port number within the LAG.
++			 */
++			logical_port = sparx5_lag_id_get(sparx5,
++							 port->lag_master);
++			if (logical_port < 0)
++				/* This should not happen. */
++				logical_port = port->portno;
++		} else {
++			/* By default, the logical port number is the same as
++			 * the physical port number.
++			 */
++			logical_port = port->portno;
++		}
++
++		spx5_rmw(ANA_CL_PORT_ID_CFG_LPORT_NUM_SET(logical_port),
++			 ANA_CL_PORT_ID_CFG_LPORT_NUM, sparx5,
++			 ANA_CL_PORT_ID_CFG(i));
++	}
++}
++
++/* Set the aggregation masks.
++ *
++ * By default all aggregation masks will be all ones, corresponding to no
++ * forwarding restrictions wrt. link aggregation. For port devices under a LAG,
++ * only one port per LAG must be set in each aggregation mask. Effectively, this
++ * means that a frame will only get forwarded to one port per LAG.
++ *
++ * To enforce this, we get a mask of each port member of a LAG, and distribute
++ * each port across all aggregation masks.
++ */
++int sparx5_lag_aggr_masks_set(struct sparx5_port *port, bool leaving)
++{
++	const struct sparx5_consts *consts = port->sparx5->data->consts;
++	struct sparx5 *sparx5 = port->sparx5;
++	DECLARE_BITMAP(lag_mask, SPX5_PORTS);
++	int n_active_ports = 0, portno = 0;
++	u8 active_idx[LAG_MASKS_CNT];
++	u32 mask;
++
++	sparx5_lag_mask_get(sparx5, port->lag_master, lag_mask);
++
++	for_each_set_bit(portno, lag_mask, consts->n_ports)
++		if (sparx5->ports[portno]->lag_tx_active)
++			active_idx[n_active_ports++] = portno;
++
++	if (!leaving && n_active_ports > LAG_MASKS_CNT)
++		return -EOPNOTSUPP;
++
++	for (int i = 0; i < LAG_MASKS_CNT; i++) {
++		mask = leaving ? BIT(port->portno) : 0;
++
++		if (n_active_ports)
++			mask |= BIT(active_idx[i % n_active_ports]);
++
++		spx5_rmw(mask, lag_mask[0] | BIT(port->portno), sparx5,
++			 ANA_AC_AGGR_CFG(i));
++
++		if (is_sparx5(sparx5))
++			spx5_rmw(mask, lag_mask[1] | BIT(port->portno), sparx5,
++				 ANA_AC_AGGR_CFG(i));
++	}
++
++	return 0;
++}
++
++static int sparx5_lag_replace_mact_entries(struct sparx5_port *src_port,
++					   struct sparx5_port *dst_port)
++{
++	struct sparx5_mact_entry *mact_entry, *tmp;
++	struct sparx5 *sparx5 = src_port->sparx5;
++
++	mutex_lock(&sparx5->mact_lock);
++	list_for_each_entry_safe(mact_entry, tmp, &sparx5->mact_entries, list) {
++		if (mact_entry->port == src_port->portno && mact_entry->lag) {
++			sparx5_mact_forget(sparx5, mact_entry->mac,
++					   mact_entry->vid);
++
++			sparx5_mact_learn(sparx5, dst_port->portno,
++					  mact_entry->mac, mact_entry->vid);
++
++			mact_entry->port = dst_port->portno;
++		}
++	}
++	mutex_unlock(&sparx5->mact_lock);
++
++	return 0;
++}
++
++static int sparx5_lag_remove_mact_entries(struct sparx5_port *src_port)
++{
++	struct sparx5_mact_entry *mact_entry, *tmp;
++	struct sparx5 *sparx5 = src_port->sparx5;
++
++	mutex_lock(&sparx5->mact_lock);
++	list_for_each_entry_safe(mact_entry, tmp, &sparx5->mact_entries, list) {
++		if (mact_entry->port == src_port->portno && mact_entry->lag) {
++			sparx5_mact_forget(sparx5, mact_entry->mac,
++					   mact_entry->vid);
++
++			list_del(&mact_entry->list);
++			devm_kfree(sparx5->dev, mact_entry);
++		}
++	}
++	mutex_unlock(&sparx5->mact_lock);
++
++	return 0;
++}
++
++int sparx5_lag_join(struct sparx5_port *port, struct net_device *brport_dev,
++		    struct net_device *lag_master,
++		    struct netlink_ext_ack *extack)
++{
++	struct sparx5 *sparx5 = port->sparx5;
++	struct net_device *dev = port->ndev;
++	struct net_device *br;
++	int lag_id, err;
++
++	br = netdev_master_upper_dev_get(lag_master);
++	if (br && netif_is_bridge_master(br)) {
++		/* If a port is joining a LAG, which in turn is under a bridge,
++		 * we have to make sure the port joining the LAG, is also
++		 * properly joining the bridge. The easiest way to do this, is
++		 * to generate an event for the joining port, with the upper_dev
++		 * being the bridge, instead of the LAG.
++		 */
++
++		struct netdev_notifier_changeupper_info info = {
++			.linking = true,
++			.upper_dev = br,
++		};
++
++		/* Port PVID is not set in case the netdevice event was for a
++		 * lag device. Set it here. Is reset on bridge_leave();
++		 */
++		port->pvid = 1;
++
++		sparx5_port_prechangeupper(port->ndev, port->ndev, &info);
++		sparx5_port_changeupper(port->ndev, port->ndev, &info);
++
++		/* Must be called _after_ the port joins the bridge */
++		sparx5_attr_stp_state_set(port,
++					  br_port_get_stp_state(brport_dev));
++	}
++
++	/* Get the lagid before adding the new port. */
++	lag_id = sparx5_lag_id_get(sparx5, lag_master);
++
++	sparx5_lag_add_locked(port, lag_master);
++
++	/* MAC table entries for LAG ports, are added for the LAG port
++	 * with the lowest physical port number (lagid). If a new port, with a
++	 * lower physical port number than the current lagid joins the lag, all
++	 * LAG entries have to be updated.
++	 */
++	if (lag_id >= 0 && sparx5_lag_is_first(lag_master, dev))
++		sparx5_lag_replace_mact_entries(sparx5->ports[lag_id], port);
++
++	sparx5_update_dst_fwd(sparx5);
++
++	err = sparx5_lag_aggr_masks_set(port, false);
++	if (err)
++		return err;
++
++	sparx5_lag_map_logical_ports(sparx5);
++
++	return 0;
++}
++
++void sparx5_lag_leave(struct sparx5_port *port, struct net_device *lag_master)
++{
++	DECLARE_BITMAP(lag_mask, SPX5_PORTS);
++	struct sparx5 *sparx5 = port->sparx5;
++	struct net_device *br;
++	int lag_id;
++
++	br = netdev_master_upper_dev_get(lag_master);
++	if (br && netif_is_bridge_master(br)) {
++		/* If a port is leaving a LAG, which in turn is under a bridge,
++		 * we have to make sure the port leaving the LAG, is also
++		 * properly leaving the bridge. The easiest way to do this, is
++		 * to generate an event for the leaving port, with the upper_dev
++		 * being the bridge, instead og the LAG.
++		 */
++
++		struct netdev_notifier_changeupper_info info = {
++			.linking = false,
++			.upper_dev = br,
++		};
++
++		/* Must be called _before_ the port leaves the bridge */
++		sparx5_attr_stp_state_set(port,
++					  br_port_get_stp_state(port->ndev));
++
++		sparx5_port_prechangeupper(port->ndev, port->ndev, &info);
++		sparx5_port_changeupper(port->ndev, port->ndev, &info);
++	}
++
++	if (sparx5_lag_is_first(lag_master, port->ndev)) {
++		/* MAC table entries for LAG ports, are added for the LAG port
++		 * with the lowest physical port number (lagid). If that port
++		 * leaves the lag, all LAG entries have to be either updated to
++		 * the new lagid, or removed entirely.
++		 */
++
++		sparx5_lag_del_locked(port);
++
++		sparx5_lag_mask_get(sparx5, lag_master, lag_mask);
++
++		if (!bitmap_empty(lag_mask, SPX5_PORTS)) {
++			lag_id = sparx5_lag_id_get(sparx5, lag_master);
++
++			sparx5_lag_replace_mact_entries(port,
++							sparx5->ports[lag_id]);
++		} else {
++			sparx5_lag_remove_mact_entries(port);
++		}
++	} else {
++		sparx5_lag_del_locked(port);
++	}
++
++	sparx5_update_dst_fwd(sparx5);
++	/* Ignore return value */
++	sparx5_lag_aggr_masks_set(port, true);
++	sparx5_lag_map_logical_ports(sparx5);
++}
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index c90595cb481e..359555386e13 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -30,20 +30,6 @@
+ #define TABLE_UPDATE_SLEEP_US 10
+ #define TABLE_UPDATE_TIMEOUT_US 100000
+ 
+-struct sparx5_mact_entry {
+-	struct list_head list;
+-	unsigned char mac[ETH_ALEN];
+-	u32 flags;
+-#define MAC_ENT_ALIVE	BIT(0)
+-#define MAC_ENT_MOVED	BIT(1)
+-#define MAC_ENT_LOCK	BIT(2)
+-	u16 vid;
+-	u16 port;
+-	u8 refs; /* Bridge VIDs using a locked entry */
+-#define MAC_ENT_REF_VID		BIT(0) /* The entry's own VID */
+-#define MAC_ENT_REF_UNAWARE	BIT(1) /* Bridge VID 0, see UNAWARE_VID */
+-};
+-
+ /* Bridge VID 0 is mapped to UNAWARE_VID, to keep clear of the standalone
+  * ports on NULL_VID, so it shares the MAC table entry with that VID.
+  */
+@@ -334,6 +320,7 @@ static struct sparx5_mact_entry *alloc_mact_entry(struct sparx5 *sparx5,
+ 						  const unsigned char *mac,
+ 						  u16 vid, u16 port_index)
+ {
++	struct sparx5_port *port = sparx5->ports[port_index];
+ 	struct sparx5_mact_entry *mact_entry;
+ 
+ 	mact_entry = devm_kzalloc(sparx5->dev,
+@@ -344,6 +331,12 @@ static struct sparx5_mact_entry *alloc_mact_entry(struct sparx5 *sparx5,
+ 	memcpy(mact_entry->mac, mac, ETH_ALEN);
+ 	mact_entry->vid = vid;
+ 	mact_entry->port = port_index;
++
++	spin_lock(&sparx5->lock);
++	mact_entry->lag = !!(mact_entry->port < sparx5->data->consts->n_ports &&
++			     port->lag_master);
++	spin_unlock(&sparx5->lock);
++
+ 	return mact_entry;
+ }
+ 
+@@ -370,14 +363,21 @@ static struct sparx5_mact_entry *find_mact_entry(struct sparx5 *sparx5,
+ 
+ static void sparx5_fdb_call_notifiers(enum switchdev_notifier_type type,
+ 				      const char *mac, u16 vid,
+-				      struct net_device *dev, bool offloaded)
++				      struct sparx5_port *port, bool offloaded)
+ {
+ 	struct switchdev_notifier_fdb_info info = {};
++	struct sparx5 *sparx5 = port->sparx5;
++	struct net_device *ndev;
+ 
+ 	info.addr = mac;
+ 	info.vid = vid;
+ 	info.offloaded = offloaded;
+-	call_switchdev_notifiers(type, dev, &info.info, NULL);
++
++	spin_lock(&sparx5->lock);
++	ndev = (port->lag_master ? port->lag_master : port->ndev);
++	spin_unlock(&sparx5->lock);
++
++	call_switchdev_notifiers(type, ndev, &info.info, NULL);
+ }
+ 
+ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+@@ -385,6 +385,7 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 			  u16 portno,
+ 			  const unsigned char *addr, u16 vid)
+ {
++	struct sparx5_port *port = netdev_priv(dev);
+ 	struct sparx5_mact_entry *mact_entry;
+ 	int ret;
+ 	u32 cfg2;
+@@ -419,7 +420,6 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 	mutex_lock(&sparx5->mact_lock);
+ 	list_add_tail(&mact_entry->list, &sparx5->mact_entries);
+ 	mutex_unlock(&sparx5->mact_lock);
+-
+ update_hw:
+ 	ret = sparx5_mact_learn(sparx5, portno, addr, vid);
+ 
+@@ -427,8 +427,14 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 	if (mact_entry->flags == 0) {
+ 		mact_entry->flags |= MAC_ENT_LOCK; /* Don't age this */
+ 		mact_entry->refs = ref;
+-		sparx5_fdb_call_notifiers(SWITCHDEV_FDB_ADD_TO_BRIDGE, addr, vid,
+-					  dev, true);
++		/* Only notify bridge for entries on physical ports.
++		 * Host/foreign device entries use a PGID (portno >= n_ports)
++		 * and must not notify, as it would override the bridge's
++		 * FDB entry pointing to the foreign device.
++		 */
++		if (portno < sparx5->data->consts->n_ports)
++			sparx5_fdb_call_notifiers(SWITCHDEV_FDB_ADD_TO_BRIDGE,
++						  addr, vid, port, true);
+ 	}
+ 
+ 	return ret;
+@@ -520,9 +526,8 @@ static void sparx5_mact_handle_entry(struct sparx5 *sparx5,
+ 	}
+ 
+ 	/* New or moved entry - notify bridge */
+-	sparx5_fdb_call_notifiers(SWITCHDEV_FDB_ADD_TO_BRIDGE,
+-				  mac, vid, sparx5->ports[port]->ndev,
+-				  true);
++	sparx5_fdb_call_notifiers(SWITCHDEV_FDB_ADD_TO_BRIDGE, mac, vid,
++				  sparx5->ports[port], true);
+ }
+ 
+ static void sparx5_mact_pull_work(struct work_struct *work)
+@@ -571,7 +576,7 @@ static void sparx5_mact_pull_work(struct work_struct *work)
+ 
+ 		sparx5_fdb_call_notifiers(SWITCHDEV_FDB_DEL_TO_BRIDGE,
+ 					  mact_entry->mac, mact_entry->vid,
+-					  sparx5->ports[mact_entry->port]->ndev,
++					  sparx5->ports[mact_entry->port],
+ 					  true);
+ 
+ 		list_del(&mact_entry->list);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 18fa9075d8f6..c02d339db858 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -237,6 +237,11 @@ struct sparx5_port {
+ 	struct sk_buff_head tx_skbs;
+ 	bool is_mrouter;
+ 	struct list_head tc_templates; /* list of TC templates on this port */
++
++	/* LAG */
++	struct net_device *lag_master;
++	enum netdev_lag_hash lag_hash_type;
++	bool lag_tx_active;
+ };
+ 
+ enum sparx5_core_clockfreq {
+@@ -449,6 +454,14 @@ bool sparx5_has_feature(struct sparx5 *sparx5, enum sparx5_feature feature);
+ /* sparx5_switchdev.c */
+ int sparx5_register_notifier_blocks(struct sparx5 *sparx5);
+ void sparx5_unregister_notifier_blocks(struct sparx5 *sparx5);
++void sparx5_attr_stp_state_set(struct sparx5_port *port, u8 state);
++int sparx5_port_prechangeupper(struct net_device *dev,
++			       struct net_device *brport_dev,
++			       struct netdev_notifier_changeupper_info *info);
++
++int sparx5_port_changeupper(struct net_device *dev,
++			    struct net_device *brport_dev,
++			    struct netdev_notifier_changeupper_info *info);
+ 
+ /* sparx5_packet.c */
+ struct frame_info {
+@@ -477,6 +490,21 @@ void sparx5_fdma_reload(struct sparx5 *sparx5, struct fdma *fdma);
+ void sparx5_fdma_injection_mode(struct sparx5 *sparx5);
+ 
+ /* sparx5_mactable.c */
++struct sparx5_mact_entry {
++	struct list_head list;
++	unsigned char mac[ETH_ALEN];
++	u32 flags;
++#define MAC_ENT_ALIVE	BIT(0)
++#define MAC_ENT_MOVED	BIT(1)
++#define MAC_ENT_LOCK	BIT(2)
++	u16 vid;
++	u16 port;
++	bool lag;
++	u8 refs; /* Bridge VIDs using a locked entry */
++#define MAC_ENT_REF_VID		BIT(0) /* The entry's own VID */
++#define MAC_ENT_REF_UNAWARE	BIT(1) /* Bridge VID 0, see UNAWARE_VID */
++};
++
+ int sparx5_mact_learn(struct sparx5 *sparx5, int port,
+ 		      const unsigned char mac[ETH_ALEN], u16 vid);
+ bool sparx5_mact_getnext(struct sparx5 *sparx5,
+@@ -503,6 +531,7 @@ int sparx5_mact_init(struct sparx5 *sparx5);
+ void sparx5_mact_deinit(struct sparx5 *sparx5);
+ 
+ /* sparx5_vlan.c */
++void sparx5_update_dst_fwd(struct sparx5 *sparx5);
+ void sparx5_pgid_update_mask(struct sparx5_port *port, int pgid, bool enable);
+ void sparx5_pgid_clear(struct sparx5 *spx5, int pgid);
+ void sparx5_pgid_read_mask(struct sparx5 *sparx5, int pgid, u32 portmask[3]);
+@@ -724,6 +753,17 @@ void sparx5_mirror_del(struct sparx5_mall_entry *entry);
+ void sparx5_mirror_stats(struct sparx5_mall_entry *entry,
+ 			 struct flow_stats *fstats);
+ 
++/* sparx5_lag.c */
++int sparx5_lag_join(struct sparx5_port *port, struct net_device *brport_dev,
++		    struct net_device *bond, struct netlink_ext_ack *extack);
++void sparx5_lag_leave(struct sparx5_port *port, struct net_device *bond);
++int sparx5_lag_aggr_code_set(struct net_device *dev,
++			     struct netdev_notifier_changeupper_info *info);
++int sparx5_lag_aggr_masks_set(struct sparx5_port *port, bool leaving);
++bool sparx5_lag_is_first(struct net_device *lag_master, struct net_device *dev);
++void sparx5_lag_mask_get(struct sparx5 *sparx5, struct net_device *lag_master,
++			 unsigned long *lag_mask);
++
+ /* Clock period in picoseconds */
+ static inline u32 sparx5_clk_period(enum sparx5_core_clockfreq cclock)
+ {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index 3b732a0d6c59..937e85941725 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -165,6 +165,23 @@ extern const struct sparx5_regs *regs;
+ #define ANA_AC_PROBE_PORT_CFG2_PROBE_PORT_MASK2_GET(x)\
+ 	FIELD_GET(ANA_AC_PROBE_PORT_CFG2_PROBE_PORT_MASK2, x)
+ 
++/* ANA_AC:AGGR:AGGR_CFG */
++#define ANA_AC_AGGR_CFG(g)                                                     \
++	__REG(TARGET_ANA_AC, 0, 1, regs->gaddr[GA_ANA_AC_AGGR], g, 16, 16, 0, 0, 1,  \
++	      4)
++
++/* SPARX5 ONLY */
++/* ANA_AC:AGGR:AGGR_CFG1 */
++#define ANA_AC_AGGR_CFG1(g)                                                    \
++	__REG(TARGET_ANA_AC, 0, 1, regs->gaddr[GA_ANA_AC_AGGR], g, 16, 16, 4, 0, 1,  \
++	      4)
++
++/* SPARX5 ONLY */
++/* ANA_AC:AGGR:AGGR_CFG2 */
++#define ANA_AC_AGGR_CFG2(g)                                                    \
++	__REG(TARGET_ANA_AC, 0, 1, regs->gaddr[GA_ANA_AC_AGGR], g, 16, 16, 8, 0, 1,  \
++	      4)
++
+ /* ANA_AC:SRC:SRC_CFG */
+ #define ANA_AC_SRC_CFG(g)                                                      \
+ 	__REG(TARGET_ANA_AC, 0, 1, regs->gaddr[GA_ANA_AC_SRC], g,              \
+@@ -762,6 +779,113 @@ extern const struct sparx5_regs *regs;
+ #define ANA_ACL_OWN_UPSID_OWN_UPSID_GET(x)\
+ 	FIELD_GET(ANA_ACL_OWN_UPSID_OWN_UPSID, x)
+ 
++/* ANA_CL:PORT:PORT_ID_CFG */
++#define ANA_CL_PORT_ID_CFG(g)                                                  \
++	__REG(TARGET_ANA_CL, 0, 1, regs->gaddr[GA_ANA_CL_PORT], g,                   \
++	      regs->gcnt[GC_ANA_CL_PORT], 512, 104, 0, 1, 4)
++
++#define ANA_CL_PORT_ID_CFG_LPORT_NUM\
++	GENMASK(regs->fsize[FW_ANA_CL_PORT_ID_CFG_LPORT_NUM] + 0 - 1, 0)
++#define ANA_CL_PORT_ID_CFG_LPORT_NUM_SET(x)\
++	spx5_field_prep(ANA_CL_PORT_ID_CFG_LPORT_NUM, x)
++#define ANA_CL_PORT_ID_CFG_LPORT_NUM_GET(x)\
++	spx5_field_get(ANA_CL_PORT_ID_CFG_LPORT_NUM, x)
++
++/* ANA_CL:COMMON:AGGR_CFG */
++#define ANA_CL_AGGR_CFG                                                        \
++	__REG(TARGET_ANA_CL, 0, 1, regs->gaddr[GA_ANA_CL_COMMON], 0, 1, 756, 12, 0,  \
++	      1, 4)
++
++#define ANA_CL_AGGR_CFG_RT_UPD_VSTAX_AC_ENA      BIT(14)
++#define ANA_CL_AGGR_CFG_RT_UPD_VSTAX_AC_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_RT_UPD_VSTAX_AC_ENA, x)
++#define ANA_CL_AGGR_CFG_RT_UPD_VSTAX_AC_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_RT_UPD_VSTAX_AC_ENA, x)
++
++#define ANA_CL_AGGR_CFG_SHORT_AGGR_ENA           BIT(13)
++#define ANA_CL_AGGR_CFG_SHORT_AGGR_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_SHORT_AGGR_ENA, x)
++#define ANA_CL_AGGR_CFG_SHORT_AGGR_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_SHORT_AGGR_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_ISDX_ENA            BIT(12)
++#define ANA_CL_AGGR_CFG_AGGR_ISDX_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_ISDX_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_ISDX_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_ISDX_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_USE_VSTAX_AC_ENA    BIT(11)
++#define ANA_CL_AGGR_CFG_AGGR_USE_VSTAX_AC_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_USE_VSTAX_AC_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_USE_VSTAX_AC_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_USE_VSTAX_AC_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_REVERSED_ENA   BIT(10)
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_REVERSED_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_DMAC_REVERSED_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_REVERSED_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_DMAC_REVERSED_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_RND_ENA             BIT(9)
++#define ANA_CL_AGGR_CFG_AGGR_RND_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_RND_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_RND_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_RND_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA         BIT(8)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP6_DIP_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA         BIT(7)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP6_SIP_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP6_FLOW_LBL_ENA    BIT(6)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_FLOW_LBL_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP6_FLOW_LBL_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_FLOW_LBL_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP6_FLOW_LBL_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA BIT(5)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP6_TCPUDP_PORT_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA BIT(4)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP4_TCPUDP_PORT_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA         BIT(3)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP4_DIP_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA         BIT(2)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_IP4_SIP_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_ENA            BIT(1)
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_DMAC_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_DMAC_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_DMAC_ENA, x)
++
++#define ANA_CL_AGGR_CFG_AGGR_SMAC_ENA            BIT(0)
++#define ANA_CL_AGGR_CFG_AGGR_SMAC_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_AGGR_CFG_AGGR_SMAC_ENA, x)
++#define ANA_CL_AGGR_CFG_AGGR_SMAC_ENA_GET(x)\
++	FIELD_GET(ANA_CL_AGGR_CFG_AGGR_SMAC_ENA, x)
++
+ /* ANA_ACL:KEY_SEL:VCAP_S2_KEY_SEL */
+ #define ANA_ACL_VCAP_S2_KEY_SEL(g, r)                                          \
+ 	__REG(TARGET_ANA_ACL, 0, 1, regs->gaddr[GA_ANA_ACL_KEY_SEL], g,        \
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+index 220e81b714d4..d6c0dc3194fe 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+@@ -53,6 +53,7 @@ const unsigned int sparx5_gaddr[GADDR_LAST] = {
+ 	[GA_ANA_AC_RAM_CTRL] = 839108,
+ 	[GA_ANA_AC_PS_COMMON] = 894472,
+ 	[GA_ANA_AC_MIRROR_PROBE] = 893696,
++	[GA_ANA_AC_AGGR] = 851712,
+ 	[GA_ANA_AC_SRC] = 849920,
+ 	[GA_ANA_AC_PGID] = 786432,
+ 	[GA_ANA_AC_TSN_SF] = 839136,
+@@ -219,4 +220,5 @@ const unsigned int sparx5_fsize[FSIZE_LAST] = {
+ 	[FW_XQS_QLIMIT_SHR_ATOP_CFG_QLIMIT_SHR_ATOP] = 15,
+ 	[FW_XQS_QLIMIT_SHR_CTOP_CFG_QLIMIT_SHR_CTOP] = 15,
+ 	[FW_XQS_QLIMIT_SHR_QLIM_CFG_QLIMIT_SHR_QLIM] = 15,
++	[FW_ANA_CL_PORT_ID_CFG_LPORT_NUM] = 7,
+ };
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+index ea28130c2341..3e433b34b7c6 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+@@ -62,6 +62,7 @@ enum sparx5_gaddr_enum {
+ 	GA_ANA_AC_RAM_CTRL,
+ 	GA_ANA_AC_PS_COMMON,
+ 	GA_ANA_AC_MIRROR_PROBE,
++	GA_ANA_AC_AGGR,
+ 	GA_ANA_AC_SRC,
+ 	GA_ANA_AC_PGID,
+ 	GA_ANA_AC_TSN_SF,
+@@ -232,6 +233,7 @@ enum sparx5_fsize_enum {
+ 	FW_XQS_QLIMIT_SHR_ATOP_CFG_QLIMIT_SHR_ATOP,
+ 	FW_XQS_QLIMIT_SHR_CTOP_CFG_QLIMIT_SHR_CTOP,
+ 	FW_XQS_QLIMIT_SHR_QLIM_CFG_QLIMIT_SHR_QLIM,
++	FW_ANA_CL_PORT_ID_CFG_LPORT_NUM,
+ 	FSIZE_LAST,
+ };
+ 
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index a56b5a83f814..6f5a47ae0c7a 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -5,6 +5,7 @@
+  */
+ 
+ #include <linux/if_bridge.h>
++#include <net/bonding.h>
+ #include <net/switchdev.h>
+ 
+ #include "sparx5_main_regs.h"
+@@ -16,6 +17,7 @@ struct sparx5_switchdev_event_work {
+ 	struct work_struct work;
+ 	struct switchdev_notifier_fdb_info fdb_info;
+ 	struct net_device *dev;
++	struct net_device *orig_dev;
+ 	struct sparx5 *sparx5;
+ 	unsigned long event;
+ };
+@@ -62,12 +64,11 @@ static void sparx5_port_attr_bridge_flags(struct sparx5_port *port,
+ 					!!(flags.val & BR_BCAST_FLOOD));
+ }
+ 
+-static void sparx5_attr_stp_state_set(struct sparx5_port *port,
+-				      u8 state)
++void sparx5_attr_stp_state_set(struct sparx5_port *port, u8 state)
+ {
+ 	struct sparx5 *sparx5 = port->sparx5;
+ 
+-	if (!test_bit(port->portno, sparx5->bridge_mask)) {
++	if (!test_bit(port->portno, sparx5->bridge_mask) && !port->lag_master) {
+ 		netdev_err(port->ndev,
+ 			   "Controlling non-bridged port %d?\n", port->portno);
+ 		return;
+@@ -140,9 +141,10 @@ static int sparx5_port_attr_set(struct net_device *dev, const void *ctx,
+ 	struct sparx5 *sparx5 = port->sparx5;
+ 
+ 	/* Attributes of an upper in a bridge, e.g. a VLAN interface on the
+-	 * port, or of a bridge the port is not in, are not ours.
++	 * port, or of a bridge the port is not in, are not ours.  Those of
++	 * the LAG the port is in are.
+ 	 */
+-	if (attr->orig_dev != dev &&
++	if (attr->orig_dev != dev && attr->orig_dev != port->lag_master &&
+ 	    (attr->orig_dev != sparx5->hw_bridge_dev ||
+ 	     !test_bit(port->portno, sparx5->bridge_mask)))
+ 		return -EOPNOTSUPP;
+@@ -182,6 +184,7 @@ static int sparx5_port_attr_set(struct net_device *dev, const void *ctx,
+ }
+ 
+ static int sparx5_port_bridge_join(struct sparx5_port *port,
++				   struct net_device *brport_dev,
+ 				   struct net_device *bridge,
+ 				   struct netlink_ext_ack *extack)
+ {
+@@ -202,7 +205,7 @@ static int sparx5_port_bridge_join(struct sparx5_port *port,
+ 
+ 	set_bit(port->portno, sparx5->bridge_mask);
+ 
+-	err = switchdev_bridge_port_offload(ndev, ndev, NULL, NULL, NULL,
++	err = switchdev_bridge_port_offload(brport_dev, ndev, NULL, NULL, NULL,
+ 					    false, extack);
+ 	if (err)
+ 		goto err_switchdev_offload;
+@@ -234,8 +237,6 @@ static void sparx5_port_bridge_leave(struct sparx5_port *port,
+ 	struct switchdev_brport_flags flags = {0};
+ 	struct sparx5 *sparx5 = port->sparx5;
+ 
+-	switchdev_bridge_port_unoffload(port->ndev, NULL, NULL, NULL);
+-
+ 	clear_bit(port->portno, sparx5->bridge_mask);
+ 	if (bitmap_empty(sparx5->bridge_mask, SPX5_PORTS))
+ 		sparx5->hw_bridge_dev = NULL;
+@@ -258,8 +259,38 @@ static void sparx5_port_bridge_leave(struct sparx5_port *port,
+ 	sparx5_port_attr_bridge_flags(port, flags);
+ }
+ 
+-static int sparx5_port_changeupper(struct net_device *dev,
+-				   struct netdev_notifier_changeupper_info *info)
++int
++sparx5_port_prechangeupper(struct net_device *dev,
++			   struct net_device *brport_dev,
++			   struct netdev_notifier_changeupper_info *info)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	int err = NOTIFY_DONE;
++
++	if (netif_is_bridge_master(info->upper_dev)) {
++		if (info->linking)
++			return 0;
++		else
++			switchdev_bridge_port_unoffload(dev, port, NULL, NULL);
++	}
++
++	if (netif_is_lag_master(info->upper_dev)) {
++		err = sparx5_lag_aggr_code_set(dev, info);
++		if (err)
++			return err;
++
++		if (info->linking)
++			return 0;
++
++		switchdev_bridge_port_unoffload(brport_dev, port, NULL, NULL);
++	}
++
++	return err;
++}
++
++int sparx5_port_changeupper(struct net_device *dev,
++			    struct net_device *brport_dev,
++			    struct netdev_notifier_changeupper_info *info)
+ {
+ 	struct sparx5_port *port = netdev_priv(dev);
+ 	struct netlink_ext_ack *extack;
+@@ -269,7 +300,9 @@ static int sparx5_port_changeupper(struct net_device *dev,
+ 
+ 	if (netif_is_bridge_master(info->upper_dev)) {
+ 		if (info->linking)
+-			err = sparx5_port_bridge_join(port, info->upper_dev,
++			err = sparx5_port_bridge_join(port,
++						      brport_dev,
++						      info->upper_dev,
+ 						      extack);
+ 		else
+ 			sparx5_port_bridge_leave(port, info->upper_dev);
+@@ -277,9 +310,47 @@ static int sparx5_port_changeupper(struct net_device *dev,
+ 		sparx5_vlan_port_apply(port->sparx5, port);
+ 	}
+ 
++	if (netif_is_lag_master(info->upper_dev)) {
++		/* Upper device is a LAG master, add this device to the LAG. */
++		if (info->linking)
++			err = sparx5_lag_join(port,
++					      info->upper_dev,
++					      info->upper_dev,
++					      extack);
++		else
++			sparx5_lag_leave(port, info->upper_dev);
++	}
++
+ 	return err;
+ }
+ 
++static int
++sparx5_port_changelower(struct net_device *dev,
++			struct netdev_notifier_changelowerstate_info *info)
++{
++	struct netdev_lag_lower_state_info *lag = info->lower_state_info;
++	struct sparx5_port *port = netdev_priv(dev);
++	struct sparx5 *sparx5 = port->sparx5;
++	bool is_active;
++
++	if (netif_is_lag_port(dev)) {
++		if (!port->lag_master)
++			return NOTIFY_DONE;
++
++		is_active = lag->link_up && lag->tx_enabled;
++
++		if (port->lag_tx_active == is_active)
++			return NOTIFY_DONE;
++
++		port->lag_tx_active = is_active;
++
++		sparx5_update_dst_fwd(sparx5);
++		sparx5_lag_aggr_masks_set(port, false);
++	}
++
++	return NOTIFY_OK;
++}
++
+ static int sparx5_port_add_addr(struct net_device *dev, bool up)
+ {
+ 	struct sparx5_port *port = netdev_priv(dev);
+@@ -308,8 +379,22 @@ static int sparx5_netdevice_port_event(struct net_device *dev,
+ 		return 0;
+ 
+ 	switch (event) {
++	case NETDEV_PRECHANGEUPPER:
++		/* When a port is directly attached to a bridge, the brport_dev
++		 * and dev are identical.
++		 */
++
++		sparx5_port_prechangeupper(dev, dev, ptr);
++		break;
+ 	case NETDEV_CHANGEUPPER:
+-		err = sparx5_port_changeupper(dev, ptr);
++		/* When a port is directly attached to a bridge, the brport_dev
++		 * and dev are identical.
++		 */
++
++		err = sparx5_port_changeupper(dev, dev, ptr);
++		break;
++	case NETDEV_CHANGELOWERSTATE:
++		err = sparx5_port_changelower(dev, ptr);
+ 		break;
+ 	case NETDEV_PRE_UP:
+ 		err = sparx5_port_add_addr(dev, true);
+@@ -322,13 +407,73 @@ static int sparx5_netdevice_port_event(struct net_device *dev,
+ 	return err;
+ }
+ 
++static int
++sparx5_netdevice_lag_event(struct net_device *dev, struct notifier_block *nb,
++			   unsigned long event,
++			   struct netdev_notifier_changeupper_info *info)
++{
++	/* Event for lag master. Walk the lower devices. */
++	struct sparx5_port *port;
++	struct net_device *lower;
++	struct list_head *iter;
++	int err = 0;
++
++	netdev_for_each_lower_dev(dev, lower, iter) {
++		if (!sparx5_netdevice_check(lower))
++			continue;
++
++		port = netdev_priv(lower);
++		if (port->lag_master != dev)
++			continue;
++
++		switch (event) {
++		case NETDEV_PRECHANGEUPPER:
++			err = sparx5_port_prechangeupper(lower, dev, info);
++			break;
++		case NETDEV_CHANGEUPPER:
++			err = sparx5_port_changeupper(lower, dev, info);
++			break;
++		default:
++			break;
++		}
++
++		if (err)
++			return err;
++	}
++
++	return NOTIFY_DONE;
++}
++
++static int
++sparx5_netdevice_foreign_event(struct net_device *dev,
++			       struct notifier_block *nb, unsigned long event,
++			       struct netdev_notifier_changeupper_info *info)
++{
++	return NOTIFY_DONE;
++}
++
+ static int sparx5_netdevice_event(struct notifier_block *nb,
+ 				  unsigned long event, void *ptr)
+ {
+ 	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+ 	int ret = 0;
+ 
+-	ret = sparx5_netdevice_port_event(dev, nb, event, ptr);
++	if (netif_is_lag_master(dev)) {
++		/* This event is for a lag master device e.g bond0 */
++
++		ret = sparx5_netdevice_lag_event(dev, nb, event, ptr);
++	} else if (netif_is_bridge_master(dev)) {
++		/* This event is for a bridge master device e.g br0 */
++
++		ret = 0;
++	} else if (sparx5_netdevice_check(dev)) {
++		/* This event is for a sparx5 port device e.g eth0 */
++
++		ret = sparx5_netdevice_port_event(dev, nb, event, ptr);
++	} else {
++		/* Anything else */
++		ret = sparx5_netdevice_foreign_event(dev, nb, event, ptr);
++	}
+ 
+ 	return notifier_from_errno(ret);
+ }
+@@ -337,20 +482,42 @@ static void sparx5_switchdev_bridge_fdb_event_work(struct work_struct *work)
+ {
+ 	struct sparx5_switchdev_event_work *switchdev_work =
+ 		container_of(work, struct sparx5_switchdev_event_work, work);
++	struct net_device *orig_dev = switchdev_work->orig_dev;
+ 	struct net_device *dev = switchdev_work->dev;
+ 	struct switchdev_notifier_fdb_info *fdb_info;
+ 	struct sparx5_port *port;
+ 	struct sparx5 *sparx5;
+ 	bool host_addr;
+ 
++	sparx5 = switchdev_work->sparx5;
++
+ 	rtnl_lock();
+-	if (!sparx5_netdevice_check(dev)) {
+-		host_addr = true;
+-		sparx5 = switchdev_work->sparx5;
+-	} else {
++
++	if (sparx5_netdevice_check(orig_dev)) {
++		/* The notification was for a netdevice */
++
++		port = netdev_priv(orig_dev);
+ 		host_addr = false;
+-		sparx5 = switchdev_work->sparx5;
++	} else if (netif_is_bridge_master(orig_dev)) {
++		/* The notification was for a bridge master - add host addr */
++
++		port = netdev_priv(orig_dev);
++		host_addr = true;
++	} else if (netif_is_lag_master(orig_dev)) {
++		/* The notification was for a LAG master - add FDB for first
++		 * port in LAG. LAG ports can join and leave the LAG while FDB
++		 * events are being handled.
++		 */
++
++		if (!sparx5_lag_is_first(orig_dev, dev))
++			goto out;
++
+ 		port = netdev_priv(dev);
++		host_addr = false;
++	} else {
++		/* Foreign device - forward to CPU for software bridging */
++
++		host_addr = true;
+ 	}
+ 
+ 	fdb_info = &switchdev_work->fdb_info;
+@@ -370,6 +537,7 @@ static void sparx5_switchdev_bridge_fdb_event_work(struct work_struct *work)
+ 		break;
+ 	}
+ 
++out:
+ 	rtnl_unlock();
+ 	kfree(switchdev_work->fdb_info.addr);
+ 	kfree(switchdev_work);
+@@ -381,41 +549,34 @@ static void sparx5_schedule_work(struct work_struct *work)
+ 	queue_work(sparx5_owq, work);
+ }
+ 
+-static int sparx5_switchdev_event(struct notifier_block *nb,
+-				  unsigned long event, void *ptr)
++static int
++__sparx5_switchdev_handle_fdb(struct sparx5 *sparx5, struct net_device *dev,
++			      struct net_device *orig_dev, unsigned long event,
++			      const struct switchdev_notifier_fdb_info *fdb_info)
+ {
+-	struct net_device *dev = switchdev_notifier_info_to_dev(ptr);
+ 	struct sparx5_switchdev_event_work *switchdev_work;
+-	struct switchdev_notifier_fdb_info *fdb_info;
+-	struct switchdev_notifier_info *info = ptr;
+-	struct sparx5 *spx5;
+-	int err;
+-
+-	spx5 = container_of(nb, struct sparx5, switchdev_nb);
+ 
+ 	switch (event) {
+-	case SWITCHDEV_PORT_ATTR_SET:
+-		err = switchdev_handle_port_attr_set(dev, ptr,
+-						     sparx5_netdevice_check,
+-						     sparx5_port_attr_set);
+-		return notifier_from_errno(err);
+ 	case SWITCHDEV_FDB_ADD_TO_DEVICE:
+ 		fallthrough;
+ 	case SWITCHDEV_FDB_DEL_TO_DEVICE:
++		if (sparx5_netdevice_check(orig_dev) &&
++		    !fdb_info->added_by_user)
++			break;
++
+ 		switchdev_work = kzalloc(sizeof(*switchdev_work), GFP_ATOMIC);
+ 		if (!switchdev_work)
+ 			return NOTIFY_BAD;
+ 
+ 		switchdev_work->dev = dev;
++		switchdev_work->orig_dev = orig_dev;
+ 		switchdev_work->event = event;
+-		switchdev_work->sparx5 = spx5;
++		switchdev_work->sparx5 = sparx5;
+ 
+-		fdb_info = container_of(info,
+-					struct switchdev_notifier_fdb_info,
+-					info);
+ 		INIT_WORK(&switchdev_work->work,
+ 			  sparx5_switchdev_bridge_fdb_event_work);
+-		memcpy(&switchdev_work->fdb_info, ptr,
++		memcpy(&switchdev_work->fdb_info,
++		       fdb_info,
+ 		       sizeof(switchdev_work->fdb_info));
+ 		switchdev_work->fdb_info.addr = kzalloc(ETH_ALEN, GFP_ATOMIC);
+ 		if (!switchdev_work->fdb_info.addr)
+@@ -435,6 +596,80 @@ static int sparx5_switchdev_event(struct notifier_block *nb,
+ 	return NOTIFY_BAD;
+ }
+ 
++static int
++sparx5_switchdev_handle_fdb(struct net_device *dev,
++			    struct net_device *orig_dev,
++			    unsigned long event, const void *ctx,
++			    const struct switchdev_notifier_fdb_info *fdb_info)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++
++	return __sparx5_switchdev_handle_fdb(port->sparx5, dev, orig_dev,
++					     event, fdb_info);
++}
++
++static bool sparx5_foreign_device_check(const struct net_device *dev,
++					const struct net_device *foreign_dev)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++	struct sparx5 *sparx5 = port->sparx5;
++	int i;
++
++	/* Our own bridge master is not foreign. */
++	if (netif_is_bridge_master(foreign_dev))
++		if (sparx5->hw_bridge_dev == foreign_dev)
++			return false;
++
++	/* A LAG master that contains one of our ports is not foreign. */
++	if (netif_is_lag_master(foreign_dev))
++		for (i = 0; i < sparx5->data->consts->n_ports; ++i)
++			if (sparx5->ports[i] &&
++			    sparx5->ports[i]->lag_master == foreign_dev)
++				return false;
++
++	/* Everything else is a foreign device. */
++	return true;
++}
++
++static int sparx5_switchdev_event(struct notifier_block *nb,
++				  unsigned long event, void *ptr)
++{
++	struct net_device *dev = switchdev_notifier_info_to_dev(ptr);
++	int err;
++
++	switch (event) {
++	case SWITCHDEV_PORT_ATTR_SET:
++		err = switchdev_handle_port_attr_set(dev,
++						     ptr,
++						     sparx5_netdevice_check,
++						     sparx5_port_attr_set);
++		return notifier_from_errno(err);
++	case SWITCHDEV_FDB_ADD_TO_DEVICE:
++			fallthrough;
++	case SWITCHDEV_FDB_DEL_TO_DEVICE:
++		/* The bridge's own addresses, also those it gets before any
++		 * port joins, which have no lower device to reach us through.
++		 */
++		if (netif_is_bridge_master(dev)) {
++			struct sparx5 *sparx5 = container_of(nb, struct sparx5,
++							     switchdev_nb);
++
++			return __sparx5_switchdev_handle_fdb(sparx5, dev, dev,
++							     event, ptr);
++		}
++
++		err = switchdev_handle_fdb_event_to_device(dev,
++							   event,
++							   ptr,
++							   sparx5_netdevice_check,
++							   sparx5_foreign_device_check,
++							   sparx5_switchdev_handle_fdb);
++		return notifier_from_errno(err);
++	}
++
++	return NOTIFY_DONE;
++}
++
+ static int sparx5_handle_port_vlan_add(struct net_device *dev,
+ 				       struct notifier_block *nb,
+ 				       const struct switchdev_obj_port_vlan *v)
+@@ -453,6 +688,33 @@ static int sparx5_handle_port_vlan_add(struct net_device *dev,
+ 		return sparx5_cpu_entry_get(sparx5, dev->broadcast, v->vid);
+ 	}
+ 
++	if (netif_is_lag_master(dev)) {
++		/* Walk lower devices and make each port member of the bridge
++		 * VLAN.
++		 */
++		struct net_device *lower;
++		struct list_head *iter;
++		int err;
++
++		 netdev_for_each_lower_dev(dev, lower, iter) {
++			if (!sparx5_netdevice_check(lower))
++				continue;
++
++			port = netdev_priv(lower);
++			if (port->lag_master != dev)
++				continue;
++
++			err = sparx5_vlan_vid_add(port,
++						  v->vid,
++						  v->flags & BRIDGE_VLAN_INFO_PVID,
++						  v->flags & BRIDGE_VLAN_INFO_UNTAGGED);
++			if (err)
++				return err;
++		}
++
++		return 0;
++	}
++
+ 	if (!sparx5_netdevice_check(dev))
+ 		return -EOPNOTSUPP;
+ 
+@@ -645,6 +907,20 @@ static int sparx5_handle_port_mdb_del(struct net_device *dev,
+ 	return 0;
+ }
+ 
++static int sparx5_handle_port_obj_add_mdb(struct net_device *dev,
++					  const void *ctx,
++					  const struct switchdev_obj *obj,
++					  struct netlink_ext_ack *extack)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++
++	if (ctx && ctx != port)
++		return 0;
++
++	return sparx5_handle_port_mdb_add(dev, NULL,
++					  SWITCHDEV_OBJ_PORT_MDB(obj));
++}
++
+ static int sparx5_handle_port_obj_add(struct net_device *dev,
+ 				      struct notifier_block *nb,
+ 				      struct switchdev_notifier_port_obj_info *info)
+@@ -659,8 +935,9 @@ static int sparx5_handle_port_obj_add(struct net_device *dev,
+ 		break;
+ 	case SWITCHDEV_OBJ_ID_PORT_MDB:
+ 	case SWITCHDEV_OBJ_ID_HOST_MDB:
+-		err = sparx5_handle_port_mdb_add(dev, nb,
+-						 SWITCHDEV_OBJ_PORT_MDB(obj));
++		err = switchdev_handle_port_obj_add(dev, info,
++						    sparx5_netdevice_check,
++						    sparx5_handle_port_obj_add_mdb);
+ 		break;
+ 	default:
+ 		err = -EOPNOTSUPP;
+@@ -690,6 +967,29 @@ static int sparx5_handle_port_vlan_del(struct net_device *dev,
+ 		return 0;
+ 	}
+ 
++	if (netif_is_lag_master(dev)) {
++		/* Walk lower devices and make each port member of the bridge
++		 * VLAN.
++		 */
++		struct net_device *lower;
++		struct list_head *iter;
++
++		netdev_for_each_lower_dev(dev, lower, iter) {
++			if (!sparx5_netdevice_check(lower))
++				continue;
++
++			port = netdev_priv(lower);
++			if (port->lag_master != dev)
++				continue;
++
++			ret = sparx5_vlan_vid_del(port, vid);
++			if (ret)
++				return ret;
++		}
++
++		return 0;
++	}
++
+ 	if (!sparx5_netdevice_check(dev))
+ 		return -EOPNOTSUPP;
+ 
+@@ -700,6 +1000,19 @@ static int sparx5_handle_port_vlan_del(struct net_device *dev,
+ 	return 0;
+ }
+ 
++static int sparx5_handle_port_obj_del_mdb(struct net_device *dev,
++					  const void *ctx,
++					  const struct switchdev_obj *obj)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++
++	if (ctx && ctx != port)
++		return 0;
++
++	return sparx5_handle_port_mdb_del(dev, NULL,
++					  SWITCHDEV_OBJ_PORT_MDB(obj));
++}
++
+ static int sparx5_handle_port_obj_del(struct net_device *dev,
+ 				      struct notifier_block *nb,
+ 				      struct switchdev_notifier_port_obj_info *info)
+@@ -714,8 +1027,9 @@ static int sparx5_handle_port_obj_del(struct net_device *dev,
+ 		break;
+ 	case SWITCHDEV_OBJ_ID_PORT_MDB:
+ 	case SWITCHDEV_OBJ_ID_HOST_MDB:
+-		err = sparx5_handle_port_mdb_del(dev, nb,
+-						 SWITCHDEV_OBJ_PORT_MDB(obj));
++		err = switchdev_handle_port_obj_del(dev, info,
++						    sparx5_netdevice_check,
++						    sparx5_handle_port_obj_del_mdb);
+ 		break;
+ 	default:
+ 		err = -EOPNOTSUPP;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+index 55dd02b53d01..ece42d1ed9d3 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+@@ -176,6 +176,7 @@ void sparx5_pgid_read_mask(struct sparx5 *spx5, int pgid, u32 portmask[3])
+ void sparx5_update_fwd(struct sparx5 *sparx5)
+ {
+ 	DECLARE_BITMAP(workmask, SPX5_PORTS);
++	DECLARE_BITMAP(lagmask, SPX5_PORTS);
+ 	u32 mask[3];
+ 	int port;
+ 
+@@ -188,6 +189,20 @@ void sparx5_update_fwd(struct sparx5 *sparx5)
+ 			/* Allow to send to all bridged but self */
+ 			bitmap_copy(workmask, sparx5->bridge_fwd_mask, SPX5_PORTS);
+ 			clear_bit(port, workmask);
++
++			spin_lock(&sparx5->lock);
++			if (sparx5->ports[port] && sparx5->ports[port]->lag_master) {
++				/* Do not send frames back on the LAG they were
++				 * received on.
++				 */
++				sparx5_lag_mask_get(sparx5,
++						    sparx5->ports[port]->lag_master,
++						    lagmask);
++				bitmap_andnot(workmask, workmask, lagmask,
++					      SPX5_PORTS);
++			}
++			spin_unlock(&sparx5->lock);
++
+ 			bitmap_to_arr32(mask, workmask, SPX5_PORTS);
+ 			spx5_wr(mask[0], sparx5, ANA_AC_SRC_CFG(port));
+ 			if (is_sparx5(sparx5)) {
+@@ -216,6 +231,34 @@ void sparx5_update_fwd(struct sparx5 *sparx5)
+ 	}
+ }
+ 
++void sparx5_update_dst_fwd(struct sparx5 *sparx5)
++{
++	DECLARE_BITMAP(dstmask, SPX5_PORTS);
++	struct sparx5_port *port;
++	u32 mask[3] = {0};
++
++	for (int i = 0; i < sparx5->data->consts->n_ports; i++) {
++		port = sparx5->ports[i];
++		if (!port)
++			continue;
++
++		bitmap_zero(dstmask, SPX5_PORTS);
++
++		if (port->lag_master)
++			sparx5_lag_mask_get(sparx5, port->lag_master, dstmask);
++		else
++			set_bit(i, dstmask);
++
++		bitmap_to_arr32(mask, dstmask, SPX5_PORTS);
++
++		spx5_wr(mask[0], sparx5, ANA_AC_PGID_CFG(i));
++		if (is_sparx5(sparx5)) {
++			spx5_wr(mask[1], sparx5, ANA_AC_PGID_CFG1(i));
++			spx5_wr(mask[2], sparx5, ANA_AC_PGID_CFG2(i));
++		}
++	}
++}
++
+ void sparx5_vlan_port_apply(struct sparx5 *sparx5,
+ 			    struct sparx5_port *port)
+ 
