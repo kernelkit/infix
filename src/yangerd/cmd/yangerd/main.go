@@ -14,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kernelkit/infix/src/features"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
 	"github.com/kernelkit/infix/src/yangerd/internal/containermonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/dbusmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ethmonitor"
-	"github.com/kernelkit/infix/src/yangerd/internal/features"
 	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
 	"github.com/kernelkit/infix/src/yangerd/internal/fswatcher"
 	"github.com/kernelkit/infix/src/yangerd/internal/ipbatch"
@@ -29,8 +29,8 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/kernelrib"
 	"github.com/kernelkit/infix/src/yangerd/internal/lldpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/mcd"
-	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -70,8 +70,8 @@ func main() {
 	cfg := config.Load()
 	log.SetFlags(0)
 
-	// What the model carries is what is built in, see internal/features.
-	feat, err := features.Load(features.ModulesPath)
+	// What the model carries is what is built in, see src/features.
+	feat, err := features.LoadSysrepoModules(features.SysrepoModulesPath)
 	if err != nil {
 		log.Printf("%v, assuming every feature", err)
 		feat = features.All()
@@ -105,7 +105,7 @@ func main() {
 	}
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
-	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, feat.WiFi(), feat.GPS())
+	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, feat.On(features.WiFi), feat.On(features.GPS))
 	ntp := collector.NewNTPCollector(cmd, cfg.PollNTP)
 	t.RegisterProvider("ietf-ntp:ntp", ntp.Live)
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
@@ -113,7 +113,7 @@ func main() {
 		ntp,
 		hardware,
 	}
-	if feat.FRR() {
+	if feat.On(features.Routing) {
 		collectors = append(collectors, collector.NewRoutingCollector(cfg.PollRouting))
 	}
 	pokes := collector.RunAll(ctx, &wg, t, collectors)
@@ -202,7 +202,7 @@ func main() {
 		return backoff.Retry(ctx, slogLog, "nlmonitor", nlmon.Run)
 	})
 
-	if feat.WiFi() {
+	if feat.On(features.WiFi) {
 		iwmon := iwmonitor.New(slogLog)
 		iwmon.SetOnUpdate(nlmon.SetWifiData)
 		iwmon.SetOnRadioChange(hardware.RequestRadioRefresh)
@@ -214,7 +214,7 @@ func main() {
 	lldpmon := lldpmonitor.New(t, slogLog)
 	spawn("lldpmonitor", lldpmon.Run)
 
-	if feat.Containers() {
+	if feat.On(features.Containers) {
 		ctrmon := containermonitor.New(t, cmd, fs, slogLog)
 		spawn("containermonitor", ctrmon.Run)
 	}
@@ -227,7 +227,7 @@ func main() {
 
 	// The RIB comes from zebra when built with FRR, otherwise straight
 	// from the kernel table that netd installs into.
-	if feat.FRR() {
+	if feat.On(features.Routing) {
 		zapi := zapiwatcher.New(t, frrvty.New(""), slogLog)
 		zapi.SetOnChange(func() { pokes.Poke("routing") })
 		spawn("zapiwatcher", zapi.Run)

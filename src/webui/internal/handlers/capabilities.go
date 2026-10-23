@@ -4,9 +4,11 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 
+	"github.com/kernelkit/infix/src/features"
 	"infix/webui/internal/restconf"
 )
 
@@ -19,18 +21,6 @@ const docsIndexPath = "/var/www/guide/index.html"
 func DetectDocs() bool {
 	_, err := os.Stat(docsIndexPath)
 	return err == nil
-}
-
-type feature struct {
-	Name    string // key used in Has() and session cookie
-	Module  string // YANG module that carries the feature
-	Feature string // YANG feature name in the module's feature array
-}
-
-// optionalFeatures maps UI capabilities to YANG module features. Extend here.
-var optionalFeatures = []feature{
-	{Name: "wifi", Module: "infix-interfaces", Feature: "wifi"},
-	{Name: "containers", Module: "infix-interfaces", Feature: "containers"},
 }
 
 // Capabilities tracks which optional features are present on the device.
@@ -71,17 +61,6 @@ func CapabilitiesFromContext(ctx context.Context) *Capabilities {
 	return caps
 }
 
-type yangLibrary struct {
-	YangLibrary struct {
-		ModuleSet []struct {
-			Module []struct {
-				Name    string   `json:"name"`
-				Feature []string `json:"feature"`
-			} `json:"module"`
-		} `json:"module-set"`
-	} `json:"ietf-yang-library:yang-library"`
-}
-
 // webConfig mirrors the slice of infix-services we need to gate the
 // external web-app shortcuts (console, netbrowse).
 type webConfig struct {
@@ -117,29 +96,20 @@ func ApplyWebShortcuts(ctx context.Context, rc restconf.Fetcher, features map[st
 	features["console"], features["netbrowse"] = DetectWebShortcuts(ctx, rc)
 }
 
+// DetectCapabilities reads the device's ietf-yang-library and maps it to
+// the optional parts of Infix, see src/features for the table.  The
+// device daemons key on the same features from the same model.  Fails
+// closed: a read error means no optional pages rather than dead ones.
 func DetectCapabilities(ctx context.Context, rc restconf.Fetcher) *Capabilities {
-	var lib yangLibrary
-	if err := rc.Get(ctx, "/data/ietf-yang-library:yang-library", &lib); err != nil {
+	var raw json.RawMessage
+	if err := rc.Get(ctx, "/data/ietf-yang-library:yang-library", &raw); err != nil {
 		log.Printf("yang-library: %v (ignored, no optional features)", err)
 		return NewCapabilities(nil)
 	}
-
-	// Build index: module name → set of YANG features advertised.
-	modFeatures := make(map[string]map[string]bool)
-	for _, ms := range lib.YangLibrary.ModuleSet {
-		for _, m := range ms.Module {
-			fs := make(map[string]bool, len(m.Feature))
-			for _, f := range m.Feature {
-				fs[f] = true
-			}
-			modFeatures[m.Name] = fs
-		}
+	set, err := features.ParseYangLibrary(raw)
+	if err != nil {
+		log.Printf("yang-library: %v (ignored, no optional features)", err)
+		return NewCapabilities(nil)
 	}
-
-	result := make(map[string]bool, len(optionalFeatures))
-	for _, f := range optionalFeatures {
-		result[f.Name] = modFeatures[f.Module][f.Feature]
-	}
-
-	return NewCapabilities(result)
+	return NewCapabilities(set.Enabled())
 }
