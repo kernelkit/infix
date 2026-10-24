@@ -1,0 +1,6 @@
+config BR2_PACKAGE_BANANAPI_BPI_R2_PRO
+	bool "Banana Pi R2 Pro"
+	depends on BR2_aarch64
+	select SDCARD_AUX
+	help
+	  Build Banana PI R2 Pro support

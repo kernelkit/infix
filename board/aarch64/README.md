@@ -5,6 +5,7 @@ Board Specific Documentation
 ----------------------------
 
 - [Acer Connect Vero W6m](acer-connect-vero-w6m/)
+- [Banana Pi BPi-R2 Pro](bananapi-bpi-r2-pro/)
 - [Banana Pi BPi-R3](bananapi-bpi-r3/)
 - [Banana Pi BPi-R4](bananapi-bpi-r4/)
 - [Banana Pi BPi-R64](bananapi-bpi-r64/)
