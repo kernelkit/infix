@@ -18,6 +18,7 @@ jobs:
         defconfig:
           - aarch64_qemu_boot
           - bpi_m1_boot
+          - bpi_r2_pro_boot
           - bpi_r3_sd_boot
           - bpi_r3_emmc_boot
           - bpi_r4_sd_boot

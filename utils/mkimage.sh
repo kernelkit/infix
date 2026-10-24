@@ -191,6 +191,9 @@ get_bootloader_name()
         bananapi-bpi-m1)
             echo "bpi_m1_boot"
             ;;
+        bananapi-bpi-r2-pro)
+            echo "bpi_r2_pro_boot"
+            ;;
         bananapi-bpi-r3)
             if [ "$target" = "emmc" ]; then
                 echo "bpi_r3_emmc_boot"

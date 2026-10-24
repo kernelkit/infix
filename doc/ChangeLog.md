@@ -80,6 +80,9 @@ All notable changes to the project are documented in this file.
   VLAN, issue #354
 - Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
   build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
+- Add support for the Banana Pi BPI-R2 Pro (Rockchip RK3568) to the Aarch64
+  build, a five port router with 4x LAN switch ports and 1x WAN.  New
+  `bpi_r2_pro_boot_defconfig` builds one bootloader for SD card and eMMC
 - Support for Intel AX210 WiFi cards in the Aarch64 build
 - New `iitoctl` tool, shows which rule drives each LED and why, and can
   start locate, the board's LEDs blink as configured: `iitoctl locate on`
