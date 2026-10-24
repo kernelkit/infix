@@ -6,6 +6,7 @@ then be read back from the operational datastore.
 """
 import infamy
 import infamy.iface as iface
+from infamy.util import until
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -29,8 +30,6 @@ with infamy.Test() as test:
         }})
 
     with test.step("Verify description can be read back from operational"):
-        text = iface.get_param(target, tport, "description")
-        if text != DESC:
-            test.fail()
+        until(lambda: iface.get_param(target, tport, "description") == DESC)
 
     test.succeed()

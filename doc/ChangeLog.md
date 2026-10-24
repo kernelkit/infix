@@ -17,6 +17,13 @@ All notable changes to the project are documented in this file.
 - The active IGMP and MLD querier of a bridge, or of a bridge VLAN, is
   available in the operational datastore: its address, version, query
   interval and timeout, and whether it is the system itself
+- Operational data is returned much faster.  Interface, routing, bridge,
+  WiFi, container and hardware status is now kept up to date as the
+  system changes, instead of being gathered from the system on every
+  request.  A `show` command, a NETCONF or RESTCONF GET of operational
+  state, or a WebUI status page answers from that data at once, also
+  on devices with many interfaces, and reflects a change as soon as it
+  has happened
 - Switch boards advertise one of their port addresses as the LLDP chassis
   ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,

@@ -28,6 +28,12 @@ def get_address_set(target, name):
     return next((s for s in sets if s["name"] == name), None)
 
 
+def firewall_logging(target):
+    """Return the operational logging mode of the firewall"""
+    data = target.get_data("/infix-firewall:firewall")
+    return data["firewall"].get("logging")
+
+
 def current_entries(target, name):
     """Return {entry: dynamic} for the live contents of an address-set"""
     aset = get_address_set(target, name)
@@ -148,10 +154,10 @@ with infamy.Test() as test:
                 }
             })
 
+            until(lambda: firewall_logging(target) == "unicast", attempts=30)
+            until(lambda: current_entries(target, "allowed").get(HOST_IP) is True,
+                  attempts=10)
             ns.must_reach(TARGET_IP, timeout=30)
-            current = current_entries(target, "allowed")
-            assert current.get(HOST_IP) is True, \
-                f"Dynamic entry {HOST_IP} lost in firewall reload"
 
         with test.step("Verify static entry cannot be removed with action"):
             must_fail(target.call_action, f"{ALLOWED}/remove",

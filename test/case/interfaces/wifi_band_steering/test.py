@@ -136,7 +136,9 @@ with infamy.Test() as test:
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
         # once it had been seen on 5GHz, or asked the client to move there.
-        until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)
+        wifi.until_diagnosed(env, lambda: steered(ap, client, client_mac),
+                             attempts=20, interval=10,
+                             ap="ap", ap_ifaces=("wifi0", "wifi1"), clients=("client",))
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 
@@ -162,6 +164,9 @@ with infamy.Test() as test:
 
     with test.step("Start the 5GHz BSS in hostapd again"):
         apsh.runsh("sudo hostapd_cli -i wifi1 enable")
+
+    with test.step("Verify the 5GHz BSS is reported as an access point with the SSID again"):
+        until(lambda: wifi.ap_ssid(ap, "wifi1") == SSID, attempts=30, interval=2)
 
     with test.step("Verify a scanning client is steered to the 5GHz BSS by a fast transition"):
         def client_log():
@@ -192,6 +197,10 @@ with infamy.Test() as test:
         ap.put_config_dicts({"ietf-interfaces": {"interfaces": {
             "interface": [{"name": "wifi1", "enabled": True}]}}})
         until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
+
+    with test.step("Verify both BSSes are reported as access points with the SSID"):
+        until(lambda: wifi.ap_ssid(ap, "wifi1") == SSID, attempts=30, interval=2)
+        assert wifi.ap_ssid(ap, "wifi0") == SSID, wifi.ap_ssid(ap, "wifi0")
 
     with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
         until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)

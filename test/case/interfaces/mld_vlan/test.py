@@ -21,7 +21,10 @@ multicast.
 
 Both DUTs have IPv6 enabled on their VLAN interfaces, so in each VLAN
 they must agree on one MLD querier, the one with the lowest link-local
-address.  A sender in VLAN 55 on DUT1 sends to ff2e::55 and a sender
+address.  The other DUT receives the queries on its link port, and
+learns it as a multicast router port in that VLAN.
+
+A sender in VLAN 55 on DUT1 sends to ff2e::55 and a sender
 in VLAN 77 on DUT2 sends to ff2e::77.  Each group is flooded within its
 own VLAN, and never leaks into the other.  Once the receiver in VLAN 55
 on DUT2 joins ff2e::55, DUT2 learns the group on that port.
@@ -105,6 +108,14 @@ with infamy.Test() as test:
         until(lambda: iface.get_bridge_querier_election([dut1, dut2], "ipv6", vid=55) and
                       iface.get_bridge_querier_election([dut1, dut2], "ipv6", vid=77),
               attempts=30)
+
+    with test.step("Verify the DUT that is not querier has learned its link port as router port in VLAN 55 and 77"):
+        def router_port_learned(vid):
+            querier, _ = iface.get_bridge_querier_election([dut1, dut2], "ipv6", vid=vid)
+            other = [dut1, dut2][1 - querier]
+            return other["link"] in iface.get_bridge_router_ports(other, "br0", vid)
+
+        until(lambda: router_port_learned(55) and router_port_learned(77), attempts=10)
 
     with infamy.IsolatedMacVlan(hsend55) as send55_ns, \
          infamy.IsolatedMacVlan(hnojoin77) as nojoin77_ns, \

@@ -1151,6 +1151,13 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	fprintf(hostapd, "use_driver_iface_addr=1\n");
 
 	/*
+	 * Every access point is created with its address before hostapd
+	 * starts.  Without this hostapd gives a second BSS the primary's
+	 * address plus one and changes the interface under us.
+	 */
+	fprintf(hostapd, "use_driver_iface_addr=1\n");
+
+	/*
 	 * 802.11d broadcasts country info in beacons, required for clients
 	 * to know which channels/power levels are legal in this region.
 	 */

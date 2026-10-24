@@ -1,0 +1,56 @@
+From 7103c5330e3fbc7fe97fd44ab1e5a84480618c5f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Fri, 23 Oct 2026 12:26:50 +0200
+Subject: [PATCH] bridge: fdb: reset show state between batch commands
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The dev, br, vlan and state filters of an fdb show are statics that a
+one-shot command never has to clean up.  In batch mode they leak into
+the next command: 'fdb show br br0' after 'fdb show dev lo' answers
+with the entries on lo in br0, that is none.
+
+A dump that fails, e.g. for a bridge deleted after the command was
+queued, exits the whole batch.  Fail the command instead, like any
+other error, so the batch goes on.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ bridge/fdb.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/bridge/fdb.c b/bridge/fdb.c
+index 7b444366..b1105632 100644
+--- a/bridge/fdb.c
++++ b/bridge/fdb.c
+@@ -334,6 +334,15 @@ static int fdb_show(int argc, char **argv)
+ 	char *br = NULL;
+ 	int rc;
+ 
++	/* In batch mode the filters of the previous command must not
++	 * carry over to this one.
++	 */
++	filter_index = 0;
++	filter_master = 0;
++	filter_vlan = 0;
++	filter_state = 0;
++	filter_dynamic = 0;
++
+ 	while (argc > 0) {
+ 		if ((strcmp(*argv, "brport") == 0) || strcmp(*argv, "dev") == 0) {
+ 			NEXT_ARG();
+@@ -390,8 +399,9 @@ static int fdb_show(int argc, char **argv)
+ 
+ 	new_json_obj(json);
+ 	if (rtnl_dump_filter(&rth, print_fdb, stdout) < 0) {
++		delete_json_obj();
+ 		fprintf(stderr, "Dump terminated\n");
+-		exit(1);
++		return -1;
+ 	}
+ 	delete_json_obj();
+ 	fflush(stdout);
+-- 
+2.43.0
+

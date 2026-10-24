@@ -27,7 +27,7 @@ graph "dual" {
 	    provides="infix watchdog modem usb-stick",
 	    expected_boot="primary",
 	    qn_console=9001,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut1.usb",
 	    qn_modem="1"
 	];
@@ -37,7 +37,7 @@ graph "dual" {
 	    provides="infix watchdog usb-stick",
 	    expected_boot="primary",
 	    qn_console=9002,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut2.usb"
 	];
 

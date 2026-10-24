@@ -18,7 +18,9 @@ allowed-tools: Read, Grep, Glob, Bash(make *), Bash(go *), Bash(git submodule *)
 
 The project documents its own workflow. This skill says which part to read for the
 task at hand, and lists the rules reviewers enforce. Read the section before starting;
-when this file and the docs disagree, the docs win.
+when this file and the docs disagree, the docs win. Each daemon and application keeps
+its design rules and gotchas next to its code, so a task inside `src/<name>/` or
+`package/<name>/` starts with that directory's README and AGENTS file.
 
 !`git status --short | head -20`
 
@@ -32,7 +34,7 @@ when this file and the docs disagree, the docs win.
 | Change a YANG model, add a revision, write descriptions | `doc/developers-guide.md`, *YANG Model* and *Configuration Migration* |
 | Bump Buildroot or the kernel | `doc/developers-guide.md`, *Upgrading Packages* |
 | Run, debug or write a test, the test specification | `doc/testing.md`, `doc/test-arch.md`, `test/infix-test-skill.md` |
-| Change the WebUI | `src/webui/README.md` |
+| Work on one daemon or application under `src/` or `package/` | its own `src/<name>/README.md` or `package/<name>/README.md`, and `src/<name>/AGENTS.md` where there is one, before any code |
 | Code style, comments, commits, ChangeLog, pull requests | `.github/CONTRIBUTING.md` |
 | Feature docs | the topic page in `doc/`, e.g. `doc/wifi.md` |
 

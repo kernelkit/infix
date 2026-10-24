@@ -7,6 +7,16 @@ Verify that it is possible to set timezone using UTC offset
 import infamy
 import lxml
 
+from infamy.util import until
+
+def get_timezone_offset():
+    try:
+        tz=target.get_data("/ietf-system:system/clock/timezone-utc-offset")
+        offset=tz.get("system", {}).get("clock",{}).get("timezone-utc-offset", 0)
+        return offset
+    except:
+        return None
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -22,8 +32,6 @@ with infamy.Test() as test:
           }})
 
     with test.step("Verify current timezone is UTC+12:00"):
-        tz=target.get_data("/ietf-system:system/clock/timezone-utc-offset")
-        offset=tz.get("system", {}).get("clock",{}).get("timezone-utc-offset", 0)
-        assert(offset == 12)
+        until(lambda: get_timezone_offset() == 12)
 
     test.succeed()

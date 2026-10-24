@@ -196,6 +196,12 @@ def get_bridge_queriers(target, bridge, vid=None):
     return {q["family"]: q for q in queriers}
 
 
+def get_bridge_router_ports(target, bridge, vid=None):
+    """Fetch the multicast router ports of a bridge, or bridge VLAN"""
+    mcast = _get_bridge_mcast(target, bridge, vid)
+    return set(mcast.get("multicast", {}).get("router-ports", []))
+
+
 def get_bridge_querier_election(targets, family, bridge="br0", vid=None):
     """Return (index of the local querier, its address) if all targets agree"""
     from .util import parallel  # circular: util -> netconf -> transport -> iface
