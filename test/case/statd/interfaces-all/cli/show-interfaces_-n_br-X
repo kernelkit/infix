@@ -1,8 +1,9 @@
 name               : br-X
 type               : bridge
-index              : 11
+index              : 18
 mtu                : 1500
 operational status : up
+last change        : in 1392 days and 5 hours
 ip forwarding      : disabled
 lower-layer-if     : e2.30
 physical address   : 00:a0:85:00:03:00

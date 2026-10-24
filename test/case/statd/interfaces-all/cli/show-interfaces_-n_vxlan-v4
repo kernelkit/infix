@@ -1,10 +1,11 @@
 name               : vxlan-v4
 type               : vxlan
-index              : 23
+index              : 31
 mtu                : 1500
 operational status : up
+last change        : in 1392 days and 5 hours
 ip forwarding      : disabled
-physical address   : 8a:ea:59:32:df:70
+physical address   : b2:f3:d6:e3:31:f5
 ipv4 addresses     : 192.168.30.2/24 (static)
 ipv6 addresses     :
 local address      : 192.168.20.100

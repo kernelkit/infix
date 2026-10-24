@@ -7,39 +7,38 @@ usage()
     cat <<EOF
 usage: $me [<command>]
 
-Verify that yanger produces the expected operational data for
-$yang_models, and that cli_pretty produces the expected output for
-$cli_commands.
+Verify that cli_pretty produces the expected output for $cli_commands,
+from the operational data in operational.json.
 
   Commands:
     If no command is specified it defaults to "check"
 
     gen
-      (Re)generate system state, operational.json and expected
-      cli_pretty output based on $gen_test
+      Run $gen_test, read $oper_xpaths from the operational
+      datastore of the Infix device behind $gen_iface into
+      operational.json, and update the expected cli_pretty output
 
     check
-      Check yanger and CLI output
+      Verify that cli_pretty produces the expected output for
+      $cli_commands, based on the current operational.json
 
-    yanger gen
-      Run $gen_test and capture the system status from the Infix
-      device behind $gen_iface
+    oper gen
+      Like gen, without updating the expected cli_pretty output
 
-    yanger check
-      Verify that yanger produces the operational data previously
-      recorded in operational.json
-
-    yanger live
-      Produce the operational data for $yang_models from the Infix
-      device behind $gen_iface, and write it to stdout
+    oper live
+      Read $oper_xpaths from the device behind $gen_iface, and write
+      it to stdout
 
     cli gen
       Update the expected output of $cli_commands from the current
       operational.json
 
     cli check
-      Verify that cli_pretty produces the expected output for
-      $cli_commands, based on the current operational.json
+      Same as check
+
+    cli live
+      Run $cli_commands on operational data read from the device
+      behind $gen_iface
 
 EOF
 }
@@ -47,7 +46,6 @@ EOF
 casedir=$(readlink -f $(dirname $0))
 ixdir=$(readlink -f $casedir/../../../../)
 
-YANGER=${YANGER:-$ixdir/src/statd/python/yanger/yanger}
 CLI=${CLI:-$ixdir/src/statd/python/cli_pretty/cli_pretty.py}
 
 wrapper="$ixdir/utils/ixll -A ssh $gen_iface sudo"
@@ -78,113 +76,39 @@ plan()
     exit $exitcode
 }
 
-prepare_infamy_test()
+oper_live()
 {
-    $ixdir/test/case/meta/wait.py && \
-	$ixdir/test/case/$1
-}
+    local files=
+    local json=
 
-yanger_exec()
-{
-    local opts=
-    while getopts "c:r:x:" opt; do
-	case ${opt} in
-	    c|r|x)
-		opts="$opts -$opt \"$OPTARG\""
-		;;
-	esac
+    for xpath in $oper_xpaths; do
+	json=$(mktemp)
+	$wrapper copy operational -x "$xpath" >"$json"
+	files="$files $json"
     done
-    shift $((OPTIND - 1))
 
-    eval "$YANGER" $opts "$1"
+    cat $files | jq --slurp --sort-keys 'reduce .[] as $item ({}; . * $item)'
+    rm $files
 }
 
-yanger_gen()
+oper_gen()
 {
-    local operfiles=
-
-    if type gen_exec &>/dev/null; then
-	gen_exec
-	return
-    fi
-
-    if ! [ "$gen_test" ] && [ "$gen_iface" ]; then
-	echo "!!! Not implemented" >&2
+    if ! [ "$gen_test" ] || ! [ "$gen_iface" ]; then
+	echo "!!! $(basename $casedir) has no gen_test, operational.json is hand written" >&2
 	false
     fi
 
     echo ">>> RUNNING $gen_test" >&2
-    prepare_infamy_test "$gen_test"
-    set $yang_models
-    while [ $# -gt 0 ]; do
-	echo ">>> CAPTURING $1 from $gen_iface" >&2
-	yanger_exec \
-	    -c "$casedir/system" \
-	    -x "$wrapper" \
-	    $1 \
-	    >"$casedir/$1.json"
- 	operfiles="$operfiles $casedir/$1.json"
-	echo ">>> OK" >&2
-	shift
-    done
+    $ixdir/test/case/$gen_test
 
-    echo ">>> GENERATING operational.json" >&2
-    cat $operfiles | jq --slurp --sort-keys \
-       'reduce .[] as $item ({}; . * $item)' \
-       >"$casedir/operational.json"
+    echo ">>> READING $oper_xpaths from $gen_iface" >&2
+    oper_live >"$casedir/operational.json"
     echo ">>> OK" >&2
 }
 
-yanger_check()
+oper()
 {
-    local status=
-    local diff=$(mktemp)
-
-    set $yang_models
-    while [ $# -gt 0 ]; do
-	status="ok"
-	if ! diff -up \
-	     "$casedir/$1.json" \
-	     <(yanger_exec -r "$casedir/system" $1) \
-	     >"$diff"; then
-	    cat $diff | sed 's/^/# /'
-	    status="not ok"
-	fi
-
-	rm $diff
-	step "$status" \
-	     "yanger output of \"$1\" matches $1.json"
-	shift
-    done
-}
-
-yanger_cat()
-{
-    if [ $# -eq 0 ]; then
-	set $yang_models
-    fi
-
-    while [ $# -gt 0 ]; do
-	yanger_exec -r "$casedir/system" $1
-	shift
-    done
-}
-
-yanger_live()
-{
-    if [ $# -eq 0 ]; then
-	set $yang_models
-    fi
-
-    while [ $# -gt 0 ]; do
-	yanger_exec -x "$wrapper" $1
-	shift
-    done
-}
-
-yanger()
-{
-    local cmd=check
+    local cmd=live
 
     if [ $# -gt 0 ]; then
 	cmd="$1"
@@ -192,13 +116,10 @@ yanger()
     fi
 
     case "$cmd" in
-	cat|gen|live)
-	    "yanger_$cmd" "$@"
+	gen|live)
+	    "oper_$cmd" "$@"
 	    return
 	    ;;
-	check)
-	    yanger_check "$@"
-	    plan
     esac
 
     false
@@ -265,8 +186,8 @@ cli_cat()
 cli_live()
 {
     local json=$(mktemp)
-    echo ">>> Capturing live state" >&2
-    yanger_live >$json
+    echo ">>> Reading live operational data" >&2
+    oper_live >$json
     echo ">>> OK" >&2
 
     if [ $# -eq 0 ]; then
@@ -275,7 +196,7 @@ cli_live()
 
     while [ $# -gt 0 ]; do
 	echo ">>> Running $1" >&2
-	cli_exec "$1" <"$casedir/cli/$1"
+	cli_exec "$1" <$json
 	shift
     done
 
@@ -316,13 +237,13 @@ main()
 
     case $cmd in
 	gen)
-	    yanger gen && cli gen
+	    oper_gen && cli_gen
 	    ;;
 	check)
-	    yanger_check && cli_check
+	    cli_check
 	    plan
 	    ;;
-	yanger|cli)
+	oper|cli)
 	    "$cmd" "$@"
 	    ;;
 	-h|--help|help)

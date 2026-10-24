@@ -1,8 +1,8 @@
 #!/bin/sh
 
-yang_models="ietf-interfaces"
+oper_xpaths="/ietf-interfaces:interfaces"
 
-gen_test=ietf_interfaces/verify_all_interface_types/test.py
+gen_test=interfaces/verify_all_interface_types/test.py
 gen_iface=d3a
 
 cli_commands="show-interfaces"

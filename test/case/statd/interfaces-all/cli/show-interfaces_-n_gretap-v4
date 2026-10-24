@@ -1,10 +1,11 @@
 name               : gretap-v4
 type               : gretap
-index              : 21
+index              : 27
 mtu                : 1462
 operational status : up
+last change        : in 1392 days and 5 hours
 ip forwarding      : disabled
-physical address   : f6:d4:96:d8:9f:96
+physical address   : 56:47:9f:d0:bc:a5
 ipv4 addresses     :
 ipv6 addresses     :
 local address      : 192.168.20.1
