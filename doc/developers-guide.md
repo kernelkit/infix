@@ -372,12 +372,17 @@ therefore a `confd` bug, while missing or stale operational data is a
    gets a `<type>_add_deps()`, see `vlan_add_deps()`
 
 
-### `statd`
+### `statd` and `yangerd`
 
-The Infix status daemon, `src/statd`, is responsible for populating the
-sysrepo `operational` datastore. Like `confd`, it uses XPath subscriptions,
-but unlike `confd`, it relies entirely on `yanger`, a Python script that
-gathers data from local linux services and feeds it into sysrepo.
+Operational data comes from two daemons.  `yangerd`, in `src/yangerd`,
+collects it: it follows netlink, D-Bus, inotify and the daemons' own
+event channels, and keeps every module ready as YANG-shaped JSON.
+`statd`, in `src/statd`, owns the sysrepo side: it subscribes to the
+`operational` datastore per module, asks yangerd over
+`/run/yangerd.sock` when a client reads, and hands the answer to
+libyang.  New data goes in yangerd.  Read `src/yangerd/README.md`
+before changing it, it says what is event driven, what is polled and
+why a new poll needs agreement first.
 
 Operational data replaces the running configuration rather than being
 merged with it, so a leaf that exists only in the configuration is absent
@@ -386,41 +391,26 @@ system can report it.
 
 To apply changes, rebuild the image:
 
-    make statd-rebuild all
+    make yangerd-rebuild statd-rebuild all
 
-Rebuilding the image and testing on target for every change during
-development process can be tedious. Instead, `yanger` allows remote
-execution, running the script directly on the host system (test
-container):
+The Go unit tests run on the host, from `src/yangerd`:
 
-    infamy0:test # ../src/statd/python/yanger/yanger -x "../utils/ixll -A ssh d3a" ieee802-dot1ab-lldp
+    go test -mod=vendor ./...
 
-`ixll` is a utility script that lets you run network commands using an
-**interface name** instead of a hostname. It makes operations like
-`ssh`, `scp`, and network discovery easier.
+On a DUT, `yangerctl` shows what yangerd has, without sysrepo in
+between:
 
-Normally, `yanger` runs commands **locally** to retrieve data
-(e.g., `lldpcli` when handling `ieee802-dot1ab-lldp`). However, when
-executed with `-x "../utils/ixll -A ssh d3a"` it redirects these
-commands to a remote system connected to the local `d3a` interface via
-SSH. This setup is used for running `yanger` in an
-[interactive test environment](testing.md#interactive-usage). The yanger
-script runs on the `host` system, but key commands are executed on the
-`target` system.
+    admin@example:~$ sudo yangerctl get /ietf-interfaces:interfaces
+    admin@example:~$ sudo yangerctl health
 
-For debugging or testing, you can capture system command output and
-replay it later without needing a live system.
+When a GET comes back empty or incomplete, look in `/var/log/syslog`.
+statd logs every value libyang rejects as `yangerd: dropping ...`, and
+yangerd logs failed queries.  For more, set `YANGERD_LOG_LEVEL=debug` in
+`/etc/default/yangerd` and run `initctl restart yangerd`.
 
-To capture:
-
-    infamy0:test # ../src/statd/python/yanger/yanger -c /tmp/capture ieee802-dot1ab-lldp
-
-To replay:
-
-    infamy0:test # ../src/statd/python/yanger/yanger -r /tmp/capture ieee802-dot1ab-lldp
-
-This is especially useful when working in isolated environments or debugging
-issues without direct access to the DUT.
+Values that are expensive to read, or that change the system, are not
+operational data but YANG actions handled by confd, for example the WiFi
+`scan` and the bridge `get-forwarding-database`.
 
 
 ## Upgrading Packages

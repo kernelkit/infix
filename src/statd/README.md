@@ -1,7 +1,13 @@
 # Introduction
-Statd is designed to be integrated into Infix and supply the operational
-database with data. To do this it uses companion binaries written in
-python, these are located in the `python` directory.
+Statd serves the sysrepo operational datastore.  It subscribes per
+module and, when a client reads, asks yangerd for the data over
+`/run/yangerd.sock`.  The data itself is collected by yangerd, see
+`src/yangerd/README.md`.
+
+The `python` directory holds `cli-pretty`, which formats operational
+data for the CLI, and the OSPF, RIP and DHCP server status helpers.
+The `yanger` scripts there are the old collectors, statd no longer runs
+them.
 
 
 ## Run outside Infix
@@ -40,23 +46,17 @@ user@host ~/infix$ ./utils/srload src/confd/yang/rousette.inc
 user@host ~/infix$ ./utils/srload src/confd/yang/test-mode.inc
 ```
 
-### Build and install python companion binaries
-```bash
-user@host ~/infix/src/statd/python$ ./local_install.sh
-```
-This will install the binaries in ~/.local/bin
-
 ### Build and install statd
 
 ```bash
-user@host ~/infix/src/statd$ ./configure --with-yanger-dir=$HOME/.local/bin
+user@host ~/infix/src/statd$ ./configure
 user@host ~/infix/src/statd$ make
 user@host ~/infix/src/statd$ sudo make install
 ```
 
 ### Running statd
-Since the `yanger` binary, for example, reads the shadow database, you
-can expect different results if running `statd` as root or not.
+statd answers from yangerd, so start yangerd first, as root, see
+`src/yangerd/README.md`.
 ```bash
 user@host ~/infix/src/statd$ statd
 ```

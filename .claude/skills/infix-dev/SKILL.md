@@ -3,13 +3,13 @@ name: infix-dev
 description: >-
   Active workflow for developing the Infix Buildroot network OS (KernelKit):
   configure/build/flash images, run the QEMU dev loop, run or write infamy
-  regression tests, add/edit YANG models, hack on the confd/netd/statd
+  regression tests, add/edit YANG models, hack on the confd/netd/statd/yangerd
   daemons, and work on the Go+htmx WebUI. Use whenever the task is about
   building, testing, or changing Infix itself.
 when_to_use: >-
   Building or flashing an Infix image; running `make test` / writing a test case;
   editing src/confd/yang or wiring a YANG model into a daemon; changing confd,
-  netd or statd; changing src/webui pages, handlers or templates; debugging the
+  netd, statd or yangerd; changing src/webui pages, handlers or templates; debugging the
   QEMU dev build; writing a commit, doc page or ChangeLog entry.
 allowed-tools: Read, Grep, Glob, Bash(make *), Bash(go *), Bash(git submodule *), Bash(git status), Bash(git log:*), Bash(ls *)
 ---
@@ -30,7 +30,7 @@ its design rules and gotchas next to its code, so a task inside `src/<name>/` or
 |------|------|
 | Build, rebuild one package, second output tree, config snippets | `doc/developers-guide.md`, *Building* and *Development* |
 | Add or change a package patch | `doc/developers-guide.md`, *Patching a Package* |
-| Debug confd, work on statd collectors | `doc/developers-guide.md`, *`confd`* and *`statd`* |
+| Debug confd, work on operational data | `doc/developers-guide.md`, *`confd`* and *`statd` and `yangerd`*, then `src/yangerd/README.md` |
 | Change a YANG model, add a revision, write descriptions | `doc/developers-guide.md`, *YANG Model* and *Configuration Migration* |
 | Bump Buildroot or the kernel | `doc/developers-guide.md`, *Upgrading Packages* |
 | Run, debug or write a test, the test specification | `doc/testing.md`, `doc/test-arch.md`, `test/infix-test-skill.md` |
@@ -42,8 +42,9 @@ its design rules and gotchas next to its code, so a task inside `src/<name>/` or
 
 Each is explained in the doc named above; these are the ones that come back in review.
 
-- confd owns all configuration and creates every interface, statd owns all operational
-  data. Never fill an operational gap from the running configuration.
+- confd owns all configuration and creates every interface. yangerd collects all
+  operational data and statd serves it to sysrepo. Never fill an operational gap from
+  the running configuration.
 - Discuss YANG changes with the core team first. At most one new revision per release
   cycle. Description first line is a short complete sentence, then a blank line.
 - A package patch is a commit on the `<version>-kkit` branch of a `kernelkit/` fork of
