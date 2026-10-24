@@ -407,6 +407,8 @@ def load_config():
             "ip-type": bearer_cfg.get("ip-type", "ipv4v6"),
             "roaming": bearer_cfg.get("roaming", False),
             "route-preference": bearer_cfg.get("route-preference", 200),
+            "ipv4-forwarding": iface.get("ietf-ip:ipv4", {}).get("forwarding", False),
+            "ipv6-forwarding": iface.get("ietf-ip:ipv6", {}).get("forwarding", False),
         }
         if auth:
             bearer["username"] = auth.get("username", "")
@@ -972,6 +974,17 @@ class ModemThread(threading.Thread):
 
         return True
 
+    def forwarding(self, ifname, bearer):
+        """Apply forwarding from the configuration, a modem reset re-creates
+        the interface with kernel defaults."""
+        for path, leaf in (("ipv4/conf/%s/forwarding", "ipv4-forwarding"),
+                           ("ipv6/conf/%s/force_forwarding", "ipv6-forwarding")):
+            try:
+                with open("/proc/sys/net/" + path % ifname, "w") as fd:
+                    fd.write("1" if bearer.get(leaf) else "0")
+            except OSError as e:
+                self.err("Unable to set forwarding on %s: %s" % (ifname, e))
+
     def linkup(self, iface):
         self.iplink(iface["name"], "up")
 
@@ -983,6 +996,8 @@ class ModemThread(threading.Thread):
         if len(addrs) == 0:
             self.err("No addresses yet")
             return False
+
+        self.forwarding(iface["name"], iface["bearer"])
 
         # Flush any stale wwan-protocol addresses before adding new ones.
         # The 'proto wwan' tag (rt_addrprotos entry 7) allows precise cleanup
@@ -1548,7 +1563,10 @@ class ModemThread(threading.Thread):
                 runcmd(["ip", "link", "del", "dev", name], check=False)
             self.info("Starting PPP on %s as %s" % (iface["name"], name))
             self.ppp[name] = ppp.start(iface["name"], name, iface["bearer"])
-        return ppp.is_up(name)
+        if not ppp.is_up(name):
+            return False
+        self.forwarding(name, iface["bearer"])
+        return True
 
     def dhcp_renew(self):
         """Apply a DHCP lease that changed while the bearer is up."""
