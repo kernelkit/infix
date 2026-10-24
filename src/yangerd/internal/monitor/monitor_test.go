@@ -649,3 +649,25 @@ func TestTransformMDBVID(t *testing.T) {
 		t.Fatalf("unfiltered got %d groups, want 3", len(all))
 	}
 }
+
+func TestAppendInterfaces(t *testing.T) {
+	doc := json.RawMessage(`{"interface":[{"name":"lo","if-index":1},{"name":"eth0","if-index":2}]}`)
+	extra := map[string]json.RawMessage{
+		"net1": json.RawMessage(`{"name":"net1","if-index":9,"statistics":{"in-octets":"18446744073709551615"}}`),
+		"eth0": json.RawMessage(`{"name":"eth0","if-index":3}`),
+		"net0": json.RawMessage(`{"name":"net0","if-index":8}`),
+	}
+
+	got := appendInterfaces(doc, extra)
+	want := `{"interface":[{"name":"lo","if-index":1},{"name":"eth0","if-index":2},{"name":"net0","if-index":8},{"name":"net1","if-index":9,"statistics":{"in-octets":"18446744073709551615"}}]}`
+	if string(got) != want {
+		t.Fatalf("appendInterfaces =\n%s\nwant\n%s", got, want)
+	}
+
+	if got := appendInterfaces(doc, nil); string(got) != string(doc) {
+		t.Fatalf("no extra must be a no-op, got %s", got)
+	}
+	if got := appendInterfaces(json.RawMessage(`{}`), map[string]json.RawMessage{"net0": json.RawMessage(`{"name":"net0"}`)}); string(got) != `{"interface":[{"name":"net0"}]}` {
+		t.Fatalf("empty document got %s", got)
+	}
+}

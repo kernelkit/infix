@@ -53,6 +53,10 @@ type ContainerMonitor struct {
 	// collect returns the current container subtree, or nil when there are
 	// no containers; overridable in tests.
 	collect func() json.RawMessage
+
+	// onUpdate, when set, runs after every re-read of the container
+	// table, whatever it found.
+	onUpdate func()
 }
 
 // New creates a ContainerMonitor.
@@ -66,6 +70,13 @@ func New(t *tree.Tree, cmd collector.CommandRunner, fs collector.FileReader, log
 		refresh: make(chan struct{}, 1),
 		collect: func() json.RawMessage { return collector.CollectContainers(cmd, fs) },
 	}
+}
+
+// SetOnUpdate sets a callback run after every re-read of the container
+// table, so other collectors can follow the container set without a
+// podman stream of their own.  Must be called before Run.
+func (m *ContainerMonitor) SetOnUpdate(fn func()) {
+	m.onUpdate = fn
 }
 
 // Run starts the container monitor.  It blocks until ctx is cancelled,
@@ -165,8 +176,11 @@ func (m *ContainerMonitor) updateTree() {
 	if len(data) == 0 {
 		m.tree.Delete(treeKey)
 		m.log.Debug("container monitor: no containers, key removed")
-		return
+	} else {
+		m.tree.Set(treeKey, data)
+		m.log.Debug("container monitor: tree updated")
 	}
-	m.tree.Set(treeKey, data)
-	m.log.Debug("container monitor: tree updated")
+	if m.onUpdate != nil {
+		m.onUpdate()
+	}
 }

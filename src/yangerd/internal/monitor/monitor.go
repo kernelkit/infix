@@ -79,6 +79,12 @@ type NLMonitor struct {
 	vlans       map[string][]iface.VLANEntry
 	vlanGlobals map[string][]iface.VLANGlobal
 
+	// containers holds the interfaces moved into container network
+	// namespaces, by configured name, appended to the document since
+	// the host link dump no longer has them.
+	containers map[string]json.RawMessage
+	lastCtr    string
+
 	// vlanEvents tells whether the RTNLGRP_BRVLAN subscription is up;
 	// without it the VLAN table follows bridge link events only.
 	vlanEvents bool
@@ -139,6 +145,7 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 		ethernet:       make(map[string]json.RawMessage),
 		wifi:           make(map[string]json.RawMessage),
 		wireguard:      make(map[string]json.RawMessage),
+		containers:     make(map[string]json.RawMessage),
 		lastOperStatus: make(map[string]string),
 		lastChange:     make(map[string]time.Time),
 	}
@@ -189,6 +196,28 @@ func (m *NLMonitor) SetWifiData(ifname string, data json.RawMessage) {
 	m.wifi[ifname] = data
 	m.mu.Unlock()
 	m.rebuild()
+}
+
+// SetContainerInterfaces replaces the interfaces found in container
+// network namespaces, by configured name.  The document is rebuilt only
+// when something changed.
+func (m *NLMonitor) SetContainerInterfaces(data map[string]json.RawMessage) {
+	var b strings.Builder
+	writeSortedRaw(&b, "c", data)
+	fp := b.String()
+
+	m.mu.Lock()
+	changed := fp != m.lastCtr
+	m.lastCtr = fp
+	m.containers = copyStringMap(data)
+	if m.containers == nil {
+		m.containers = make(map[string]json.RawMessage)
+	}
+	m.mu.Unlock()
+
+	if changed {
+		m.rebuild()
+	}
 }
 
 // SetWireguardAll replaces the WireGuard peer-status data of every
@@ -710,8 +739,8 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 }
 
 // rebuild runs iface.Transform on all staged data, merges augments
-// (ethernet, wifi, bridge mdb/vlans, STP, WireGuard), and stores
-// the result.
+// (ethernet, wifi, bridge mdb/vlans, STP, WireGuard), appends the
+// container network interfaces and stores the result.
 // Caller must NOT hold m.mu.
 func (m *NLMonitor) rebuild() {
 	m.mu.Lock()
@@ -728,6 +757,7 @@ func (m *NLMonitor) rebuild() {
 		vlans:       maps.Clone(m.vlans),
 		vlanGlobals: maps.Clone(m.vlanGlobals),
 	}
+	ctr := copyStringMap(m.containers)
 	m.mu.Unlock()
 
 	aug.bridges = iface.Bridges(linksCopy)
@@ -735,6 +765,7 @@ func (m *NLMonitor) rebuild() {
 	aug.bridgeSTP, aug.portSTP = stpquery.Query(linksCopy, resolver)
 
 	doc = mergeAugments(doc, aug)
+	doc = appendInterfaces(doc, ctr)
 	m.tree.Set(treeKey, doc)
 }
 
@@ -938,6 +969,63 @@ func mergeAugments(doc json.RawMessage, a augments) json.RawMessage {
 		return doc
 	}
 	return json.RawMessage(out)
+}
+
+// appendInterfaces adds the container network interfaces to the
+// document.  Their names are by construction absent from the host link
+// list; one that is not (a collection older than the interface's return
+// to the host) is skipped rather than duplicating a list key.
+func appendInterfaces(doc json.RawMessage, extra map[string]json.RawMessage) json.RawMessage {
+	if len(extra) == 0 {
+		return doc
+	}
+
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(doc, &root); err != nil {
+		return doc
+	}
+	var list []json.RawMessage
+	if json.Unmarshal(root["interface"], &list) != nil {
+		list = nil
+	}
+
+	present := make(map[string]bool, len(list))
+	for _, entry := range list {
+		var head struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(entry, &head) == nil {
+			present[head.Name] = true
+		}
+	}
+
+	names := make([]string, 0, len(extra))
+	for name := range extra {
+		if !present[name] && len(extra[name]) > 0 {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return doc
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		list = append(list, extra[name])
+	}
+
+	merged, err := json.Marshal(list)
+	if err != nil {
+		return doc
+	}
+	if root == nil {
+		root = make(map[string]json.RawMessage)
+	}
+	root["interface"] = merged
+	out, err := json.Marshal(root)
+	if err != nil {
+		return doc
+	}
+	return out
 }
 
 // ensureBridgeAugment returns the bridge augment object within an

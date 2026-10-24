@@ -79,6 +79,28 @@ func TestEventTriggersRefresh(t *testing.T) {
 	}
 }
 
+// The update hook must run after every re-read, with and without
+// containers, since the hook's own state depends on both.
+func TestUpdateTreeRunsHook(t *testing.T) {
+	have := true
+	m, _ := newTestMonitor(t, func() json.RawMessage {
+		if have {
+			return json.RawMessage(`{"container":[{"name":"web"}]}`)
+		}
+		return nil
+	})
+	calls := 0
+	m.SetOnUpdate(func() { calls++ })
+
+	m.updateTree()
+	have = false
+	m.updateTree()
+
+	if calls != 2 {
+		t.Fatalf("hook ran %d times, want 2", calls)
+	}
+}
+
 func TestEventStatus(t *testing.T) {
 	if s := eventStatus([]byte(`{"Status":"start"}`)); s != "start" {
 		t.Errorf("eventStatus = %q, want start", s)

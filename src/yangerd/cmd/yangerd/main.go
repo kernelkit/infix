@@ -19,6 +19,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
 	"github.com/kernelkit/infix/src/yangerd/internal/containermonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/ctrnet"
 	"github.com/kernelkit/infix/src/yangerd/internal/dbusmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ethmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
@@ -210,7 +211,58 @@ func main() {
 
 	if feat.On(features.Containers) {
 		ctrmon := containermonitor.New(t, cmd, fs, slogLog)
+		// An interface moved into a container's netns leaves the host
+		// netlink stream, so the container set and the netlink events
+		// inside those namespaces are the events: collect again after
+		// each, and once at start for the containers already running.
+		ctrNetCh := make(chan struct{}, 1)
+		kick := func() {
+			select {
+			case ctrNetCh <- struct{}{}:
+			default:
+			}
+		}
+		ctrmon.SetOnUpdate(kick)
 		spawn("containermonitor", ctrmon.Run)
+		spawn("ctrnet", func(ctx context.Context) error {
+			watcher := ctrnet.NewWatcher(kick, slogLog)
+			defer watcher.Close()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-nlmon.WaitReady():
+			}
+			for {
+				cctx, ccancel := context.WithTimeout(ctx, ctrnetTimeout)
+				ifaces, namespaces, err := ctrnet.Collect(cctx, cmd.Run)
+				ccancel()
+				if err != nil {
+					// Keep what we have: podman busy with confd
+					// is transient, and without podman there is
+					// nothing staged to begin with.
+					slogLog.Debug("container network interfaces", "err", err)
+				} else {
+					nlmon.SetContainerInterfaces(ifaces)
+					watcher.Follow(namespaces)
+				}
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ctrNetCh:
+				}
+				// One collection for a burst, a link coming up
+				// and its address arrive together.
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(ctrnetSettle):
+				}
+				select {
+				case <-ctrNetCh:
+				default:
+				}
+			}
+		})
 	}
 
 	tftpmon := tftpmonitor.New(t, slogLog)
@@ -401,6 +453,10 @@ func slogLevel(s string) slog.Level {
 const (
 	routingTreeKey = "ietf-routing:routing"
 	pidFile        = "/run/yangerd.pid"
+	// ctrnetTimeout bounds one walk of podman and the named netns,
+	// ctrnetSettle collects the events of a burst into one walk.
+	ctrnetTimeout = 30 * time.Second
+	ctrnetSettle  = 200 * time.Millisecond
 )
 
 func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string) (json.RawMessage, error) {
