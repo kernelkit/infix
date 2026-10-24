@@ -1,0 +1,6 @@
+{
+    "@ethtool:driver=iwlwifi": {
+	"comment": "LAR firmware disables 5 and 6 GHz until a scan has seen the country of nearby APs",
+	"lar-needs-scan": true
+    }
+}

@@ -2133,6 +2133,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	 */
 	if (wifi_changed) {
 		struct lyd_node *cifs;
+		bool lar_scan = false;
 		glob_t gl = { 0 };
 		size_t i;
 
@@ -2152,6 +2153,8 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 				if (!n) {
 					unlink(gl.gl_pathv[i]);
 					erasef(HOSTAPD_CONF_NEXT, radio);
+				} else if (iface_has_quirk(radio, "lar-needs-scan")) {
+					lar_scan = true;
 				}
 			}
 			globfree(&gl);
@@ -2170,6 +2173,8 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 				/* kill:10 gives the stop script time to hand over clients */
 				fprintf(fp, "service <!> name:hostapd pid:!/run/hostapd.pid kill:10"
 					" stop:/usr/libexec/infix/wifi-handover.sh \\\n");
+				if (lar_scan)
+					fprintf(fp, "\tpre:60,/usr/libexec/infix/wifi-scan-lar.sh \\\n");
 				fprintf(fp, "\t[2345] hostapd -g /run/hostapd.global -P /run/hostapd.pid");
 				for (i = 0; i < gl.gl_pathc; i++)
 					fprintf(fp, " %s", gl.gl_pathv[i]);

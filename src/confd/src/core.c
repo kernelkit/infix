@@ -1009,6 +1009,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	int log_opts = LOG_PID | LOG_NDELAY;
 	int rc = SR_ERR_SYS;
 	const char *env;
+	json_t *product;
 
 	/* Convert into command line option+SIGUSR1 when converting to standalone confd */
 	env = getenv("DEBUG");
@@ -1046,10 +1047,17 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 	}
 
-	/* An optional file that contains hardware specific quirks for
-	 * the network interfaces on running board.
+	/* Optional hardware quirks for network interfaces: built-in ones
+	 * for pluggable hardware, overridden by those of the running board.
 	 */
-	confd.ifquirks = json_load_file("/etc/product/interface-quirks.json", 0, NULL);
+	confd.ifquirks = json_load_file("/etc/interface-quirks.json", 0, NULL);
+	product = json_load_file("/etc/product/interface-quirks.json", 0, NULL);
+	if (!confd.ifquirks) {
+		confd.ifquirks = product;
+	} else if (product) {
+		json_object_update(confd.ifquirks, product);
+		json_decref(product);
+	}
 
 	rc = subscribe_model("ietf-interfaces", &confd, 0);
 	if (rc) {

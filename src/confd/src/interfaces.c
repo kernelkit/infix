@@ -37,7 +37,7 @@ bool iface_has_quirk(const char *ifname, const char *quirkname)
 
 	/* @ethtool: patterns match on driver info, left to has-quirk */
 	json_object_foreach(confd.ifquirks, pattern, quirks) {
-		if (!strncmp(pattern, "@ethtool:", 9))
+		if (!strncmp(pattern, "@ethtool:", 9) && quirk_is_set(quirks, quirkname))
 			return systemf("[ $(/usr/libexec/infix/has-quirk %s %s) = true ]",
 				       quirkname, ifname) == 0;
 	}
