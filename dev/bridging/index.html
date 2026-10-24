@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -28,10 +28,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2787,7 +2787,7 @@ top of <code>ethN</code>, or <code>dockerN</code> for a IP masquerading containe
 <p>Note, this inference only works with the CLI, configuring networking
 over NETCONF or RESTCONF requires setting the type explicitly.</p>
 </div>
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/mac-bridge.svg" data-desc-position="bottom"><img alt="A MAC bridge with two ports" src="../img/mac-bridge.svg"></a></p>
 <p>It is possible to create multiple MAC bridges, however, it is
 currently<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> <em>not recommended</em> to use more than one MAC bridge on
 products with Marvell LinkStreet switching ASICs. A VLAN filtering
@@ -2812,7 +2812,7 @@ admin@example:/config/interface/br0/&gt; <b>set bridge vlans vlan 20 untagged et
 <p>This sets <code>eth0</code> as an untagged member of VLAN 10 and <code>eth1</code> as an
 untagged member of VLAN 20.  Switching between these ports is thus
 prohibited.</p>
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vlan-bridge.svg" data-desc-position="bottom"><img alt="A VLAN bridge with two VLANs" src="../img/vlan-bridge.svg"></a></p>
 <p>To terminate a VLAN in the switch itself, either for switch management
 or for routing, the bridge must become a (tagged) member of the VLAN.</p>
 <pre class="cli"><code>admin@example:/config/interface/br0/&gt; <b>set bridge vlans vlan 10 tagged br0</b>
@@ -2922,7 +2922,9 @@ admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 forwarding-
 to the host instead of forwarded.  Such an entry is shown as <code>local</code>.</p>
 <p>The FDB can be listed per VLAN, per port, or for a single address.
 <code>AGE</code> is the number of seconds since a dynamic entry was last seen, and
-<code>offload</code> in <code>FLAGS</code> means the entry is installed in switch hardware:</p>
+<code>offload</code> in <code>FLAGS</code> means the entry is installed in switch hardware.
+Addresses that a switch learns on its own are also listed, as <code>dynamic</code>
+and <code>offload</code>, but without an age:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show bridge fdb port e2</b>
 <span class="header">BRIDGE  VID  ADDRESS            PORT  STATE    AGE  FLAGS  </span>
 br0          00:11:22:33:44:55  e2    static        offload
@@ -2931,6 +2933,9 @@ admin@example:/&gt; <b>show bridge fdb vlan 10</b>
 admin@example:/&gt; <b>show bridge fdb address 02:00:00:00:00:02</b>
 </code></pre>
 
+<p>Over NETCONF and RESTCONF the FDB is read with the bridge's
+<code>get-forwarding-database</code> action, it is not in the operational
+datastore.  The action lists every entry of the bridge, with its VLAN.</p>
 <h2 id="multicast-filtering-and-snooping">Multicast Filtering and Snooping<a class="headerlink" href="#multicast-filtering-and-snooping" title="Permanent link">¶</a></h2>
 <p>Multicast filtering in the bridge is handled by the bridge itself.  It
 can filter both IP multicast and MAC multicast.  For IP multicast it
@@ -2955,23 +2960,27 @@ filtering.  We focus on the multicast specific settings:</p>
 admin@example:/config/&gt; <b>edit interface br0</b>
 admin@example:/config/interface/br0/&gt; <b>set bridge multicast snooping</b>
 admin@example:/config/interface/br0/&gt; <b>set ipv4 address 192.168.2.1 prefix-length 24</b>
+admin@example:/config/interface/br0/&gt; <b>set ipv6 enabled</b>
 admin@example:/config/interface/br0/&gt; <b>leave</b>
 admin@example:/&gt; <b>copy running-config startup-config</b>
 </code></pre>
 
-<p>Here we enable snooping and set a static IPv4 address so that the switch
-can take part in IGMP querier elections.  (MLD querier election
-currently not supported.)  We can inspect the current state:</p>
+<p>Here we enable snooping, set a static IPv4 address, and enable IPv6 so
+that the switch can take part in both IGMP and MLD querier elections.
+MLD queries are always sent from the IPv6 link-local address of the
+interface.  Without one the switch can only send proxy queries, from
+<code>::</code>, which hosts ignore.  We can inspect the current state:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
-Router Timeout          : 255
+Router Timeout (default): 255 sec
 Fast Leave Ports        :
 Router Ports            :
 Flood Ports             : e0, e1, e2, e3, e4, e5, e6, e7
 
-<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
-br0                  192.168.2.1                    Up       125     None    3
+<span class="header">Interface       VID  Proto  Querier                         State  Interval  Timeout  MRD  Ver</span>
+br0                  IGMP   192.168.2.1                        Up       125     None  off    3
+br0                  MLD    fe80::7a4c:9bff:fe12:3456          Up       125     None  off    2
 
 <span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e3, e2
@@ -2979,10 +2988,15 @@ br0                  ff02::6a              br0
 </code></pre>
 
 <p>This is a rather small LAN, so our bridge has already become the elected
-IGMP querier.  We see it is ours because the timeout is <code>None</code>, and we
+IGMP and MLD querier.  We see it is ours because the timeout is <code>None</code>, and we
 recognize the IP address the system has detected, as ours.  We can also
 see two ports that have joined the same IPv4 multicast group, 224.1.1.1,
 and one join from the system itself for the IPv6 group ff02::6a.</p>
+<p>The active IGMP and MLD querier, with its address, version and timeout,
+is also in the operational datastore, under
+<code>/interfaces/interface[name='br0']/bridge/multicast/active-querier</code>.  On
+a VLAN filtering bridge it is per VLAN, under
+<code>/interfaces/interface[name='br1']/bridge/vlans/vlan[vid='1']/multicast/active-querier</code>.</p>
 <p>Now, let us see what happens when we add another bridge, this time with
 VLAN filtering enabled.  We skip the boring parts about how to move
 ports e4-e7 to <code>br1</code> and assign them to VLANs, and again, focus on the
@@ -2999,15 +3013,18 @@ admin@example:/&gt; <b>copy running-config startup-config</b>
 <pre class="cli"><code>admin@example:/&gt; <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
-Router Timeout          : 255
+Router Timeout (default): 255 sec
 Fast Leave Ports        : e5
 Router Ports            : e1, e2, e5, e6, e7
 Flood Ports             : e1, e2, e3, e4, e5, e6, e7, e8
 
-<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
-br0                  192.168.2.1                    Up       125     None    3
-br1               1  0.0.0.0                        Up       125     None    3
-br1               2  0.0.0.0                        Up       125     None    3
+<span class="header">Interface       VID  Proto  Querier                         State  Interval  Timeout  MRD  Ver</span>
+br0                  IGMP   192.168.2.1                        Up       125     None  off    3
+br0                  MLD    fe80::7a4c:9bff:fe12:3456          Up       125     None  off    2
+br1               1  IGMP   0.0.0.0                            Up       125     None  off    3
+br1               1  MLD    ::                                 Up       125     None  off    2
+br1               2  IGMP   0.0.0.0                            Up       125     None  off    3
+br1               2  MLD    ::                                 Up       125     None  off    2
 
 <span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e2
@@ -3085,7 +3102,7 @@ br0           01:00:5e:01:01:01     e2
    also only support filtering on the MAC level<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup></li>
 <li><strong>Querier election</strong>: the process of determining who is the elected
    IGMP/MLD querier on a LAN.  Lowest numerical IP address wins, the
-   special address 0.0.0.0 (proxy querier) never wins</li>
+   special addresses 0.0.0.0 and :: (proxy querier) never win</li>
 <li><strong>Proxy querier</strong>: when no better querier exists on a LAN, one or
    more devices can send proxy queries with source address 0.0.0.0 (or
    :: for IPv6).  See <strong>Query Interval</strong>, below, why this is a good
@@ -3104,9 +3121,12 @@ br0           01:00:5e:01:01:01     e2
 <li><strong>Flood port</strong>: set on a bridge port (default: enabled) to ensure
    all <em>unknown</em> multicast is forwarded</li>
 <li><strong>Router timeout</strong>: the time in seconds until a querier is deemed to
-   have been lost and another device (switch/router) takes over.  In the
+   have been lost and another device (switch/router) takes over.  It is
+   derived from the query interval of the bridge, or VLAN.  In the
    tables shown above, a <em>None</em> timeout is declared when the current
    device is the active querier</li>
+<li><strong>MRD</strong>: Multicast Router Discovery, <a href="https://www.rfc-editor.org/rfc/rfc4286.html">RFC 4286</a>, is not
+   used, so the MRD column in the tables above is always <em>off</em></li>
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -3118,6 +3138,11 @@ not used by other IGMP/MLD aware devices on the LAN.</p>
 <p>As soon as an IGMP/MLD membership report to "join" a group is received
 the group is added to the kernel MDB and forwarding to other ports
 stop.  The only exception to this rule is multicast router ports.</p>
+<p>With flooding disabled on a port, a topology change can leave hosts
+without multicast until they report their memberships again.  When the system
+is the active querier it sends a query as soon as a bridge port starts
+forwarding, so hosts rejoin within the query response interval, 10
+seconds, instead of at the next periodic query.</p>
 <p>If your MAC multicast forwarding is not working properly, it may be
 because an IP multicast group maps to the same MAC address.  Please
 see <a href="https://www.rfc-editor.org/rfc/rfc1112.html">RFC 1112</a> for details.  Use static multicast router
@@ -3210,10 +3235,10 @@ one IP multicast group maps to the same MAC multicast group.&nbsp;<a class="foot
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   

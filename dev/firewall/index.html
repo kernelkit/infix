@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -28,10 +28,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -3201,7 +3201,7 @@
   
 
 
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/firewall.svg" data-desc-position="bottom"><img align="left" alt="Firewall" src="../img/firewall.svg" width="60"></a></p>
 <h1 id="firewall-documentation">Firewall Documentation<a class="headerlink" href="#firewall-documentation" title="Permanent link">¶</a></h1>
 <h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">¶</a></h2>
 <p>A zone-based firewall aims to <em>simplify network security</em>.  Instead of complex
@@ -3209,7 +3209,7 @@ per-interface rules, you work with <strong>zones</strong> and <strong>policies</
 define a level of trust</ins> for all interfaces or networks assigned to it, and
 <ins>policies regulate the traffic flow</ins> between zones.</p>
 <figure id="__figure-caption_1">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-concept.svg" data-desc-position="bottom"><img alt="Zone based concept" src="../img/fw-concept.svg" width="600"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 1.</span> Zones group interfaces, policies control traffic flows.</p>
 </figcaption>
@@ -3238,7 +3238,7 @@ relationship between zones and the policies that connect them.  Each cell in
 the matrix represents a potential traffic flow, with rows indicating the
 ingress zone and columns the egress zone.</p>
 <figure id="__figure-caption_2">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-matrix.png" data-desc-position="bottom"><img alt="Firewall Matrix" src="../img/fw-matrix.png"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 2.</span> Example output from <kbd>show firewall</kbd> command.</p>
 </figcaption>
@@ -3312,7 +3312,7 @@ yellow, when exceptions like port forwarding are active.</p>
 inter-zone (and intra-zone) traffic is rejected.  Meaning you must explicitly
 allow the traffic flows you intend.</p>
 <figure id="__figure-caption_3">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-zones.svg" data-desc-position="bottom"><img alt="Zone based firewall" src="../img/fw-zones.svg" width="600"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 3.</span> Example of common traffic flows (policies) between zones.</p>
 </figcaption>
@@ -3514,7 +3514,7 @@ be seen in the below screenshot, the only interface <code>e1</code> has been ass
 automatically to the public zone.  This information is also saved to the
 system log.</p>
 <figure id="__figure-caption_4">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-default.png" data-desc-position="bottom"><img alt="Initial firewall setup with default zone" src="../img/fw-default.png"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 4.</span> Zone matrix and firewall overview from <kbd>show firewall</kbd>.</p>
 </figcaption>
@@ -3599,7 +3599,7 @@ admin@example:/config/firewall/&gt; <b>leave</b>
 CLI admin-exec command <kbd>show firewall</kbd> shows the last 10 log messages in the
 overview:</p>
 <figure id="__figure-caption_5">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-logs.png" data-desc-position="bottom"><img alt="Firewall logs" src="../img/fw-logs.png" width="100%"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 5.</span> Summary of recent logs at the end of <kbd>show firewall</kbd>.</p>
 </figcaption>
@@ -3614,7 +3614,7 @@ the <em>zones</em> and <em>policy</em> concepts map to these hooks will hopefull
 understand the firewall's behavior and ease troubleshooting.</p>
 <h3 id="packet-flow">Packet Flow<a class="headerlink" href="#packet-flow" title="Permanent link">¶</a></h3>
 <figure id="__figure-caption_6">
-<p></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-netfilter.svg" data-desc-position="bottom"><img alt="Netfilter hooks" src="../img/fw-netfilter.svg" width="750"></a></p>
 <figcaption>
 <p><span class="caption-prefix">Figure 6.</span> Linux netfilter hooks in layer-3 traffic flow.</p>
 </figcaption>
@@ -3775,10 +3775,10 @@ of network mysteries.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Ju
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   

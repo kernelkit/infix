@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -28,10 +28,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2278,6 +2278,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#patching-a-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patching a Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#configuration-snippets" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2322,10 +2333,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#statd" class="md-nav__link">
+  <a href="#statd-and-yangerd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        statd
+        statd and yangerd
       
     </span>
   </a>
@@ -2836,6 +2847,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#patching-a-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patching a Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#configuration-snippets" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2880,10 +2902,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#statd" class="md-nav__link">
+  <a href="#statd-and-yangerd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        statd
+        statd and yangerd
       
     </span>
   </a>
@@ -3219,10 +3241,6 @@ go, like this:</p>
 <p>This rebuilds (and installs) <code>foo</code> and <code>bar</code>, the <code>all</code> target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final <code>run</code> argument is explained below.</p>
-<p>Patches in <code>patches/foo/</code>, and kernel patches in <code>patches/linux/&lt;ver&gt;/</code>,
-are applied when the package is extracted.  A new or changed patch is
-therefore only picked up by <code>make foo-dirclean foo</code>, not by
-<code>foo-rebuild</code>.</p>
 <p>To keep a build for a second board, give it its own output directory,
 every target takes <code>O=</code>:</p>
 <div class="highlight"><pre><span></span><code>make O=output_x86 x86_64_defconfig
@@ -3230,6 +3248,52 @@ make O=output_x86
 </code></pre></div>
 <p>The virtual test environment only boots x86_64 images, see
 <a href="../testing/">Regression Testing</a>.</p>
+<h4 id="patching-a-package">Patching a Package<a class="headerlink" href="#patching-a-package" title="Permanent link">¶</a></h4>
+<p>Patches in <code>patches/foo/</code>, and kernel patches in <code>patches/linux/&lt;ver&gt;/</code>,
+are applied when the package is extracted.  A new or changed patch is
+therefore only picked up by <code>make foo-dirclean foo</code>, not by
+<code>foo-rebuild</code>.</p>
+<p>Every patch series is maintained as commits on a branch in a Kernelkit
+<a href="https://github.com/kernelkit">fork</a> of the upstream project, never as hand-edited files in
+<code>patches/</code>.  The branch is based on the exact version the package pins
+and named after it with a <code>-kkit</code> suffix, e.g. <code>v4.4-kkit</code> in
+<code>kernelkit/linuxptp</code>.  Forks of projects we already track, the kernel,
+Buildroot and FRR, have their own naming, see below.</p>
+<p>To add or change a patch:</p>
+<ol>
+<li>
+<p>Fork the project under the <code>kernelkit</code> organization if it is not
+   there yet, and add the fork as a remote in your clone</p>
+</li>
+<li>
+<p>Check out the <code>-kkit</code> branch, or create it from the pinned version
+   tag when the package has no patches yet</p>
+<div class="highlight"><pre><span></span><code>git checkout -b v4.4-kkit v4.4
+</code></pre></div>
+</li>
+<li>
+<p>Make the change as one commit per fix, with a commit message that
+   says why, as for any other commit.  Fold fixes to an earlier patch
+   into that commit rather than adding a patch on top</p>
+</li>
+<li>
+<p>Regenerate the whole series, then push the branch</p>
+<div class="highlight"><pre><span></span><code>rm patches/linuxptp/*.patch
+git -C ../linuxptp format-patch --no-signoff --no-encode-email-headers \
+    --no-cover-letter --no-signature -o patches/linuxptp v4.4..v4.4-kkit
+git -C ../linuxptp push kkit v4.4-kkit
+</code></pre></div>
+</li>
+<li>
+<p>Rebuild from scratch and commit the new series in Infix</p>
+<div class="highlight"><pre><span></span><code>make linuxptp-dirclean linuxptp
+</code></pre></div>
+</li>
+</ol>
+<p>When the package is bumped, rebase the <code>-kkit</code> branch onto the new
+version, drop patches that landed upstream, and push it under the new
+name.  The patches <code>patches/</code> holds are then always a plain export of
+the branch, so a reviewer can read the series as commits on GitHub.</p>
 <h3 id="configuration-snippets">Configuration Snippets<a class="headerlink" href="#configuration-snippets" title="Permanent link">¶</a></h3>
 <p>Infix ships a set of Kconfig fragments in <code>configs/snippets/</code> that can
 be merged into your active <code>.config</code> on demand.  This avoids polluting
@@ -3348,45 +3412,38 @@ therefore a <code>confd</code> bug, while missing or stale operational data is a
 <li>Interfaces are ordered explicitly, a type that needs its parent first
    gets a <code>&lt;type&gt;_add_deps()</code>, see <code>vlan_add_deps()</code></li>
 </ul>
-<h3 id="statd"><code>statd</code><a class="headerlink" href="#statd" title="Permanent link">¶</a></h3>
-<p>The Infix status daemon, <code>src/statd</code>, is responsible for populating the
-sysrepo <code>operational</code> datastore. Like <code>confd</code>, it uses XPath subscriptions,
-but unlike <code>confd</code>, it relies entirely on <code>yanger</code>, a Python script that
-gathers data from local linux services and feeds it into sysrepo.</p>
+<h3 id="statd-and-yangerd"><code>statd</code> and <code>yangerd</code><a class="headerlink" href="#statd-and-yangerd" title="Permanent link">¶</a></h3>
+<p>Operational data comes from two daemons.  <code>yangerd</code>, in <code>src/yangerd</code>,
+collects it: it follows netlink, D-Bus, inotify and the daemons' own
+event channels, and keeps every module ready as YANG-shaped JSON.
+<code>statd</code>, in <code>src/statd</code>, owns the sysrepo side: it subscribes to the
+<code>operational</code> datastore per module, asks yangerd over
+<code>/run/yangerd.sock</code> when a client reads, and hands the answer to
+libyang.  New data goes in yangerd.  Read <code>src/yangerd/README.md</code>
+before changing it, it says what is event driven, what is polled and
+why a new poll needs agreement first.</p>
 <p>Operational data replaces the running configuration rather than being
 merged with it, so a leaf that exists only in the configuration is absent
 from operational data.  Only add a leaf to a collector when the live
 system can report it.</p>
 <p>To apply changes, rebuild the image:</p>
-<div class="highlight"><pre><span></span><code>make statd-rebuild all
+<div class="highlight"><pre><span></span><code>make yangerd-rebuild statd-rebuild all
 </code></pre></div>
-<p>Rebuilding the image and testing on target for every change during
-development process can be tedious. Instead, <code>yanger</code> allows remote
-execution, running the script directly on the host system (test
-container):</p>
-<div class="highlight"><pre><span></span><code>infamy0:test # ../src/statd/python/yanger/yanger -x "../utils/ixll -A ssh d3a" ieee802-dot1ab-lldp
+<p>The Go unit tests run on the host, from <code>src/yangerd</code>:</p>
+<div class="highlight"><pre><span></span><code>go test -mod=vendor ./...
 </code></pre></div>
-<p><code>ixll</code> is a utility script that lets you run network commands using an
-<strong>interface name</strong> instead of a hostname. It makes operations like
-<code>ssh</code>, <code>scp</code>, and network discovery easier.</p>
-<p>Normally, <code>yanger</code> runs commands <strong>locally</strong> to retrieve data
-(e.g., <code>lldpcli</code> when handling <code>ieee802-dot1ab-lldp</code>). However, when
-executed with <code>-x "../utils/ixll -A ssh d3a"</code> it redirects these
-commands to a remote system connected to the local <code>d3a</code> interface via
-SSH. This setup is used for running <code>yanger</code> in an
-<a href="../testing/#interactive-usage">interactive test environment</a>. The yanger
-script runs on the <code>host</code> system, but key commands are executed on the
-<code>target</code> system.</p>
-<p>For debugging or testing, you can capture system command output and
-replay it later without needing a live system.</p>
-<p>To capture:</p>
-<div class="highlight"><pre><span></span><code>infamy0:test # ../src/statd/python/yanger/yanger -c /tmp/capture ieee802-dot1ab-lldp
+<p>On a DUT, <code>yangerctl</code> shows what yangerd has, without sysrepo in
+between:</p>
+<div class="highlight"><pre><span></span><code>admin@example:~$ sudo yangerctl get /ietf-interfaces:interfaces
+admin@example:~$ sudo yangerctl health
 </code></pre></div>
-<p>To replay:</p>
-<div class="highlight"><pre><span></span><code>infamy0:test # ../src/statd/python/yanger/yanger -r /tmp/capture ieee802-dot1ab-lldp
-</code></pre></div>
-<p>This is especially useful when working in isolated environments or debugging
-issues without direct access to the DUT.</p>
+<p>When a GET comes back empty or incomplete, look in <code>/var/log/syslog</code>.
+statd logs every value libyang rejects as <code>yangerd: dropping ...</code>, and
+yangerd logs failed queries.  For more, set <code>YANGERD_LOG_LEVEL=debug</code> in
+<code>/etc/default/yangerd</code> and run <code>initctl restart yangerd</code>.</p>
+<p>Values that are expensive to read, or that change the system, are not
+operational data but YANG actions handled by confd, for example the WiFi
+<code>scan</code> and the bridge <code>get-forwarding-database</code>.</p>
 <h2 id="upgrading-packages">Upgrading Packages<a class="headerlink" href="#upgrading-packages" title="Permanent link">¶</a></h2>
 <p>The steps below describe upgrading on <code>main</code>.  Maintained release
 branches take the same kernel and Buildroot patch bumps, ported from
@@ -3659,10 +3716,10 @@ of local changes another company-specific branch can be used instead.&nbsp;<a cl
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   
