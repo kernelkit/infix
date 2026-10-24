@@ -61,3 +61,10 @@ config BR2_PACKAGE_FEATURE_WIFI_QUALCOMM
        select BR2_PACKAGE_LINUX_FIRMWARE_ATHEROS_11K_WCN6855
        help
          Enables support for Qualcomm Atheros ath11k WiFi devices.
+
+config BR2_PACKAGE_FEATURE_WIFI_INTEL
+       bool "Intel WiFi Devices"
+       depends on BR2_PACKAGE_FEATURE_WIFI
+       select BR2_PACKAGE_LINUX_FIRMWARE
+       help
+         Enables support for Intel AX210 Wi-Fi 6E devices.

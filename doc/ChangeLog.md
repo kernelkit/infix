@@ -75,6 +75,7 @@ All notable changes to the project are documented in this file.
   VLAN, issue #354
 - Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
   build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
+- Support for Intel AX210 WiFi cards in the Aarch64 build
 - New `iitoctl` tool, shows which rule drives each LED and why, and can
   start locate, the board's LEDs blink as configured: `iitoctl locate on`
 - New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
