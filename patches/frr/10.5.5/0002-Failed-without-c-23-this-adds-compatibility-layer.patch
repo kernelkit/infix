@@ -1,13 +1,9 @@
-From 80634c421c695b191c54d94feda6fb6c32c17eb4 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+From b6bfe25ee113c69f07199a1d1e20551fe9e34583 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
 Date: Fri, 30 Jan 2026 13:00:12 +0100
-Subject: [PATCH 2/3] Failed without c++ 23, this adds compatibility layer
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 2/6] Failed without c++ 23, this adds compatibility layer
 Organization: Wires
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  lib/assert/assert.h | 29 +++++++++++++++++++++++++++++
  lib/zlog.c          | 45 +++++++++++++++++++++++++++++++++++++++++++++
@@ -122,6 +118,3 @@ index eb9b1c236b..b1d23a08d9 100644
  int zlog_msg_prio(struct zlog_msg *msg)
  {
  	return msg->prio;
--- 
-2.43.0
-

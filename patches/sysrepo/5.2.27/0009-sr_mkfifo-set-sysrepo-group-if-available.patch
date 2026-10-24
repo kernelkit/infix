@@ -1,0 +1,36 @@
+From d2155166da3d9fd7a2e8180106fc3f02bb69226f Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 7 Jan 2026 18:09:32 +0100
+Subject: [PATCH 9/9] sr_mkfifo(): set sysrepo group if available
+Organization: Wires
+
+We already set the umask, set the group to allow users of the sysrepo
+group to initiate events.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/common.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/common.c b/src/common.c
+index 0a96a8f4..6f82bd4d 100644
+--- a/src/common.c
++++ b/src/common.c
+@@ -3952,6 +3952,17 @@ sr_mkfifo(const char *path, mode_t mode)
+         return err_info;
+     }
+ 
++    /* and group, if any */
++    if (sr_is_prod_env() && strlen(SR_GROUP)) {
++        if ((err_info = sr_get_gid(SR_GROUP, &gid)))
++            return err_info;
++
++        if (chown(path, -1, gid) == -1) {
++            SR_ERRINFO_SYSERRNO(&err_info, "chown");
++            return err_info;
++        }
++    }
++
+     return NULL;
+ }
+ 

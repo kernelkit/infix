@@ -1,7 +1,7 @@
-From 6088ca29476f8776426348ab413ddc4eccc6760b Mon Sep 17 00:00:00 2001
+From 03d5f5fd348f3357a77b0944278339c914bdda96 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 4 Oct 2026 15:15:28 +0200
-Subject: [PATCH] lib: mgmt_msg: hand handlers an aligned message
+Subject: [PATCH 5/6] lib: mgmt_msg: hand handlers an aligned message
 Organization: Wires
 
 mgmt_msg_procbufs() passes handlers a pointer into the receive stream,
@@ -16,6 +16,7 @@ the kernel cannot fix up, so mgmtd dies with SIGBUS:
 
 Copy unaligned messages to an aligned buffer before calling the handler.
 
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  lib/mgmt_msg.c | 27 +++++++++++++++++++++++----
  1 file changed, 23 insertions(+), 4 deletions(-)

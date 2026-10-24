@@ -1,0 +1,123 @@
+From 264cc5babfe191491b733c78d883608f9046b372 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 21 Aug 2024 16:00:35 +0200
+Subject: [PATCH 5/9] Introduce new log level [SEC] for audit trails
+Organization: Wires
+
+This adds a new log level for security and audit trail related log
+messages, see LOG_AUDIT defined in RFC5424.  E.g., nacm user applied
+a change, copied a datastore, etc.
+
+The new log level is added last to not affect the advertised command
+line log levels.  A security notice has higher actual priorty than
+DBG, of course, so we remap it to WRN.  The construct allows us to
+have another [label] than [WRN], which might otherwise be read as
+a bug/problem rather than just a high-priority-notification.
+
+When logging to syslog() we let delegate labling and filtering to the
+system log daemon, dropping any [SEVERITY] prefix.  Also, \n is most
+often dropped by log daemons.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/log.c           | 23 ++++++++++++++++++++++-
+ src/log.h           |  1 +
+ src/sysrepo_types.h |  3 ++-
+ tests/tcommon.c     |  3 +++
+ 4 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/src/log.c b/src/log.c
+index eaa185d5..2829a22c 100644
+--- a/src/log.c
++++ b/src/log.c
+@@ -33,6 +33,10 @@
+ 
+ #include "config.h"
+ 
++#ifndef LOG_AUDIT
++#define LOG_AUDIT 	(13<<3)	/* Log audit, for audit trails */
++#endif
++
+ sr_log_level_t sr_stderr_ll = SR_LL_NONE;   /**< stderr log level */
+ sr_log_level_t sr_syslog_ll = SR_LL_NONE;   /**< syslog log level */
+ int syslog_open;                            /**< Whether syslog was opened */
+@@ -111,6 +115,11 @@ sr_api_ret(sr_session_ctx_t *session, sr_error_info_t *err_info)
+ int
+ sr_log_msg_hidden(sr_log_level_t ll)
+ {
++    if (ll == SR_LL_SEC) {
++        /* remapped to higher level in sr_log_msg() */
++        ll = SR_LL_WRN;
++    }
++
+     return (ll > sr_stderr_ll) && (ll > sr_syslog_ll) && (!sr_lcb || (ll > sr_lcb_ll));
+ }
+ 
+@@ -137,6 +146,11 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
+         priority = LOG_INFO;
+         severity = "VRB";
+         break;
++    case SR_LL_SEC:
++        priority = LOG_AUDIT | LOG_NOTICE;
++        severity = "SEC";
++        ll = SR_LL_WRN;         /* remap to higher level. */
++        break;
+     case SR_LL_DBG:
+         priority = LOG_DEBUG;
+         severity = "DBG";
+@@ -153,7 +167,14 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
+ 
+     /* syslog logging */
+     if (ll <= sr_syslog_ll) {
+-        syslog(priority | (plugin ? LOG_DAEMON : 0), "[%s] %s\n", severity, msg);
++        int facility;
++
++        if (priority & ~LOG_PRIMASK)
++            facility = 0;       /* audit */
++        else
++            facility = plugin ? LOG_DAEMON : 0;
++
++        syslog(facility | priority, "%s", msg);
+     }
+ 
+     /* logging callback */
+diff --git a/src/log.h b/src/log.h
+index 243f3235..68e05206 100644
+--- a/src/log.h
++++ b/src/log.h
+@@ -29,6 +29,7 @@
+ 
+ #define SR_LOG_WRN(...) sr_log(SR_LL_WRN, __VA_ARGS__)
+ #define SR_LOG_INF(...) sr_log(SR_LL_INF, __VA_ARGS__)
++#define SR_LOG_SEC(...) sr_log(SR_LL_SEC, __VA_ARGS__)
+ #define SR_LOG_DBG(...) sr_log(SR_LL_DBG, __VA_ARGS__)
+ 
+ #define SR_CHECK_MEM_GOTO(cond, err_info, go) if (cond) { SR_ERRINFO_MEM(&(err_info)); goto go; }
+diff --git a/src/sysrepo_types.h b/src/sysrepo_types.h
+index e033a79b..883a49f1 100644
+--- a/src/sysrepo_types.h
++++ b/src/sysrepo_types.h
+@@ -67,7 +67,8 @@ typedef enum {
+     SR_LL_WRN,       /**< Print error and warning messages. */
+     SR_LL_INF,       /**< Print error, warning, and informational messages. */
+     SR_LL_VRB,       /**< Print error, warning, informational, and even verbose (libyang) messages. */
+-    SR_LL_DBG        /**< Print all messages including some development debug messages. */
++    SR_LL_DBG,       /**< Print all messages including some development debug messages. */
++    SR_LL_SEC,       /**< Security, e.g., audit trail, high priority remapped to SR_LL_WRN */
+ } sr_log_level_t;
+ 
+ /**
+diff --git a/tests/tcommon.c b/tests/tcommon.c
+index a5172ea0..c731de98 100644
+--- a/tests/tcommon.c
++++ b/tests/tcommon.c
+@@ -36,6 +36,9 @@ _test_log_msg(sr_log_level_t level, const char *message, const char *prefix)
+     case SR_LL_WRN:
+         severity = "WRN";
+         break;
++    case SR_LL_SEC:
++        severity = "SEC";
++        break;
+     case SR_LL_INF:
+         severity = "INF";
+         break;

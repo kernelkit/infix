@@ -12,5 +12,5 @@ MODULES=(
 	"ietf-ssh-server@2024-10-10.yang"
 	"ietf-tls-server@2024-10-10.yang -e server-ident-x509-cert -e client-auth-supported -e client-auth-x509-cert"
 	"ietf-netconf-server@2025-04-24.yang -e ssh-listen -e tls-listen -e ssh-call-home -e tls-call-home -e central-netconf-server-supported"
-	"libnetconf2-netconf-server@2025-11-11.yang"
+	"libnetconf2-netconf-server@2026-09-18.yang"
 )

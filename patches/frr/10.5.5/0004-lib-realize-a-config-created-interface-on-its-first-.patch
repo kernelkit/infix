@@ -1,7 +1,7 @@
-From 13d16871ee1da466d42ab2bb72de3516de2ebb5d Mon Sep 17 00:00:00 2001
+From 78c7b88c97fa62b1a6e7a8baf1a9bd67117debc9 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 29 Sep 2026 20:46:52 +0200
-Subject: [PATCH 4/4] lib: realize a config-created interface on its first
+Subject: [PATCH 4/6] lib: realize a config-created interface on its first
  state update
 Organization: Wires
 
@@ -32,10 +32,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/lib/zclient.c b/lib/zclient.c
-index 48fb42872a..9a444dc041 100644
+index 82afc5de79..6f93d5c83f 100644
 --- a/lib/zclient.c
 +++ b/lib/zclient.c
-@@ -2851,6 +2851,7 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
+@@ -2872,6 +2872,7 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
  {
  	struct interface *ifp;
  	char ifname_tmp[IFNAMSIZ + 1] = {};
@@ -43,7 +43,7 @@ index 48fb42872a..9a444dc041 100644
  
  	/* Read interface name. */
  	STREAM_GET(ifname_tmp, s, IFNAMSIZ);
-@@ -2864,8 +2865,13 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
+@@ -2885,8 +2886,13 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
  		return NULL;
  	}
  
@@ -57,6 +57,3 @@ index 48fb42872a..9a444dc041 100644
  	return ifp;
  stream_failure:
  	return NULL;
--- 
-2.43.0
-
