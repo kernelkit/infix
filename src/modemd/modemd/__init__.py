@@ -22,6 +22,7 @@ pidfile = "/run/modemd.pid"
 debug   = False
 threads = []
 reload_event = threading.Event()
+terminating = threading.Event()
 
 # Vendor-specific AT commands to enable / disable raw NMEA output on the
 # modem's dedicated GPS port.  Used when the udev rules in
@@ -199,12 +200,13 @@ def runcmdp(cmd1, cmd2, check=True):
         return ret
 
 
-def runcmd(cmd, check=True):
+def runcmd(cmd, check=True, timeout=None):
     dbg("Running: %s" % " ".join(cmd))
     ret = None
     try:
         res = subprocess.run(cmd, check=check, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True)
+                             stderr=subprocess.PIPE, text=True,
+                             timeout=timeout)
         if res.returncode == 0:
             if res.stdout:
                 ret = res.stdout.strip()
@@ -575,7 +577,6 @@ class ModemThread(threading.Thread):
         self.index = cfg["index"]
         super().__init__(daemon=True, name="modem%d" % self.index)
         self.stopevent = threading.Event()
-        self.exited = False
 
         self.cfg = cfg
         self.port = cfg.get("usb-port")
@@ -769,6 +770,10 @@ class ModemThread(threading.Thread):
         self.init()
 
     def notif(self, msg):
+        # sysrepo goes down with the system, sending blocks until killed
+        if terminating.is_set():
+            return
+
         data = {
           "ietf-hardware:hardware": {
             "component": [{
@@ -781,7 +786,7 @@ class ModemThread(threading.Thread):
         }
         note = "%s/notif" % self.rundir
         fwritej(note, data)
-        if runcmd(["sysrepocfg", "-f", "json", "-N", note]):
+        if runcmd(["sysrepocfg", "-f", "json", "-N", note], timeout=2):
             self.dbg("Sent notification: %s" % msg)
         rmf(note)
 
@@ -1964,26 +1969,21 @@ class ModemThread(threading.Thread):
         rmrf(self.rundir)
 
         self.dbg("Exiting")
-        self.exited = True
         return True
 
 
 def sighandler(signum, frame):
     global threads
 
+    terminating.set()
     for th in threads:
         th.stop()
 
-    timeout = 0
-    while timeout < 3:
-        exited = True
-        for th in threads:
-            if isinstance(th, ModemThread) and not th.exited:
-                exited = False
-        if exited:
-            break
-        time.sleep(1)
-        timeout += 1
+    # Exit before finit's SIGKILL, 3 s after SIGTERM
+    deadline = time.monotonic() + 2.5
+    for th in threads:
+        if isinstance(th, ModemThread):
+            th.join(max(0, deadline - time.monotonic()))
 
     if signum == 15:
         sys.exit(0)
