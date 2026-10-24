@@ -1313,7 +1313,7 @@ class Iface:
         Prefers pmd-type (specific medium, e.g. '10GbaseLR') over phy-type
         (family-level, e.g. '10GbaseR') when both are populated.  Empty
         when neither is reported — non-ethernet interfaces don't have these
-        leaves, and yanger skips them for ethernet ports with no link or
+        leaves, and yangerd skips them for ethernet ports with no link or
         unmapped (port, speed, duplex) tuple.
         """
         return self._pmd_label(self.pmd_type or self.phy_type)

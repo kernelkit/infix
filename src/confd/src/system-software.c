@@ -118,7 +118,7 @@ static int add_output(sr_val_t **output, size_t *cnt, const char *path,
 
 /*
  * Run the scheduled check now.  The script records the outcome in the
- * state file yanger serves, the reply repeats the parts a caller acts on.
+ * state file yangerd serves, the reply repeats the parts a caller acts on.
  */
 static int infix_system_sw_check_update(sr_session_ctx_t *session, uint32_t sub_id,
 					const char *path, const sr_val_t *input,

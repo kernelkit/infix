@@ -889,7 +889,7 @@ def nacm(args: List[str]) -> None:
         print(f'Error: Access denied because "{user}" NACM authorization failed.')
         return
 
-    # Fetch user data from operational (includes shell and authorized-key from yanger)
+    # Fetch user data from operational (includes shell and authorized-key from yangerd)
     user_oper = get_json("/ietf-system:system/authentication", quiet=True)
 
     if user_oper:

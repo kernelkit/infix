@@ -4,10 +4,11 @@ module and, when a client reads, asks yangerd for the data over
 `/run/yangerd.sock`.  The data itself is collected by yangerd, see
 `src/yangerd/README.md`.
 
+statd also keeps the mDNS neighbor table, from avahi, and periodic
+snapshots of the operational data.
+
 The `python` directory holds `cli-pretty`, which formats operational
-data for the CLI, and the OSPF, RIP and DHCP server status helpers.
-The `yanger` scripts there are the old collectors, statd no longer runs
-them.
+data for the CLI.
 
 
 ## Run outside Infix
