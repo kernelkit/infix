@@ -10,6 +10,9 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.58 (LTS)
 - Upgrade Linux kernel to 6.18.57 (LTS)
+- Upgrade libyang to 6.4.13, sysrepo to 5.2.27, libnetconf2
+  to 4.6.4, netopeer2 to 2.8.21 and rousette to the latest development
+  version
 - Bridges with multicast snooping now also run an MLD querier for IPv6,
   next to the IGMP querier, using the same `querier` and `query-interval`
   settings.  Enable IPv6 on the bridge to take part in MLD querier

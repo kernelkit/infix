@@ -12,6 +12,8 @@ MODULES=(
 	"ietf-network-instance@2019-01-21.yang"
 	"ietf-subscribed-notifications@2019-09-09.yang -e encode-xml -e replay -e subtree -e xpath"
 	"ietf-yang-push@2019-09-09.yang -e on-change"
+	"netopeer-notifications@2026-01-05.yang"
 	"ietf-system-capabilities@2022-02-17.yang"
 	"ietf-notification-capabilities@2022-02-17.yang"
+	"ietf-netconf-private-candidate@2026-02-03.yang -e private-candidate"
 )

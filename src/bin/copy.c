@@ -417,9 +417,9 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
  * ietf-system being the one that predates the convention */
 static bool is_secret(const struct lysc_node *snode)
 {
-	LY_ARRAY_COUNT_TYPE u;
+	LYA_COUNT_T u;
 
-	LY_ARRAY_FOR(snode->exts, u) {
+	LYA_FOR(snode->exts, u) {
 		const struct lysc_ext *def = snode->exts[u].def;
 
 		if (!strcmp(def->name, "default-deny-all") &&
