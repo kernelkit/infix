@@ -189,6 +189,9 @@ All notable changes to the project are documented in this file.
   to syslog and to their own file, `/var/log/web`, which is rotated like
   the other logs.  The old log directory, `/var/log/nginx`, is removed
   at boot
+- The factory config of the Banana Pi R3, R3 mini, R4, R64, NanoPi R2S
+  and Vero W6M now enables IPv4 and IPv6 forwarding on the LAN and WAN
+  interfaces.  Without it, LAN clients could not reach the Internet
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
