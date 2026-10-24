@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/facebook/time v0.0.0-20250531133328-3ef67721da27
-	github.com/godbus/dbus/v5 v5.2.2
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/mdlayher/genetlink v1.3.2
 	github.com/mdlayher/netlink v1.8.0
 	github.com/vishvananda/netlink v1.3.1
