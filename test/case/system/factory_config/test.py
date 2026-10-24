@@ -44,7 +44,7 @@ def isolate(env):
 def cleanup(env):
     """Restore the rig to the clean per-test baseline for the next test."""
     print("Restoring device to clean test baseline")
-    target = env.attach("target", "mgmt", "netconf")
+    target = env.attach("target", "mgmt", "netconf", test_reset=False)
     target.reboot()
     if not wait_boot(target, env):
         test.fail("Device did not come back while restoring baseline")
