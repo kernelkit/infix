@@ -107,7 +107,7 @@ static void add_v6(const char *ifname, struct lyd_node *cfg)
 	if (request_pd)
 		strlcpy(prefix_del, "-P 0 ", sizeof(prefix_del));
 
-	fp = fopenf("w", "/etc/finit.d/available/dhcpv6-client-%s.conf", ifname);
+	fp = fopenfp(0644, NULL, "/etc/finit.d/available/dhcpv6-client-%s.conf", ifname);
 	if (!fp) {
 	generr:
 		ERRNO("failed creating DHCPv6 client %s: %s", ifname, strerror(errno));

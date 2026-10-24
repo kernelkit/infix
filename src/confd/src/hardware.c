@@ -2002,7 +2002,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (num_gps > 0) {
 				FILE *fp;
 
-				fp = fopen(GPSD_CONF_NEXT, "w");
+				fp = fopenp(GPSD_CONF_NEXT, 0644, NULL);
 				if (!fp) {
 					ERRNO("Could not open " GPSD_CONF_NEXT);
 					return SR_ERR_INTERNAL;
@@ -2157,7 +2157,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		if (glob("/etc/hostapd-*.conf", 0, NULL, &gl) == 0 && gl.gl_pathc > 0) {
 			FILE *fp;
 
-			fp = fopen(HOSTAPD_SERVICE, "w");
+			fp = fopenp(HOSTAPD_SERVICE, 0644, NULL);
 			if (!fp) {
 				ERRNO("Could not open " HOSTAPD_SERVICE);
 				rc = SR_ERR_INTERNAL;

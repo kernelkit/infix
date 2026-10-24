@@ -14,11 +14,6 @@
 struct confd confd;
 
 /*
- * confd runs with umask 0027, so generated files are readable by root
- * only.  Use these for files read by a daemon running as another user,
- * or for the few files that must stay world readable.
- */
-/*
  * Write str to fp in double quotes, with '"' and '\' escaped, for
  * config files that unescape quoted values, e.g. syslog.conf, dnsmasq.
  */
@@ -36,6 +31,11 @@ int fputq(const char *str, FILE *fp)
 	return fputc('"', fp) == EOF ? EOF : 0;
 }
 
+/*
+ * confd runs with umask 0027, so generated files are readable by root
+ * only.  Use these for files read by a daemon running as another user,
+ * or for the few files that must stay world readable.
+ */
 FILE *fopenp(const char *path, mode_t mode, const char *group)
 {
 	gid_t gid = 0;
