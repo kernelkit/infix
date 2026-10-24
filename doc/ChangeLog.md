@@ -121,10 +121,12 @@ All notable changes to the project are documented in this file.
 - `show hardware` lists the devices plugged into each USB port, also
   behind a hub or on a locked port: ID, speed, maker and model, and
   whether the device may be used, see [USB Ports][usb]
-- Bridge unicast forwarding database (FDB) in the operational datastore,
-  with static entries and a configurable aging time.  `show bridge fdb`
-  can list one VLAN, one port, or one address, and shows the age of each
-  learned entry and whether it is offloaded to the switch, see [FDB][fdb]
+- Bridge unicast forwarding database (FDB), with static entries and a
+  configurable aging time.  `show bridge fdb`, or the bridge's
+  `get-forwarding-database` action over NETCONF and RESTCONF, lists the
+  learned and static entries, also those a switch learns on its own, with
+  the age of each entry and whether it is offloaded to the switch.  The
+  CLI can list one VLAN, one port, or one address, see [FDB][fdb]
 
 ### Fixes
 

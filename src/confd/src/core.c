@@ -1184,6 +1184,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 
+	rc = bridge_rpc_init(&confd);
+	if (rc)
+		goto err;
+
 	rc = support_rpc_init(&confd);
 	if (rc)
 		goto err;

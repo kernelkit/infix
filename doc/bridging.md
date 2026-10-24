@@ -162,6 +162,10 @@ admin@example:/> <b>show bridge fdb vlan 10</b>
 admin@example:/> <b>show bridge fdb address 02:00:00:00:00:02</b>
 </code></pre>
 
+Over NETCONF and RESTCONF the FDB is read with the bridge's
+`get-forwarding-database` action, it is not in the operational
+datastore.  The action lists every entry of the bridge, with its VLAN.
+
 
 ## Multicast Filtering and Snooping
 

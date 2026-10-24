@@ -283,49 +283,6 @@ def multicast_filters(iplink, vid):
     return { "multicast-filter": list(mdb.values()) }
 
 
-def fdb_state(entry):
-    return {
-        "permanent": "local",
-        "static": "static",
-    }.get(entry.get("state"), "dynamic")
-
-
-def forwarding_database(iplink):
-    """Bridge FDB containers, keyed by VID (None on VLAN unaware bridges)"""
-    brname = iplink["ifname"]
-    swports = {name for name, link in iplinks_lower_of(brname).items()
-               if "phys_switch_id" in link}
-    brfdb = HOST.run_json(["bridge", "-s", "-j", "fdb", "show", "br", brname], [])
-
-    fdb = {}
-    for brentry in brfdb:
-        # Group addresses belong in the MDB, the model only allows unicast
-        if int(brentry["mac"][:2], 16) & 1:
-            continue
-
-        bridged = brentry.get("master") == brname
-        # A switch port's self entries are its hardware FDB
-        if not bridged and (brentry["ifname"] not in swports
-                            or brentry.get("state") == "permanent"):
-            continue
-
-        entry = {
-            "address": brentry["mac"],
-            "port": brentry["ifname"],
-            "state": fdb_state(brentry),
-            "offloaded": not bridged or "offload" in brentry.get("flags", []),
-        }
-        if entry["state"] == "dynamic" and "updated" in brentry:
-            entry["age"] = brentry["updated"]
-
-        # The bridge's own entry wins over the switch's copy of it
-        entries = fdb.setdefault(brentry.get("vlan"), {})
-        if bridged or entry["address"] not in entries:
-            entries[entry["address"]] = entry
-
-    return {vid: {"entry": list(entries.values())} for vid, entries in fdb.items()}
-
-
 def multicast(iplink, info, mctldata, upper=None):
     mctlq = mctl(iplink["ifname"], info.get("vlan"), mctldata, upper=upper)
 
@@ -371,7 +328,6 @@ def vlans(iplink):
         return []
 
     mctldata = mctl_queriers()
-    fdb = forwarding_database(iplink)
     uppers = vlan_uppers(iplink["ifname"])
 
     vlans = {}
@@ -386,8 +342,6 @@ def vlans(iplink):
                 "multicast": multicast(iplink, v, mctldata, uppers.get(vid)),
                 "multicast-filters": multicast_filters(iplink, vid),
             }
-            if vfdb := fdb.get(vid):
-                vlans[vid]["forwarding-database"] = vfdb
 
     vlans_add_memberships(iplink, vlans)
     return list(vlans.values())
@@ -411,9 +365,6 @@ def dbridge(iplink):
         "multicast": multicast(iplink, info, mctl_queriers()),
         "multicast-filters": multicast_filters(iplink, None),
     }
-    if fdb := forwarding_database(iplink).get(None):
-        br["forwarding-database"] = fdb
-
     return br
 
 

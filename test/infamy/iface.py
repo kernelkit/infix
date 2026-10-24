@@ -144,14 +144,27 @@ def get_bridge(target, bridge):
     return interface.get("bridge") or interface.get("infix-interfaces:bridge") or {}
 
 
+def bridge_fdb(target, bridge):
+    """Entries the get-forwarding-database action lists for bridge.
+
+    vid and age are integers and offloaded a boolean on both transports.
+    """
+    xpath = f"/ietf-interfaces:interfaces/interface[name='{bridge}']" \
+            "/infix-interfaces:bridge/get-forwarding-database"
+    entries = target.call_action_output(xpath).get("entry", [])
+    for entry in entries:
+        for key in ("vid", "age"):
+            if key in entry:
+                entry[key] = int(entry[key])
+        entry["offloaded"] = str(entry.get("offloaded")).lower() == "true"
+    return entries
+
+
 def bridge_fdb_entry(target, bridge, vid, address):
     """FDB entry for address in VLAN vid of bridge, None if missing"""
-    for vlan in get_bridge(target, bridge).get("vlans", {}).get("vlan", []):
-        if vlan["vid"] != vid:
-            continue
-        for entry in vlan.get("forwarding-database", {}).get("entry", []):
-            if entry["address"] == address:
-                return entry
+    for entry in bridge_fdb(target, bridge):
+        if entry.get("vid") == vid and entry["address"] == address:
+            return entry
     return None
 
 

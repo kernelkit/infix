@@ -1,7 +1,0 @@
-[7mBRIDGE  VID  ADDRESS            PORT  STATE    AGE  FLAGS[0m
-br0          00:a0:85:00:03:00  br0   local         
-br0          00:a0:85:00:03:02  e2    local         
-br0          00:a0:85:00:03:03  e3    local         
-br0          00:a0:85:00:03:04  e4    local         
-br0          02:00:00:00:00:02  e2    dynamic    4  
-br0          02:00:00:00:00:03  e3    dynamic   37  

@@ -520,8 +520,7 @@ echo "Public:  $pub"
           </COMMAND>
         </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          show --raw interface | /usr/libexec/statd/cli-pretty show-bridge-fdb \
-            ${KLISH_PARAM_vid:+-v "$KLISH_PARAM_vid"} \
+          show fdb ${KLISH_PARAM_vid:+-v "$KLISH_PARAM_vid"} \
             ${KLISH_PARAM_port:+-p "$KLISH_PARAM_port"} \
             ${KLISH_PARAM_address:+-a "$KLISH_PARAM_address"} |pager
         </ACTION>

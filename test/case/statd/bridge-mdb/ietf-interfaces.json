@@ -349,48 +349,6 @@
               }
             ]
           },
-          "forwarding-database": {
-            "entry": [
-              {
-                "address": "02:00:00:00:00:02",
-                "port": "e2",
-                "state": "dynamic",
-                "offloaded": false,
-                "age": 4
-              },
-              {
-                "address": "00:a0:85:00:03:02",
-                "port": "e2",
-                "state": "local",
-                "offloaded": false
-              },
-              {
-                "address": "02:00:00:00:00:03",
-                "port": "e3",
-                "state": "dynamic",
-                "offloaded": false,
-                "age": 37
-              },
-              {
-                "address": "00:a0:85:00:03:03",
-                "port": "e3",
-                "state": "local",
-                "offloaded": false
-              },
-              {
-                "address": "00:a0:85:00:03:04",
-                "port": "e4",
-                "state": "local",
-                "offloaded": false
-              },
-              {
-                "address": "00:a0:85:00:03:00",
-                "port": "br0",
-                "state": "local",
-                "offloaded": false
-              }
-            ]
-          },
           "aging-time": 300
         }
       }
