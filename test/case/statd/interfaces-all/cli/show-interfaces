@@ -36,20 +36,26 @@
                 ipv6                  fe80::2a0:85ff:fe00:306/64 (link-layer)
    e7           ethernet  [32mUP[39m          00:a0:85:00:03:07
                 ipv6                  fe80::2a0:85ff:fe00:307/64 (link-layer)
+   e8           ethernet  [32mUP[39m          00:a0:85:00:03:08
+                ipv6                  fe80::2a0:85ff:fe00:308/64 (link-layer)
    gre-v4       gre       [32mUP[39m          remote: 192.168.20.2
    gre-v6       gre       [32mUP[39m          remote: 2001:db8::2
                 ipv4                  192.168.50.2/16 (static)
    gretap-v4    gre       [32mUP[39m          remote: 192.168.20.2
-                ethernet              f6:d4:96:d8:9f:96
+                ethernet              56:47:9f:d0:bc:a5
    gretap-v6    gre       [32mUP[39m          remote: 2001:db8::2
-                ethernet              7a:46:13:bd:fa:e6
-   veth0a       veth      [32mUP[39m          6e:d0:98:c4:e7:ef
+                ethernet              8e:28:32:01:bd:72
+   radio0       ethernet  [32mUP[39m          00:a0:85:00:03:09
+                ipv6                  fe80::2a0:85ff:fe00:309/64 (link-layer)
+   radio1       ethernet  [32mUP[39m          00:a0:85:00:03:0a
+                ipv6                  fe80::2a0:85ff:fe00:30a/64 (link-layer)
+   veth0a       veth      [32mUP[39m          5e:1f:58:41:e5:1a
    veth0a.20    vlan      [32mUP[39m          vid: 20
    └ veth0a                           
-   veth0b       veth      [32mUP[39m          36:da:80:06:7f:99
+   veth0b       veth      [32mUP[39m          46:4b:6a:a0:d5:59
    vxlan-v4     vxlan     [32mUP[39m          vni: 4 remote: 192.168.20.200
-                ethernet              8a:ea:59:32:df:70
+                ethernet              b2:f3:d6:e3:31:f5
                 ipv4                  192.168.30.2/24 (static)
    vxlan-v6     vxlan     [32mUP[39m          vni: 6 remote: 2001:db8::200
-                ethernet              3e:30:c6:a1:71:64
+                ethernet              5a:de:40:77:a5:c4
                 ipv4                  192.168.40.2/24 (static)

@@ -34,8 +34,8 @@ submodule infix-if-bridge {
 
   revision 2026-10-22 {
     description
-      "Add unicast forwarding database, with static entries, and the
-       bridge aging time.
+      "Add static unicast forwarding database entries, the bridge aging
+       time, and an action that lists the forwarding database.
 
        Add operational state for the active IGMP and MLD querier.";
     reference "internal";
@@ -555,7 +555,7 @@ submodule infix-if-bridge {
       reference "IEEE 802.1Q-2018 8.8";
 
       list entry {
-        description "Unicast forwarding entry.  Configured entries are static.";
+        description "Static unicast forwarding entry.";
         key "address";
 
         leaf address {
@@ -573,26 +573,6 @@ submodule infix-if-bridge {
             error-message "Port is not member of bridge";
           }
           mandatory true;
-        }
-
-        leaf state {
-          config false;
-          description "Origin of entry, static, dynamic, or local.";
-          type fdb-state;
-        }
-
-        leaf age {
-          config false;
-          description "Time since the address was last seen as source
-                       address on the port.  Only for dynamic entries.";
-          type uint32;
-          units seconds;
-        }
-
-        leaf offloaded {
-          config false;
-          description "Entry is installed in switch hardware.";
-          type boolean;
         }
       }
     }
@@ -817,6 +797,64 @@ submodule infix-if-bridge {
                   error-message "Port is not a member of bridge or already untagged in the same VLAN.";
                 }
               }
+            }
+          }
+        }
+      }
+
+      action get-forwarding-database {
+        description
+          "List the unicast forwarding database (FDB) of the bridge.
+
+           Lists the static and local entries and the addresses the
+           bridge has learned, in every VLAN.  A switch that learns
+           addresses on its own ports lists them too.  The FDB is not
+           operational data, this action is the only way to read it.";
+
+        output {
+          list entry {
+            description "Unicast forwarding entry.";
+
+            leaf address {
+              type mac-unicast-address;
+              description "Unicast MAC address.";
+            }
+
+            leaf vid {
+              type dot1q-types:vlanid;
+              description
+                "VLAN of the entry.
+
+                 Absent on a bridge without VLAN filtering.";
+            }
+
+            leaf port {
+              type if:interface-ref;
+              description
+                "Port the address is reachable through.
+
+                 The bridge itself for local entries and for static
+                 entries to the host.";
+            }
+
+            leaf state {
+              type fdb-state;
+              description "Origin of the entry, static, dynamic, or local.";
+            }
+
+            leaf age {
+              type uint32;
+              units seconds;
+              description
+                "Time since the address was last seen.
+
+                 Only for dynamic entries the bridge learned, a switch
+                 does not report it.";
+            }
+
+            leaf offloaded {
+              type boolean;
+              description "Entry is installed in switch hardware.";
             }
           }
         }

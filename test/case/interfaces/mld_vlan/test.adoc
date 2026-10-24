@@ -24,7 +24,10 @@ multicast.
 
 Both DUTs have IPv6 enabled on their VLAN interfaces, so in each VLAN
 they must agree on one MLD querier, the one with the lowest link-local
-address.  A sender in VLAN 55 on DUT1 sends to ff2e::55 and a sender
+address.  The other DUT receives the queries on its link port, and
+learns it as a multicast router port in that VLAN.
+
+A sender in VLAN 55 on DUT1 sends to ff2e::55 and a sender
 in VLAN 77 on DUT2 sends to ff2e::77.  Each group is flooded within its
 own VLAN, and never leaks into the other.  Once the receiver in VLAN 55
 on DUT2 joins ff2e::55, DUT2 learns the group on that port.
@@ -38,6 +41,7 @@ image::topology.svg[MLD VLAN topology, align=center, scaledwidth=75%]
 . Set up topology and attach to target DUTs
 . Configure VLAN 55 and 77 with MLD snooping, and IPv6 on the VLAN interfaces
 . Verify the DUTs agree on one MLD querier in VLAN 55 and in VLAN 77
+. Verify the DUT that is not querier has learned its link port as router port in VLAN 55 and 77
 . Verify the hosts can reach the DUTs in their VLAN
 . Start multicast senders on host:data11, group ff2e::55, and host:data22, group ff2e::77
 . Verify group ff2e::55 is flooded to host:data21 and ff2e::77 to host:data12

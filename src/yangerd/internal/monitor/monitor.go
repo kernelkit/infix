@@ -1,0 +1,1683 @@
+package monitor
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"maps"
+	"net"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/iface"
+	"github.com/kernelkit/infix/src/yangerd/internal/ipbatch"
+	"github.com/kernelkit/infix/src/yangerd/internal/mcd"
+	"github.com/kernelkit/infix/src/yangerd/internal/stpquery"
+	"github.com/kernelkit/infix/src/yangerd/internal/tree"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
+)
+
+// treeKey is the single YANG module key where the complete
+// ietf-interfaces document is stored.
+const treeKey = "ietf-interfaces:interfaces"
+
+// NLMonitor subscribes to netlink link/address/neighbor events and
+// keeps interface operational data in the in-memory tree up to date.
+// It is the central coordinator for all interface data — raw ip-json
+// staging data is transformed via iface.Transform() and augmented
+// with ethernet/wifi/bridge data before being stored as a single
+// complete YANG document.
+//
+// Staged link and address rows are keyed by ifindex, which survives a
+// rename; everything keyed by name is dropped when the name changes.
+type NLMonitor struct {
+	linkBatch  *ipbatch.Batch
+	addrBatch  *ipbatch.Batch
+	neighBatch *ipbatch.Batch
+	brBatch    *ipbatch.Batch
+	tree       *tree.Tree
+	ethRefresh func(string)
+	linkSet    func()
+	queriers   func() []mcd.Querier
+	log        *slog.Logger
+	fc         iface.FileChecker
+
+	// initDone is closed after the first initialDump completes.
+	// initDoneOnce ensures it is only closed once across restarts.
+	initDone     chan struct{}
+	initDoneOnce sync.Once
+
+	// redumpCh asks the event loop to run initialDump, e.g. after a
+	// batch subprocess died.  Buffer of 1 so requests coalesce.
+	redumpCh chan struct{}
+
+	// staging holds raw ip-json data used as input to iface.Transform().
+	// Protected by mu.
+	mu        sync.Mutex
+	links     json.RawMessage // ip -json -s -d link show (includes stats+details)
+	addrs     json.RawMessage // ip -json -d addr show (details only, no stats)
+	neighs    json.RawMessage // ip -json neigh show
+	mdb       map[string]json.RawMessage
+	rtrPorts  map[string][]string        // bridge → multicast router ports
+	ethernet  map[string]json.RawMessage // ifname → ethtool JSON
+	wifi      map[string]json.RawMessage // ifname → wifi JSON
+	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
+	lastWG    string
+
+	// vlans is `bridge vlan show` by interface, vlanGlobals the
+	// per-bridge `bridge vlan global show`.  Both are replaced whole
+	// by refreshBridgeVLANs and never mutated in place.
+	vlans       map[string][]iface.VLANEntry
+	vlanGlobals map[string][]iface.VLANGlobal
+
+	// containers holds the interfaces moved into container network
+	// namespaces, by configured name, appended to the document since
+	// the host link dump no longer has them.
+	containers map[string]json.RawMessage
+	lastCtr    string
+
+	// vlanEvents tells whether the RTNLGRP_BRVLAN subscription is up;
+	// without it the VLAN table follows bridge link events only.
+	vlanEvents bool
+
+	lastOperStatus map[string]string
+	// lastChange stamps the operstate transitions seen since start.
+	// Kept as time.Time for the monotonic reading: the wall clock is
+	// derived at GET time, so a later NTP step corrects old stamps.
+	lastChange map[string]time.Time
+
+	// stpMu guards lastSTP, a fingerprint of the most recent mstpd STP
+	// query, letting the periodic poll rebuild only on actual change.
+	stpMu   sync.Mutex
+	lastSTP string
+}
+
+// coalesceDelay is how long the event loop collects further netlink
+// events before rebuilding the document once for all of them.
+const coalesceDelay = 20 * time.Millisecond
+
+const (
+	// redumpSettle lets a burst of failures and the batch restart that
+	// caused them settle before one re-dump, redumpRetry follows a
+	// failed one.
+	redumpSettle = 200 * time.Millisecond
+	redumpRetry  = 2 * time.Second
+)
+
+// NETLINK_ROUTE multicast groups without a netlink library binding.
+const (
+	rtnlgrpMDB    = unix.RTNLGRP_MDB    // bridge multicast database
+	rtnlgrpBRVLAN = unix.RTNLGRP_BRVLAN // bridge VLAN table (kernel 5.6+)
+)
+
+// An MDB notification is a struct br_port_msg followed by either an
+// MDBA_MDB or an MDBA_ROUTER attribute (linux/if_bridge.h).
+const (
+	sizeofBrPortMsg = 8
+	mdbaRouter      = 2
+)
+
+// New creates a netlink monitor backed by ip/bridge batch query workers.
+// linkBatch should include -s -d flags; addrBatch should include -d only
+// (no -s, which causes multi-line output for link commands).
+func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
+	return &NLMonitor{
+		linkBatch:      linkBatch,
+		addrBatch:      addrBatch,
+		neighBatch:     neighBatch,
+		brBatch:        brBatch,
+		tree:           t,
+		fc:             fc,
+		log:            log,
+		initDone:       make(chan struct{}),
+		redumpCh:       make(chan struct{}, 1),
+		mdb:            make(map[string]json.RawMessage),
+		rtrPorts:       make(map[string][]string),
+		ethernet:       make(map[string]json.RawMessage),
+		wifi:           make(map[string]json.RawMessage),
+		wireguard:      make(map[string]json.RawMessage),
+		containers:     make(map[string]json.RawMessage),
+		lastOperStatus: make(map[string]string),
+		lastChange:     make(map[string]time.Time),
+	}
+}
+
+// SetEthRefresh sets an optional callback used to refresh ethtool data
+// when an ethernet interface sees a link event.
+func (m *NLMonitor) SetEthRefresh(fn func(string)) {
+	m.ethRefresh = fn
+}
+
+// SetLinkSetChange sets an optional callback run when an interface
+// appears, goes away or is renamed.
+func (m *NLMonitor) SetLinkSetChange(fn func()) {
+	m.linkSet = fn
+}
+
+// SetQuerierSource sets an optional function asked for mcd's querier
+// state on every GET.
+func (m *NLMonitor) SetQuerierSource(fn func() []mcd.Querier) {
+	m.queriers = fn
+}
+
+func (m *NLMonitor) linkSetChanged() {
+	if m.linkSet != nil {
+		m.linkSet()
+	}
+}
+
+// WaitReady returns a channel that is closed after initialDump completes.
+func (m *NLMonitor) WaitReady() <-chan struct{} {
+	return m.initDone
+}
+
+// SetEthernetData updates the staged ethernet data for an interface
+// and triggers a full rebuild of the YANG document.
+func (m *NLMonitor) SetEthernetData(ifname string, data json.RawMessage) {
+	m.mu.Lock()
+	m.ethernet[ifname] = data
+	m.mu.Unlock()
+	m.rebuild()
+}
+
+// SetWifiData updates the staged wifi data for an interface
+// and triggers a full rebuild of the YANG document.
+func (m *NLMonitor) SetWifiData(ifname string, data json.RawMessage) {
+	m.mu.Lock()
+	m.wifi[ifname] = data
+	m.mu.Unlock()
+	m.rebuild()
+}
+
+// SetContainerInterfaces replaces the interfaces found in container
+// network namespaces, by configured name.  The document is rebuilt only
+// when something changed.
+func (m *NLMonitor) SetContainerInterfaces(data map[string]json.RawMessage) {
+	var b strings.Builder
+	writeSortedRaw(&b, "c", data)
+	fp := b.String()
+
+	m.mu.Lock()
+	changed := fp != m.lastCtr
+	m.lastCtr = fp
+	m.containers = copyStringMap(data)
+	if m.containers == nil {
+		m.containers = make(map[string]json.RawMessage)
+	}
+	m.mu.Unlock()
+
+	if changed {
+		m.rebuild()
+	}
+}
+
+// SetWireguardAll replaces the WireGuard peer-status data of every
+// interface, so a tunnel that lost its last peer loses its status too.
+// The document is rebuilt only when something changed.
+func (m *NLMonitor) SetWireguardAll(data map[string]json.RawMessage) {
+	var b strings.Builder
+	writeSortedRaw(&b, "w", data)
+	fp := b.String()
+
+	m.mu.Lock()
+	changed := fp != m.lastWG
+	m.lastWG = fp
+	m.wireguard = copyStringMap(data)
+	if m.wireguard == nil {
+		m.wireguard = make(map[string]json.RawMessage)
+	}
+	m.mu.Unlock()
+
+	if changed {
+		m.rebuild()
+	}
+}
+
+// Links returns a copy of the current staged links data.
+func (m *NLMonitor) Links() json.RawMessage {
+	m.mu.Lock()
+	cp := append(json.RawMessage{}, m.links...)
+	m.mu.Unlock()
+	return cp
+}
+
+// Run starts the netlink monitor loop and returns on context
+// cancellation, channel closure, or subscription errors.  The netlink
+// library ends a subscription on any receive error, ENOBUFS included,
+// so every error means resubscribe and re-dump: return and let the
+// caller restart us.
+func (m *NLMonitor) Run(ctx context.Context) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	errorCallback := func(err error) {
+		if err == nil {
+			return
+		}
+		if strings.Contains(err.Error(), syscall.ENOBUFS.Error()) {
+			m.log.Warn("netlink events dropped, resubscribing", "err", err)
+		} else {
+			m.log.Error("netlink subscription error", "err", err)
+		}
+		cancel()
+	}
+
+	linkCh := make(chan netlink.LinkUpdate, 64)
+	addrCh := make(chan netlink.AddrUpdate, 64)
+	neighCh := make(chan netlink.NeighUpdate, 64)
+	mdbCh := make(chan struct{}, 32)
+
+	if err := netlink.LinkSubscribeWithOptions(linkCh, done, netlink.LinkSubscribeOptions{
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
+	}); err != nil {
+		return fmt.Errorf("subscribe link updates: %w", err)
+	}
+	if err := netlink.AddrSubscribeWithOptions(addrCh, done, netlink.AddrSubscribeOptions{
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
+	}); err != nil {
+		return fmt.Errorf("subscribe addr updates: %w", err)
+	}
+	if err := netlink.NeighSubscribeWithOptions(neighCh, done, netlink.NeighSubscribeOptions{
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
+	}); err != nil {
+		return fmt.Errorf("subscribe neigh updates: %w", err)
+	}
+	if err := m.subscribeRtnlGroup(runCtx, rtnlgrpMDB, mdbCh, errorCallback); err != nil {
+		return fmt.Errorf("subscribe bridge mdb updates: %w", err)
+	}
+	// A router port of a VLAN is only in the VLAN global options.
+	rtrCh := make(chan struct{}, 1)
+	if err := m.subscribeRtnlGroupFilter(runCtx, rtnlgrpMDB, isRouterMsg, rtrCh, errorCallback); err != nil {
+		return fmt.Errorf("subscribe bridge router port updates: %w", err)
+	}
+	// A nil channel is never ready, so the select below simply skips
+	// it when the kernel has no bridge VLAN group.
+	vlanCh := make(chan struct{}, 32)
+	m.vlanEvents = true
+	if err := m.subscribeRtnlGroup(runCtx, rtnlgrpBRVLAN, vlanCh, errorCallback); err != nil {
+		m.log.Warn("bridge vlan events unavailable, following link events only", "err", err)
+		m.vlanEvents = false
+		vlanCh = nil
+	}
+
+	if err := m.initialDump(); err != nil {
+		m.log.Error("initial dump failed", "err", err)
+	}
+	m.initDoneOnce.Do(func() { close(m.initDone) })
+
+	var flush, redump <-chan time.Time
+	for {
+		changed := false
+		select {
+		case <-runCtx.Done():
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return runCtx.Err()
+		case lu, ok := <-linkCh:
+			if !ok {
+				return fmt.Errorf("link update channel closed")
+			}
+			changed = m.handleLinkUpdate(lu)
+		case au, ok := <-addrCh:
+			if !ok {
+				return fmt.Errorf("addr update channel closed")
+			}
+			changed = m.handleAddrUpdate(au)
+		case nu, ok := <-neighCh:
+			if !ok {
+				return fmt.Errorf("neigh update channel closed")
+			}
+			changed = m.handleNeighUpdate(nu)
+		case _, ok := <-mdbCh:
+			if !ok {
+				return fmt.Errorf("bridge mdb update channel closed")
+			}
+			changed = m.handleMDBUpdate()
+		case _, ok := <-rtrCh:
+			if !ok {
+				return fmt.Errorf("bridge router port update channel closed")
+			}
+			changed = m.refreshBridgeVLANs()
+		case _, ok := <-vlanCh:
+			if !ok {
+				return fmt.Errorf("bridge vlan update channel closed")
+			}
+			changed = m.refreshBridgeVLANs()
+		case <-flush:
+			flush = nil
+			m.rebuild()
+		case <-m.redumpCh:
+			// Every event that hits a dead batch asks for this, so
+			// requests while one is pending are the same request.
+			if redump == nil {
+				redump = time.After(redumpSettle)
+			}
+		case <-redump:
+			redump = nil
+			if !m.batchesAlive() {
+				redump = time.After(redumpSettle)
+				break
+			}
+			m.log.Warn("re-dumping all interfaces")
+			if err := m.initialDump(); err != nil {
+				m.log.Error("re-dump failed, will retry", "err", err, "in", redumpRetry)
+				redump = time.After(redumpRetry)
+			}
+		}
+		if changed && flush == nil {
+			flush = time.After(coalesceDelay)
+		}
+	}
+}
+
+func (m *NLMonitor) initialDump() error {
+	linkRaw, err := m.query(m.linkBatch, "link show")
+	if err != nil {
+		return err
+	}
+	addrRaw, err := m.query(m.addrBatch, "addr show")
+	if err != nil {
+		return err
+	}
+	neighRaw, err := m.query(m.neighBatch, "neigh show")
+	if err != nil {
+		neighRaw = json.RawMessage(`[]`)
+	}
+	mdbRaw, err := m.query(m.brBatch, "mdb show")
+	if err != nil {
+		mdbRaw = json.RawMessage(`[]`)
+	}
+	m.log.Debug("initialDump", "linkBytes", len(linkRaw), "addrBytes", len(addrRaw), "neighBytes", len(neighRaw))
+	m.validateAddrData("initialDump", addrRaw)
+
+	m.mu.Lock()
+	m.links = linkRaw
+	m.addrs = addrRaw
+	m.neighs = neighRaw
+	m.mdb = mdbByBridge(mdbRaw)
+	m.rtrPorts = routerPorts(mdbRaw)
+	for _, row := range decodeRows(linkRaw) {
+		if name := rowString(row, "ifname"); name != "" {
+			if st := rowString(row, "operstate"); st != "" {
+				if prev, had := m.lastOperStatus[name]; had && prev != st {
+					m.lastChange[name] = time.Now()
+				}
+				m.lastOperStatus[name] = st
+			}
+		}
+	}
+	m.mu.Unlock()
+
+	m.refreshBridgeVLANs()
+	m.rebuild()
+
+	// Ports that are up when yangerd starts send no link event, so ask
+	// for their ethtool data here or they stay without speed and duplex.
+	if m.ethRefresh != nil {
+		for _, name := range ethernetNames(linkRaw, m.fc) {
+			m.ethRefresh(name)
+		}
+	}
+	return nil
+}
+
+// ethernetNames lists the interfaces in an `ip -json link` dump that
+// carry ethtool data.
+func ethernetNames(linkRaw json.RawMessage, fc iface.FileChecker) []string {
+	var rows []json.RawMessage
+	if json.Unmarshal(linkRaw, &rows) != nil {
+		return nil
+	}
+
+	var names []string
+	for _, row := range rows {
+		one := append(append(json.RawMessage{'['}, row...), ']')
+		if !iface.IsEthernet(one, fc) {
+			continue
+		}
+		var link struct {
+			Name string `json:"ifname"`
+		}
+		if json.Unmarshal(row, &link) == nil && link.Name != "" {
+			names = append(names, link.Name)
+		}
+	}
+	return names
+}
+
+func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
+	index := int(update.Index)
+	m.mu.Lock()
+	old := nameByIndex(m.links, index)
+	wasBridge := bridgeRelated(m.links, index)
+	m.mu.Unlock()
+
+	if update.Header.Type == syscall.RTM_DELLINK {
+		defer m.linkSetChanged()
+		changed := m.removeInterface(index)
+		if wasBridge {
+			m.refreshBridgeVLANs()
+		}
+		return changed
+	}
+
+	name, ok := linkNameFromUpdate(update)
+	if !ok || name == "" {
+		m.log.Warn("link update without interface name", "index", index)
+		return false
+	}
+	changed := m.refreshInterface(index, name)
+	if !changed {
+		return false
+	}
+
+	// The VLAN table has its own events; without them every change of
+	// a bridge or port may have moved VLANs, with them only a new or
+	// gone interface is worth the extra queries, as insurance.
+	m.mu.Lock()
+	isBridge := bridgeRelated(m.links, index)
+	m.mu.Unlock()
+	if (isBridge || wasBridge) && (!m.vlanEvents || old == "") {
+		m.refreshBridgeVLANs()
+	}
+	return true
+}
+
+// refreshBridgeVLANs re-reads the VLAN table of every interface and the
+// global VLAN options of every VLAN filtering bridge.  Reports whether
+// the document needs a rebuild.
+func (m *NLMonitor) refreshBridgeVLANs() bool {
+	raw, err := m.query(m.brBatch, "vlan show")
+	if err != nil {
+		if !errors.Is(err, ipbatch.ErrCommandFailed) {
+			return false
+		}
+		raw = nil
+	}
+	table := iface.ParseVLANTable(raw)
+
+	m.mu.Lock()
+	bridges := iface.Bridges(m.links)
+	m.mu.Unlock()
+
+	// A bridge whose query fails keeps the globals it had, the batch
+	// may have died between two queries and a re-dump follows.
+	m.mu.Lock()
+	previous := m.vlanGlobals
+	m.mu.Unlock()
+	globals := make(map[string][]iface.VLANGlobal)
+	for name, br := range bridges {
+		if !br.VLANFiltering || br.Index == 0 {
+			continue
+		}
+		raw, err := m.query(m.brBatch, "vlan global show dev "+devRef(br.Index))
+		if err != nil {
+			if old, ok := previous[name]; ok {
+				globals[name] = old
+			}
+			continue
+		}
+		globals[name] = iface.ParseVLANGlobals(raw)
+	}
+
+	m.mu.Lock()
+	m.vlans = table
+	m.vlanGlobals = globals
+	m.mu.Unlock()
+	return true
+}
+
+// bridgeRelated tells whether the staged link row of index is a bridge
+// or a bridge port.
+func bridgeRelated(links json.RawMessage, index int) bool {
+	want := jsonKey(index)
+	for _, row := range decodeRows(links) {
+		if !rowMatches(row, "ifindex", want) {
+			continue
+		}
+		var li struct {
+			Kind  string `json:"info_kind"`
+			Slave string `json:"info_slave_kind"`
+		}
+		json.Unmarshal(row["linkinfo"], &li)
+		return li.Kind == "bridge" || li.Slave == "bridge"
+	}
+	return false
+}
+
+func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
+	ifname, err := ifNameByIndex(update.LinkIndex)
+	if err != nil {
+		m.log.Debug("addr update: interface gone", "index", update.LinkIndex, "err", err)
+		return false
+	}
+
+	raw, err := m.query(m.addrBatch, "addr show dev "+devRef(update.LinkIndex))
+	if err != nil {
+		return false
+	}
+	if !m.validateAddrData("handleAddrUpdate/"+ifname, raw) {
+		m.log.Error("handleAddrUpdate: REFUSING to store invalid addr data", "ifname", ifname)
+		return false
+	}
+
+	m.mu.Lock()
+	m.addrs = replaceRows(m.addrs, "ifindex", update.LinkIndex, raw)
+	m.mu.Unlock()
+	return true
+}
+
+func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) bool {
+	// The FDB is listed by the get-forwarding-database action
+	if isBridgeFDB(update) {
+		return false
+	}
+
+	ifname, err := ifNameByIndex(update.LinkIndex)
+	if err != nil {
+		raw, err := m.query(m.neighBatch, "neigh show")
+		if err != nil {
+			return false
+		}
+		m.mu.Lock()
+		m.neighs = raw
+		m.mu.Unlock()
+		return true
+	}
+
+	raw, err := m.query(m.neighBatch, "neigh show dev "+devRef(update.LinkIndex))
+	if err != nil {
+		return false
+	}
+	rows := withField(raw, "dev", ifname)
+
+	m.mu.Lock()
+	m.neighs = replaceRows(m.neighs, "dev", ifname, rows)
+	m.mu.Unlock()
+	return true
+}
+
+func (m *NLMonitor) handleMDBUpdate() bool {
+	raw, err := m.query(m.brBatch, "mdb show")
+	if err != nil {
+		return false
+	}
+
+	m.mu.Lock()
+	m.mdb = mdbByBridge(raw)
+	m.rtrPorts = routerPorts(raw)
+	m.mu.Unlock()
+	return true
+}
+
+// removeInterface purges all staged data for the interface at index.
+func (m *NLMonitor) removeInterface(index int) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	name := nameByIndex(m.links, index)
+	m.links = replaceRows(m.links, "ifindex", index, nil)
+	m.addrs = replaceRows(m.addrs, "ifindex", index, nil)
+	// Link and address events arrive on separate channels, so the delete
+	// of an old interface can be handled after a new one took its name.
+	if name != "" && !nameInUse(m.links, name) {
+		m.forgetName(name)
+	}
+	m.log.Debug("removeInterface", "index", index, "ifname", name)
+	return true
+}
+
+// forgetName drops everything staged under an interface name.  Caller
+// holds m.mu.
+func (m *NLMonitor) forgetName(name string) {
+	m.neighs = replaceRows(m.neighs, "dev", name, nil)
+	delete(m.mdb, name)
+	delete(m.rtrPorts, name)
+	delete(m.vlans, name)
+	delete(m.vlanGlobals, name)
+	delete(m.ethernet, name)
+	delete(m.wifi, name)
+	delete(m.wireguard, name)
+	delete(m.lastOperStatus, name)
+	delete(m.lastChange, name)
+}
+
+// batchesAlive tells whether every batch subprocess is up, so a re-dump
+// can succeed.
+func (m *NLMonitor) batchesAlive() bool {
+	for _, b := range []*ipbatch.Batch{m.linkBatch, m.addrBatch, m.neighBatch, m.brBatch} {
+		if b != nil && !b.Alive() {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *NLMonitor) requestRedump() {
+	select {
+	case m.redumpCh <- struct{}{}:
+	default:
+	}
+}
+
+func (m *NLMonitor) refreshInterface(index int, name string) bool {
+	linkRaw, err := m.query(m.linkBatch, "link show dev "+name)
+	if errors.Is(err, ipbatch.ErrCommandFailed) {
+		if _, gone := net.InterfaceByIndex(index); gone != nil {
+			return m.removeInterface(index) // gone before we asked
+		}
+		// Still there: ip resolved the name from its cache, to an
+		// interface that had it before.  See devRef.
+		m.log.Debug("link query failed for a live interface, refreshing ip", "ifname", name)
+		if rerr := m.linkBatch.Refresh(); rerr != nil {
+			m.log.Warn("refreshing ip batch failed", "err", rerr)
+			return false
+		}
+		linkRaw, err = m.query(m.linkBatch, "link show dev "+name)
+	}
+	if err != nil {
+		return false
+	}
+	if !linkRowFor(linkRaw, index) {
+		// ip prints the object before it checks the message, so a
+		// link racing a delete or rename can come back as [{}].
+		m.log.Warn("link query returned no row for the interface, re-dumping", "ifname", name, "ifindex", index)
+		m.requestRedump()
+		return false
+	}
+
+	addrRaw, err := m.query(m.addrBatch, "addr show dev "+devRef(index))
+	if err != nil {
+		addrRaw = nil
+	}
+	if addrRaw != nil && !m.validateAddrData("refreshInterface/"+name, addrRaw) {
+		m.log.Error("refreshInterface: REFUSING to store invalid addr data", "ifname", name)
+		addrRaw = nil
+	}
+
+	m.mu.Lock()
+	old := nameByIndex(m.links, index)
+	if old != "" && old != name {
+		m.log.Info("interface renamed", "from", old, "to", name)
+		if !nameInUse(replaceRows(m.links, "ifindex", index, nil), old) {
+			m.forgetName(old)
+		}
+	}
+	m.updateOperStatus(name, linkRaw)
+	m.links = replaceRows(m.links, "ifindex", index, linkRaw)
+	if addrRaw != nil {
+		m.addrs = replaceRows(m.addrs, "ifindex", index, addrRaw)
+	}
+	m.mu.Unlock()
+
+	if old != name {
+		m.linkSetChanged()
+	}
+	if m.ethRefresh != nil && iface.IsEthernet(linkRaw, m.fc) {
+		m.ethRefresh(name)
+	}
+	return true
+}
+
+// rebuild runs iface.Transform on all staged data, merges augments
+// (ethernet, wifi, bridge mdb/vlans, STP, WireGuard), appends the
+// container network interfaces and stores the result.
+// Caller must NOT hold m.mu.
+func (m *NLMonitor) rebuild() {
+	m.mu.Lock()
+	linksCopy := append(json.RawMessage{}, m.links...)
+	addrsCopy := append(json.RawMessage{}, m.addrs...)
+	neighsCopy := append(json.RawMessage{}, m.neighs...)
+	doc := iface.Transform(linksCopy, addrsCopy, neighsCopy, m.fc)
+	aug := augments{
+		ethernet:    copyStringMap(m.ethernet),
+		wifi:        copyStringMap(m.wifi),
+		mdb:         copyStringMap(m.mdb),
+		rtrPorts:    maps.Clone(m.rtrPorts),
+		wireguard:   copyStringMap(m.wireguard),
+		vlans:       maps.Clone(m.vlans),
+		vlanGlobals: maps.Clone(m.vlanGlobals),
+	}
+	ctr := copyStringMap(m.containers)
+	m.mu.Unlock()
+
+	aug.bridges = iface.Bridges(linksCopy)
+	resolver := stpquery.NewLinksIfIndexResolver(linksCopy)
+	aug.bridgeSTP, aug.portSTP = stpquery.Query(linksCopy, resolver)
+
+	doc = mergeAugments(doc, aug)
+	doc = appendInterfaces(doc, ctr)
+	m.tree.Set(treeKey, doc)
+}
+
+// RefreshSTP re-queries mstpd and rebuilds only when STP data changed.
+// mstpd's control socket is request/response with no event channel, and
+// the bridge-level root-id settles via BPDU exchange without any netlink
+// event, so STP state must be polled to stay current.  An empty result
+// is a result too: mstpd going away must drop the stale STP data, and
+// its return must bring it back.
+func (m *NLMonitor) RefreshSTP() {
+	links := m.Links()
+	resolver := stpquery.NewLinksIfIndexResolver(links)
+	brSTP, ptSTP := stpquery.Query(links, resolver)
+
+	fp := stpFingerprint(brSTP, ptSTP)
+	m.stpMu.Lock()
+	changed := fp != m.lastSTP
+	m.lastSTP = fp
+	m.stpMu.Unlock()
+
+	if changed {
+		m.rebuild()
+	}
+}
+
+func stpFingerprint(brSTP, ptSTP map[string]json.RawMessage) string {
+	var b strings.Builder
+	writeSortedRaw(&b, "b", brSTP)
+	writeSortedRaw(&b, "p", ptSTP)
+	return b.String()
+}
+
+func writeSortedRaw(b *strings.Builder, prefix string, m map[string]json.RawMessage) {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		b.WriteString(prefix)
+		b.WriteByte(':')
+		b.WriteString(k)
+		b.WriteByte('=')
+		b.Write(m[k])
+		b.WriteByte('\n')
+	}
+}
+
+// augments is everything merged into the document iface.Transform
+// produced, keyed by interface name unless noted.
+type augments struct {
+	ethernet, wifi, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage
+
+	rtrPorts    map[string][]string           // bridge multicast router ports, by bridge
+	bridges     map[string]iface.BridgeInfo   // by bridge name, from the link dump
+	vlans       map[string][]iface.VLANEntry  // `bridge vlan show`, by interface
+	vlanGlobals map[string][]iface.VLANGlobal // `bridge vlan global show`, by bridge
+}
+
+func (a *augments) empty() bool {
+	return len(a.ethernet) == 0 && len(a.wifi) == 0 && len(a.mdb) == 0 &&
+		len(a.bridgeSTP) == 0 && len(a.portSTP) == 0 && len(a.wireguard) == 0 && len(a.bridges) == 0
+}
+
+// mergeAugments adds ethernet, wifi, and bridge data into the
+// complete ietf-interfaces document produced by iface.Transform().
+func mergeAugments(doc json.RawMessage, a augments) json.RawMessage {
+	if a.empty() {
+		return doc
+	}
+
+	// VLAN filtering bridges and their ports, the only ones whose PVID
+	// means anything.  The bridge's own PVID is that of its host port.
+	vlanPorts := make(map[string]bool)
+	for _, br := range a.bridges {
+		if !br.VLANFiltering {
+			continue
+		}
+		vlanPorts[br.Name] = true
+		for _, port := range br.Ports {
+			vlanPorts[port] = true
+		}
+	}
+
+	var root map[string]any
+	if err := json.Unmarshal(doc, &root); err != nil {
+		return doc
+	}
+
+	ifaceList, ok := root["interface"]
+	if !ok {
+		return doc
+	}
+	ifaceArr, ok := ifaceList.([]any)
+	if !ok {
+		return doc
+	}
+
+	for i, entry := range ifaceArr {
+		ifaceObj, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := ifaceObj["name"].(string)
+		if name == "" {
+			continue
+		}
+
+		if ethData, ok := a.ethernet[name]; ok {
+			var wrapper map[string]json.RawMessage
+			if err := json.Unmarshal(ethData, &wrapper); err == nil {
+				if ethRaw, ok := wrapper["ethernet"]; ok {
+					var ethObj any
+					if err := json.Unmarshal(ethRaw, &ethObj); err == nil {
+						ifaceObj["ieee802-ethernet-interface:ethernet"] = ethObj
+					}
+				}
+				if speedRaw, ok := wrapper["speed"]; ok {
+					var speed string
+					if err := json.Unmarshal(speedRaw, &speed); err == nil {
+						ifaceObj["speed"] = speed
+					}
+				}
+			}
+		}
+
+		if wifiData, ok := a.wifi[name]; ok {
+			var wifiObj any
+			if err := json.Unmarshal(wifiData, &wifiObj); err == nil {
+				ifaceObj["infix-interfaces:wifi"] = wifiObj
+			}
+		}
+
+		// The bridge type is a YANG choice: a VLAN filtering bridge
+		// carries its multicast state per VLAN, any other at the
+		// bridge level.  An MDB for a name the link dump does not
+		// call a bridge (the dump lagging a new bridge) is kept at
+		// the bridge level, as before.
+		mdbData, hasMDB := a.mdb[name]
+		br, isBridge := a.bridges[name]
+		switch {
+		case isBridge && br.VLANFiltering:
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			bridgeObj["aging-time"] = br.AgingTime
+			vlans := iface.BridgeVLANs(br, a.vlans, a.vlanGlobals[name], func(vid int) map[string]any {
+				return transformMDBVID(mdbData, vid)
+			})
+			bridgeObj["vlans"] = vlans
+		case isBridge:
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			bridgeObj["aging-time"] = br.AgingTime
+			mcast := map[string]any{"snooping": br.Snooping}
+			if ports := a.rtrPorts[name]; len(ports) > 0 {
+				mcast["router-ports"] = ports
+			}
+			bridgeObj["multicast"] = mcast
+			if mf := transformMDB(mdbData); mf != nil {
+				bridgeObj["multicast-filters"] = mf
+			}
+		case hasMDB:
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			if mf := transformMDB(mdbData); mf != nil {
+				bridgeObj["multicast-filters"] = mf
+			}
+		}
+
+		if vlanPorts[name] {
+			if vid, ok := iface.PVID(a.vlans[name]); ok {
+				ensureBridgePortAugment(ifaceObj)["pvid"] = vid
+			}
+		}
+
+		if stpData, ok := a.bridgeSTP[name]; ok {
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			var stpObj any
+			if err := json.Unmarshal(stpData, &stpObj); err == nil {
+				bridgeObj["stp"] = stpObj
+			}
+		}
+
+		if stpData, ok := a.portSTP[name]; ok {
+			bpObj := ensureBridgePortAugment(ifaceObj)
+			var stpObj any
+			if err := json.Unmarshal(stpData, &stpObj); err == nil {
+				deepMergeSTP(bpObj, stpObj)
+			}
+		}
+
+		if wgData, ok := a.wireguard[name]; ok {
+			var wgObj any
+			if err := json.Unmarshal(wgData, &wgObj); err == nil {
+				ifaceObj["infix-interfaces:wireguard"] = wgObj
+			}
+		}
+
+		ifaceArr[i] = ifaceObj
+	}
+
+	out, err := json.Marshal(root)
+	if err != nil {
+		return doc
+	}
+	return json.RawMessage(out)
+}
+
+// appendInterfaces adds the container network interfaces to the
+// document.  Their names are by construction absent from the host link
+// list; one that is not (a collection older than the interface's return
+// to the host) is skipped rather than duplicating a list key.
+func appendInterfaces(doc json.RawMessage, extra map[string]json.RawMessage) json.RawMessage {
+	if len(extra) == 0 {
+		return doc
+	}
+
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(doc, &root); err != nil {
+		return doc
+	}
+	var list []json.RawMessage
+	if json.Unmarshal(root["interface"], &list) != nil {
+		list = nil
+	}
+
+	present := make(map[string]bool, len(list))
+	for _, entry := range list {
+		var head struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(entry, &head) == nil {
+			present[head.Name] = true
+		}
+	}
+
+	names := make([]string, 0, len(extra))
+	for name := range extra {
+		if !present[name] && len(extra[name]) > 0 {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return doc
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		list = append(list, extra[name])
+	}
+
+	merged, err := json.Marshal(list)
+	if err != nil {
+		return doc
+	}
+	if root == nil {
+		root = make(map[string]json.RawMessage)
+	}
+	root["interface"] = merged
+	out, err := json.Marshal(root)
+	if err != nil {
+		return doc
+	}
+	return out
+}
+
+// ensureBridgeAugment returns the bridge augment object within an
+// interface, creating it if necessary.
+func ensureBridgeAugment(ifaceObj map[string]any) map[string]any {
+	key := "infix-interfaces:bridge"
+	if existing, ok := ifaceObj[key]; ok {
+		if m, ok := existing.(map[string]any); ok {
+			return m
+		}
+	}
+	bridgeObj := map[string]any{}
+	ifaceObj[key] = bridgeObj
+	return bridgeObj
+}
+
+func ensureBridgePortAugment(ifaceObj map[string]any) map[string]any {
+	key := "infix-interfaces:bridge-port"
+	if existing, ok := ifaceObj[key]; ok {
+		if m, ok := existing.(map[string]any); ok {
+			return m
+		}
+	}
+	obj := map[string]any{}
+	ifaceObj[key] = obj
+	return obj
+}
+
+// deepMergeSTP merges mstpd STP data into the bridge-port augment.
+// The kernel already provides stp.cist.state via iface.Transform;
+// mstpd adds role, port-id, designated, etc.  We deep-merge to
+// preserve the kernel state field while adding mstpd fields.
+func deepMergeSTP(bpObj map[string]any, stpData any) {
+	stpMap, ok := stpData.(map[string]any)
+	if !ok {
+		return
+	}
+
+	existing, _ := bpObj["stp"].(map[string]any)
+	if existing == nil {
+		bpObj["stp"] = stpMap
+		return
+	}
+
+	if newCist, ok := stpMap["cist"].(map[string]any); ok {
+		existingCist, _ := existing["cist"].(map[string]any)
+		if existingCist == nil {
+			existing["cist"] = newCist
+		} else {
+			for k, v := range newCist {
+				existingCist[k] = v
+			}
+		}
+	}
+
+	for k, v := range stpMap {
+		if k != "cist" {
+			existing[k] = v
+		}
+	}
+}
+
+func copyStringMap(m map[string]json.RawMessage) map[string]json.RawMessage {
+	if len(m) == 0 {
+		return nil
+	}
+	cp := make(map[string]json.RawMessage, len(m))
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
+}
+
+func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
+	status, ok := extractOperStatus(raw)
+	if !ok {
+		return
+	}
+
+	prev, had := m.lastOperStatus[ifname]
+	m.lastOperStatus[ifname] = status
+	if !had || prev != status {
+		m.lastChange[ifname] = time.Now()
+	}
+	if had && prev != status {
+		m.log.Info("oper-status transition", "ifname", ifname, "from", prev, "to", status)
+	}
+}
+
+// OnDemand is the tree provider for the interface list.  It stamps
+// last-change on every interface whose operstate changed since start,
+// interfaces up since before yangerd started carry no stamp, and it
+// re-reads each description from sysfs.  The kernel sends no link event
+// for an alias set on an interface that is down, so the staged link row
+// may hold a stale description, while the sysfs file is always current.
+func (m *NLMonitor) OnDemand() json.RawMessage {
+	m.mu.Lock()
+	stamps := make(map[string]time.Time, len(m.lastChange))
+	for k, v := range m.lastChange {
+		stamps[k] = v
+	}
+	m.mu.Unlock()
+	if len(stamps) == 0 && m.fc == nil && m.queriers == nil {
+		return nil
+	}
+
+	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc, m.queriers)
+}
+
+func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker, queriers func() []mcd.Querier) json.RawMessage {
+	var root map[string]any
+	if err := json.Unmarshal(doc, &root); err != nil {
+		return nil
+	}
+	ifaceArr, ok := root["interface"].([]any)
+	if !ok {
+		return nil
+	}
+
+	uppers := vlanUppers(ifaceArr)
+	var qs []mcd.Querier
+	for _, entry := range ifaceArr {
+		ifaceObj, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := ifaceObj["name"].(string)
+		if at, ok := stamps[name]; ok {
+			// Elapsed time is monotonic, so the stamp follows the
+			// wall clock as it is now, not as it was when the link
+			// changed.
+			when := now.Add(-now.Sub(at))
+			ifaceObj["last-change"] = when.UTC().Format("2006-01-02T15:04:05+00:00")
+		}
+		refreshDescription(ifaceObj, name, fc)
+		if br, ok := ifaceObj["infix-interfaces:bridge"].(map[string]any); ok && queriers != nil {
+			if qs == nil {
+				qs = queriers()
+			}
+			applyQueriers(br, name, qs, uppers)
+		}
+	}
+
+	out, err := json.Marshal(map[string]any{"interface": ifaceArr})
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
+// vlanUppers maps each bridge to its VLAN interfaces, by VID.
+func vlanUppers(ifaceArr []any) map[string]map[int]string {
+	uppers := make(map[string]map[int]string)
+	for _, entry := range ifaceArr {
+		ifaceObj, _ := entry.(map[string]any)
+		vlan, _ := ifaceObj["infix-interfaces:vlan"].(map[string]any)
+		lower, _ := vlan["lower-layer-if"].(string)
+		id, _ := vlan["id"].(float64)
+		name, _ := ifaceObj["name"].(string)
+		if lower == "" || name == "" {
+			continue
+		}
+		if uppers[lower] == nil {
+			uppers[lower] = make(map[int]string)
+		}
+		uppers[lower][int(id)] = name
+	}
+	return uppers
+}
+
+// applyQueriers adds mcd's querier state to the multicast node of a
+// bridge, or of each of its VLANs.
+func applyQueriers(br map[string]any, name string, qs []mcd.Querier, uppers map[string]map[int]string) {
+	if mcast, ok := br["multicast"].(map[string]any); ok {
+		mcd.Apply(mcast, qs, name, 0, "")
+	}
+	vlans, _ := br["vlans"].(map[string]any)
+	list, _ := vlans["vlan"].([]any)
+	for _, v := range list {
+		vlan, _ := v.(map[string]any)
+		mcast, ok := vlan["multicast"].(map[string]any)
+		if !ok {
+			continue
+		}
+		vid, _ := vlan["vid"].(float64)
+		mcd.Apply(mcast, qs, name, int(vid), uppers[name][int(vid)])
+	}
+}
+
+// refreshDescription replaces the description with the current ifalias
+// from sysfs.  An interface it cannot read, gone or in another netns,
+// keeps what the link row said.
+func refreshDescription(ifaceObj map[string]any, name string, fc iface.FileChecker) {
+	if fc == nil || name == "" {
+		return
+	}
+	alias, err := fc.ReadFile("/sys/class/net/" + name + "/ifalias")
+	if err != nil {
+		return
+	}
+	if alias = strings.TrimRight(alias, "\n"); alias == "" {
+		delete(ifaceObj, "description")
+	} else {
+		ifaceObj["description"] = alias
+	}
+}
+
+// query runs one command on a batch worker.  A dead worker asks for a
+// re-dump once it is back; a rejected command is left to the caller.
+func (m *NLMonitor) query(b *ipbatch.Batch, command string) (json.RawMessage, error) {
+	raw, err := b.Query(command)
+	switch {
+	case err == nil:
+		return raw, nil
+	case errors.Is(err, ipbatch.ErrCommandFailed):
+		m.log.Debug("batch command failed", "command", command)
+	case errors.Is(err, ipbatch.ErrBatchDead):
+		m.log.Warn("batch dead", "command", command)
+		m.requestRedump()
+	default:
+		m.log.Error("batch query failed", "command", command, "err", err)
+	}
+	return nil, err
+}
+
+// subscribeRtnlGroup delivers a tick on ch for every message the kernel
+// multicasts on a NETLINK_ROUTE group.  Membership is added through
+// setsockopt rather than the bind mask nl.Subscribe builds, which has
+// room for groups 1-32 only; RTNLGRP_BRVLAN is 33.
+func (m *NLMonitor) subscribeRtnlGroup(ctx context.Context, group int, ch chan<- struct{}, errorCallback func(error)) error {
+	return m.subscribeRtnlGroupFilter(ctx, group, nil, ch, errorCallback)
+}
+
+// subscribeRtnlGroupFilter is subscribeRtnlGroup signalling only for
+// the messages match accepts, all when match is nil.
+func (m *NLMonitor) subscribeRtnlGroupFilter(ctx context.Context, group int, match func(syscall.NetlinkMessage) bool, ch chan<- struct{}, errorCallback func(error)) error {
+	sock, err := nl.Subscribe(syscall.NETLINK_ROUTE)
+	if err != nil {
+		return err
+	}
+	if err := unix.SetsockoptInt(sock.GetFd(), unix.SOL_NETLINK, unix.NETLINK_ADD_MEMBERSHIP, group); err != nil {
+		sock.Close()
+		return fmt.Errorf("join group %d: %w", group, err)
+	}
+
+	// Receive blocks until a message arrives; closing the socket on
+	// cancel is what ends it.  Close once, the fd number may be reused.
+	var once sync.Once
+	closeSock := func() { once.Do(sock.Close) }
+	stop := context.AfterFunc(ctx, closeSock)
+
+	go func() {
+		defer close(ch)
+		defer stop()
+		defer closeSock()
+
+		for {
+			msgs, _, err := sock.Receive()
+			if err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				errorCallback(err)
+				return
+			}
+			if !slices.ContainsFunc(msgs, func(msg syscall.NetlinkMessage) bool {
+				return match == nil || match(msg)
+			}) {
+				continue
+			}
+
+			select {
+			case ch <- struct{}{}:
+			default:
+			}
+		}
+	}()
+
+	return nil
+}
+
+func ifNameByIndex(index int) (string, error) {
+	iface, err := net.InterfaceByIndex(index)
+	if err != nil {
+		return "", err
+	}
+	return iface.Name, nil
+}
+
+func linkNameFromUpdate(update netlink.LinkUpdate) (string, bool) {
+	if update.Link != nil && update.Link.Attrs() != nil && update.Link.Attrs().Name != "" {
+		return update.Link.Attrs().Name, true
+	}
+	if update.Index <= 0 {
+		return "", false
+	}
+	name, err := ifNameByIndex(int(update.Index))
+	if err != nil {
+		return "", false
+	}
+	return name, true
+}
+
+func isBridgeFDB(update netlink.NeighUpdate) bool {
+	if update.Family == syscall.AF_BRIDGE {
+		return true
+	}
+	if update.MasterIndex > 0 {
+		return true
+	}
+	if update.Flags&netlink.NTF_MASTER != 0 {
+		return true
+	}
+	return false
+}
+
+// devRef names a device by index for a batch command.  iproute2 caches
+// name-to-index lookups for the life of the process, so once a name is
+// reused by a new interface, "dev wifi0" keeps resolving to the deleted
+// one.  "if<N>" bypasses that cache.  "link show" is the exception: it
+// sends the name to the kernel and does not accept this form.
+func devRef(index int) string {
+	return "if" + strconv.Itoa(index)
+}
+
+// validateAddrData checks whether a JSON response from "addr show" contains
+// addr_info entries.  "ip -json addr show" always includes an "addr_info"
+// array for every interface object; its absence means we got link-format
+// data instead.  Returns true if the data looks valid (has addr_info).
+func (m *NLMonitor) validateAddrData(caller string, raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		m.log.Error("addr data is EMPTY", "caller", caller)
+		return false
+	}
+
+	var rows []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		m.log.Error("addr data unmarshal failed", "caller", caller, "err", err, "raw", string(raw))
+		return false
+	}
+
+	if len(rows) == 0 {
+		// Empty array is valid — interface exists but has no addresses.
+		return true
+	}
+
+	for _, row := range rows {
+		ifnRaw, _ := row["ifname"]
+		var ifn string
+		json.Unmarshal(ifnRaw, &ifn)
+
+		if _, ok := row["addr_info"]; !ok {
+			m.log.Error("addr data MISSING addr_info — got link-format data",
+				"caller", caller,
+				"ifname", ifn,
+				"keys", mapKeys(row),
+				"raw", string(raw),
+			)
+			return false
+		}
+	}
+	return true
+}
+
+// mapKeys returns the JSON object keys from a map for diagnostic logging.
+func mapKeys(m map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func extractOperStatus(raw json.RawMessage) (string, bool) {
+	var rows []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &rows); err != nil || len(rows) == 0 {
+		return "", false
+	}
+	stateRaw, ok := rows[0]["operstate"]
+	if !ok {
+		return "", false
+	}
+	var state string
+	if err := json.Unmarshal(stateRaw, &state); err != nil || state == "" {
+		return "", false
+	}
+	return state, true
+}
+
+// decodeRows splits an ip/bridge -json array into raw rows.
+func decodeRows(raw json.RawMessage) []map[string]json.RawMessage {
+	var rows []map[string]json.RawMessage
+	if json.Unmarshal(raw, &rows) != nil {
+		return nil
+	}
+	return rows
+}
+
+func rowString(row map[string]json.RawMessage, key string) string {
+	var s string
+	if json.Unmarshal(row[key], &s) != nil {
+		return ""
+	}
+	return s
+}
+
+// rowMatches compares a row field against a Go value by its JSON form,
+// so an ifindex matches as a number and a dev name as a string.
+func rowMatches(row map[string]json.RawMessage, key, want string) bool {
+	v, ok := row[key]
+	return ok && string(v) == want
+}
+
+func jsonKey(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+// replaceRows drops every row of bulk whose key equals match, appends
+// the rows of replacement (nil to only drop), and returns the result.
+func replaceRows(bulk json.RawMessage, key string, match any, replacement json.RawMessage) json.RawMessage {
+	want := jsonKey(match)
+	var kept []json.RawMessage
+	if json.Unmarshal(bulk, &kept) != nil {
+		kept = nil
+	}
+
+	out := kept[:0]
+	for _, raw := range kept {
+		var row map[string]json.RawMessage
+		if json.Unmarshal(raw, &row) == nil && rowMatches(row, key, want) {
+			continue
+		}
+		out = append(out, raw)
+	}
+
+	var add []json.RawMessage
+	if json.Unmarshal(replacement, &add) == nil {
+		out = append(out, add...)
+	}
+	if out == nil {
+		out = []json.RawMessage{}
+	}
+
+	merged, err := json.Marshal(out)
+	if err != nil {
+		return bulk
+	}
+	return merged
+}
+
+// nameByIndex returns the staged ifname for index, "" if none.
+// linkRowFor tells whether raw is a link answer for index: one row with
+// that ifindex and a name.
+func linkRowFor(raw json.RawMessage, index int) bool {
+	rows := decodeRows(raw)
+	return len(rows) == 1 && rowMatches(rows[0], "ifindex", jsonKey(index)) &&
+		rowString(rows[0], "ifname") != ""
+}
+
+// nameInUse tells whether any staged link row carries name.
+func nameInUse(links json.RawMessage, name string) bool {
+	for _, row := range decodeRows(links) {
+		if rowString(row, "ifname") == name {
+			return true
+		}
+	}
+	return false
+}
+
+func nameByIndex(links json.RawMessage, index int) string {
+	want := jsonKey(index)
+	for _, row := range decodeRows(links) {
+		if rowMatches(row, "ifindex", want) {
+			return rowString(row, "ifname")
+		}
+	}
+	return ""
+}
+
+// withField sets key to value on every row of raw that lacks it.
+// `ip neigh show dev X` leaves out the dev it was asked about.
+func withField(raw json.RawMessage, key, value string) json.RawMessage {
+	rows := decodeRows(raw)
+	v := json.RawMessage(jsonKey(value))
+	for _, row := range rows {
+		if _, ok := row[key]; !ok {
+			row[key] = v
+		}
+	}
+	if rows == nil {
+		rows = []map[string]json.RawMessage{}
+	}
+	out, err := json.Marshal(rows)
+	if err != nil {
+		return raw
+	}
+	return out
+}
+
+// parseMDBEntries extracts the flat list of MDB entries from the
+// bridge batch output format: [{"mdb":[{entries...}],"router":{}}]
+func parseMDBEntries(raw json.RawMessage) []map[string]any {
+	var wrappers []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &wrappers); err != nil {
+		return nil
+	}
+
+	var all []map[string]any
+	for _, w := range wrappers {
+		mdbRaw, ok := w["mdb"]
+		if !ok {
+			continue
+		}
+		var entries []map[string]any
+		if err := json.Unmarshal(mdbRaw, &entries); err != nil {
+			continue
+		}
+		all = append(all, entries...)
+	}
+	return all
+}
+
+// isRouterMsg tells an MDB notification about a multicast router port
+// from one about a group.
+func isRouterMsg(msg syscall.NetlinkMessage) bool {
+	if len(msg.Data) < sizeofBrPortMsg {
+		return false
+	}
+	attrs, err := nl.ParseRouteAttr(msg.Data[sizeofBrPortMsg:])
+	if err != nil {
+		return false
+	}
+	return slices.ContainsFunc(attrs, func(a syscall.NetlinkRouteAttr) bool {
+		return a.Attr.Type == mdbaRouter
+	})
+}
+
+// routerPorts reads the multicast router ports of each bridge from
+// `bridge -d mdb show`, which prints them under "router".  With per-VLAN
+// snooping they are in the VLAN global options instead.
+func routerPorts(raw json.RawMessage) map[string][]string {
+	var wrappers []struct {
+		Router map[string]any `json:"router"`
+	}
+	if err := json.Unmarshal(raw, &wrappers); err != nil {
+		return nil
+	}
+	out := make(map[string][]string)
+	for _, w := range wrappers {
+		for br, list := range w.Router {
+			if ports := iface.RouterPorts(list); len(ports) > 0 {
+				out[br] = ports
+			}
+		}
+	}
+	return out
+}
+
+// mdbByBridge splits `bridge mdb show` into per-bridge entry lists.  A
+// bridge without entries is simply absent, which clears its filters.
+func mdbByBridge(raw json.RawMessage) map[string]json.RawMessage {
+	groups := make(map[string][]map[string]any)
+	for _, e := range parseMDBEntries(raw) {
+		if dev, _ := e["dev"].(string); dev != "" {
+			groups[dev] = append(groups[dev], e)
+		}
+	}
+	out := make(map[string]json.RawMessage, len(groups))
+	for dev, entries := range groups {
+		if b, err := json.Marshal(entries); err == nil {
+			out[dev] = b
+		}
+	}
+	return out
+}
+
+func transformMDB(raw json.RawMessage) map[string]any {
+	return transformMDBVID(raw, -1)
+}
+
+// transformMDBVID builds the multicast-filters container from the MDB
+// entries of one VLAN; a negative vid takes every entry.
+func transformMDBVID(raw json.RawMessage, vid int) map[string]any {
+	var entries []map[string]any
+	if err := json.Unmarshal(raw, &entries); err != nil || len(entries) == 0 {
+		return nil
+	}
+
+	type portEntry struct {
+		Port  string `json:"port"`
+		State string `json:"state"`
+	}
+
+	groups := make(map[string][]portEntry)
+	var order []string
+
+	for _, e := range entries {
+		grp, _ := e["grp"].(string)
+		port, _ := e["port"].(string)
+		state, _ := e["state"].(string)
+		if grp == "" || port == "" {
+			continue
+		}
+		if vid >= 0 && entryVID(e) != vid {
+			continue
+		}
+
+		if _, seen := groups[grp]; !seen {
+			order = append(order, grp)
+		}
+		groups[grp] = append(groups[grp], portEntry{
+			Port:  port,
+			State: mdbStateToYANG(state),
+		})
+	}
+
+	if len(groups) == 0 {
+		return nil
+	}
+
+	filters := make([]map[string]any, 0, len(order))
+	for _, grp := range order {
+		filters = append(filters, map[string]any{
+			"group": grp,
+			"ports": groups[grp],
+		})
+	}
+
+	return map[string]any{"multicast-filter": filters}
+}
+
+// entryVID is the VLAN of an MDB entry, 0 when it has none.
+func entryVID(e map[string]any) int {
+	switch v := e["vid"].(type) {
+	case float64:
+		return int(v)
+	case json.Number:
+		n, _ := v.Int64()
+		return int(n)
+	default:
+		return 0
+	}
+}
+
+func mdbStateToYANG(state string) string {
+	switch state {
+	case "temp":
+		return "temporary"
+	case "permanent":
+		return "permanent"
+	default:
+		return state
+	}
+}

@@ -1,7 +1,0 @@
-[ {
-        "ifname": "e6",
-        "eth-phy": {},
-        "eth-mac": {},
-        "eth-ctrl": {},
-        "rmon": {}
-    } ]

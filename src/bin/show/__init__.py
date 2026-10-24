@@ -200,6 +200,33 @@ def wifi_scan(radio: str) -> None:
         print(f"{ssid:<{width}.{width}}  {bssid:<17}  {security:<{sec}}  {signal:>8}  {channel:>7}")
 
 
+def fdb(args: List[str]) -> None:
+    """Run the get-forwarding-database action on every bridge and list the entries"""
+    data = get_json("/ietf-interfaces:interfaces", "running")
+    bridges = [iface["name"] for iface in
+               data.get("ietf-interfaces:interfaces", {}).get("interface", [])
+               if iface.get("type") == "infix-if-type:bridge"]
+
+    entries = {}
+    for br in bridges:
+        xpath = (f"/ietf-interfaces:interfaces/interface[name='{br}']"
+                 "/infix-interfaces:bridge/get-forwarding-database")
+        result = subprocess.run(["rpc", "-j", xpath], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"{br}: {result.stderr.strip() or 'reading the forwarding database failed'}")
+            continue
+        try:
+            entries[br] = find_lists(json.loads(result.stdout), "entry", "address")
+        except json.JSONDecodeError:
+            entries[br] = []
+
+    if RAW_OUTPUT:
+        print(json.dumps(entries, indent=2))
+        return
+
+    cli_pretty({"bridges": entries}, "show-bridge-fdb", *args)
+
+
 def channel_survey(radio: str, passive: bool) -> None:
     """Run the channel-survey action on a WiFi radio and render the channel map"""
     out = radio_action(radio, "channel-survey", "Channel survey",
@@ -862,7 +889,7 @@ def nacm(args: List[str]) -> None:
         print(f'Error: Access denied because "{user}" NACM authorization failed.')
         return
 
-    # Fetch user data from operational (includes shell and authorized-key from yanger)
+    # Fetch user data from operational (includes shell and authorized-key from yangerd)
     user_oper = get_json("/ietf-system:system/authentication", quiet=True)
 
     if user_oper:
@@ -938,6 +965,7 @@ def execute_command(command: str, args: List[str]):
         'boot-order': boot_order,
         'container': container,
         'dhcp': dhcp,
+        'fdb': fdb,
         'hardware': hardware,
         'interface': interface,
         'keystore': keystore,

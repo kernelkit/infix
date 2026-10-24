@@ -13,8 +13,89 @@
         }
       },
       {
-        "infix-hardware:vpd-data": {},
-        "name": "vpd-product"
+        "class": "infix-hardware:wifi",
+        "description": "WiFi Radio",
+        "infix-hardware:wifi-radio": {
+          "bands": [
+            {
+              "band": "0",
+              "he-capable": true,
+              "ht-capable": true,
+              "name": "2.4 GHz"
+            },
+            {
+              "band": "1",
+              "he-capable": true,
+              "ht-capable": true,
+              "name": "5 GHz",
+              "vht-capable": true
+            }
+          ],
+          "driver": "mac80211_hwsim",
+          "max-interfaces": {
+            "ap": 2048
+          },
+          "max-txpower": 0,
+          "num-virtual-interfaces": 0,
+          "supported-channels": [
+            15,
+            165
+          ]
+        },
+        "mfg-name": "Virtual (hwsim)",
+        "name": "radio0"
+      },
+      {
+        "class": "infix-hardware:wifi",
+        "description": "WiFi Radio",
+        "infix-hardware:wifi-radio": {
+          "bands": [
+            {
+              "band": "0",
+              "he-capable": true,
+              "ht-capable": true,
+              "name": "2.4 GHz"
+            },
+            {
+              "band": "1",
+              "he-capable": true,
+              "ht-capable": true,
+              "name": "5 GHz",
+              "vht-capable": true
+            }
+          ],
+          "driver": "mac80211_hwsim",
+          "max-interfaces": {
+            "ap": 2048
+          },
+          "max-txpower": 0,
+          "num-virtual-interfaces": 0,
+          "supported-channels": [
+            15,
+            165
+          ]
+        },
+        "mfg-name": "Virtual (hwsim)",
+        "name": "radio1"
+      },
+      {
+        "class": "infix-hardware:usb-device",
+        "hardware-rev": "0.00",
+        "infix-hardware:usb-device": {
+          "authorized": false,
+          "product-id": "0001",
+          "speed": "480.0",
+          "usb-version": "2.00",
+          "vendor-id": "46f4"
+        },
+        "mfg-name": "QEMU",
+        "model-name": "QEMU USB HARDDRIVE",
+        "name": "usb-1-1",
+        "parent": "usb1",
+        "serial-num": "1-0000:00:0d.0-1",
+        "uri": [
+          "usb:///sys/bus/usb/devices/1-1"
+        ]
       },
       {
         "class": "infix-hardware:usb",
@@ -26,55 +107,6 @@
         }
       },
       {
-        "class": "infix-hardware:usb-device",
-        "hardware-rev": "6.63",
-        "infix-hardware:usb-device": {
-          "authorized": true,
-          "interface": [
-            {
-              "class": "hub",
-              "number": 0
-            }
-          ],
-          "product-id": "0610",
-          "speed": "480",
-          "usb-version": "2.00",
-          "vendor-id": "05e3"
-        },
-        "mfg-name": "GenesysLogic",
-        "model-name": "USB2.1 Hub",
-        "name": "usb-1-1",
-        "parent": "usb1",
-        "uri": [
-          "usb:///sys/bus/usb/devices/1-1"
-        ]
-      },
-      {
-        "class": "infix-hardware:usb-device",
-        "hardware-rev": "1.00",
-        "infix-hardware:usb-device": {
-          "authorized": false,
-          "interface": [
-            {
-              "class": "mass-storage",
-              "number": 0
-            }
-          ],
-          "product-id": "5581",
-          "speed": "480",
-          "usb-version": "3.20",
-          "vendor-id": "0781"
-        },
-        "mfg-name": "SanDisk",
-        "model-name": "Ultra",
-        "name": "usb-1-1.2",
-        "parent": "usb1",
-        "serial-num": "4C530001230920115031",
-        "uri": [
-          "usb:///sys/bus/usb/devices/1-1.2"
-        ]
-      },
-      {
         "class": "infix-hardware:usb",
         "name": "usb2",
         "state": {
@@ -82,6 +114,10 @@
           "oper-state": "enabled",
           "usage-state": "idle"
         }
+      },
+      {
+        "class": "infix-hardware:vpd",
+        "name": "vpd-product"
       }
     ]
   },
@@ -89,7 +125,7 @@
     "authentication": {
       "user": [
         {
-          "infix-system:shell": "infix-system:bash",
+          "infix-system:shell": "bash",
           "name": "admin",
           "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
         }
@@ -102,19 +138,8 @@
   },
   "ietf-system:system-state": {
     "clock": {
-      "boot-datetime": "2026-01-02T20:42:11+00:00",
-      "current-datetime": "2026-01-02T20:43:23+00:00"
-    },
-    "infix-system:dns-resolver": {
-      "options": {},
-      "search": [],
-      "server": [
-        {
-          "address": "192.168.2.1",
-          "interface": "e7",
-          "origin": "dhcp"
-        }
-      ]
+      "boot-datetime": "2026-10-24T17:43:49+00:00",
+      "current-datetime": "2026-10-24T17:44:47+00:00"
     },
     "infix-system:ntp": {
       "sources": {
@@ -123,21 +148,21 @@
             "address": "192.168.1.1",
             "mode": "server",
             "poll": 6,
-            "state": "candidate",
+            "state": "selected",
             "stratum": 1
           },
           {
             "address": "192.168.2.1",
             "mode": "server",
             "poll": 6,
-            "state": "candidate",
+            "state": "unusable",
             "stratum": 1
           },
           {
             "address": "192.168.3.1",
             "mode": "server",
             "poll": 6,
-            "state": "selected",
+            "state": "unusable",
             "stratum": 1
           }
         ]
@@ -148,43 +173,43 @@
         {
           "available": "0",
           "mount-point": "/",
-          "size": "142720",
-          "used": "142720"
+          "size": "172032",
+          "used": "172032"
         },
         {
-          "available": "79270",
+          "available": "100357",
           "mount-point": "/var",
-          "size": "86427",
-          "used": "281"
+          "size": "109461",
+          "used": "508"
         },
         {
-          "available": "12860",
+          "available": "12868",
           "mount-point": "/cfg",
           "size": "14073",
-          "used": "67"
+          "used": "59"
         },
         {
-          "available": "51072",
+          "available": "241028",
           "mount-point": "/run",
-          "size": "51200",
-          "used": "128"
+          "size": "241912",
+          "used": "884"
         },
         {
-          "available": "102160",
+          "available": "241908",
           "mount-point": "/tmp",
-          "size": "102400",
-          "used": "240"
+          "size": "241912",
+          "used": "4"
         }
       ],
       "load-average": {
-        "load-15min": "0.02",
-        "load-1min": "0.12",
-        "load-5min": "0.05"
+        "load-15min": "0.06",
+        "load-1min": "0.7",
+        "load-5min": "0.19"
       },
       "memory": {
-        "available": "225652",
-        "free": "134936",
-        "total": "355076"
+        "available": "309500",
+        "free": "123384",
+        "total": "483824"
       }
     },
     "infix-system:services": {
@@ -192,99 +217,121 @@
         {
           "description": "Device event daemon (udev)",
           "name": "udevd",
-          "pid": 1185,
+          "pid": 1290,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "24010752",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "55"
           },
           "status": "running"
         },
         {
-          "description": "D-Bus message bus daemon",
-          "name": "dbus",
-          "pid": 2248,
+          "description": "Checking software partitions",
+          "name": "slot-check",
+          "pid": 0,
           "statistics": {
             "memory-usage": "0",
+            "restart-count": 1,
+            "uptime": "0"
+          },
+          "status": "done"
+        },
+        {
+          "description": "D-Bus message bus daemon",
+          "name": "dbus",
+          "pid": 3559,
+          "statistics": {
+            "memory-usage": "1277952",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Configuration daemon",
           "name": "confd",
-          "pid": 3039,
+          "pid": 2748,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "31035392",
             "restart-count": 0,
-            "uptime": "1390"
-          },
-          "status": "running"
-        },
-        {
-          "description": "NETCONF server",
-          "name": "netopeer",
-          "pid": 3548,
-          "statistics": {
-            "memory-usage": "0",
-            "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "48"
           },
           "status": "running"
         },
         {
           "description": "DHCP/DNS proxy",
           "name": "dnsmasq",
-          "pid": 2249,
+          "pid": 3560,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "835584",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Getty on ttyS0",
+          "name": "tty:S0",
+          "pid": 3608,
+          "statistics": {
+            "memory-usage": "159744",
+            "restart-count": 0,
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Getty on hvc0",
           "name": "tty:hvc0",
-          "pid": 3559,
+          "pid": 3609,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "159744",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "LED daemon",
           "name": "iitod",
-          "pid": 2340,
+          "pid": 2675,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "782336",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "48"
           },
           "status": "running"
         },
         {
           "description": "CLI backend daemon",
           "name": "klishd",
-          "pid": 3560,
+          "pid": 3610,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "4075520",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
-          "description": "mDNS alias advertiser ",
+          "description": "",
           "name": "mdns-alias",
-          "pid": 3617,
+          "pid": 3611,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "548864",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "FRR MGMT daemon",
+          "name": "mgmtd",
+          "pid": 3612,
+          "statistics": {
+            "memory-usage": "9428992",
+            "restart-count": 0,
+            "uptime": "46"
           },
           "status": "running"
         },
@@ -300,18 +347,62 @@
           "status": "stopped"
         },
         {
-          "description": "Software update service",
-          "name": "rauc",
-          "pid": 3564,
+          "description": "Network browser",
+          "name": "netbrowse",
+          "pid": 3613,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "8224768",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
-          "description": "Update DNS configuration",
+          "description": "NETCONF server",
+          "name": "netopeer",
+          "pid": 3614,
+          "statistics": {
+            "memory-usage": "10641408",
+            "restart-count": 0,
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Network route daemon",
+          "name": "netd",
+          "pid": 3811,
+          "statistics": {
+            "memory-usage": "16859136",
+            "restart-count": 0,
+            "uptime": "45"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Software update service",
+          "name": "rauc",
+          "pid": 3617,
+          "statistics": {
+            "memory-usage": "4382720",
+            "restart-count": 0,
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Running rc.d scripts",
+          "name": "rcd",
+          "pid": 0,
+          "statistics": {
+            "memory-usage": "0",
+            "restart-count": 1,
+            "uptime": "0"
+          },
+          "status": "done"
+        },
+        {
+          "description": "",
           "name": "resolvconf",
           "pid": 0,
           "statistics": {
@@ -324,121 +415,165 @@
         {
           "description": "Status daemon",
           "name": "statd",
-          "pid": 3472,
+          "pid": 3632,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "6578176",
             "restart-count": 0,
-            "uptime": "1389"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Static routing daemon",
           "name": "staticd",
-          "pid": 3653,
+          "pid": 3789,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "2699264",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "45"
           },
           "status": "running"
         },
         {
           "description": "System log daemon",
           "name": "syslogd",
-          "pid": 2241,
+          "pid": 2579,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "868352",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "48"
           },
           "status": "running"
         },
         {
           "description": "System watchdog daemon",
           "name": "watchdogd",
-          "pid": 2242,
+          "pid": 2580,
           "statistics": {
             "memory-usage": "0",
             "restart-count": 0,
-            "uptime": "1390"
+            "uptime": "48"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Virtual WiFi medium (hwsim)",
+          "name": "wifimedium",
+          "pid": 3685,
+          "statistics": {
+            "memory-usage": "6610944",
+            "restart-count": 0,
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Operational data daemon",
+          "name": "yangerd",
+          "pid": 3686,
+          "statistics": {
+            "memory-usage": "71028736",
+            "restart-count": 0,
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Zebra routing daemon",
           "name": "zebra",
-          "pid": 3587,
+          "pid": 3760,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "8761344",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Avahi mDNS-SD daemon",
           "name": "mdns",
-          "pid": 3616,
+          "pid": 8812,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "2916352",
             "restart-count": 0,
-            "uptime": "1388"
-          },
-          "status": "running"
-        },
-        {
-          "description": "Chrony NTP v3/v4 daemon",
-          "name": "chronyd",
-          "pid": 3618,
-          "statistics": {
-            "memory-usage": "0",
-            "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "6"
           },
           "status": "running"
         },
         {
           "description": "LLDP daemon (IEEE 802.1ab)",
           "name": "lldpd",
-          "pid": 3633,
+          "pid": 3692,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "4386816",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "Web server",
           "name": "nginx",
-          "pid": 3635,
+          "pid": 3704,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "5267456",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "RESTCONF server",
           "name": "rousette",
-          "pid": 3636,
+          "pid": 3725,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "15839232",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
           },
           "status": "running"
         },
         {
           "description": "OpenSSH daemon",
           "name": "sshd",
-          "pid": 3641,
+          "pid": 3736,
           "statistics": {
-            "memory-usage": "0",
+            "memory-usage": "15736832",
             "restart-count": 0,
-            "uptime": "1388"
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Web terminal daemon (ttyd)",
+          "name": "ttyd",
+          "pid": 3746,
+          "statistics": {
+            "memory-usage": "2080768",
+            "restart-count": 0,
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Web management interface",
+          "name": "webui",
+          "pid": 3747,
+          "statistics": {
+            "memory-usage": "24076288",
+            "restart-count": 0,
+            "uptime": "46"
+          },
+          "status": "running"
+        },
+        {
+          "description": "Chrony NTP v3/v4 daemon",
+          "name": "chronyd",
+          "pid": 8818,
+          "statistics": {
+            "memory-usage": "884736",
+            "restart-count": 0,
+            "uptime": "6"
           },
           "status": "running"
         }
@@ -453,72 +588,63 @@
       "booted": "primary",
       "compatible": "infix-x86_64",
       "installer": {
-        "operation": "idle",
-        "progress": {
-          "percentage": 0
-        }
+        "operation": "idle"
       },
       "slot": [
         {
           "activated": {
             "count": 1,
-            "datetime": "2025-01-15T10:00:56Z"
+            "datetime": "2026-10-24T17:43:44+00:00"
           },
           "bootname": "secondary",
           "bundle": {
             "compatible": "infix-x86_64",
-            "version": "94cd526"
+            "version": "v26.09.0-325-gdd794c892-dirty"
           },
           "class": "rootfs",
           "installed": {
             "count": 1,
-            "datetime": "2025-01-15T10:00:56Z"
+            "datetime": "2026-10-24T17:43:44+00:00"
           },
           "name": "rootfs.1",
-          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
-          "size": "126205952",
+          "sha256": "c32665b874eda80a15fd6c156fb8b74def798a6577e5618e0d4b4c2c26bf2da0",
+          "size": "176037888",
           "state": "inactive"
         },
         {
           "activated": {
             "count": 1,
-            "datetime": "2025-01-15T10:00:56Z"
+            "datetime": "2026-10-24T17:43:44+00:00"
           },
           "bootname": "primary",
           "bundle": {
             "compatible": "infix-x86_64",
-            "version": "94cd526"
+            "version": "v26.09.0-325-gdd794c892-dirty"
           },
           "class": "rootfs",
           "installed": {
             "count": 1,
-            "datetime": "2025-01-15T10:00:56Z"
+            "datetime": "2026-10-24T17:43:44+00:00"
           },
           "name": "rootfs.0",
-          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
-          "size": "126205952",
+          "sha256": "c32665b874eda80a15fd6c156fb8b74def798a6577e5618e0d4b4c2c26bf2da0",
+          "size": "176037888",
           "state": "booted"
         },
         {
-          "activated": {},
           "bootname": "net",
-          "bundle": {},
           "class": "net",
-          "installed": {},
           "name": "net.0",
           "state": "inactive"
         }
       ],
-      "update": {
-        "reboot-pending": false
-      },
       "variant": ""
     },
     "platform": {
       "machine": "x86_64",
       "os-name": "Infix",
-      "os-release": "v25.11.0-135-g44d2af57-dirty",
-      "os-version": "v25.11.0-135-g44d2af57-dirty"
+      "os-release": "v26.09.0-325-gdd794c892-dirty",
+      "os-version": "v26.09.0-325-gdd794c892-dirty"
     }
   }
 }

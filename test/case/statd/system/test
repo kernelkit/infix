@@ -1,8 +1,8 @@
 #!/bin/sh
 
-yang_models="ietf-system ietf-hardware"
+oper_xpaths="/ietf-system:system /ietf-system:system-state /ietf-hardware:hardware"
 
-gen_test=ietf_system/ntp_client/test.py
+gen_test=system/ntp_client/test.py
 gen_iface=d3a
 
 cli_commands="show-ntp"

@@ -27,8 +27,8 @@ temp=${file}.tmp
 
 #
 # The (speed Gb/s, copper-T-implicit-duplex) → PMD table below is a subset
-# of the canonical map in src/statd/python/yanger/ietf_interfaces/ethernet.py
-# (_LINK_MODES, key by (port, speed, duplex)).  Migrate only covers the
+# of the canonical map in src/yangerd/internal/ethmonitor/ethmonitor.go
+# (linkModes, key by (port, speed, duplex)).  Migrate only covers the
 # copper-T cases that the old legacy syntax supported in the first place;
 # fiber/DAC pinning was never expressible via the deprecated speed leaf.
 #

@@ -2,7 +2,7 @@
    lo         loopback   [32mUP[39m          
               ipv4                   127.0.0.1/8 (static)
               ipv6                   ::1/128 (static)
-   br0        bridge     [33m[39m            vlan: 1u pvid: 1
+⇅  br0        bridge     [33m[39m            vlan: 1u pvid: 1
    │          ethernet               00:a0:85:00:03:00
    │          ipv4                   169.254.1.1/16 (random)
    │          ipv6                   fe80::2a0:85ff:fe00:300/64 (link-layer)
@@ -26,16 +26,22 @@
    └ e4                              
    e5         ethernet   [32mUP[39m          00:a0:85:00:03:05
               ipv6                   fe80::2a0:85ff:fe00:305/64 (link-layer)
-   e6         ethernet   [32mUP[39m          00:a0:85:00:03:06
+⇅  e6         ethernet   [32mUP[39m          00:a0:85:00:03:06
               ipv4                   10.1.1.101/24 (static)
               ipv6                   fe80::2a0:85ff:fe00:306/64 (link-layer)
    e7         ethernet   [32mUP[39m          00:a0:85:00:03:07
               ipv6                   fe80::2a0:85ff:fe00:307/64 (link-layer)
+   e8         ethernet   [32mUP[39m          00:a0:85:00:03:08
+              ipv6                   fe80::2a0:85ff:fe00:308/64 (link-layer)
+   radio0     ethernet   [32mUP[39m          00:a0:85:00:03:09
+              ipv6                   fe80::2a0:85ff:fe00:309/64 (link-layer)
+   radio1     ethernet   [32mUP[39m          00:a0:85:00:03:0a
+              ipv6                   fe80::2a0:85ff:fe00:30a/64 (link-layer)
 [100m   veth0a     container              container-A                            [0m
-   veth0b     veth       [32mUP[39m          e6:19:75:86:80:dd
+   veth0b     veth       [32mUP[39m          d2:ba:76:bf:e6:4e
 [100m   veth1a     container              container-A                            [0m
-   veth1b     veth       [32mUP[39m          3e:67:0f:15:24:14
+   veth1b     veth       [32mUP[39m          92:45:94:57:9c:0c
 [100m   veth2a     container              container-B                            [0m
-   veth2b     veth       [32mUP[39m          b2:fa:30:63:98:f0
+   veth2b     veth       [32mUP[39m          12:2b:ee:c7:d7:2f
 [100m   veth3a     container              container-B                            [0m
-   veth3b     veth       [32mUP[39m          b2:1c:fa:a7:45:eb
+   veth3b     veth       [32mUP[39m          3a:e0:b5:80:e8:41

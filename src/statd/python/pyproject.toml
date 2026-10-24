@@ -1,14 +1,10 @@
 [tool.poetry]
 name = "infix-yang-tools"
 version = "1.0"
-description = "Linux to infix-YANG"
+description = "CLI formatting of Infix operational data"
 license = "MIT"
 packages = [
-    { include = "yanger" },
-    { include = "cli_pretty" },
-    { include = "ospf_status" },
-    { include = "ospf6_status" },
-    { include = "rip_status" }
+    { include = "cli_pretty" }
 ]
 authors = [
   "KernelKit developers"
@@ -20,8 +16,4 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-yanger = "yanger.__main__:main"
 cli-pretty = "cli_pretty:main"
-ospf-status = "ospf_status:main"
-ospf6-status = "ospf6_status:main"
-rip-status = "rip_status.rip_status:main"

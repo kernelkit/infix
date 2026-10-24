@@ -604,3 +604,153 @@ int bridge_add_deps(struct lyd_node *cif)
 }
 
 /* BR */
+
+/* A switch port, whose self FDB entries are the switch's own FDB */
+static bool fdb_switch_port(const char *ifname)
+{
+	char buf[64];
+	FILE *fp;
+	bool ok;
+
+	fp = fopenf("r", "/sys/class/net/%s/phys_switch_id", ifname);
+	if (!fp)
+		return false;
+	ok = fgets(buf, sizeof(buf), fp) != NULL;
+	fclose(fp);
+
+	return ok;
+}
+
+static void fdb_add_entry(struct lyd_node *output, json_t *row, bool bridged)
+{
+	const char *mac, *port, *state;
+	struct lyd_node *entry;
+	bool offloaded = !bridged;
+	json_t *flags, *flag, *val;
+	char buf[32];
+	size_t i;
+
+	mac = json_string_value(json_object_get(row, "mac"));
+	port = json_string_value(json_object_get(row, "ifname"));
+
+	state = json_string_value(json_object_get(row, "state"));
+	if (state && !strcmp(state, "permanent"))
+		state = "local";
+	else if (!state || strcmp(state, "static"))
+		state = "dynamic";
+
+	flags = json_object_get(row, "flags");
+	json_array_foreach(flags, i, flag) {
+		if (json_is_string(flag) && !strcmp(json_string_value(flag), "offload"))
+			offloaded = true;
+	}
+
+	if (lyd_new_list2(output, NULL, "entry", NULL, LYD_NEW_VAL_OUTPUT, &entry)) {
+		ERROR("get-forwarding-database: failed adding %s", mac);
+		return;
+	}
+	lyd_new_term(entry, NULL, "address", mac, LYD_NEW_VAL_OUTPUT, NULL);
+
+	val = json_object_get(row, "vlan");
+	if (json_is_integer(val)) {
+		snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
+		lyd_new_term(entry, NULL, "vid", buf, LYD_NEW_VAL_OUTPUT, NULL);
+	}
+
+	lyd_new_term(entry, NULL, "port", port, LYD_NEW_VAL_OUTPUT, NULL);
+	lyd_new_term(entry, NULL, "state", state, LYD_NEW_VAL_OUTPUT, NULL);
+
+	val = json_object_get(row, "updated");
+	if (!strcmp(state, "dynamic") && json_is_integer(val)) {
+		snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
+		lyd_new_term(entry, NULL, "age", buf, LYD_NEW_VAL_OUTPUT, NULL);
+	}
+
+	lyd_new_term(entry, NULL, "offloaded", offloaded ? "true" : "false",
+		     LYD_NEW_VAL_OUTPUT, NULL);
+}
+
+/*
+ * The get-forwarding-database action.  The bridge's own entries come
+ * first, then the addresses its switch ports learned in hardware, the
+ * self entries of a port with a switch ID, unless the bridge already
+ * has them.  Permanent self entries are a port's own address list, and
+ * group addresses belong in the MDB, so both are left out.
+ */
+static int bridge_fdb_show(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+			   const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+			   struct lyd_node *output, void *priv)
+{
+	json_t *root, *row, *seen;
+	struct lyd_node *iface;
+	const char *brname;
+	json_error_t jerr;
+	unsigned int idx;
+	size_t i;
+	FILE *pp;
+	int pass;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	iface = lyd_parent(lyd_parent(input));
+	brname = iface ? lydx_get_cattr(iface, "name") : NULL;
+	idx = brname ? if_nametoindex(brname) : 0;
+	if (!idx)
+		return rpc_failed(session, "No such bridge");
+
+	pp = popenf("r", "bridge -j -s fdb show br if%u", idx);
+	if (!pp)
+		return rpc_failed(session, "Failed reading forwarding database");
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!json_is_array(root)) {
+		json_decref(root);
+		return rpc_failed(session, "Forwarding database returned no data");
+	}
+
+	seen = json_object();
+	for (pass = 0; pass < 2; pass++) {
+		json_array_foreach(root, i, row) {
+			const char *mac = json_string_value(json_object_get(row, "mac"));
+			const char *port = json_string_value(json_object_get(row, "ifname"));
+			const char *master = json_string_value(json_object_get(row, "master"));
+			const char *state = json_string_value(json_object_get(row, "state"));
+			bool bridged = master && !strcmp(master, brname);
+			char key[32];
+
+			if (!mac || !port || strtoul(mac, NULL, 16) & 1)
+				continue;
+			if (pass == 0 && !bridged)
+				continue;
+			if (pass == 1 && (bridged || (state && !strcmp(state, "permanent")) ||
+					  !fdb_switch_port(port)))
+				continue;
+
+			snprintf(key, sizeof(key), "%s/%lld", mac,
+				 json_integer_value(json_object_get(row, "vlan")));
+			if (json_object_get(seen, key))
+				continue;
+			json_object_set_new(seen, key, json_true());
+
+			fdb_add_entry(output, row, bridged);
+		}
+	}
+	json_decref(seen);
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+int bridge_rpc_init(struct confd *confd)
+{
+	int rc;
+
+	REGISTER_RPC_TREE(confd->session, IF_XPATH "/infix-interfaces:bridge/get-forwarding-database",
+			  bridge_fdb_show, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("Init bridge rpc failed: %s", sr_strerror(rc));
+	return rc;
+}

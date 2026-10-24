@@ -1,6 +1,6 @@
 #!/bin/sh
 
-yang_models="ietf-interfaces ietf-routing ietf-ospf infix-containers"
+oper_xpaths="/ietf-interfaces:interfaces /ietf-routing:routing /infix-containers:containers"
 
 gen_test=use_case/ospf_container/test.py
 gen_iface=d3a

@@ -1,12 +1,11 @@
 name               : veth0a
 type               : veth
-index              : 13
+index              : 20
 mtu                : 1500
 operational status : up
+last change        : in 1392 days and 5 hours
 ip forwarding      : disabled
 higher-layer-if    : veth0a.20
-physical address   : 6e:d0:98:c4:e7:ef
+physical address   : 5e:1f:58:41:e5:1a
 ipv4 addresses     :
 ipv6 addresses     :
-in-octets          : 299
-out-octets         : 17190

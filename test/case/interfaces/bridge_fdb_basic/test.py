@@ -3,8 +3,9 @@ r"""
 Bridge FDB basic
 
 Verify the unicast forwarding database (FDB) of a VLAN filtering bridge:
-the configured aging time, a static entry, and an address learned from
-traffic through the bridge, all in the operational datastore.
+the configured aging time, and a static entry and an address learned
+from traffic through the bridge, both listed by the
+get-forwarding-database action.
 
 ....
 

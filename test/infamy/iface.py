@@ -144,14 +144,27 @@ def get_bridge(target, bridge):
     return interface.get("bridge") or interface.get("infix-interfaces:bridge") or {}
 
 
+def bridge_fdb(target, bridge):
+    """Entries the get-forwarding-database action lists for bridge.
+
+    vid and age are integers and offloaded a boolean on both transports.
+    """
+    xpath = f"/ietf-interfaces:interfaces/interface[name='{bridge}']" \
+            "/infix-interfaces:bridge/get-forwarding-database"
+    entries = target.call_action_output(xpath).get("entry", [])
+    for entry in entries:
+        for key in ("vid", "age"):
+            if key in entry:
+                entry[key] = int(entry[key])
+        entry["offloaded"] = str(entry.get("offloaded")).lower() == "true"
+    return entries
+
+
 def bridge_fdb_entry(target, bridge, vid, address):
     """FDB entry for address in VLAN vid of bridge, None if missing"""
-    for vlan in get_bridge(target, bridge).get("vlans", {}).get("vlan", []):
-        if vlan["vid"] != vid:
-            continue
-        for entry in vlan.get("forwarding-database", {}).get("entry", []):
-            if entry["address"] == address:
-                return entry
+    for entry in bridge_fdb(target, bridge):
+        if entry.get("vid") == vid and entry["address"] == address:
+            return entry
     return None
 
 
@@ -194,6 +207,12 @@ def get_bridge_queriers(target, bridge, vid=None):
     mcast = _get_bridge_mcast(target, bridge, vid)
     queriers = mcast.get("multicast", {}).get("active-querier", [])
     return {q["family"]: q for q in queriers}
+
+
+def get_bridge_router_ports(target, bridge, vid=None):
+    """Fetch the multicast router ports of a bridge, or bridge VLAN"""
+    mcast = _get_bridge_mcast(target, bridge, vid)
+    return set(mcast.get("multicast", {}).get("router-ports", []))
 
 
 def get_bridge_querier_election(targets, family, bridge="br0", vid=None):

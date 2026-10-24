@@ -124,6 +124,7 @@ int netdag_gen_ip_neighs(struct dagger *net, FILE *ip, const char *proto,
 int bridge_mstpd_gen(struct lyd_node *cifs);
 int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
 int bridge_add_deps(struct lyd_node *cif);
+int bridge_rpc_init(struct confd *confd);
 /* if-bridge-mcd.c */
 int bridge_mcd_gen(struct lyd_node *cifs);
 /* if-bridge-port.c */

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 import infamy
-from infamy.util import parallel
+from infamy.util import parallel, until
+
+
+def booted(tgt):
+    data = tgt.get_data("/ietf-system:system-state") or {}
+    return data.get("system-state", {}).get("software", {}).get("booted")
+
 
 with infamy.Test() as test:
     with test.step("Discover topology and attach to available DUTs"):
@@ -19,8 +25,7 @@ with infamy.Test() as test:
     with test.step("Verify bootorder"):
         for name, tgt in duts.items():
             expected = env.ptop.get_expected_boot(name)
-            running  = tgt.get_data("/ietf-system:system-state")
-            running = running['system-state']['software']['booted']
+            running  = until(lambda: booted(tgt), 30)
             print(f"{name}: booted: {running} expected: {expected}")
 
             if running != expected:

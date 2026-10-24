@@ -1,8 +1,9 @@
 name               : gre-v6
 type               : gre
-index              : 20
+index              : 28
 mtu                : 1448
 operational status : up
+last change        : in 1392 days and 5 hours
 ip forwarding      : disabled
 ipv4 addresses     : 192.168.50.2/16 (static)
 ipv6 addresses     :

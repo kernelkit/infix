@@ -1,12 +1,6 @@
 ---
 # Tests in this suite can be run on localhost without a target environment
 
-- name:  statd-yanger
-  suite: statd/all.yaml
-  opts:
-    - yanger
-    - check
-
 - name:  statd-cli
   suite: statd/all.yaml
   opts:

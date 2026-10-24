@@ -978,6 +978,9 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		if (systemf("runlevel >/dev/null 2>&1"))
 			return SR_ERR_OK;
 
+		/* Polled operational data catches up with the new config */
+		finit_reload("yangerd");
+
 		if (systemf("initctl -b reload")) {
 			EMERG("initctl reload: failed applying new configuration!");
 			return SR_ERR_SYS;
@@ -1178,6 +1181,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = hardware_rpc_init(&confd);
+	if (rc)
+		goto err;
+
+	rc = bridge_rpc_init(&confd);
 	if (rc)
 		goto err;
 

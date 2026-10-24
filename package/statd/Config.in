@@ -1,12 +1,13 @@
 config BR2_PACKAGE_STATD
 	bool "statd"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS # yangerd
+	select BR2_PACKAGE_YANGERD
 	select BR2_PACKAGE_JANSSON
 	select BR2_PACKAGE_LIBEV
 	select BR2_PACKAGE_SYSREPO
 	select BR2_PACKAGE_LIBSRX
 	select BR2_PACKAGE_LIBITE
 	select BR2_PACKAGE_HOST_PYTHON3
-	select BR2_PACKAGE_DBUS_PYTHON
 	help
 	  Operational Status Daemon. Responsible for handling sysrepo
 	  operational run-time info. Such as interface state and address.

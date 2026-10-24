@@ -1,7 +1,11 @@
 [7m   DESTINATION                                     PREF NEXT-HOP                                 PROTO     UPTIME[0m
- * fe80::/64                                        0/0 e6                                       direct  06:44:31
- * fe80::/64                                        0/0 br0                                      direct  06:44:32
- * fe80::/64                                        0/0 e2                                       direct  06:44:34
- * fe80::/64                                        0/0 e7                                       direct  06:45:24
- * fe80::/64                                        0/0 e5                                       direct  06:45:24
->* fe80::/64                                        0/0 e1                                       direct  06:45:24
+>* ::1/128                                          0/0 lo                                       kernel  17:58:07
+ * fe80::/64                                        0/0 br0                                      direct  17:57:54
+ * fe80::/64                                        0/0 e6                                       direct  17:57:54
+ * fe80::/64                                        0/0 e5                                       direct  17:58:05
+ * fe80::/64                                        0/0 radio0                                   direct  17:58:05
+ * fe80::/64                                        0/0 e7                                       direct  17:58:05
+ * fe80::/64                                        0/0 e8                                       direct  17:58:06
+ * fe80::/64                                        0/0 radio1                                   direct  17:58:06
+ * fe80::/64                                        0/0 e2                                       direct  17:58:06
+>* fe80::/64                                        0/0 e1                                       direct  17:58:06

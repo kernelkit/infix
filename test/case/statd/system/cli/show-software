@@ -1,8 +1,8 @@
 Boot order : primary secondary net 
 
-[7mNAME       STATE     VERSION                DATE                     [0m
-primary    booted    94cd526                2025-01-15T10:00:56Z     
-secondary  inactive  94cd526                2025-01-15T10:00:56Z     
+[7mNAME       STATE     VERSION                        DATE                     [0m
+primary    booted    v26.09.0-325-gdd794c892-dirty  2026-10-24T17:43:44+00:00
+secondary  inactive  v26.09.0-325-gdd794c892-dirty  2026-10-24T17:43:44+00:00
 
 Software updates
   Source       : not configured

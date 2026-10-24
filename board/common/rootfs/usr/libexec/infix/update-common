@@ -1,7 +1,7 @@
 # Shared helpers for check-update and unattended-update.  Sourced, not run;
 # the caller sets TAG first.
 
-# Outcome of the last run, read by yanger for /system-state/software/update.
+# Outcome of the last run, read by yangerd for /system-state/software/update.
 STATE_FILE=/run/software-update.json
 
 # Apply a jq filter to the state file, extra args go to jq (--arg name value).

@@ -12,7 +12,7 @@ STATD_LICENSE_FILES = LICENSE
 STATD_REDISTRIBUTE = NO
 STATD_DEPENDENCIES = sysrepo libev libsrx jansson libyang libite avahi \
 	host-python3 python3 host-python-pypa-build host-python-installer \
-	host-python-poetry-core dbus-python
+	host-python-poetry-core
 STATD_AUTORECONF = YES
 
 define STATD_CONF_ENV
