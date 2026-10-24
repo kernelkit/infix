@@ -533,3 +533,34 @@ is required; the modem only needs to be registered on the network:
 - Use `show modem modem0` to check signal quality and RSRP
 - Signal below -110 dBm RSRP typically indicates poor coverage
 - Consider repositioning the antenna or the device
+
+### USB 3.0 Modem in a Mini PCIe Slot
+
+Mini PCIe has no USB 3.0 pins, so modems like the Quectel EP06 and the
+Sierra Wireless MC7455 put their SuperSpeed lines on the PCIe lane
+pins.  In a slot that has those pins wired to a PCIe controller the
+modem never connects, not even at USB 2.0 speed, and does not show up
+in `lsusb`.
+
+Turn off USB 3.0 in the modem: connect it to a USB port with a Mini
+PCIe to USB adapter and run the commands below on its AT port, usually
+`ttyUSB2`.  The modem stores the setting, so this is only needed once.
+Power off, put the modem back in the slot, and power on.
+
+Quectel:
+
+```
+AT+QUSBCFG="SS",0
+AT+CFUN=1,1
+```
+
+Sierra Wireless, where `A710` is the default password:
+
+```
+AT!ENTERCND="A710"
+AT!USBSPEED=0
+AT!RESET
+```
+
+Older Sierra Wireless firmware answers `ERROR` to `AT!USBSPEED`, update
+the modem firmware first.
