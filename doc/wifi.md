@@ -307,6 +307,11 @@ which helps when picking a band and channel for it.  Add `passive` to listen lon
 probe requests, which gives a steadier utilization reading at the cost of a
 longer pause.
 
+Not every driver reports channel survey data.  On Intel cards, e.g., the
+AX210, the survey fails with *the driver reports no per-channel survey
+data*, use `show hardware radio0 scan` to see which channels other networks
+use.
+
 In the WebUI, each radio on the WiFi page has a **Scan channels** button that
 draws the same survey as a chart.
 

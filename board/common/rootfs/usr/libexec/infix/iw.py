@@ -818,6 +818,8 @@ def survey_scan_on(iface, passive):
         return err
 
     channels = parse_survey(ifname)
+    if not channels:
+        return {'error': 'the driver reports no per-channel survey data'}
     if not any(ch['in_use'] for ch in channels):
         # Not every driver flags the operating channel, mac80211_hwsim
         # does not, take it from the interface instead.

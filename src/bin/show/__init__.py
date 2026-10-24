@@ -238,6 +238,10 @@ def channel_survey(radio: str, passive: bool) -> None:
         print(out)
         return
 
+    if not out.strip():
+        print(f"No channel survey data from {radio}.")
+        return
+
     chart = subprocess.run(["/usr/libexec/infix/wifi-channel-map.py"],
                            input=out, capture_output=True, text=True)
     sys.stdout.write(chart.stdout or chart.stderr)
