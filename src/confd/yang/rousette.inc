@@ -4,4 +4,5 @@ MODULES=(
 	"ietf-restconf-monitoring@2017-01-26.yang"
 	"ietf-subscribed-notifications@2019-09-09.yang -e encode-json"
 	"ietf-restconf-subscribed-notifications@2019-11-17.yang"
+	"rousette@2026-08-07.yang"
 )

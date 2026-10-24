@@ -1,0 +1,28 @@
+From 1068ff5284a0852efe918258426479c69b9d8092 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 16 Dec 2025 11:40:21 +0100
+Subject: [PATCH 1/6] Infix: Disable local-users
+Organization: Wires
+
+We do not configure specian netconf user, we use PAM and
+shadow. The default setting for netopeer2 is unfortunatly
+that you should configure each user that should be allowed
+to use netconf in the  "ietf-netconf-server:netconf-server" node
+---
+ src/server_config.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/server_config.c b/src/server_config.c
+index 12633b9..8ef5301 100644
+--- a/src/server_config.c
++++ b/src/server_config.c
+@@ -683,7 +683,8 @@ nc_server_config_load_modules(struct ly_ctx **ctx)
+     /* no ssh-x509-certs, asymmetric-key-pair-generation */
+     const char *ietf_ssh_common[] = {"algorithm-discovery", "transport-params", NULL};
+     /* no ssh-server-keepalives and local-user-auth-hostbased */
+-    const char *ietf_ssh_server[] = {"local-users-supported", "local-user-auth-publickey", "local-user-auth-password", "local-user-auth-none", NULL};
++    /* no local-users-supported - use system users (PAM/shadow) instead */
++    const char *ietf_ssh_server[] = {NULL};
+     /* all features */
+     const char *iana_ssh_encryption_algs[] = {NULL};
+     /* all features */

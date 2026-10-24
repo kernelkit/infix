@@ -3,7 +3,7 @@
 # CPP bindings for libyang
 #
 ################################################################################
-LIBYANG_CPP_VERSION = v4
+LIBYANG_CPP_VERSION = v12
 LIBYANG_CPP_SITE = $(call github,CESNET,libyang-cpp,$(LIBYANG_CPP_VERSION))
 LIBYANG_CPP_LICENSE = BSD-3-Clause
 LIBYANG_CPP_LICENSE_FILES = LICENSE
