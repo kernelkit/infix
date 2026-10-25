@@ -1527,6 +1527,8 @@ class ModemThread(threading.Thread):
             return False
         # Optional, must not block the data connection, see check_location()
         self.prepare_location()
+        # Extended signal values, RSSI, RSRP and more, every 5 s
+        self._mmcli("--signal-setup=5", check=False)
 
         self.info("Waiting for network")
         return True
