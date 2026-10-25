@@ -6,6 +6,7 @@ import (
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -48,9 +49,10 @@ func TestBuildEthernetContainerCopper1G(t *testing.T) {
 	if autoneg["enable"] != true {
 		t.Fatal("autoneg should be true")
 	}
-	// advertised == supported → no advertised-pmd-types key
-	if _, ok := autoneg["infix-ethernet-interface:advertised-pmd-types"]; ok {
-		t.Fatal("advertised-pmd-types should be suppressed when equal to supported")
+	// the PHY advertises all it supports, and the state says so
+	adv, _ := autoneg["infix-ethernet-interface:advertised-pmd-types"].([]string)
+	if sup, _ := eth["infix-ethernet-interface:supported-pmd-types"].([]string); len(adv) != 3 || !slices.Equal(adv, sup) {
+		t.Fatalf("advertised = %v, want the supported %v", adv, sup)
 	}
 }
 
@@ -116,7 +118,7 @@ func TestBuildEthernetContainerAdvertisedDiffers(t *testing.T) {
 	autoneg := eth["auto-negotiation"].(map[string]any)
 	adv, ok := autoneg["infix-ethernet-interface:advertised-pmd-types"]
 	if !ok {
-		t.Fatal("advertised-pmd-types should be present when != supported")
+		t.Fatal("advertised-pmd-types missing")
 	}
 	advList := adv.([]string)
 	if len(advList) != 1 || advList[0] != "ieee802-ethernet-phy-type:pmd-type-1000BASE-T" {
