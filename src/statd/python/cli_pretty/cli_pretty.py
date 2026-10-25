@@ -1113,6 +1113,7 @@ class DhcpServer:
 class Iface:
     # Class variable to hold routing-enabled interfaces for the current display session
     _routing_ifaces = set()
+    _modems = {}  # modem components by name, for modem interfaces
     _keystore = {}
 
     def __init__(self, data):
@@ -1198,6 +1199,7 @@ class Iface:
         self.vxlan = self.data.get('infix-interfaces:vxlan')
         self.wifi = self.data.get('infix-interfaces:wifi')
         self.wireguard = self.data.get('infix-interfaces:wireguard')
+        self.wwan = self.data.get('infix-interfaces:wwan')
 
         if self.data.get('infix-interfaces:vlan'):
             vlan_data = self.data.get('infix-interfaces:vlan')
@@ -1209,6 +1211,9 @@ class Iface:
 
     def is_wifi(self):
         return self.type == "infix-if-type:wifi"
+
+    def is_modem(self):
+        return self.type == "infix-if-type:modem"
 
     def is_vlan(self):
         return self.type == "infix-if-type:vlan"
@@ -1519,6 +1524,26 @@ class Iface:
 
         return self.cells("wifi", data_str)
 
+    def cells_modem(self):
+        """Network, operator and signal of the modem, or why it is down"""
+        wwan = self.wwan or {}
+        bearer = wwan.get("bearer-state", {})
+        if bearer and not bearer.get("connected"):
+            reason = bearer.get("connection-failed-reason")
+            return self.cells("modem", "not connected" + (f" ({reason})" if reason else ""))
+
+        ms = self._modem_state()
+        cell = ms.get("cellular", {})
+        parts = []
+        if cell.get("network-type"):
+            parts.append(cell["network-type"])
+        if cell.get("operator-name"):
+            roaming = " (roaming)" if cell.get("registration-state") == "roaming" else ""
+            parts.append(cell["operator-name"] + roaming)
+        if ms.get("signal-quality") is not None:
+            parts.append(f"signal: {signal_quality_to_status(ms['signal-quality'])}")
+        return self.cells("modem", ", ".join(parts))
+
     def cells_br(self, br_vlans):
         if self.oper() == "up":
             dec = Decore.green if self.stp_state == "forwarding" else Decore.yellow
@@ -1614,6 +1639,39 @@ class Iface:
     def add_container(self, table):
         table.row(self.flag(), self.name, "container", "", ", ".join(self.containers),
                   style=Decore.gray_bg)
+
+    def _modem_state(self):
+        """modem-state of the modem a modem interface runs on, or {}"""
+        name = (self.wwan or {}).get('modem')
+        return Iface._modems.get(name, {}).get('infix-hardware:modem-state', {})
+
+    def pr_wwan(self):
+        """The modem of a modem interface, its network, and the bearer"""
+        name = self.wwan.get('modem')
+        if name:
+            ms = self._modem_state()
+            model = " ".join(v for v in (ms.get('manufacturer'), ms.get('model')) if v)
+            print(f"{'modem':<{19}}: {name}" + (f" ({model})" if model else ""))
+            cell = ms.get('cellular', {})
+            if cell.get('operator-name'):
+                roaming = " (roaming)" if cell.get('registration-state') == 'roaming' else ""
+                print(f"{'operator':<{19}}: {cell['operator-name']}{roaming}")
+            if cell.get('network-type'):
+                print(f"{'network':<{19}}: {cell['network-type']}")
+            quality = ms.get('signal-quality')
+            if quality is not None:
+                print(f"{'signal':<{19}}: {quality}% {signal_quality_to_status(quality)}")
+
+        bearer = self.wwan.get('bearer-state')
+        if not bearer:
+            return
+        if bearer.get('connected'):
+            secs = int(bearer.get('total-duration', 0) or 0)
+            since = f", for {format_uptime_seconds(secs)}" if secs else ""
+            print(f"{'bearer':<{19}}: connected{since}")
+        else:
+            reason = bearer.get('connection-failed-reason')
+            print(f"{'bearer':<{19}}: disconnected" + (f" ({reason})" if reason else ""))
 
     def pr_iface(self):
         if self.is_in_container():
@@ -1756,6 +1814,9 @@ class Iface:
                     print(f"{'rx bitrate':<{19}}: {rx_speed / 10:.1f} Mbps")
                 if tx_speed is not None:
                     print(f"{'tx bitrate':<{19}}: {tx_speed / 10:.1f} Mbps")
+
+        if self.wwan:
+            self.pr_wwan()
 
         if self.gre:
             print(f"{'local address':<{19}}: {self.gre['local']}")
@@ -1953,6 +2014,8 @@ def pr_interface_list(json):
             iface.add_plain(table, iface.cells_wireguard())
         elif iface.is_wifi():
             iface.add_plain(table, iface.cells_wifi(), eth_sub=True)
+        elif iface.is_modem():
+            iface.add_plain(table, iface.cells_modem())
         elif iface.is_vlan():
             iface.add_vlan(table, ifaces)
         elif iface.lower_if or iface.bridge or iface.lag:
@@ -1971,6 +2034,10 @@ def show_interfaces(json, name):
         Iface._routing_ifaces = set(routing_data.get("interface", []))
     else:
         Iface._routing_ifaces = set()
+
+    components = json.get("ietf-hardware:hardware", {}).get("component", [])
+    Iface._modems = {c.get("name"): c for c in components
+                     if c.get("class") == "infix-hardware:modem"}
 
     if name:
         if not json.get("ietf-interfaces:interfaces"):
