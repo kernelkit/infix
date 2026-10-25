@@ -83,8 +83,9 @@ func (h *ContainersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	// browser connection resets.
 	ctx := context.WithoutCancel(r.Context())
 
+	// No containers is no data, a 404, not an error
 	var listResp containerListWrapper
-	if err := h.RC.Get(ctx, "/data/infix-containers:containers", &listResp); err != nil {
+	if err := h.RC.Get(ctx, "/data/infix-containers:containers", &listResp); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("restconf containers list: %v", err)
 		data.Error = "Could not fetch container information"
 	} else {

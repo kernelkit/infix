@@ -102,7 +102,7 @@ func (h *MDNSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var raw mdnsWrapper
-	if err := h.RC.Get(r.Context(), "/data/infix-services:mdns", &raw); err != nil {
+	if err := h.RC.Get(r.Context(), "/data/infix-services:mdns", &raw); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("restconf mdns: %v", err)
 		data.Error = "Could not fetch mDNS data"
 	} else {

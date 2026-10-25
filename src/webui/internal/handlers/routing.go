@@ -203,7 +203,9 @@ func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
 		raw, err := h.RC.GetRaw(ctx, "/data/ietf-routing:routing/ribs")
 		if err != nil {
-			log.Printf("restconf rib: %v", err)
+			if !restconf.IsNotFound(err) {
+				log.Printf("restconf rib: %v", err)
+			}
 			return
 		}
 		var rib ribWrapper
@@ -239,7 +241,9 @@ func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		if err := h.RC.Get(ctx,
 			"/data/ietf-routing:routing/control-plane-protocols",
 			&cpp); err != nil {
-			log.Printf("restconf ospf (ignored): %v", err)
+			if !restconf.IsNotFound(err) {
+				log.Printf("restconf ospf (ignored): %v", err)
+			}
 			return
 		}
 		for _, proto := range cpp.Routing.CPP.Protocol {
