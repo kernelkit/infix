@@ -1289,7 +1289,8 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 /* mDNS toggle column and chevron button */
 .mdns-toggle-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
-.data-table td.mdns-toggle-col,
+/* Level with the first line of the row, like the interface markers */
+.data-table td.mdns-toggle-col { vertical-align: top; padding-top: 0.75rem !important; }
 .data-table th.mdns-toggle-col { vertical-align: middle; }
 .mdns-addr-toggle {
   background: none;
