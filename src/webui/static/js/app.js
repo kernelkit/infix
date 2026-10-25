@@ -1631,9 +1631,10 @@ function markActiveOpt(cls, attr, value) {
       btn.setAttribute('aria-expanded', val ? 'true' : 'false');
     }
 
-    // Hover: keep aria-expanded in sync so CSS transition fires correctly
-    menu.addEventListener('mouseenter', function() { setExpanded(true); });
-    menu.addEventListener('mouseleave', function() { setExpanded(false); });
+    // Hover: keep aria-expanded in sync so CSS transition fires correctly.
+    // Only for a mouse, a tap sends these too and would undo its toggle.
+    menu.addEventListener('pointerenter', function(e) { if (e.pointerType === 'mouse') setExpanded(true); });
+    menu.addEventListener('pointerleave', function(e) { if (e.pointerType === 'mouse') setExpanded(false); });
 
     // Click/tap: toggle (primary interaction on touch devices)
     btn.addEventListener('click', function(e) {
@@ -1641,9 +1642,9 @@ function markActiveOpt(cls, attr, value) {
       setExpanded(btn.getAttribute('aria-expanded') !== 'true');
     });
 
-    // Close when clicking outside (touch: tap outside)
+    // Close when clicking outside (touch: tap outside), or on a choice
     document.addEventListener('click', function(e) {
-      if (!menu.contains(e.target)) setExpanded(false);
+      if (!menu.contains(e.target) || e.target.closest('.dropdown-item')) setExpanded(false);
     });
 
     document.addEventListener('keydown', function(e) {
@@ -1742,9 +1743,10 @@ function markActiveOpt(cls, attr, value) {
       }
     });
 
-    // Close when navigating via htmx
-    document.addEventListener('htmx:beforeRequest', function() {
-      closeSidebar(btn);
+    // Close when navigating from the sidebar, not on background polls
+    document.addEventListener('htmx:beforeRequest', function(evt) {
+      var elt = evt.detail && evt.detail.elt;
+      if (elt && elt.closest && elt.closest('#sidebar')) closeSidebar(btn);
     });
 
     // Close when viewport grows beyond the mobile breakpoint so the

@@ -2380,11 +2380,18 @@ details[open] > .cfg-multi-summary {
   transform: translateY(-4px);
   transition: opacity 0.15s, transform 0.15s;
 }
-.user-menu:hover .user-dropdown,
 .user-menu-btn[aria-expanded="true"] + .user-dropdown {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+/* Hover only where there is a mouse, a tap would leave it stuck open */
+@media (hover: hover) {
+  .user-menu:hover .user-dropdown {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 }
 
 .dropdown-section-label {
