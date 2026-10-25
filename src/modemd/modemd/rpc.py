@@ -1,22 +1,6 @@
 import argparse
-import json
+import subprocess
 import sys
-import os
-
-
-def sendrpc(index, rpc):
-    path = "/run/modemd/modem%d/rpc" % index
-    if os.path.exists(path):
-        sys.stderr.write("Error: another rpc is running\n")
-        return
-
-    with open(path, "w") as fd:
-        json.dump(rpc, fd)
-
-    if not os.system(['sysrepocfg', '-f', 'json', '-R', path]):
-        sys.stderr.write("Error: unable to restart\n")
-
-    os.unlink(path)
 
 
 def main():
@@ -36,16 +20,10 @@ def main():
 
     print("Sending '%s' rpc to modem%d" % (args.rpc, index))
 
-    rpc = {
-        "ietf-hardware:hardware": {
-            "component": [{
-                "name": "modem%d" % index,
-                "infix-hardware:modem": {args.rpc: {}}
-            }]
-        }
-    }
-
-    sendrpc(index, rpc)
+    xpath = "/ietf-hardware:hardware/component[name='modem%d']/infix-hardware:%s" % (index, args.rpc)
+    if subprocess.run(["rpc", xpath]).returncode:
+        sys.stderr.write("Error: unable to send '%s' rpc\n" % args.rpc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

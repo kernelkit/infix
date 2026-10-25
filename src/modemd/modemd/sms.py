@@ -11,46 +11,15 @@ import os
 LOCALEPATH = "/usr/lib/locale"
 
 
-def run_cmd(cmd):
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        return True if res.returncode == 0 else False
-    except subprocess.CalledProcessError:
-        return False
-
-
 def send(index, number, text):
     if index < 0:
         # use first modem by default
         index = 0
 
-    rpc = {
-        "ietf-hardware:hardware": {
-            "component": [{
-                "name": "modem%d" % index,
-                "infix-hardware:modem": {
-                    "send-sms": {
-                        "phone-number": number,
-                        "message-text": text
-                    }
-                }
-            }]
-        }
-    }
     print("Sending SMS to modem%d" % index)
-
-    path = "/run/modemd/modem%d/rpc" % index
-    if os.path.exists(path):
-        sys.stderr.write("Error: another rpc is running\n")
-        return
-
-    with open(path, "w") as fd:
-        json.dump(rpc, fd)
-
-    if not run_cmd(['sysrepocfg', '-f', 'json', '-R', path]):
+    xpath = "/ietf-hardware:hardware/component[name='modem%d']/infix-hardware:send-sms" % index
+    if subprocess.run(["rpc", xpath, "phone-number", number, "message-text", text]).returncode:
         sys.stderr.write("Error: Unable to send SMS\n")
-
-    os.unlink(path)
 
 
 def listsms():
