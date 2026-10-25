@@ -1,0 +1,96 @@
+{
+    "input": {
+        "path": {
+            "locate": {
+                "path": "/run/led/locate"
+            },
+            "startup": {
+                "path": "/run/finit/cond/usr/startup-config-ok"
+            },
+            "fail-safe": {
+                "path": "/run/finit/cond/usr/failure-config-ok"
+            },
+            "panic": {
+                "path": "/run/finit/cond/usr/failure-config-error"
+            }
+        }
+    },
+    "output": {
+        "led-group": {
+            "port-link-act": {
+                "match": [
+                    "*:green:tp",
+                    "*:green:sfp",
+                    "*:green:port"
+                ],
+                "rules": [
+                    {
+                        "if": "true",
+                        "then": {
+                            "trigger": "netdev",
+                            "link": 1,
+                            "rx": 1,
+                            "tx": 1
+                        }
+                    }
+                ]
+            }
+        },
+        "led": {
+            "bpi-r64:pio:green": {
+                "rules": [
+                    {
+                        "if": "locate",
+                        "then": "@blink-1hz"
+                    },
+                    {
+                        "if": "panic",
+                        "then": "@off"
+                    },
+                    {
+                        "if": "startup",
+                        "then": "@on"
+                    },
+                    {
+                        "if": "true",
+                        "then": "@blink-1hz"
+                    }
+                ]
+            },
+            "bpi-r64:pio:red": {
+                "rules": [
+                    {
+                        "if": "locate",
+                        "then": "@off"
+                    },
+                    {
+                        "if": "panic",
+                        "then": "@blink-5hz"
+                    },
+                    {
+                        "if": "fail-safe",
+                        "then": "@blink-5hz"
+                    }
+                ]
+            }
+        }
+    },
+    "aliases": {
+        "on": {
+            "brightness": true
+        },
+        "off": {
+            "brightness": false
+        },
+        "blink-1hz": {
+            "trigger": "timer",
+            "delay_on": 500,
+            "delay_off": 500
+        },
+        "blink-5hz": {
+            "trigger": "timer",
+            "delay_on": 100,
+            "delay_off": 100
+        }
+    }
+}
