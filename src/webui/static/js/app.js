@@ -1457,6 +1457,14 @@ function setBlockEnabled(el, on) {
   });
 })();
 
+// Marks the menu option whose attr matches value as the active one, for
+// the Theme, Auto-logout and Auto-refresh sections of the user menu
+function markActiveOpt(cls, attr, value) {
+  document.querySelectorAll('.' + cls).forEach(function(btn) {
+    btn.classList.toggle('is-active', btn.getAttribute(attr) === value);
+  });
+}
+
 // Theme (auto / light / dark) — shared by main app and login page
 (function() {
   function getTheme() {
@@ -1468,14 +1476,8 @@ function setBlockEnabled(el, on) {
     document.documentElement.classList.remove('dark', 'light');
     if (mode === 'dark') document.documentElement.classList.add('dark');
     else if (mode === 'light') document.documentElement.classList.add('light');
-    updateDropdownCheck(mode || 'auto');
+    markActiveOpt('theme-opt', 'data-theme', mode || 'auto');
     updateLoginToggleIcon(mode || 'auto');
-  }
-
-  function updateDropdownCheck(mode) {
-    document.querySelectorAll('.theme-opt').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-theme') === mode);
-    });
   }
 
   function updateLoginToggleIcon(mode) {
@@ -2410,10 +2412,7 @@ function renderCfgLog() {
   }
 
   function updateOpts() {
-    var current = localStorage.getItem(LS_KEY) || DEFAULT;
-    document.querySelectorAll('.timeout-opt').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-timeout') === current);
-    });
+    markActiveOpt('timeout-opt', 'data-timeout', localStorage.getItem(LS_KEY) || DEFAULT);
   }
 
   function doLogout() {
@@ -2583,9 +2582,7 @@ function renderCfgLog() {
 
   function update() {
     var secs = parseInt(current(), 10) || 0;
-    document.querySelectorAll('.refresh-opt').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-refresh') === current());
-    });
+    markActiveOpt('refresh-opt', 'data-refresh', current());
     var ind = document.getElementById('refresh-indicator');
     if (ind) {
       ind.hidden = !isStatusPage();
