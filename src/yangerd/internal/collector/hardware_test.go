@@ -898,3 +898,22 @@ func TestHardwareSystemJSONParsedOnChange(t *testing.T) {
 		t.Errorf("vendor = %v after system.json changed", got)
 	}
 }
+
+// iwlwifi names its thermal zone after itself, iwlwifi_1, and that is
+// the radio's sensor when it is the only radio the driver drives.
+func TestHardwareRadioDriverSensor(t *testing.T) {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/sys/class/ieee80211/radio0/device/uevent": []byte("DRIVER=iwlwifi\nPCI_ID=8086:2725\n"),
+		"/sys/class/thermal/thermal_zone2/type":     []byte("iwlwifi_1\n"),
+		"/sys/class/thermal/thermal_zone2/temp":     []byte("45000\n"),
+	}, Globs: map[string][]string{
+		"/sys/class/thermal/*": {"/sys/class/thermal/thermal_zone2"},
+	}}
+	c := newHardwareCollector(&testutil.MockRunner{}, fs)
+
+	got := c.sensorComponents(context.Background(), map[string]map[string]interface{}{"radio0": {}})
+	temp := getComponentByName(got, "radio0-temp")
+	if temp == nil || temp["parent"] != "radio0" {
+		t.Fatalf("iwlwifi sensor not adopted by radio0: %v", got)
+	}
+}

@@ -213,7 +213,42 @@ func (c *HardwareCollector) sensorComponents(ctx context.Context, wifiInfo map[s
 		}
 	}
 	sensors = append(sensors, c.hwmonSensorComponents(ctx, mirrored)...)
+
+	drivers := c.radioDrivers(wifiInfo)
+	for _, raw := range sensors {
+		component := raw.(map[string]interface{})
+		name, _ := component["name"].(string)
+		if radio, ok := drivers[strings.TrimRight(name, "0123456789")]; ok {
+			component["name"] = radio
+		}
+	}
 	return adoptWifiSensors(sensors, wifiInfo)
+}
+
+// radioDrivers maps a driver to the one radio it drives.  Some drivers
+// name their sensor after themselves, e.g. iwlwifi_1, not after the
+// radio, and with one radio per driver the sensor can only be its.
+func (c *HardwareCollector) radioDrivers(wifiInfo map[string]map[string]interface{}) map[string]string {
+	radios := make(map[string]string)
+	seen := make(map[string]int)
+	for radio := range wifiInfo {
+		data, err := c.fs.ReadFile("/sys/class/ieee80211/" + radio + "/device/uevent")
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			if driver, ok := strings.CutPrefix(line, "DRIVER="); ok && driver != "" {
+				radios[driver] = radio
+				seen[driver]++
+			}
+		}
+	}
+	for driver, n := range seen {
+		if n > 1 {
+			delete(radios, driver)
+		}
+	}
+	return radios
 }
 
 // readSystemJSON parses system.json again only when it has changed,
