@@ -2,7 +2,12 @@
 
 package restconf
 
-import "testing"
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestCheckPath(t *testing.T) {
 	ok := []string{
@@ -30,5 +35,24 @@ func TestCheckPath(t *testing.T) {
 		if err := checkPath(p); err == nil {
 			t.Errorf("%q accepted", p)
 		}
+	}
+}
+
+// rousette answers a POST without a Content-Type with 400, also for an
+// RPC without input, like infix-hardware:locate.
+func TestPostWithoutBodyHasContentType(t *testing.T) {
+	var ctype string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctype = r.Header.Get("Content-Type")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL+"/restconf", false)
+	if err := c.Post(context.Background(), "/operations/infix-hardware:locate"); err != nil {
+		t.Fatal(err)
+	}
+	if ctype != "application/yang-data+json" {
+		t.Errorf("Content-Type = %q", ctype)
 	}
 }
