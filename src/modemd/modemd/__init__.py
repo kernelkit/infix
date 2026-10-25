@@ -280,11 +280,24 @@ def list_sms(modem):
     return smslist
 
 
-def load_config():
-    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
-    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+def running(xpath):
+    """Running config at xpath, {} when there is none, None on error"""
+    output = runcmd(["copy", "running-config", "-x", xpath])
+    if output is None:
+        return None
+    if output is True:
+        return {}
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return None
 
-    ks = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-keystore"])
+
+def load_config():
+    hw = running("/ietf-hardware:hardware")
+    ifaces = running("/ietf-interfaces:interfaces")
+
+    ks = running("/ietf-keystore:keystore")
     keys = {}
     if ks:
         for key in ks.get("ietf-keystore:keystore", {}) \
