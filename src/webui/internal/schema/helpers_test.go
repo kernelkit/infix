@@ -15,3 +15,32 @@ func TestReflow(t *testing.T) {
 		t.Fatalf("Reflow() list = %q, want %q", got, want)
 	}
 }
+
+// An identityref default names the identity without a module prefix, or
+// with the module's own prefix, while the options carry the module name.
+func TestOptionsForIdentityDefault(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, dir, "test-area.yang", `module test-area {
+  yang-version 1.1; namespace "urn:test:area"; prefix ta;
+  identity kind;
+  identity plain { base kind; }
+  identity fancy { base kind; }
+  leaf bare { type identityref { base kind; } default plain; }
+  leaf prefixed { type identityref { base kind; } default ta:fancy; }
+}`)
+	mgr, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for leaf, want := range map[string]string{"bare": "test-area:plain", "prefixed": "test-area:fancy"} {
+		var got []string
+		for _, o := range OptionsFor(mgr, "/test-area:"+leaf) {
+			if o.IsDefault {
+				got = append(got, o.Value)
+			}
+		}
+		if len(got) != 1 || got[0] != want {
+			t.Errorf("%s: default %q, want %q", leaf, got, want)
+		}
+	}
+}
