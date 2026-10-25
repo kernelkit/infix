@@ -67,11 +67,11 @@ func TestSummarizeModem(t *testing.T) {
 func TestHardwarePageModems(t *testing.T) {
 	var data hardwarePageData
 	buildHardwarePage(&data, modemComponents(t))
-	if len(data.Modems) != 1 || len(data.SIMs) != 1 {
-		t.Fatalf("modems %v sims %v", data.Modems, data.SIMs)
+	if len(data.Modems) != 1 || data.Modems[0].SIM == nil {
+		t.Fatalf("modems %+v", data.Modems)
 	}
-	if data.SIMs[0].Slot != "1" || data.SIMs[0].StateClass != "status-up" {
-		t.Errorf("sim = %+v", data.SIMs[0])
+	if sim := data.Modems[0].SIM; sim.Name != "sim0" || sim.Slot != "1" || sim.StateClass != "status-up" {
+		t.Errorf("sim = %+v", sim)
 	}
 	for _, c := range data.OtherComps {
 		if c.Class == classModem || c.Class == classSIM {

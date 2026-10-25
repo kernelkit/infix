@@ -86,6 +86,7 @@ type modemSummary struct {
 	SignalWord   string // excellent, good, poor, bad, as in the CLI
 	SignalClass  string // health-bar-fill modifier
 	SignalDetail string // e.g. "RSRP -98 dBm · SINR 14.0 dB"
+	SIM          *simSummary
 }
 
 // simSummary is one SIM card as the status pages show it.

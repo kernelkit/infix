@@ -28,7 +28,6 @@ type hardwarePageData struct {
 	WiFiRadios   []wifiEntry
 	GPSReceivers []gpsEntry
 	Modems       []modemSummary
-	SIMs         []simSummary
 	SensorGroups []hwSensorGroup
 	OtherComps   []otherCompEntry
 	Error        string
@@ -176,6 +175,7 @@ func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 // summary indicator instead of hiding them.
 func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 	sensorMap := make(map[string][]hwSensorEntry)
+	sims := make(map[string]simSummary)
 	var sensorParents []string
 
 	for _, c := range comps {
@@ -202,7 +202,7 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 		case classModem:
 			data.Modems = append(data.Modems, summarizeModem(c))
 		case classSIM:
-			data.SIMs = append(data.SIMs, summarizeSIM(c))
+			sims[c.Name] = summarizeSIM(c)
 		case classGPS:
 			data.GPSReceivers = append(data.GPSReceivers, gpsEntry{
 				Name:         c.Name,
@@ -251,7 +251,11 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 	}
 	sort.Slice(data.USBPorts, func(i, j int) bool { return data.USBPorts[i].Name < data.USBPorts[j].Name })
 	sort.Slice(data.Modems, func(i, j int) bool { return data.Modems[i].Name < data.Modems[j].Name })
-	sort.Slice(data.SIMs, func(i, j int) bool { return data.SIMs[i].Name < data.SIMs[j].Name })
+	for i := range data.Modems {
+		if sim, ok := sims[simOf(data.Modems[i].Name)]; ok {
+			data.Modems[i].SIM = &sim
+		}
+	}
 	sort.Slice(data.OtherComps, func(i, j int) bool {
 		if data.OtherComps[i].Class != data.OtherComps[j].Class {
 			return data.OtherComps[i].Class < data.OtherComps[j].Class
