@@ -1,0 +1,31 @@
+{{define "gps.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="iface-detail-header" data-auto-refresh>
+  <a href="/hardware" hx-get="/hardware" hx-target="#content" hx-push-url="true" class="back-link">&larr; Hardware</a>
+  <h2>{{.Name}}</h2>
+</div>
+
+{{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{else}}
+<div class="info-grid">
+  <section class="info-card">
+    <div class="card-header">GPS Receiver</div>
+    <table class="info-table">
+      <tr><th>Fix</th><td><span class="status-dot {{.FixClass}}"></span>{{.Fix}}</td></tr>
+      {{template "info-rows" .Receiver}}
+    </table>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Position</div>
+    {{if .Position}}
+    <table class="info-table">{{template "info-rows" .Position}}</table>
+    {{else}}
+    <p class="empty-message">No position without a fix.</p>
+    {{end}}
+  </section>
+</div>
+{{end}}
+{{end}}

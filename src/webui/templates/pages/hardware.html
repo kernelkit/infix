@@ -127,7 +127,7 @@
         <tbody>
           {{range .WiFiRadios}}
           <tr>
-            <td>{{.Name}}</td>
+            <td><a href="/wifi#radio-{{.Name}}" hx-get="/wifi" hx-target="#content" hx-push-url="/wifi#radio-{{.Name}}">{{.Name}}</a></td>
             <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
             <td>{{if .Bands}}{{.Bands}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
             <td>{{if .Standards}}{{.Standards}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
@@ -182,18 +182,20 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Manufacturer</th>
-            <th>Model</th>
-            <th>HW Rev</th>
+            <th>Device</th>
+            <th>Fix</th>
+            <th>Satellites</th>
+            <th>Position</th>
           </tr>
         </thead>
         <tbody>
           {{range .GPSReceivers}}
           <tr>
-            <td>{{.Name}}</td>
-            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
-            <td>{{if .ModelName}}{{.ModelName}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
-            <td>{{if .HardwareRev}}{{.HardwareRev}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><a href="/hardware/gps/{{.Name}}" hx-get="/hardware/gps/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+            <td>{{if .Device}}{{.Device}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><span class="status-dot {{.FixClass}}"></span>{{.Fix}}</td>
+            <td>{{if .Satellites}}{{.Satellites}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Position}}{{.Position}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
           </tr>
           {{end}}
         </tbody>

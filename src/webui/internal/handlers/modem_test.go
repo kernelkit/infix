@@ -98,7 +98,7 @@ func TestModemDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tmpl := realTemplates(t, nil, "layouts/*.html", "fragments/modem-signal.html", "pages/modem.html")
+	tmpl := realTemplates(t, nil, "layouts/*.html", "fragments/hw-detail.html", "pages/modem.html")
 	h := &ModemHandler{Template: tmpl, RC: restconf.NewClient(srv.URL+"/restconf", false)}
 	ctx := restconf.ContextWithCredentials(context.Background(), restconf.Credentials{Username: "admin", Password: "admin"})
 

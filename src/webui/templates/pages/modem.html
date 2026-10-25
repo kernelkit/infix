@@ -2,8 +2,6 @@
 {{template "base" .}}
 {{end}}
 
-{{define "info-rows"}}{{range .}}<tr><th>{{.Label}}</th><td>{{.Value}}</td></tr>{{end}}{{end}}
-
 {{define "content"}}
 <div class="iface-detail-header" data-auto-refresh>
   <a href="/hardware" hx-get="/hardware" hx-target="#content" hx-push-url="true" class="back-link">&larr; Hardware</a>

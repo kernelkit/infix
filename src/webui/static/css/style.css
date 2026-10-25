@@ -644,6 +644,9 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   text-align: left;
 }
 
+/* Labels line up with the first line of a multi-line value */
+.info-table th, .info-table td { vertical-align: baseline; }
+
 /* Disk usage widget (one entry per mount point) */
 .disk-item {
   padding: 0.7rem 1.25rem;

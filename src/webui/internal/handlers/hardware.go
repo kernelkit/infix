@@ -41,10 +41,12 @@ type usbPortEntry struct {
 }
 
 type gpsEntry struct {
-	Name         string
-	Manufacturer string
-	ModelName    string
-	HardwareRev  string
+	Name       string
+	Device     string
+	Fix        string // "3D", "2D" or "none"
+	FixClass   string // status-dot class
+	Satellites string // "7 of 11"
+	Position   string // "59.329300, 18.068600", "" without a fix
 }
 
 type hwSensorGroup struct {
@@ -204,12 +206,7 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 		case classSIM:
 			sims[c.Name] = summarizeSIM(c)
 		case classGPS:
-			data.GPSReceivers = append(data.GPSReceivers, gpsEntry{
-				Name:         c.Name,
-				Manufacturer: c.MfgName,
-				ModelName:    c.ModelName,
-				HardwareRev:  c.HardwareRev,
-			})
+			data.GPSReceivers = append(data.GPSReceivers, summarizeGPS(c))
 		default:
 			handled = false
 		}

@@ -44,7 +44,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	ifDetailTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/iface-detail.html", "fragments/iface-counters.html", "fragments/modem-signal.html")
+	ifDetailTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/iface-detail.html", "fragments/iface-counters.html", "fragments/hw-detail.html")
 	if err != nil {
 		return nil, err
 	}
@@ -80,11 +80,15 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	hwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/modem-signal.html", "pages/hardware.html")
+	hwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/hw-detail.html", "pages/hardware.html")
 	if err != nil {
 		return nil, err
 	}
-	modemTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/modem-signal.html", "pages/modem.html")
+	modemTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/hw-detail.html", "pages/modem.html")
+	if err != nil {
+		return nil, err
+	}
+	gpsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/hw-detail.html", "pages/gps.html")
 	if err != nil {
 		return nil, err
 	}
@@ -229,6 +233,7 @@ func New(
 	wifi := &handlers.WiFiHandler{Template: wifiTmpl, RC: rc}
 	hw := &handlers.HardwareHandler{Template: hwTmpl, RC: rc}
 	modem := &handlers.ModemHandler{Template: modemTmpl, RC: rc}
+	gps := &handlers.GPSHandler{Template: gpsTmpl, RC: rc}
 	vpn := &handlers.VPNHandler{Template: vpnTmpl, RC: rc}
 	dhcp := &handlers.DHCPHandler{Template: dhcpTmpl, RC: rc}
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
@@ -320,6 +325,7 @@ func New(
 	mux.HandleFunc("GET /hardware/locate", hw.LocateDone)
 	mux.HandleFunc("GET /hardware/modem/{name}", modem.Detail)
 	mux.HandleFunc("POST /hardware/modem/{name}/restart", modem.Restart)
+	mux.HandleFunc("GET /hardware/gps/{name}", gps.Detail)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)

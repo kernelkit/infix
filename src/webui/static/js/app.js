@@ -968,6 +968,14 @@ function isAutoRefresh(evt) {
   return !!(cfg && cfg.headers && cfg.headers['X-Auto-Refresh']);
 }
 
+// An htmx navigation to a URL with a #fragment, e.g. a radio on the WiFi
+// page, scrolls to it like a plain page load would
+document.addEventListener('htmx:pushedIntoHistory', function() {
+  var id = decodeURIComponent(window.location.hash.slice(1));
+  var el = id && document.getElementById(id);
+  if (el) el.scrollIntoView({ block: 'start' });
+});
+
 // Top progress bar during htmx navigations
 (function() {
   var bar, showTimer, hideTimer, inFlight = 0, visible = false;
