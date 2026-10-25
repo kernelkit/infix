@@ -103,11 +103,11 @@ func (h *HardwareHandler) Locate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	if err := h.RC.Post(r.Context(), "/operations/infix-hardware:locate"); err != nil {
 		log.Printf("locate: %v", err)
-		fmt.Fprintf(w, `<span class="sc-fd-err">Failed: %s</span>`,
+		fmt.Fprintf(w, `<div class="alert alert-error card-alert">Locate failed: %s</div>`,
 			template.HTMLEscapeString(err.Error()))
 		return
 	}
-	fmt.Fprint(w, `<span class="sc-fd-ok">&#10003; Locating, LEDs are blinking</span>`)
+	fmt.Fprint(w, `<div class="alert alert-success card-alert">&#10003; Locating, LEDs are blinking</div>`)
 }
 
 func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {

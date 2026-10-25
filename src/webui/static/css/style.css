@@ -3482,7 +3482,8 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--border);
 }
-.update-card-error { margin: 0.75rem 1.25rem; }
+/* An action's result inside a card, below its content */
+.card-alert { margin: 0.75rem 1.25rem; }
 
 /* Icon flags in the card, meaning on hover */
 .card-flag {

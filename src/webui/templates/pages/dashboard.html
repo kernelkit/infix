@@ -227,7 +227,7 @@
         {{if .Update.RebootPending}}<span class="card-flag flag-warn" title="Reboot to activate {{.Update.Installed}}">{{template "icon-reset"}}</span>{{end}}</td></tr>
       {{end}}
     </table>
-    {{if .UpdateError}}<div class="alert alert-error update-card-error">{{.UpdateError}}</div>{{end}}
+    {{if .UpdateError}}<div class="alert alert-error card-alert">{{.UpdateError}}</div>{{end}}
   </div>
   <div class="card-actions">
     <button type="button" class="btn btn-sm btn-primary"

@@ -18,7 +18,6 @@
               hx-target="#hw-locate-result"
               hx-swap="innerHTML">Locate</button>
     </div>
-    <div id="hw-locate-result"></div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
         <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
@@ -27,6 +26,7 @@
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td><span class="num">{{.Board.BaseMAC}}</span></td></tr>{{end}}
       </table>
+      <div id="hw-locate-result"></div>
     </div>
   </div>
   {{end}}
