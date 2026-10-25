@@ -63,6 +63,10 @@ type HardwareCollector struct {
 	wifiInfo map[string]map[string]interface{} // PHY info the radios were built from
 	reported map[string]bool                   // duplicate names already warned about
 
+	sysMu     sync.Mutex
+	sysRaw    []byte                 // system.json as last read
+	sysParsed map[string]interface{} // and parsed, shared, never modified
+
 	radioRefresh chan struct{}
 }
 
@@ -212,10 +216,18 @@ func (c *HardwareCollector) sensorComponents(ctx context.Context, wifiInfo map[s
 	return adoptWifiSensors(sensors, wifiInfo)
 }
 
+// readSystemJSON parses system.json again only when it has changed,
+// which after boot is never.  The map is shared, callers only read it.
 func (c *HardwareCollector) readSystemJSON() map[string]interface{} {
 	data, err := c.fs.ReadFile("/run/system.json")
 	if err != nil {
 		return map[string]interface{}{}
+	}
+
+	c.sysMu.Lock()
+	defer c.sysMu.Unlock()
+	if c.sysParsed != nil && bytes.Equal(data, c.sysRaw) {
+		return c.sysParsed
 	}
 
 	out := make(map[string]interface{})
@@ -223,6 +235,7 @@ func (c *HardwareCollector) readSystemJSON() map[string]interface{} {
 		log.Printf("collector hardware: system.json: %v", err)
 		return map[string]interface{}{}
 	}
+	c.sysRaw, c.sysParsed = data, out
 
 	return out
 }

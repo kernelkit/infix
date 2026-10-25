@@ -881,3 +881,20 @@ func TestHardwareGPSStaleFix(t *testing.T) {
 		})
 	}
 }
+
+// system.json is parsed once, and again only when it changes.
+func TestHardwareSystemJSONParsedOnChange(t *testing.T) {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json": []byte(`{"vendor":"Acme"}`),
+	}, Globs: map[string][]string{}}
+	c := newHardwareCollector(&testutil.MockRunner{}, fs)
+
+	first := c.readSystemJSON()
+	if second := c.readSystemJSON(); reflect.ValueOf(second).Pointer() != reflect.ValueOf(first).Pointer() {
+		t.Error("unchanged system.json parsed again")
+	}
+	fs.Files["/run/system.json"] = []byte(`{"vendor":"Acme Inc"}`)
+	if got := c.readSystemJSON()["vendor"]; got != "Acme Inc" {
+		t.Errorf("vendor = %v after system.json changed", got)
+	}
+}
