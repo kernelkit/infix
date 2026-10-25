@@ -72,6 +72,10 @@ type DBusMonitor struct {
 	mu   sync.Mutex
 	conn *dbus.Conn // current bus connection, nil while disconnected
 
+	// Unique bus name of each service, the only sender of its signals
+	// trusted.  Used by the signal loop only.
+	owners map[string]string
+
 	// software reads the infix-system:software object; overridable in
 	// tests.
 	software func(ctx context.Context) json.RawMessage
@@ -129,6 +133,13 @@ func (m *DBusMonitor) session(ctx context.Context) error {
 	if err := m.subscribe(conn); err != nil {
 		return err
 	}
+	m.owners = make(map[string]string)
+	for _, name := range []string{dnsmasqBusName, firewalldBusName, raucBusName} {
+		var owner string
+		if conn.BusObject().Call(dbusInterface+".GetNameOwner", 0, name).Store(&owner) == nil {
+			m.owners[name] = owner
+		}
+	}
 
 	m.setConn(conn)
 	defer m.setConn(nil)
@@ -148,6 +159,7 @@ func (m *DBusMonitor) session(ctx context.Context) error {
 
 func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
 		dbus.WithMatchMember("DHCPLeaseAdded"),
 	); err != nil {
@@ -155,6 +167,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
 		dbus.WithMatchMember("DHCPLeaseDeleted"),
 	); err != nil {
@@ -162,6 +175,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
 		dbus.WithMatchMember("DHCPLeaseUpdated"),
 	); err != nil {
@@ -169,6 +183,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(firewalldBusName),
 		dbus.WithMatchInterface(firewalldInterface),
 		dbus.WithMatchMember("Reloaded"),
 	); err != nil {
@@ -176,6 +191,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(raucBusName),
 		dbus.WithMatchInterface(raucInstallerInterface),
 		dbus.WithMatchMember("Completed"),
 	); err != nil {
@@ -183,6 +199,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dbusInterface),
 		dbus.WithMatchInterface(dbusInterface),
 		dbus.WithMatchMember("NameOwnerChanged"),
 		dbus.WithMatchArg(0, dnsmasqBusName),
@@ -191,6 +208,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dbusInterface),
 		dbus.WithMatchInterface(dbusInterface),
 		dbus.WithMatchMember("NameOwnerChanged"),
 		dbus.WithMatchArg(0, firewalldBusName),
@@ -199,6 +217,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchSender(dbusInterface),
 		dbus.WithMatchInterface(dbusInterface),
 		dbus.WithMatchMember("NameOwnerChanged"),
 		dbus.WithMatchArg(0, raucBusName),
@@ -232,28 +251,38 @@ func (m *DBusMonitor) processSignals(ctx context.Context, conn *dbus.Conn) error
 	}
 }
 
+// from reports whether sig was sent by the service owning name.  Any
+// client may send yangerd a signal, the match rules do not stop that.
+func (m *DBusMonitor) from(sig *dbus.Signal, name string) bool {
+	owner := m.owners[name]
+	return owner != "" && sig.Sender == owner
+}
+
 func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 	switch sig.Name {
 	case dnsmasqInterface + ".DHCPLeaseAdded",
 		dnsmasqInterface + ".DHCPLeaseDeleted",
 		dnsmasqInterface + ".DHCPLeaseUpdated":
-		if sig.Path != "" && string(sig.Path) != dnsmasqPath {
+		if !m.from(sig, dnsmasqBusName) || (sig.Path != "" && string(sig.Path) != dnsmasqPath) {
 			return nil
 		}
 		return m.refreshDHCP(conn)
 
 	case raucInstallerInterface + ".Completed":
+		if !m.from(sig, raucBusName) {
+			return nil
+		}
 		m.refreshSoftware()
 		return nil
 
 	case firewalldInterface + ".Reloaded":
-		if sig.Path != "" && string(sig.Path) != firewalldPath {
+		if !m.from(sig, firewalldBusName) || (sig.Path != "" && string(sig.Path) != firewalldPath) {
 			return nil
 		}
 		return m.refreshFirewall(conn)
 
 	case dbusInterface + ".NameOwnerChanged":
-		if sig.Path != "" && string(sig.Path) != dbusPath {
+		if sig.Sender != dbusInterface || (sig.Path != "" && string(sig.Path) != dbusPath) {
 			return nil
 		}
 		if len(sig.Body) < 3 {
@@ -266,6 +295,10 @@ func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 		if !ok1 || !ok2 || !ok3 {
 			return fmt.Errorf("NameOwnerChanged: unexpected arg types")
 		}
+		if m.owners == nil {
+			m.owners = make(map[string]string)
+		}
+		m.owners[name] = newOwner
 
 		switch name {
 		case dnsmasqBusName:
