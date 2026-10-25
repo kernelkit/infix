@@ -259,7 +259,7 @@ func TestHealthItems(t *testing.T) {
 	sw.Slot[1].Bundle.Version = "v1"
 
 	items := healthItems([]serviceJSON{{Name: "hostapd", Status: "crashed"}, {Name: "sshd", Status: "running"}}, sw)
-	if len(items) != 2 || items[0].Text != "hostapd crashed" || items[1].Text != "secondary partition is out of date (v1)" {
+	if len(items) != 2 || items[0].Text != "hostapd crashed" || items[1].Text != "secondary partition is out of date" || items[1].Title != "v1" {
 		t.Errorf("items = %+v", items)
 	}
 

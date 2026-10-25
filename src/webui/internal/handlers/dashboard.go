@@ -230,6 +230,7 @@ type healthItem struct {
 	Class string // status-dot class: status-up, status-warn, status-down
 	Text  string
 	Link  string // page with the details, empty for none
+	Title string // shown on hover, empty for none
 }
 
 // healthItems lists what needs attention: services that are not running,
@@ -239,7 +240,7 @@ func healthItems(services []serviceJSON, sw software) []healthItem {
 	var items []healthItem
 	for _, svc := range services {
 		if serviceStatusClass(svc.Status) == "svc-error" {
-			items = append(items, healthItem{"status-down", svc.Name + " " + svc.Status, "/services"})
+			items = append(items, healthItem{Class: "status-down", Text: svc.Name + " " + svc.Status, Link: "/services"})
 		}
 	}
 	if sw.Update.RebootPending {
@@ -247,17 +248,18 @@ func healthItems(services []serviceJSON, sw software) []healthItem {
 		if sw.Update.Installed != "" {
 			text = "Reboot to activate " + sw.Update.Installed
 		}
-		items = append(items, healthItem{"status-warn", text, "/system-control"})
+		items = append(items, healthItem{Class: "status-warn", Text: text, Link: "/system-control"})
 	} else if booted := softwareVersion(sw); booted != "" {
 		for _, s := range sw.Slot {
 			if s.Class == "rootfs" && s.BootName != sw.Booted && s.Bundle.Version != "" && s.Bundle.Version != booted {
-				items = append(items, healthItem{"status-warn",
-					s.BootName + " partition is out of date (" + s.Bundle.Version + ")", "/software"})
+				items = append(items, healthItem{Class: "status-warn",
+					Text: s.BootName + " partition is out of date", Link: "/software",
+					Title: s.Bundle.Version})
 			}
 		}
 	}
 	if len(items) == 0 {
-		items = append(items, healthItem{"status-up", "All services running", ""})
+		items = append(items, healthItem{Class: "status-up", Text: "All services running"})
 	}
 	return items
 }
@@ -510,6 +512,16 @@ type ifaceAddrEntry struct {
 	Name  string
 	Addrs []string
 	Up    bool
+}
+
+// AddrsWrapped are the addresses with a line break opportunity after
+// each colon, so a long IPv6 address wraps between its groups.
+func (e ifaceAddrEntry) AddrsWrapped() []template.HTML {
+	out := make([]template.HTML, len(e.Addrs))
+	for i, a := range e.Addrs {
+		out[i] = template.HTML(strings.ReplaceAll(template.HTMLEscapeString(a), ":", ":<wbr>"))
+	}
+	return out
 }
 
 type boardInfo struct {

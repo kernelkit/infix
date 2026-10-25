@@ -132,7 +132,7 @@
         {{range .Addresses}}
         <tr>
           <th><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</th>
-          <td>{{range $i, $a := .Addrs}}{{if $i}}<br>{{end}}{{$a}}{{end}}</td>
+          <td>{{range $i, $a := .AddrsWrapped}}{{if $i}}<br>{{end}}{{$a}}{{end}}</td>
         </tr>
         {{end}}
       </table>
@@ -172,7 +172,7 @@
     <div class="card-body" style="padding:0">
       <table class="info-table">
         {{range .Health}}
-        <tr><td colspan="2"><span class="status-dot {{.Class}}"></span>{{if .Link}}<a href="{{.Link}}" hx-get="{{.Link}}" hx-target="#content" hx-push-url="true">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td></tr>
+        <tr><td colspan="2"{{if .Title}} title="{{.Title}}"{{end}}><span class="status-dot {{.Class}}"></span>{{if .Link}}<a href="{{.Link}}" hx-get="{{.Link}}" hx-target="#content" hx-push-url="true">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td></tr>
         {{end}}
         {{range .KeyVitals}}
         <tr><th><a href="/hardware" hx-get="/hardware" hx-target="#content" hx-push-url="true">{{.Name}}</a></th><td><span class="num">{{.Value}}</span></td></tr>
