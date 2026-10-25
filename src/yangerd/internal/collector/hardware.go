@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/mmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
@@ -53,6 +54,7 @@ type HardwareCollector struct {
 	enableWifi bool
 	enableGPS  bool
 	gpsPoll    func(context.Context) map[string]interface{}
+	modems     func() []mmmonitor.Modem
 
 	mu       sync.Mutex
 	gps      []interface{}                     // last GPS poll
@@ -150,6 +152,7 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 	inventory = append(inventory, c.motherboardComponent(systemjson)...)
 	inventory = append(inventory, c.vpdComponents(systemjson)...)
 	inventory = append(inventory, c.usbPortComponents(systemjson)...)
+	inventory = append(inventory, c.modemComponents(c.readModems(systemjson), systemjson)...)
 
 	c.mu.Lock()
 	radios := cloneComponents(c.radios)
