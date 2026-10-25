@@ -11,7 +11,10 @@ import (
 )
 
 const sessionTimeout = 1 * time.Hour
-const maxSessionTimeout = 24 * time.Hour
+
+// sessionLifetime ends every session this long after login, whatever
+// its idle timeout, "Off" included.
+const sessionLifetime = 24 * time.Hour
 
 // sessionEntry is the in-memory state of a single authenticated
 // session.  The user's password is kept alongside the token so the
@@ -22,13 +25,18 @@ type sessionEntry struct {
 	password   string
 	csrfToken  string
 	features   map[string]bool
+	createdAt  time.Time
 	lastSeenAt time.Time
 	timeout    time.Duration // idle timeout; 0 = never expire ("Off")
 }
 
-// expired reports whether an entry has passed its idle timeout.  A zero
-// timeout means the session never idle-expires — the user chose "Off".
+// expired reports whether an entry has passed its lifetime or its idle
+// timeout.  A zero timeout means the session never idle-expires — the
+// user chose "Off".
 func expired(e *sessionEntry) bool {
+	if time.Since(e.createdAt) > sessionLifetime {
+		return true
+	}
 	return e.timeout > 0 && time.Since(e.lastSeenAt) > e.timeout
 }
 
@@ -63,13 +71,15 @@ func (s *SessionStore) Create(username, password string, features map[string]boo
 		return "", "", fmt.Errorf("csrf token: %w", err)
 	}
 
+	now := time.Now()
 	s.mu.Lock()
 	s.sessions[token] = &sessionEntry{
 		username:   username,
 		password:   password,
 		csrfToken:  csrf,
 		features:   features,
-		lastSeenAt: time.Now(),
+		createdAt:  now,
+		lastSeenAt: now,
 		timeout:    sessionTimeout,
 	}
 	s.mu.Unlock()
@@ -106,11 +116,11 @@ func (s *SessionStore) Lookup(token string) (username, password, csrf string, fe
 // SetTimeout updates a session's idle timeout (0 = never expire) so the
 // server-side expiry tracks the client's Auto-logout menu.  Out-of-range
 // values — including a negative from integer overflow on a garbage request —
-// are capped at maxSessionTimeout so a session can't be pinned open
-// indefinitely; 0 still means never.  No-op if the token is unknown.
+// are capped at sessionLifetime; 0 still means never, until the lifetime
+// ends.  No-op if the token is unknown.
 func (s *SessionStore) SetTimeout(token string, d time.Duration) {
-	if d < 0 || d > maxSessionTimeout {
-		d = maxSessionTimeout
+	if d < 0 || d > sessionLifetime {
+		d = sessionLifetime
 	}
 	s.mu.Lock()
 	if e, ok := s.sessions[token]; ok {

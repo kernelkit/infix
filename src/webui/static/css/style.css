@@ -2419,6 +2419,12 @@ details[open] > .cfg-multi-summary {
   padding: 0.25rem 0.875rem 0.125rem;
 }
 
+.dropdown-note {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  padding: 0.125rem 0.875rem 0.25rem;
+}
+
 .dropdown-divider {
   border: none;
   border-top: 1px solid var(--border);
