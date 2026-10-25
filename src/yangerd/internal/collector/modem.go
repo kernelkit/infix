@@ -433,8 +433,9 @@ func nonEmpty(list []string) []interface{} {
 }
 
 // WwanStates is the infix-interfaces:wwan augment of each modem
-// interface, keyed by interface name.  A connected bearer names its
-// interface, one that is not belongs to wwanN of modemN.
+// interface, keyed by interface name: the modem it runs on and the state
+// of its bearer.  A connected bearer names its interface, one that is not
+// belongs to wwanN of modemN.
 func (c *HardwareCollector) WwanStates() map[string]interface{} {
 	named := c.readModems(c.readSystemJSON())
 	out := make(map[string]interface{})
@@ -450,8 +451,9 @@ func (c *HardwareCollector) WwanStates() map[string]interface{} {
 			if _, ok := out[ifname]; ok {
 				continue
 			}
-			if bs := bearerState(b); len(bs) > 0 {
-				out[ifname] = map[string]interface{}{"bearer-state": bs}
+			out[ifname] = map[string]interface{}{
+				"modem":        name,
+				"bearer-state": bearerState(b),
 			}
 		}
 	}

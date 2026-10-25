@@ -259,7 +259,7 @@ func TestWwanStates(t *testing.T) {
 	got := modemCollector(fs, up, down).WwanStates()
 
 	want := map[string]interface{}{
-		"wwan0": map[string]interface{}{"bearer-state": map[string]interface{}{
+		"wwan0": map[string]interface{}{"modem": "modem0", "bearer-state": map[string]interface{}{
 			"path":               "/org/freedesktop/ModemManager1/Bearer/0",
 			"connected":          true,
 			"interface":          "wwan0",
@@ -268,7 +268,7 @@ func TestWwanStates(t *testing.T) {
 			"in-bytes":           "1234",
 			"total-duration":     "510",
 		}},
-		"wwan1": map[string]interface{}{"bearer-state": map[string]interface{}{
+		"wwan1": map[string]interface{}{"modem": "modem1", "bearer-state": map[string]interface{}{
 			"path":                     "/org/freedesktop/ModemManager1/Bearer/1",
 			"connected":                false,
 			"connection-failed-reason": "Serving network not allowed",
