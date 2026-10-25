@@ -3594,3 +3594,6 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   background: var(--border);
 }
 .rt-advanced { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* A configure page while the candidate is reset and the page reloaded */
+.cfg-entering { opacity: 0.5; pointer-events: none; }
