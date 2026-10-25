@@ -210,6 +210,8 @@ All notable changes to the project are documented in this file.
 - The factory config of the Banana Pi R3, R3 mini, R4, R64, NanoPi R2S
   and Vero W6M now enables IPv4 and IPv6 forwarding on the LAN and WAN
   interfaces.  Without it, LAN clients could not reach the Internet
+- WebUI: RIP and OSPF could not be set up in the advanced configuration
+  editor.  Adding an area or setting a router ID was refused
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters

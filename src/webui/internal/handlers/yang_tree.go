@@ -795,20 +795,26 @@ func buildRootedPatch(mgr *schema.Manager, listPath string, listNode *schema.Nod
 	}
 
 	topSeg := segs[0] // e.g. "ietf-system:system"
-	topModName, _ := splitModPrefix(topSeg)
 
-	// qualName returns the bare name if the node is in the same module as
-	// topMod, or "module:name" if it's in a different module.
-	qualName := func(nodePath, name string) string {
-		mod, err := mgr.ModuleName(nodePath)
-		if err == nil && mod != "" && mod != topModName {
+	// qualName returns "module:name" when the node at segs[:depth] is in
+	// another module than its parent, else the bare name (RFC 7951 §4).
+	// A segment from an augment, e.g. "ietf-ospf:ospf", has its prefix
+	// already, so it is stripped first.
+	qualName := func(depth int, name string) string {
+		_, name = splitModPrefix(name)
+		mod, err := mgr.ModuleName("/" + strings.Join(segs[:depth], "/"))
+		if err != nil || mod == "" {
+			return name
+		}
+		parentMod, _ := mgr.ModuleName("/" + strings.Join(segs[:depth-1], "/"))
+		if mod != parentMod {
 			return mod + ":" + name
 		}
 		return name
 	}
 
 	// Start with the innermost: the target list → [entry].
-	innerVal := map[string]any{qualName(listPath, listNode.Name): []map[string]any{entry}}
+	innerVal := map[string]any{qualName(len(segs), listNode.Name): []map[string]any{entry}}
 
 	// Walk upward through intermediate segments, wrapping at each level.
 	for i := len(segs) - 2; i >= 1; i-- {
@@ -834,10 +840,10 @@ func buildRootedPatch(mgr *schema.Manager, listPath string, listNode *schema.Nod
 			for k, v := range innerVal {
 				listEntry[k] = v
 			}
-			innerVal = map[string]any{qualName(schemaPath, listName): []map[string]any{listEntry}}
+			innerVal = map[string]any{qualName(i+1, listName): []map[string]any{listEntry}}
 		} else {
 			// Container segment: wrap innerVal in the container object.
-			innerVal = map[string]any{qualName(segPath, seg): innerVal}
+			innerVal = map[string]any{qualName(i+1, seg): innerVal}
 		}
 	}
 
