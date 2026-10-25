@@ -72,6 +72,14 @@ All notable changes to the project are documented in this file.
   per modem much like `show modem modem0`, and a Restart button.  The page
   of a modem interface shows its modem, operator, network and signal
 - WebUI: a login lasts at most 24 hours, also with Auto-logout set to Off
+- WebUI: the Routing configuration page sets up OSPFv2, OSPFv3, RIPv2
+  and RIPng.  A protocol is added with its interfaces and, for OSPF, a
+  router ID.  Its row folds out to the router ID, BFD and redistribution
+  of connected networks and static routes, and each OSPF area is a row
+  of its own under it, with its type and interfaces.  An interface that
+  does not forward is pointed out, with a button to turn forwarding on.
+  The rest is in the advanced editor.  The Routes status page is now
+  Routing, to match
 - RESTCONF accepts at most 10 requests a second, with bursts of 20, from
   each host other than the device itself, which slows down password
   guessing.  More gets HTTP 429

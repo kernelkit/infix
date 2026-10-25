@@ -1942,6 +1942,26 @@ function openModal(message, onConfirm, opts) {
   document.addEventListener('htmx:afterSwap', attachObserver);
 })();
 
+// Add Routing Protocol dialog: the router ID is an OSPF setting
+(function() {
+  function update() {
+    var sel = document.getElementById('rt-add-proto');
+    var row = document.getElementById('rt-add-router-id');
+    if (!sel || !row) return;
+    var opt = sel.options[sel.selectedIndex];
+    var ospf = !!(opt && opt.dataset.ospf === 'true');
+    row.hidden = !ospf;
+    var hint = document.getElementById('rt-add-ospf-hint');
+    if (hint) hint.hidden = !ospf;
+  }
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'rt-add-proto') update();
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest && e.target.closest('[data-show-modal="rt-add-dialog"]')) setTimeout(update, 0);
+  });
+})();
+
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
 // Templates are keyed by data-template attribute value.

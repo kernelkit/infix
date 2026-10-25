@@ -3581,3 +3581,16 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
 .modem-signal-bar { display: inline-block; width: 60px; }
 .modem-signal-bar .health-bar-fill { display: block; }
 .modem-signal-detail { font-size: 0.8rem; margin-top: 0.25rem; }
+
+/* Configure > Routing: the protocol rows, their areas and fold-outs */
+.rt-forwarding { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 0.75rem 1.25rem 0; }
+.rt-advanced { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
+/* The tree line runs on through an open fold-out between areas */
+.iface-tree-col.tree-line::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--border);
+}
+.rt-advanced { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
