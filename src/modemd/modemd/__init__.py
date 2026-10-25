@@ -1675,6 +1675,13 @@ class ModemThread(threading.Thread):
                 self.err("Resetting after being 30s in state failed")
                 self.reset()
 
+        # modem disabled under us, e.g. by a ModemManager restart
+        elif self.state in (State.ENABLED, State.CONNECTING, State.CONNECTED) and \
+                self.status.get("state", "") in ("initializing", "disabling",
+                                                  "disabled"):
+            self.info("Modem is %s, starting over" % self.status.get("state"))
+            self.pulldown()
+
         # state down
         elif self.state == State.DOWN:
             if self.status.get("state", "") == "disabled":
