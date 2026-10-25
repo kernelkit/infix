@@ -67,6 +67,9 @@ All notable changes to the project are documented in this file.
   per modem much like `show modem modem0`, and a Restart button.  The page
   of a modem interface shows its modem, operator, network and signal
 - WebUI: a login lasts at most 24 hours, also with Auto-logout set to Off
+- RESTCONF accepts at most 10 requests a second, with bursts of 20, from
+  each host other than the device itself, which slows down password
+  guessing.  More gets HTTP 429
 - CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
   or mismatched PVID, which drops untagged frames or puts them in the wrong
   VLAN, issue #354
