@@ -1414,6 +1414,8 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 /* Forwarding flag column */
 .iface-fwd-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
+/* Level with the first line of the row, not its middle */
+.data-table td.iface-fwd-col { padding-top: 0.75rem !important; }
 .iface-fwd-flag { font-size: 0.8rem; color: var(--primary); user-select: none; }
 
 /* Tree connector column — pseudo-elements draw the continuous vertical/horizontal lines.
@@ -1426,17 +1428,19 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   overflow: visible;
   text-align: center;
 }
-/* These two narrow icon columns must stay middle-aligned even though the rest of the
-   table uses vertical-align: top. Use td.class for higher specificity (0-1-1 beats 0-1-0). */
+/* The forwarding flag, the collapse toggle and the tree connectors follow the first
+   line of a row, at its padding plus half a line of 0.9rem text.  Use td.class for
+   higher specificity (0-1-1 beats 0-1-0). */
 .data-table td.iface-tree-col,
-.data-table td.iface-fwd-col,
+.data-table td.iface-fwd-col { vertical-align: top; }
 .data-table th.iface-fwd-col { vertical-align: middle; }
+.data-table td.iface-tree-col { --first-line: calc(0.75rem + 0.675rem); }
 
-/* Parent row: draw a vertical line from row center down to the bottom edge */
+/* Parent row: draw a vertical line from the first line down to the bottom edge */
 .iface-tree-col.tree-parent::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; bottom: 0;
+  left: 50%; top: var(--first-line); bottom: 0;
   width: 2px; margin-left: -1px;
   background: var(--border);
 }
@@ -1452,23 +1456,23 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .iface-tree-col.tree-mid::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; right: 0;
+  left: 50%; top: var(--first-line); right: 0;
   height: 2px; margin-top: -1px;
   background: var(--border);
 }
 
-/* Last member: vertical line top-to-center + horizontal arm right */
+/* Last member: vertical line down to the first line + horizontal arm right */
 .iface-tree-col.tree-last::before {
   content: '';
   position: absolute;
-  left: 50%; top: 0; bottom: 50%;
+  left: 50%; top: 0; height: var(--first-line);
   width: 2px; margin-left: -1px;
   background: var(--border);
 }
 .iface-tree-col.tree-last::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; right: 0;
+  left: 50%; top: var(--first-line); right: 0;
   height: 2px; margin-top: -1px;
   background: var(--border);
 }
@@ -1485,7 +1489,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: calc(var(--first-line) - 0.325rem) 0 0;
   color: var(--fg-muted);
   font-size: 0.65rem;
   line-height: 1;
