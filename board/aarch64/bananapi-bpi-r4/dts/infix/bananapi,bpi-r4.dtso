@@ -98,6 +98,45 @@
 };
 
 /*
+ * USB hub, VIA VL822, on xHCI port 1 (USB 3.0) and 2 (USB 2.0).  Hub
+ * ports 1-3 are the M.2 Key-B and the two mPCIe slots, 4 is the USB-A
+ * connector.
+ */
+&ssusb1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* Mini PCIe has no USB 3.0 lines */
+	hub@1 {
+		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		device@1 {
+			reg = <1>;
+		};
+	};
+
+	hub@2 {
+		reg = <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		device@1 {
+			reg = <1>;
+		};
+
+		device@2 {
+			reg = <2>;
+		};
+
+		device@3 {
+			reg = <3>;
+		};
+	};
+};
+
+/*
  * EEPROM for a WiFi card in mPCIe CN14, for cards shipped without one.
  * The boot loader copies /mnt/aux/wifi-eeprom.bin here, or zeroes the
  * region, which the driver rejects for the card's own EEPROM.
