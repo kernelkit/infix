@@ -194,7 +194,8 @@ soc                           44.5 °C               ok
 
 An USB port can be in two states _unlocked_ and _locked_. When a port is
 locked, all connected devices will get power, but never authorized by
-Linux to use.
+Linux to use.  Devices built into the board stay authorized, e.g. a
+modem in an M.2 or mPCIe slot wired to the same USB bus as the port.
 
 Every device plugged into a port is listed under *Attached USB Devices*, also
 when it sits behind a hub, and also when the port is locked.  On a
