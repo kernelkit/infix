@@ -610,6 +610,7 @@ class ModemThread(threading.Thread):
         # Retract the component -> port binding so modem-info does not
         # keep reporting this modem under a stale component identity.
         rmf("%s/port" % self.rundir)
+        rmf("%s/device" % self.rundir)
         self.stopevent.set()
 
     def stopped(self):
@@ -1949,6 +1950,9 @@ class ModemThread(threading.Thread):
         # rather than the probe enumeration order.
         if self.port:
             fwrite("%s/port" % self.rundir, self.port)
+
+        # USB device of the modem this component manages, pinned or not
+        fwrite("%s/device" % self.rundir, modem.get("devpath", ""))
 
         self.path = modem.get("path")
         self.dbg("Got path %s" % self.path)
