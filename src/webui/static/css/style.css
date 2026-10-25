@@ -311,11 +311,20 @@ a:hover {
   min-width: 4.5rem;
 }
 
-/* Narrow screens: the hamburger takes over — drop identity so it never
-   competes with the menu button. */
+/* Narrow screens: hostname next to the menu button, shortcuts and the
+   username only in the user menu */
 @media (max-width: 1024px) {
-  .topbar-identity,
-  .topbar-identity-slot { display: none; }
+  .topbar-logo,
+  .topbar-link:not(.refresh-indicator) { display: none; }
+  .topbar-identity {
+    position: relative;
+    left: 0;
+    padding-left: 0;
+  }
+  .topbar-identity::before { display: none; }
+}
+@media (max-width: 600px) {
+  .user-menu-btn > span { display: none; }
 }
 
 .sidebar-nav {
@@ -2303,18 +2312,13 @@ details[open] > .cfg-multi-summary {
 
 .hamburger-btn {
   background: none;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  padding: 0.375rem;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  color: var(--fg-muted);
   display: none;
   align-items: center;
 }
-.hamburger-btn:hover {
-  color: var(--fg);
-  border-color: var(--fg-muted);
-}
+.hamburger-btn:hover { opacity: 0.8; }
 
 /* External web-app shortcuts (console, network browser) in the topbar */
 .topbar-link {
@@ -2392,6 +2396,18 @@ details[open] > .cfg-multi-summary {
     pointer-events: auto;
     transform: translateY(0);
   }
+}
+
+/* Who is logged in, for phones where the button shows only an icon */
+.dropdown-user {
+  display: none;
+  padding: 0.4rem 1rem 0.6rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.375rem;
+}
+@media (max-width: 600px) {
+  .dropdown-user { display: block; }
 }
 
 .dropdown-section-label {

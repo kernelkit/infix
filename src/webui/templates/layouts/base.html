@@ -20,7 +20,7 @@
   <div hidden hx-get="/device-status" hx-trigger="every 5s" hx-swap="none"></div>
   <div class="topbar">
     <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
-      {{template "icon-menu"}}
+      {{template "icon-jack-menu"}}
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
     {{/* Device identity (hostname + location/contact popover), loaded async so
@@ -61,6 +61,7 @@
               {{template "icon-chevron-down"}}
             </button>
             <div class="user-dropdown" id="user-dropdown">
+              <div class="dropdown-user">{{.Username}}</div>
               <div class="dropdown-section-label">Theme</div>
               <button class="dropdown-item theme-opt" data-theme="auto">
                 {{template "icon-contrast"}}
