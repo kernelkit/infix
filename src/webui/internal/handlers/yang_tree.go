@@ -386,7 +386,10 @@ func (h *TreeHandler) fetchListInstances(r *http.Request, path string, listNode 
 		pred := buildKeyPredicate(item, listNode.Keys)
 		instancePath := path + pred
 		// Display name is the key value(s) without the leading "=".
-		displayName := pred[1:]
+		displayName, err := url.PathUnescape(pred[1:])
+		if err != nil {
+			displayName = pred[1:]
+		}
 
 		nodes = append(nodes, &schema.Node{
 			Path:   instancePath,
@@ -426,7 +429,7 @@ func buildKeyPredicate(item map[string]json.RawMessage, keys []string) string {
 			if json.Unmarshal(raw, &s) != nil {
 				s = strings.Trim(string(raw), `"`)
 			}
-			s = url.PathEscape(s)
+			s = restconf.EscapeKey(s)
 		}
 		vals = append(vals, s)
 	}
