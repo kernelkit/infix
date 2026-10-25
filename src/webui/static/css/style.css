@@ -3484,6 +3484,7 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
 }
 /* An action's result inside a card, below its content */
 .card-alert { margin: 0.75rem 1.25rem; }
+.locate-active { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 
 /* Icon flags in the card, meaning on hover */
 .card-flag {

@@ -97,18 +97,41 @@ type HardwareHandler struct {
 	RC       *restconf.Client
 }
 
-// Locate blinks LEDs to identify the chassis, for the duration
-// given by the YANG default of the infix-hardware:locate RPC.
+// locateSeconds is how long Locate blinks the LEDs.
+const locateSeconds = 60
+
+// Locate starts, or with enable=false stops, blinking the LEDs that
+// identify the chassis.  The result clears itself when the LEDs stop,
+// and Stop removes only the result, the target of the Locate button
+// stays.
 func (h *HardwareHandler) Locate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	if err := h.RC.Post(r.Context(), "/operations/infix-hardware:locate"); err != nil {
+	enable := r.FormValue("enable") != "false"
+	input := map[string]any{"enable": enable}
+	if enable {
+		input["duration"] = locateSeconds
+	}
+	err := h.RC.CallRPC(r.Context(), "/operations/infix-hardware:locate",
+		map[string]any{"infix-hardware:input": input}, nil)
+	if err != nil {
 		log.Printf("locate: %v", err)
 		fmt.Fprintf(w, `<div class="alert alert-error card-alert">Locate failed: %s</div>`,
 			template.HTMLEscapeString(err.Error()))
 		return
 	}
-	fmt.Fprint(w, `<div class="alert alert-success card-alert">&#10003; Locating, LEDs are blinking</div>`)
+	if !enable {
+		return
+	}
+	fmt.Fprintf(w, `<div class="alert alert-success card-alert locate-active"`+
+		` hx-get="/hardware/locate" hx-trigger="load delay:%ds" hx-swap="outerHTML">`+
+		`&#10003; LEDs blink for %d seconds`+
+		`<button class="btn btn-sm btn-outline" hx-post="/hardware/locate"`+
+		` hx-vals='{"enable":"false"}' hx-target="closest .locate-active">Stop</button></div>`,
+		locateSeconds, locateSeconds)
 }
+
+// LocateDone clears the Locate result once the LEDs have stopped.
+func (h *HardwareHandler) LocateDone(w http.ResponseWriter, r *http.Request) {}
 
 func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := hardwarePageData{

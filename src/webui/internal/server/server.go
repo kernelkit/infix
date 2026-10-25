@@ -312,6 +312,7 @@ func New(
 	mux.HandleFunc("POST /wifi/{name}/scan", wifi.Scan)
 	mux.HandleFunc("GET /hardware", hw.Overview)
 	mux.HandleFunc("POST /hardware/locate", hw.Locate)
+	mux.HandleFunc("GET /hardware/locate", hw.LocateDone)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
