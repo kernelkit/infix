@@ -56,17 +56,10 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 /* Hubs stay authorized so the devices behind them stay listed */
 static int is_hub(const char *dir)
 {
-	char class[8] = "";
-	FILE *fp;
+	char class[8];
 
-	fp = fopenf("r", "%s/bDeviceClass", dir);
-	if (!fp)
-		return 0;
-	if (!fgets(class, sizeof(class), fp))
-		class[0] = 0;
-	fclose(fp);
-
-	return !strncmp(class, "09", 2);
+	return readsnf(class, sizeof(class), "%s/bDeviceClass", dir) &&
+		!strcmp(class, "09");
 }
 
 /* Devices on ports the device tree marks as hard-wired, e.g. a modem slot */
