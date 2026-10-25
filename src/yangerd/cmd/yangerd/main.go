@@ -171,6 +171,9 @@ func main() {
 
 	nlmon := monitor.New(linkBatch, addrBatch, neighBatch, brBatch, t, osFileChecker{}, slogLog)
 	t.RegisterProvider("ietf-interfaces:interfaces", nlmon.OnDemand)
+	if modems != nil {
+		nlmon.SetWwanSource(hardware.WwanStates)
+	}
 	// Without mcd every bridge reports its querier off.
 	nlmon.SetQuerierSource(func() []mcd.Querier {
 		qs, err := mcd.Read(mcd.SocketPath, 500*time.Millisecond)

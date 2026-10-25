@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -254,8 +255,14 @@ func IsEthernet(row json.RawMessage, fc FileChecker) bool {
 	return len(rows) > 0 && iplink2yangType(rows[0], fc) == "infix-if-type:ethernet"
 }
 
+// wwanRe is the name confd gives a modem interface.
+var wwanRe = regexp.MustCompile(`^wwan\d+$`)
+
 func iplink2yangType(iplink map[string]any, fc FileChecker) string {
 	ifname := getString(iplink, "ifname")
+	if wwanRe.MatchString(ifname) {
+		return "infix-if-type:modem"
+	}
 
 	switch getString(iplink, "link_type") {
 	case "loopback":

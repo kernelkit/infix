@@ -94,6 +94,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
 | | `description` | on demand | sysfs `ifalias`, the link row is only current for interfaces that are up |
+| | modem bearer | event | ModemManager D-Bus signals |
 | | bridge IGMP/MLD querier | on demand | mcd IPC socket, `show interfaces json` |
 | | interfaces in container network namespaces | event | podman events and netlink in each container netns, re-read with `podman ps` and `ip -n` |
 | `ietf-routing:routing` | `ribs` | event | zebra ZAPI redistribution, or rtnetlink route events without FRR |

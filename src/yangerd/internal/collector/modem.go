@@ -431,3 +431,67 @@ func nonEmpty(list []string) []interface{} {
 	}
 	return out
 }
+
+// WwanStates is the infix-interfaces:wwan augment of each modem
+// interface, keyed by interface name.  A connected bearer names its
+// interface, one that is not belongs to wwanN of modemN.
+func (c *HardwareCollector) WwanStates() map[string]interface{} {
+	named := c.readModems(c.readSystemJSON())
+	out := make(map[string]interface{})
+	for _, name := range sortedKeys(named) {
+		for i, b := range named[name].Bearers {
+			ifname := b.Interface
+			if ifname == "" {
+				if i > 0 {
+					continue
+				}
+				ifname = "wwan" + strings.TrimPrefix(name, "modem")
+			}
+			if _, ok := out[ifname]; ok {
+				continue
+			}
+			if bs := bearerState(b); len(bs) > 0 {
+				out[ifname] = map[string]interface{}{"bearer-state": bs}
+			}
+		}
+	}
+	return out
+}
+
+func bearerState(b mmmonitor.Bearer) map[string]interface{} {
+	bs := map[string]interface{}{
+		"path":      b.Path,
+		"connected": b.Connected,
+	}
+	if b.Interface != "" {
+		bs["interface"] = b.Interface
+	}
+	if !b.Connected && b.ConnError != "" {
+		bs["connection-failed-reason"] = b.ConnError
+	}
+	if b.IPv4 != "" {
+		bs["ipv4-address"] = b.IPv4
+		if b.IPv4Prefix > 0 {
+			bs["ipv4-prefix-length"] = b.IPv4Prefix
+		}
+	}
+	if b.IPv6 != "" {
+		bs["ipv6-address"] = b.IPv6
+		if b.IPv6Prefix > 0 {
+			bs["ipv6-prefix-length"] = b.IPv6Prefix
+		}
+	}
+	for key, leaf := range map[string]string{
+		"rx-bytes":       "in-bytes",
+		"tx-bytes":       "out-bytes",
+		"total-rx-bytes": "total-in-bytes",
+		"total-tx-bytes": "total-out-bytes",
+		"total-duration": "total-duration",
+	} {
+		if v, ok := b.Stats[key]; ok {
+			// uint64 leaves are strings in JSON
+			bs[leaf] = fmt.Sprintf("%d", v)
+		}
+	}
+	return bs
+}

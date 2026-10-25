@@ -238,6 +238,47 @@ func TestHardwareModemWeakSignal(t *testing.T) {
 	}
 }
 
+// A connected bearer names its interface, the first bearer of a modem
+// that is not connected belongs to wwanN of modemN.
+func TestWwanStates(t *testing.T) {
+	up := connectedEM05()
+	down := connectedEM05()
+	down.Device = "/sys/devices/platform/soc/11200000.usb/usb1/1-1/1-1.2"
+	down.Bearers = []mmmonitor.Bearer{{
+		Path:      "/org/freedesktop/ModemManager1/Bearer/1",
+		ConnError: "Serving network not allowed",
+	}}
+
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json":          []byte(probedEM05),
+		"/run/modemd/modem0/device": []byte("/sys/devices/platform/soc/11200000.usb/usb1/1-1/1-1.1"),
+		"/run/modemd/modem1/device": []byte("/sys/devices/platform/soc/11200000.usb/usb1/1-1/1-1.2"),
+	}, Globs: map[string][]string{
+		"/run/modemd/modem*/device": {"/run/modemd/modem0/device", "/run/modemd/modem1/device"},
+	}}
+	got := modemCollector(fs, up, down).WwanStates()
+
+	want := map[string]interface{}{
+		"wwan0": map[string]interface{}{"bearer-state": map[string]interface{}{
+			"path":               "/org/freedesktop/ModemManager1/Bearer/0",
+			"connected":          true,
+			"interface":          "wwan0",
+			"ipv4-address":       "10.35.120.97",
+			"ipv4-prefix-length": uint32(30),
+			"in-bytes":           "1234",
+			"total-duration":     "510",
+		}},
+		"wwan1": map[string]interface{}{"bearer-state": map[string]interface{}{
+			"path":                     "/org/freedesktop/ModemManager1/Bearer/1",
+			"connected":                false,
+			"connection-failed-reason": "Serving network not allowed",
+		}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("WwanStates() =\n%#v\nwant\n%#v", got, want)
+	}
+}
+
 func TestAccessTechName(t *testing.T) {
 	for bits, want := range map[uint32]string{
 		0:             "unknown",

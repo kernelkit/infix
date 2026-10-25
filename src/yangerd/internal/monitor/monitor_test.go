@@ -406,7 +406,7 @@ func TestOverlayStampsLastChange(t *testing.T) {
 	changed := time.Now()
 	stamps := map[string]time.Time{"e1": changed}
 
-	out := overlay(doc, stamps, changed.Add(time.Minute), nil, nil)
+	out := overlay(doc, stamps, changed.Add(time.Minute), nil, nil, nil)
 	want := changed.UTC().Format("2006-01-02T15:04:05+00:00")
 	if !strings.Contains(string(out), `{"last-change":"`+want+`","name":"e1"}`) {
 		t.Errorf("want %s on e1 in %s", want, out)
@@ -414,7 +414,7 @@ func TestOverlayStampsLastChange(t *testing.T) {
 	if !strings.Contains(string(out), `{"name":"e2"}`) {
 		t.Errorf("e2 must be untouched in %s", out)
 	}
-	if got := overlay(json.RawMessage(`garbage`), stamps, changed, nil, nil); got != nil {
+	if got := overlay(json.RawMessage(`garbage`), stamps, changed, nil, nil, nil); got != nil {
 		t.Errorf("bad doc must yield no overlay, got %s", got)
 	}
 }
@@ -435,7 +435,7 @@ func TestOverlayQueriers(t *testing.T) {
 	var root struct {
 		Interface []map[string]json.RawMessage `json:"interface"`
 	}
-	if err := json.Unmarshal(overlay(doc, nil, time.Now(), nil, func() []mcd.Querier { return qs }), &root); err != nil {
+	if err := json.Unmarshal(overlay(doc, nil, time.Now(), nil, func() []mcd.Querier { return qs }, nil), &root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -453,7 +453,7 @@ func TestOverlayQueriers(t *testing.T) {
 		}
 	}
 
-	out := overlay(doc, nil, time.Now(), nil, nil)
+	out := overlay(doc, nil, time.Now(), nil, nil, nil)
 	if strings.Contains(string(out), "querier") {
 		t.Errorf("no querier source must leave the bridges alone: %s", out)
 	}
