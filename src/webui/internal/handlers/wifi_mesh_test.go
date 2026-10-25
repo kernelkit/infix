@@ -269,7 +269,7 @@ func TestWiFiPageRendersMeshAndRoaming(t *testing.T) {
 }
 
 func TestIfaceDetailRendersMesh(t *testing.T) {
-	tmpl := realTemplates(t, nil, "layouts/*.html", "pages/iface-detail.html", "fragments/iface-counters.html")
+	tmpl := realTemplates(t, nil, "layouts/*.html", "pages/iface-detail.html", "fragments/iface-counters.html", "fragments/modem-signal.html")
 	ifaces := decodeWiFiFixture(t)
 	req := httptest.NewRequest(http.MethodGet, "/interfaces/wifi0-mesh", nil)
 	data := buildDetailData(req, &ifaces[0])

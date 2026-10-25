@@ -63,6 +63,9 @@ All notable changes to the project are documented in this file.
   read-only root filesystem
 - WebUI: status pages refresh themselves, every 10 seconds by default.  The
   interval, 2, 10 or 30 seconds, or off, is set in the user menu
+- WebUI: cellular modems and SIM cards on the Hardware page, with a page
+  per modem much like `show modem modem0`, and a Restart button.  The page
+  of a modem interface shows its modem, operator, network and signal
 - CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
   or mismatched PVID, which drops untagged frames or puts them in the wrong
   VLAN, issue #354

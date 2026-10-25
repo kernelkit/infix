@@ -27,6 +27,8 @@ type hardwarePageData struct {
 	USBPorts     []usbPortEntry
 	WiFiRadios   []wifiEntry
 	GPSReceivers []gpsEntry
+	Modems       []modemSummary
+	SIMs         []simSummary
 	SensorGroups []hwSensorGroup
 	OtherComps   []otherCompEntry
 	Error        string
@@ -197,6 +199,10 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 			})
 		case classWiFi:
 			data.WiFiRadios = append(data.WiFiRadios, summarizeWiFiRadio(c))
+		case classModem:
+			data.Modems = append(data.Modems, summarizeModem(c))
+		case classSIM:
+			data.SIMs = append(data.SIMs, summarizeSIM(c))
 		case classGPS:
 			data.GPSReceivers = append(data.GPSReceivers, gpsEntry{
 				Name:         c.Name,
@@ -244,6 +250,8 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 		})
 	}
 	sort.Slice(data.USBPorts, func(i, j int) bool { return data.USBPorts[i].Name < data.USBPorts[j].Name })
+	sort.Slice(data.Modems, func(i, j int) bool { return data.Modems[i].Name < data.Modems[j].Name })
+	sort.Slice(data.SIMs, func(i, j int) bool { return data.SIMs[i].Name < data.SIMs[j].Name })
 	sort.Slice(data.OtherComps, func(i, j int) bool {
 		if data.OtherComps[i].Class != data.OtherComps[j].Class {
 			return data.OtherComps[i].Class < data.OtherComps[j].Class

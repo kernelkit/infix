@@ -1,0 +1,3 @@
+{{/* Signal quality of a modemSummary: a bar, percent and the CLI's word,
+     the measured values on hover. */}}
+{{define "modem-signal"}}{{if .HasSignal}}<span class="modem-signal"{{if .SignalDetail}} title="{{.SignalDetail}}"{{end}}><span class="health-bar-track modem-signal-bar"><span class="health-bar-fill {{.SignalClass}}" style="width:{{.SignalPct}}%"></span></span>{{.SignalPct}}% {{.SignalWord}}</span>{{else}}<span class="text-muted">&mdash;</span>{{end}}{{end}}

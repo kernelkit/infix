@@ -2509,7 +2509,8 @@ function renderCfgLog() {
 // Re-fetches the current status page into #content every few seconds, the
 // interval chosen in the user menu and kept in localStorage.  The status
 // pages are the sidebar's Status links, except those with data-no-refresh,
-// e.g. the YANG tree with its own expand state.  Opened and closed toggles
+// e.g. the YANG tree with its own expand state, and pages that carry a
+// data-auto-refresh element, e.g. a modem's detail.  Opened and closed toggles
 // are put back after a refresh.  A refresh is skipped while
 // the tab is hidden, the previous one is still running, or the user is busy
 // with the page: selecting text, typing, or in a menu or dialog.
@@ -2524,6 +2525,7 @@ function renderCfgLog() {
   }
 
   function isStatusPage() {
+    if (document.querySelector('#content [data-auto-refresh]')) return true;
     var links = document.querySelectorAll(
       '#sidebar details.nav-group-top:first-of-type a.nav-link:not([data-no-refresh])');
     for (var i = 0; i < links.length; i++) {

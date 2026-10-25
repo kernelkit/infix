@@ -140,6 +140,65 @@
   </div>
   {{end}}
 
+  {{/* ── Cellular Modems ─────────────────────────────────────────────── */}}
+  {{if or .Modems .SIMs}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Cellular Modems</div>
+    {{if .Modems}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Manufacturer</th>
+            <th>Model</th>
+            <th>State</th>
+            <th>Network</th>
+            <th>Signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Modems}}
+          <tr>
+            <td><a href="/hardware/modem/{{.Name}}" hx-get="/hardware/modem/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Model}}{{.Model}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><span class="status-dot {{.StateClass}}"></span>{{.State}}</td>
+            <td>{{if .Network}}{{.Network}}{{if .Operator}} <span class="text-muted">&middot; {{.Operator}}{{if .Roaming}}, roaming{{end}}</span>{{end}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{template "modem-signal" .}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{end}}
+    {{if .SIMs}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SIM</th>
+            <th>Slot</th>
+            <th>State</th>
+            <th>Operator</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .SIMs}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{if .Slot}}{{.Slot}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><span class="status-dot {{.StateClass}}"></span>{{.State}}</td>
+            <td>{{if .Operator}}{{.Operator}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
   {{/* ── GPS Receivers ────────────────────────────────────────────────── */}}
   {{if .GPSReceivers}}
   <div class="info-card info-grid-span-2">

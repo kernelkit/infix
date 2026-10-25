@@ -442,6 +442,9 @@ type hwComponentJSON struct {
 	SerialNum   string           `json:"serial-num"`
 	HardwareRev string           `json:"hardware-rev"`
 	PhysAddress string           `json:"infix-hardware:phys-address"`
+	URI         []string         `json:"uri"`
+	ModemState  *modemStateJSON  `json:"infix-hardware:modem-state"`
+	SimState    *simStateJSON    `json:"infix-hardware:sim-state"`
 	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
 	GPSReceiver *struct{}        `json:"infix-hardware:gps-receiver"`
 	SensorData  *struct {
