@@ -3513,7 +3513,11 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   border: 1px solid var(--border);
   border-radius: 0.4rem;
   font-size: 0.8rem;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s;
 }
+.port-chip:hover { border-color: var(--fg-muted); }
 .port-name {
   display: flex;
   align-items: center;

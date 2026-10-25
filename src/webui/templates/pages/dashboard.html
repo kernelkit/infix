@@ -131,7 +131,7 @@
       <table class="info-table">
         {{range .Addresses}}
         <tr>
-          <th><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</th>
+          <th><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></th>
           <td>{{range $i, $a := .AddrsWrapped}}{{if $i}}<br>{{end}}{{$a}}{{end}}</td>
         </tr>
         {{end}}
@@ -151,10 +151,10 @@
     </div>
     <div class="port-grid">
       {{range .Ports}}
-      <div class="port-chip" title="{{.Name}}: {{if .Up}}up{{if .Speed}}, {{.Speed}}{{end}}{{else}}down{{end}}{{if .Neighbor}}, {{.Neighbor}}{{end}}">
+      <a class="port-chip" href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true" title="{{.Name}}: {{if .Up}}up{{if .Speed}}, {{.Speed}}{{end}}{{else}}down{{end}}{{if .Neighbor}}, {{.Neighbor}}{{end}}">
         <span class="port-name"><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</span>
         <span class="port-info">{{if .Up}}{{.Speed}}{{if .Neighbor}}{{if .Speed}} &middot; {{end}}{{.Neighbor}}{{end}}{{else}}down{{end}}</span>
-      </div>
+      </a>
       {{end}}
     </div>
   </div>
