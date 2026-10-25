@@ -26,7 +26,7 @@
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td><span class="num">{{.Board.BaseMAC}}</span></td></tr>{{end}}
       </table>
-      <div id="hw-locate-result"></div>
+      <div id="hw-locate-result" hx-preserve="true"></div>
     </div>
   </div>
   {{end}}

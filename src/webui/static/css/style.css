@@ -2429,10 +2429,9 @@ details[open] > .cfg-multi-summary {
 .dropdown-item-danger:hover svg,
 .dropdown-item-danger:focus svg { color: var(--danger); }
 
-/* Theme checkmark — hidden by default, shown on active option */
+/* Checkmark in the user menu — hidden by default, shown on the chosen option */
 .theme-check { margin-left: auto; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
-.theme-opt.is-active .theme-check,
-.timeout-opt.is-active .theme-check { opacity: 1; }
+.dropdown-item.is-active .theme-check { opacity: 1; }
 
 /* Login page floating theme button */
 .login-theme-btn {
@@ -3526,3 +3525,17 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Auto-refresh indicator in the topbar, status pages only */
+.refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.refresh-indicator[hidden] { display: none; }
+.refresh-indicator.is-off { opacity: 0.6; }

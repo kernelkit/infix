@@ -962,6 +962,12 @@
   window.addEventListener('popstate', updateActiveNav);
 })();
 
+// Whether an htmx event belongs to an auto-refresh of a status page
+function isAutoRefresh(evt) {
+  var cfg = evt && evt.detail && evt.detail.requestConfig;
+  return !!(cfg && cfg.headers && cfg.headers['X-Auto-Refresh']);
+}
+
 // Top progress bar during htmx navigations
 (function() {
   var bar, showTimer, hideTimer, inFlight = 0, visible = false;
@@ -1020,11 +1026,18 @@
     if (visible) hide();
   }
 
-  document.addEventListener('htmx:beforeSend',    start);
+  // Auto-refresh of a status page is not a navigation, no bar for it
+  function navigation(fn) {
+    return function(evt) {
+      if (!isAutoRefresh(evt)) fn();
+    };
+  }
+
+  document.addEventListener('htmx:beforeSend',    navigation(start));
   // afterRequest fires for all types including hx-swap="none"; afterSettle does not.
-  document.addEventListener('htmx:afterRequest',  finish);
-  document.addEventListener('htmx:responseError', finish);
-  document.addEventListener('htmx:sendError',     finish);
+  document.addEventListener('htmx:afterRequest',  navigation(finish));
+  document.addEventListener('htmx:responseError', navigation(finish));
+  document.addEventListener('htmx:sendError',     navigation(finish));
 })();
 
 // Show or hide a block and keep its controls in step. Hiding a control
@@ -2438,7 +2451,7 @@ function renderCfgLog() {
     fetch('/session/timeout', { method: 'POST', body: fd, credentials: 'same-origin' }).catch(function () {});
   }
 
-  // Background pollers (watchdog, *counters refresh) must NOT extend
+  // Background pollers (watchdog, *counters, auto-refresh) must NOT extend
   // the idle window — otherwise the timer never reaches the threshold.
   function isPollingPath(p) {
     return p === '/device-status' || (p && p.indexOf('/counters') !== -1);
@@ -2453,12 +2466,14 @@ function renderCfgLog() {
 
     // mousemove deliberately omitted: trackpad jitter from a neighbouring
     // window would keep the session alive indefinitely.
+    // Only real input, not e.g. the clicks that restore toggles after an
+    // auto-refresh.
     ['mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(function(ev) {
-      window.addEventListener(ev, reset, { passive: true });
+      window.addEventListener(ev, function(e) { if (e.isTrusted) reset(); }, { passive: true });
     });
     document.addEventListener('htmx:afterRequest', function(evt) {
       var cfg = evt && evt.detail && evt.detail.requestConfig;
-      if (cfg && isPollingPath(cfg.path)) return;
+      if (isAutoRefresh(evt) || (cfg && isPollingPath(cfg.path))) return;
       reset();
     });
 
@@ -2488,6 +2503,120 @@ function renderCfgLog() {
         doLogout();
       });
     }
+  });
+})();
+
+// ─── Auto-refresh of status pages ──────────────────────────────────────────
+// Re-fetches the current status page into #content every few seconds, the
+// interval chosen in the user menu and kept in localStorage.  The status
+// pages are the sidebar's Status links, except those with data-no-refresh,
+// e.g. the YANG tree with its own expand state.  Opened and closed toggles
+// are put back after a refresh.  A refresh is skipped while
+// the tab is hidden, the previous one is still running, or the user is busy
+// with the page: selecting text, typing, or in a menu or dialog.
+(function() {
+  var LS_KEY = 'auto-refresh';
+  var DEFAULT = '10';
+  var timerId = null;
+  var running = false;
+
+  function current() {
+    return localStorage.getItem(LS_KEY) || DEFAULT;
+  }
+
+  function isStatusPage() {
+    var links = document.querySelectorAll(
+      '#sidebar details.nav-group-top:first-of-type a.nav-link:not([data-no-refresh])');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('href') === window.location.pathname) return true;
+    }
+    return false;
+  }
+
+  function userBusy() {
+    if (document.hidden) return true;
+    var sel = window.getSelection && window.getSelection();
+    if (sel && sel.toString()) return true;
+    if (document.querySelector('dialog[open]')) return true;
+    if (document.body.classList.contains('sidebar-open')) return true;
+    var menuBtn = document.getElementById('user-menu-btn');
+    if (menuBtn && menuBtn.getAttribute('aria-expanded') === 'true') return true;
+    var el = document.activeElement;
+    return !!(el && el.closest && el.closest('#content') && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName));
+  }
+
+  function tick() {
+    if (running || !isStatusPage() || userBusy()) return;
+    running = true;
+    var done = function() { running = false; };
+    htmx.ajax('GET', window.location.pathname + window.location.search, {
+      target: '#content',
+      swap: 'innerHTML',
+      headers: { 'X-Auto-Refresh': '1' }
+    }).then(done, done);
+  }
+
+  // Toggles the user opened or closed, e.g. a bridge or an mDNS host,
+  // by class and data-group, clicked back after the refresh
+  var toggles = null;
+
+  function toggleKey(btn) {
+    return btn.className + '|' + btn.getAttribute('data-group');
+  }
+
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    if (!isAutoRefresh(evt)) return;
+    toggles = {};
+    document.querySelectorAll('#content [aria-expanded][data-group]').forEach(function(btn) {
+      toggles[toggleKey(btn)] = btn.getAttribute('aria-expanded');
+    });
+  });
+
+  document.addEventListener('htmx:afterSwap', function(evt) {
+    if (!isAutoRefresh(evt) || !toggles) return;
+    document.querySelectorAll('#content [aria-expanded][data-group]').forEach(function(btn) {
+      var was = toggles[toggleKey(btn)];
+      if (was && was !== btn.getAttribute('aria-expanded')) btn.click();
+    });
+    toggles = null;
+  });
+
+  function update() {
+    var secs = parseInt(current(), 10) || 0;
+    document.querySelectorAll('.refresh-opt').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-refresh') === current());
+    });
+    var ind = document.getElementById('refresh-indicator');
+    if (ind) {
+      ind.hidden = !isStatusPage();
+      ind.classList.toggle('is-off', !secs);
+      ind.querySelector('.refresh-indicator-text').textContent = secs ? secs + ' s' : 'off';
+    }
+    clearInterval(timerId);
+    timerId = secs ? setInterval(tick, secs * 1000) : null;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('form[action="/login"]')) return;
+    update();
+
+    document.addEventListener('click', function(e) {
+      var opt = e.target.closest('.refresh-opt');
+      if (opt) {
+        localStorage.setItem(LS_KEY, opt.getAttribute('data-refresh'));
+        update();
+        return;
+      }
+      if (e.target.closest('#refresh-indicator')) {
+        e.stopPropagation();
+        var btn = document.getElementById('user-menu-btn');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    // The indicator follows navigation between status and other pages
+    document.addEventListener('htmx:pushedIntoHistory', update);
+    window.addEventListener('popstate', update);
   });
 })();
 

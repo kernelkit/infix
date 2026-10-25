@@ -27,6 +27,10 @@
          it stays out of every page's data path. Replaces itself on load. */}}
     <div class="topbar-identity-slot" hx-get="/identity" hx-trigger="load" hx-swap="outerHTML"></div>
     <div class="topbar-right">
+      <button type="button" class="topbar-link refresh-indicator" id="refresh-indicator" hidden
+              title="Auto-refresh of this page, change it in the user menu">
+        {{template "icon-refresh"}}<span class="refresh-indicator-text"></span>
+      </button>
       {{if .Capabilities.Has "docs"}}
       {{/* On-device User's Guide (static mkdocs site at /guide/). */}}
       <a class="topbar-link" href="/guide/" target="_blank" rel="noopener"
@@ -91,6 +95,28 @@
                 {{template "icon-check"}}
               </button>
               <button class="dropdown-item timeout-opt" data-timeout="0">
+                {{template "icon-circle-slash"}}
+                Off
+                {{template "icon-check"}}
+              </button>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section-label">Auto-refresh</div>
+              <button class="dropdown-item refresh-opt" data-refresh="2">
+                {{template "icon-refresh"}}
+                2 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="10">
+                {{template "icon-refresh"}}
+                10 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="30">
+                {{template "icon-refresh"}}
+                30 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="0">
                 {{template "icon-circle-slash"}}
                 Off
                 {{template "icon-check"}}

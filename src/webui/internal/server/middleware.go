@@ -39,12 +39,12 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Han
 			return
 		}
 
-		polling := isPollingPath(r.URL.Path)
+		polling := isPolling(r)
 
 		// Sliding window: extend the session on user-driven requests.
-		// Background polling endpoints are excluded so an idle user
-		// (just leaving the dashboard open in a tab) still hits the
-		// timeout.
+		// Background polling, including the auto-refresh of a status
+		// page, is excluded so an idle user (just leaving the dashboard
+		// open in a tab) still hits the timeout.
 		if !polling {
 			store.Refresh(cookie.Value)
 		}
@@ -175,7 +175,14 @@ func isPublicPath(path string) bool {
 	return path == "/login" || strings.HasPrefix(path, "/assets/")
 }
 
-func isPollingPath(path string) bool {
+// isPolling reports a background request, one the user did not make.
+// Trusting the client's X-Auto-Refresh is safe, it can only keep a
+// request from extending the session.
+func isPolling(r *http.Request) bool {
+	if r.Header.Get("X-Auto-Refresh") != "" {
+		return true
+	}
+	path := r.URL.Path
 	return path == "/device-status" || strings.HasSuffix(path, "/counters")
 }
 
