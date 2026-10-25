@@ -226,7 +226,7 @@ a:hover {
   width: 100%;
   padding: 2rem;
   overflow-y: auto;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -522,7 +522,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
   align-items: stretch;
