@@ -29,6 +29,11 @@ All notable changes to the project are documented in this file.
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
   R64, NanoPi R2S and Vero W6M now has IPv6 enabled, so the router has a
   link-local address on the LAN side like its ports already had
+- The factory config of the Banana Pi R2 Pro, R3, R3 mini, R4, R64,
+  NanoPi R2S and Vero W6M now checks for a new release every Sunday at
+  03:00, and installs and reboots to it unattended.  Pre-releases are
+  not installed.  To stay on a release, remove `unattended-update` from
+  the software settings
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
   included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see
   [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
