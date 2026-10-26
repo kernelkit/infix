@@ -227,8 +227,8 @@ func (c *HardwareCollector) usbInterfaces(busid string, entries []string) []inte
 	return interfaces
 }
 
-// usbDeviceParents points WiFi radios and GPS receivers at the USB
-// device they live on.  gpsTTY maps a receiver's component name to the
+// usbDeviceParents points WiFi radios, modems and GPS receivers at the
+// USB device they live on.  gpsTTY maps a receiver's component name to the
 // tty behind its /dev/gpsN link.
 func (c *HardwareCollector) usbDeviceParents(components []interface{}, gpsTTY map[string]string) []interface{} {
 	devices := make(map[string]bool)
@@ -260,6 +260,13 @@ func (c *HardwareCollector) usbDeviceParents(components []interface{}, gpsTTY ma
 		switch component["class"] {
 		case "infix-hardware:wifi":
 			parent = phys[name]
+		case "infix-hardware:modem":
+			uris, _ := component["uri"].([]interface{})
+			for _, raw := range uris {
+				if uri, _ := raw.(string); strings.HasPrefix(uri, "usb:") {
+					parent = "usb-" + filepath.Base(uri)
+				}
+			}
 		case "infix-hardware:gps":
 			busid := c.usbTTYBusID(gpsTTY[name])
 			if busid != "" {

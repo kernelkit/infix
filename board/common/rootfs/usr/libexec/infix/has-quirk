@@ -10,16 +10,21 @@ fi
 quirk=$1
 ifname=$2
 
-[ -f "$IFQUIRKSFILE" ] || { echo false && exit; }
+# Patterns setting the quirk, built-in ones for pluggable hardware
+# overridden by the product's
+patterns=$(cat /etc/interface-quirks.json "$IFQUIRKSFILE" 2>/dev/null | \
+	   jq -rs --arg quirk "$quirk" \
+	      'add // {} | to_entries[] | select(.value[$quirk]) | .key')
 
-match()
+# Radios have no netdev for ethtool, report their driver the same way
+drvinfo()
 {
-    jq -e  \
-       --arg quirk "$quirk" --arg pattern "$1" \
-       '.[$pattern][$quirk]' "$IFQUIRKSFILE" >/dev/null || return
-
-    echo true
-    exit 0
+    phy=/sys/class/ieee80211/$ifname
+    if [ -d "$phy" ]; then
+	echo "driver: $(basename "$(readlink "$phy/device/driver")")"
+    else
+	ethtool -i "$ifname"
+    fi
 }
 
 ethtoolmatch()
@@ -27,7 +32,7 @@ ethtoolmatch()
     local pattern="${1#@ethtool:}"
 
     # All key=val pairs of the pattern must match a "key: val" line
-    ethtool -i "$ifname" | awk -v pat="$pattern" '
+    drvinfo | awk -v pat="$pattern" '
 	BEGIN {
 		n = split(pat, kv, ";");
 		for (i = 1; i <= n; i++) {
@@ -37,21 +42,23 @@ ethtoolmatch()
 	}
 	($0 in want) { delete want[$0]; found++; }
 	END { exit(found < n); }
-    ' || return
-
-    match "@ethtool:$pattern"
+    '
 }
 
 
-for pattern in $(jq -r 'keys[]' "$IFQUIRKSFILE"); do
+for pattern in $patterns; do
     case "$pattern" in
 	@ethtool:*)
-	    ethtoolmatch "$pattern"
+	    ethtoolmatch "$pattern" || continue
 	    ;;
 	"$ifname")
-	    match "$ifname"
+	    ;;
+	*)
+	    continue
 	    ;;
     esac
+    echo true
+    exit 0
 done
 
 echo "false"

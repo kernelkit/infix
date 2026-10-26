@@ -94,6 +94,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Resp
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/yang-data+json")
+	if method == http.MethodPost {
+		// Required by rousette on every POST, body or not
+		req.Header.Set("Content-Type", "application/yang-data+json")
+	}
 	creds := CredentialsFromContext(ctx)
 	req.SetBasicAuth(creds.Username, creds.Password)
 	resp, err := c.httpClient.Do(req)

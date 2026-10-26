@@ -162,13 +162,12 @@ def _sim_lock_state(unlock_required):
     mapping = {
         "none":     "unlocked",
         "sim-pin":  "pin-required",
-        "sim-pin2": "pin-required",
         "sim-puk":  "puk-required",
-        "sim-puk2": "puk-required",
     }
     # Default to "unlocked": this function is only called when the SIM query
     # succeeded, so the card is present.  "--" means the modem doesn't report
-    # lock state but the SIM is accessible.
+    # lock state but the SIM is accessible.  PIN2/PUK2 only guard SIM
+    # services like fixed dialing, the SIM still works for data.
     return mapping.get(unlock_required, "unlocked")
 
 

@@ -70,7 +70,7 @@ func (h *LLDPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 			} `json:"port"`
 		} `json:"ieee802-dot1ab-lldp:lldp"`
 	}
-	if err := h.RC.Get(ctx, "/data/ieee802-dot1ab-lldp:lldp", &raw); err != nil {
+	if err := h.RC.Get(ctx, "/data/ieee802-dot1ab-lldp:lldp", &raw); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("restconf lldp: %v", err)
 		data.Error = "Failed to fetch LLDP data"
 	} else {

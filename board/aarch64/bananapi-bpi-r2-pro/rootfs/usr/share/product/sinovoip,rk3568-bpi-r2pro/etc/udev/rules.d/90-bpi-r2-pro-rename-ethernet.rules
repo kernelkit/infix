@@ -1,0 +1,7 @@
+# WAN is gmac1 with an RTL8211F PHY, outside the switch.  The MT7531
+# ports are matched on OF_FULLNAME and named after the case labels.
+ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/fe010000.ethernet/net/*", NAME="wan"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@1", NAME="lan1"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@2", NAME="lan2"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@3", NAME="lan3"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@4", NAME="lan4"

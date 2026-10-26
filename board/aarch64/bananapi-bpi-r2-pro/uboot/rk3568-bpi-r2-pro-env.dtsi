@@ -1,0 +1,14 @@
+/ {
+	config {
+		environment {
+			/* SD card (mmc0) first, eMMC (mmc1) second */
+			boot_targets = "mmc0 mmc1";
+			ethprime = "eth1";
+
+			/* This is a development platform, keep
+			 * developer mode statically enabled.
+			 */
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+		};
+	};
+};

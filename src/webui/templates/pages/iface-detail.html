@@ -60,6 +60,14 @@
       {{if .WiFiTxSpeed}}<tr><th>TX Speed</th><td>{{.WiFiTxSpeed}}</td></tr>{{end}}
       {{if .WiFiStationCount}}<tr><th>Connected Stations</th><td>{{.WiFiStationCount}}</td></tr>{{end}}
       {{if .WiFiPeerCount}}<tr><th>Mesh Peers</th><td>{{.WiFiPeerCount}}</td></tr>{{end}}
+      {{with .Cellular}}
+      <tr><th>Modem</th><td><a href="/hardware/modem/{{.Name}}" hx-get="/hardware/modem/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a>{{if .Model}} <span class="text-muted">{{.Manufacturer}} {{.Model}}</span>{{end}}</td></tr>
+      {{if .Operator}}<tr><th>Operator</th><td>{{.Operator}}{{if .Roaming}} <span class="text-muted">(roaming)</span>{{end}}</td></tr>{{end}}
+      {{if .Network}}<tr><th>Network</th><td>{{.Network}}</td></tr>{{end}}
+      <tr><th>Signal</th><td>{{template "modem-signal" .}}</td></tr>
+      {{end}}
+      {{if .BearerConnected}}<tr><th>Connected</th><td>{{.BearerConnected}}</td></tr>{{end}}
+      {{if .BearerFailure}}<tr><th>Not connected</th><td>{{.BearerFailure}}</td></tr>{{end}}
       {{if .WGPeerSummary}}<tr><th>Peers</th><td>{{.WGPeerSummary}}</td></tr>{{end}}
     </table>
     {{if .Addresses}}

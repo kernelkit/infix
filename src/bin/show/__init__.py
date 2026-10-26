@@ -238,6 +238,10 @@ def channel_survey(radio: str, passive: bool) -> None:
         print(out)
         return
 
+    if not out.strip():
+        print(f"No channel survey data from {radio}.")
+        return
+
     chart = subprocess.run(["/usr/libexec/infix/wifi-channel-map.py"],
                            input=out, capture_output=True, text=True)
     sys.stdout.write(chart.stdout or chart.stderr)
@@ -385,6 +389,13 @@ def interface(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
+
+    # A modem interface also shows its modem's network and signal
+    ifaces = data.get("ietf-interfaces:interfaces", {}).get("interface", [])
+    if any(i.get("type") == "infix-if-type:modem" for i in ifaces):
+        hw = get_json("/ietf-hardware:hardware", quiet=True)
+        if hw:
+            data.update(hw)
 
     if len(args) == 0 or not args[0]:  # Treat "" as no arg.
         cli_pretty(data, "show-interfaces")

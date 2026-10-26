@@ -27,6 +27,7 @@ type hardwarePageData struct {
 	USBPorts     []usbPortEntry
 	WiFiRadios   []wifiEntry
 	GPSReceivers []gpsEntry
+	Modems       []modemSummary
 	SensorGroups []hwSensorGroup
 	OtherComps   []otherCompEntry
 	Error        string
@@ -40,10 +41,12 @@ type usbPortEntry struct {
 }
 
 type gpsEntry struct {
-	Name         string
-	Manufacturer string
-	ModelName    string
-	HardwareRev  string
+	Name       string
+	Device     string
+	Fix        string // "3D", "2D" or "none"
+	FixClass   string // status-dot class
+	Satellites string // "7 of 11"
+	Position   string // "59.329300, 18.068600", "" without a fix
 }
 
 type hwSensorGroup struct {
@@ -97,18 +100,41 @@ type HardwareHandler struct {
 	RC       *restconf.Client
 }
 
-// Locate blinks LEDs to identify the chassis, for the duration
-// given by the YANG default of the infix-hardware:locate RPC.
+// locateSeconds is how long Locate blinks the LEDs.
+const locateSeconds = 60
+
+// Locate starts, or with enable=false stops, blinking the LEDs that
+// identify the chassis.  The result clears itself when the LEDs stop,
+// and Stop removes only the result, the target of the Locate button
+// stays.
 func (h *HardwareHandler) Locate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	if err := h.RC.Post(r.Context(), "/operations/infix-hardware:locate"); err != nil {
+	enable := r.FormValue("enable") != "false"
+	input := map[string]any{"enable": enable}
+	if enable {
+		input["duration"] = locateSeconds
+	}
+	err := h.RC.CallRPC(r.Context(), "/operations/infix-hardware:locate",
+		map[string]any{"infix-hardware:input": input}, nil)
+	if err != nil {
 		log.Printf("locate: %v", err)
-		fmt.Fprintf(w, `<span class="sc-fd-err">Failed: %s</span>`,
+		fmt.Fprintf(w, `<div class="alert alert-error card-alert">Locate failed: %s</div>`,
 			template.HTMLEscapeString(err.Error()))
 		return
 	}
-	fmt.Fprint(w, `<span class="sc-fd-ok">&#10003; Locating, LEDs are blinking</span>`)
+	if !enable {
+		return
+	}
+	fmt.Fprintf(w, `<div class="alert alert-success card-alert locate-active"`+
+		` hx-get="/hardware/locate" hx-trigger="load delay:%ds" hx-swap="outerHTML">`+
+		`&#10003; LEDs blink for %d seconds`+
+		`<button class="btn btn-sm btn-outline" hx-post="/hardware/locate"`+
+		` hx-vals='{"enable":"false"}' hx-target="closest .locate-active">Stop</button></div>`,
+		locateSeconds, locateSeconds)
 }
+
+// LocateDone clears the Locate result once the LEDs have stopped.
+func (h *HardwareHandler) LocateDone(w http.ResponseWriter, r *http.Request) {}
 
 func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := hardwarePageData{
@@ -151,6 +177,7 @@ func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 // summary indicator instead of hiding them.
 func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 	sensorMap := make(map[string][]hwSensorEntry)
+	sims := make(map[string]simSummary)
 	var sensorParents []string
 
 	for _, c := range comps {
@@ -174,13 +201,12 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 			})
 		case classWiFi:
 			data.WiFiRadios = append(data.WiFiRadios, summarizeWiFiRadio(c))
+		case classModem:
+			data.Modems = append(data.Modems, summarizeModem(c))
+		case classSIM:
+			sims[c.Name] = summarizeSIM(c)
 		case classGPS:
-			data.GPSReceivers = append(data.GPSReceivers, gpsEntry{
-				Name:         c.Name,
-				Manufacturer: c.MfgName,
-				ModelName:    c.ModelName,
-				HardwareRev:  c.HardwareRev,
-			})
+			data.GPSReceivers = append(data.GPSReceivers, summarizeGPS(c))
 		default:
 			handled = false
 		}
@@ -221,6 +247,12 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 		})
 	}
 	sort.Slice(data.USBPorts, func(i, j int) bool { return data.USBPorts[i].Name < data.USBPorts[j].Name })
+	sort.Slice(data.Modems, func(i, j int) bool { return data.Modems[i].Name < data.Modems[j].Name })
+	for i := range data.Modems {
+		if sim, ok := sims[simOf(data.Modems[i].Name)]; ok {
+			data.Modems[i].SIM = &sim
+		}
+	}
 	sort.Slice(data.OtherComps, func(i, j int) bool {
 		if data.OtherComps[i].Class != data.OtherComps[j].Class {
 			return data.OtherComps[i].Class < data.OtherComps[j].Class

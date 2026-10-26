@@ -34,6 +34,7 @@ const (
 	WiFi       = "wifi"
 	Containers = "containers"
 	GPS        = "gps"
+	Modem      = "modem"
 	Routing    = "routing"
 )
 
@@ -43,6 +44,7 @@ var Optionals = []Optional{
 	{Name: WiFi, Module: "infix-interfaces", Feature: "wifi"},
 	{Name: Containers, Module: "infix-interfaces", Feature: "containers"},
 	{Name: GPS, Module: "infix-hardware", Feature: "gps"},
+	{Name: Modem, Module: "infix-hardware", Feature: "modem"},
 	// The routing protocol modules are installed only with FRR.
 	{Name: Routing, Module: "ietf-ospf"},
 }

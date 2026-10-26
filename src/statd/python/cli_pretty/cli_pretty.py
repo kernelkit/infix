@@ -1113,6 +1113,7 @@ class DhcpServer:
 class Iface:
     # Class variable to hold routing-enabled interfaces for the current display session
     _routing_ifaces = set()
+    _modems = {}  # modem components by name, for modem interfaces
     _keystore = {}
 
     def __init__(self, data):
@@ -1198,6 +1199,7 @@ class Iface:
         self.vxlan = self.data.get('infix-interfaces:vxlan')
         self.wifi = self.data.get('infix-interfaces:wifi')
         self.wireguard = self.data.get('infix-interfaces:wireguard')
+        self.wwan = self.data.get('infix-interfaces:wwan')
 
         if self.data.get('infix-interfaces:vlan'):
             vlan_data = self.data.get('infix-interfaces:vlan')
@@ -1209,6 +1211,9 @@ class Iface:
 
     def is_wifi(self):
         return self.type == "infix-if-type:wifi"
+
+    def is_modem(self):
+        return self.type == "infix-if-type:modem"
 
     def is_vlan(self):
         return self.type == "infix-if-type:vlan"
@@ -1519,6 +1524,26 @@ class Iface:
 
         return self.cells("wifi", data_str)
 
+    def cells_modem(self):
+        """Network, operator and signal of the modem, or why it is down"""
+        wwan = self.wwan or {}
+        bearer = wwan.get("bearer-state", {})
+        if bearer and not bearer.get("connected"):
+            reason = bearer.get("connection-failed-reason")
+            return self.cells("modem", "not connected" + (f" ({reason})" if reason else ""))
+
+        ms = self._modem_state()
+        cell = ms.get("cellular", {})
+        parts = []
+        if cell.get("network-type"):
+            parts.append(cell["network-type"])
+        if cell.get("operator-name"):
+            roaming = " (roaming)" if cell.get("registration-state") == "roaming" else ""
+            parts.append(cell["operator-name"] + roaming)
+        if ms.get("signal-quality") is not None:
+            parts.append(f"signal: {signal_quality_to_status(ms['signal-quality'])}")
+        return self.cells("modem", ", ".join(parts))
+
     def cells_br(self, br_vlans):
         if self.oper() == "up":
             dec = Decore.green if self.stp_state == "forwarding" else Decore.yellow
@@ -1614,6 +1639,39 @@ class Iface:
     def add_container(self, table):
         table.row(self.flag(), self.name, "container", "", ", ".join(self.containers),
                   style=Decore.gray_bg)
+
+    def _modem_state(self):
+        """modem-state of the modem a modem interface runs on, or {}"""
+        name = (self.wwan or {}).get('modem')
+        return Iface._modems.get(name, {}).get('infix-hardware:modem-state', {})
+
+    def pr_wwan(self):
+        """The modem of a modem interface, its network, and the bearer"""
+        name = self.wwan.get('modem')
+        if name:
+            ms = self._modem_state()
+            model = " ".join(v for v in (ms.get('manufacturer'), ms.get('model')) if v)
+            print(f"{'modem':<{19}}: {name}" + (f" ({model})" if model else ""))
+            cell = ms.get('cellular', {})
+            if cell.get('operator-name'):
+                roaming = " (roaming)" if cell.get('registration-state') == 'roaming' else ""
+                print(f"{'operator':<{19}}: {cell['operator-name']}{roaming}")
+            if cell.get('network-type'):
+                print(f"{'network':<{19}}: {cell['network-type']}")
+            quality = ms.get('signal-quality')
+            if quality is not None:
+                print(f"{'signal':<{19}}: {quality}% {signal_quality_to_status(quality)}")
+
+        bearer = self.wwan.get('bearer-state')
+        if not bearer:
+            return
+        if bearer.get('connected'):
+            secs = int(bearer.get('total-duration', 0) or 0)
+            since = f", for {format_uptime_seconds(secs)}" if secs else ""
+            print(f"{'bearer':<{19}}: connected{since}")
+        else:
+            reason = bearer.get('connection-failed-reason')
+            print(f"{'bearer':<{19}}: disconnected" + (f" ({reason})" if reason else ""))
 
     def pr_iface(self):
         if self.is_in_container():
@@ -1756,6 +1814,9 @@ class Iface:
                     print(f"{'rx bitrate':<{19}}: {rx_speed / 10:.1f} Mbps")
                 if tx_speed is not None:
                     print(f"{'tx bitrate':<{19}}: {tx_speed / 10:.1f} Mbps")
+
+        if self.wwan:
+            self.pr_wwan()
 
         if self.gre:
             print(f"{'local address':<{19}}: {self.gre['local']}")
@@ -1953,6 +2014,8 @@ def pr_interface_list(json):
             iface.add_plain(table, iface.cells_wireguard())
         elif iface.is_wifi():
             iface.add_plain(table, iface.cells_wifi(), eth_sub=True)
+        elif iface.is_modem():
+            iface.add_plain(table, iface.cells_modem())
         elif iface.is_vlan():
             iface.add_vlan(table, ifaces)
         elif iface.lower_if or iface.bridge or iface.lag:
@@ -1971,6 +2034,10 @@ def show_interfaces(json, name):
         Iface._routing_ifaces = set(routing_data.get("interface", []))
     else:
         Iface._routing_ifaces = set()
+
+    components = json.get("ietf-hardware:hardware", {}).get("component", [])
+    Iface._modems = {c.get("name"): c for c in components
+                     if c.get("class") == "infix-hardware:modem"}
 
     if name:
         if not json.get("ietf-interfaces:interfaces"):
@@ -2594,6 +2661,131 @@ def show_modem_detail(json, ref):
             print(f"  {'Last Update':<20}: {loc_change}")
 
 
+def _build_radio_table(wifi_radios):
+    table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('MANUFACTURER', flexible=True),
+        Column('BANDS', 'right'),
+        Column('STANDARDS', 'right'),
+        Column('MAX AP', 'right')
+    ])
+
+    for component in wifi_radios:
+        phy = component.get("name", "")
+        manufacturer = component.get("mfg-name", "Unknown")
+
+        radio_data = component.get("infix-hardware:wifi-radio", {})
+
+        bands = radio_data.get("bands", [])
+        band_names = []
+        has_ht = False
+        has_vht = False
+        has_he = False
+
+        for band in bands:
+            if band.get("name"):
+                band_names.append(band["name"])
+            if band.get("ht-capable"):
+                has_ht = True
+            if band.get("vht-capable"):
+                has_vht = True
+            if band.get("he-capable"):
+                has_he = True
+
+        bands_str = "/".join(band_names) if band_names else "Unknown"
+
+        standards = []
+        if has_ht:
+            standards.append("11n")
+        if has_vht:
+            standards.append("11ac")
+        if has_he:
+            standards.append("11ax")
+        standard_str = "/".join(standards) if standards else "Unknown"
+
+        max_if = radio_data.get("max-interfaces", {})
+        max_ap = max_if.get('ap', 'N/A') if max_if else 'N/A'
+
+        table.row(phy, manufacturer, bands_str, standard_str, max_ap)
+    return table
+
+
+def _build_gps_table(gps_receivers):
+    table = SimpleTable([
+        Column('NAME'),
+        Column('DEVICE'),
+        Column('STATUS'),
+        Column('FIX'),
+        Column('SATELLITES'),
+        Column('POSITION', flexible=True),
+        Column('PPS')
+    ])
+
+    for component in gps_receivers:
+        gps = component.get("infix-hardware:gps-receiver", {})
+        name = component.get("name", "unknown")
+        device = gps.get("device", "N/A")
+        activated = gps.get("activated", False)
+        status = "Active" if activated else "Inactive"
+        fix = gps.get("fix-mode", "none").upper()
+
+        sat_vis = gps.get("satellites-visible")
+        sat_used = gps.get("satellites-used")
+        satellites = f"{sat_used}/{sat_vis}" if sat_vis is not None else "N/A"
+
+        lat = gps.get("latitude")
+        lon = gps.get("longitude")
+        alt = gps.get("altitude")
+        if lat is not None and lon is not None:
+            lat_f = float(lat)
+            lon_f = float(lon)
+            lat_dir = "N" if lat_f >= 0 else "S"
+            lon_dir = "E" if lon_f >= 0 else "W"
+            pos = f"{abs(lat_f):.6f}{lat_dir} {abs(lon_f):.6f}{lon_dir}"
+            if alt is not None:
+                pos += f" {alt}m"
+        else:
+            pos = "N/A"
+
+        pps = "Yes" if gps.get("pps-available", False) else "No"
+
+        table.row(name, device, status, fix, satellites, pos, pps)
+
+    return table
+
+
+def _build_usb_table(usb_ports):
+    table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('STATE'),
+        Column('OPER')
+    ])
+
+    for component in usb_ports:
+        port = USBport(component)
+        table.row(port.name, port.state, port.oper)
+
+    return table
+
+
+def _build_usb_device_table(usb_devices):
+    table = SimpleTable([
+        Column('PORT'),
+        Column('BUS'),
+        Column('VID:PID'),
+        Column('SPEED'),
+        Column('AUTHORIZED'),
+        Column('DESCRIPTION', flexible=True)
+    ])
+
+    for component in usb_devices:
+        dev = USBdevice(component)
+        table.row(dev.port, dev.name, dev.id, dev.speed, dev.authorized,
+                  dev.description)
+
+    return table
+
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
         print("Error, top level \"ietf-hardware:component\" missing")
@@ -2610,171 +2802,37 @@ def show_hardware(json):
     modems = [c for c in components if c.get("class") == "infix-hardware:modem"]
     sims = [c for c in components if c.get("class") == "infix-hardware:sim"]
 
-    # Pre-build modem and SIM tables to get natural widths before computing
-    # the global width used by all section separators.
-    modem_table = _build_modem_table(modems) if modems else None
-    sim_table = _build_sim_table(sims) if sims else None
-
-    width = max(PadSensor.table_width(),
-                modem_table.width() if modem_table else 0,
-                sim_table.width() if sim_table else 0,
-                62)
-
-    # Display full-width inverted heading
-    print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
+    canvas = Canvas(min_width=max(PadSensor.table_width(), 62))
 
     if motherboard:
         board = motherboard[0]  # Should only be one
-        Decore.title("Board Information", width)
+        canvas.add_title("Board Information")
 
         if board.get("model-name"):
-            print(f"Model               : {board['model-name']}")
+            canvas.add_text(f"Model               : {board['model-name']}")
         if board.get("mfg-name"):
-            print(f"Manufacturer        : {board['mfg-name']}")
+            canvas.add_text(f"Manufacturer        : {board['mfg-name']}")
         if board.get("serial-num"):
-            print(f"Serial Number       : {board['serial-num']}")
+            canvas.add_text(f"Serial Number       : {board['serial-num']}")
         if board.get("infix-hardware:phys-address"):
-            print(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
+            canvas.add_text(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
         if board.get("hardware-rev"):
-            print(f"Hardware Revision   : {board['hardware-rev']}")
+            canvas.add_text(f"Hardware Revision   : {board['hardware-rev']}")
 
-    if wifi_radios:
-        Decore.title("WiFi radios", width)
+    for title, build, items in (
+            ("WiFi radios", _build_radio_table, wifi_radios),
+            ("GPS/GNSS Receivers", _build_gps_table, gps_receivers),
+            ("USB Ports", _build_usb_table, usb_ports),
+            ("Attached USB Devices", _build_usb_device_table, usb_devices),
+            ("Cellular Modems", _build_modem_table, modems),
+            ("SIM Cards", _build_sim_table, sims)):
+        if items:
+            canvas.add_title(title)
+            canvas.add_table(build(items))
 
-        radios_table = SimpleTable([
-            Column('NAME', flexible=True),
-            Column('MANUFACTURER', flexible=True),
-            Column('BANDS', 'right'),
-            Column('STANDARDS', 'right'),
-            Column('MAX AP', 'right')
-        ], min_width=width)
-
-        for component in wifi_radios:
-            phy = component.get("name", "")
-            manufacturer = component.get("mfg-name", "Unknown")
-
-            radio_data = component.get("infix-hardware:wifi-radio", {})
-
-            bands = radio_data.get("bands", [])
-            band_names = []
-            has_ht = False
-            has_vht = False
-            has_he = False
-
-            for band in bands:
-                if band.get("name"):
-                    band_names.append(band["name"])
-                if band.get("ht-capable"):
-                    has_ht = True
-                if band.get("vht-capable"):
-                    has_vht = True
-                if band.get("he-capable"):
-                    has_he = True
-
-            bands_str = "/".join(band_names) if band_names else "Unknown"
-
-            standards = []
-            if has_ht:
-                standards.append("11n")
-            if has_vht:
-                standards.append("11ac")
-            if has_he:
-                standards.append("11ax")
-            standard_str = "/".join(standards) if standards else "Unknown"
-
-            max_if = radio_data.get("max-interfaces", {})
-            max_ap = max_if.get('ap', 'N/A') if max_if else 'N/A'
-
-            radios_table.row(phy, manufacturer, bands_str, standard_str, max_ap)
-        radios_table.print()
-
-    if gps_receivers:
-        Decore.title("GPS/GNSS Receivers", width)
-
-        gps_table = SimpleTable([
-            Column('NAME'),
-            Column('DEVICE'),
-            Column('STATUS'),
-            Column('FIX'),
-            Column('SATELLITES'),
-            Column('POSITION', flexible=True),
-            Column('PPS')
-        ], min_width=width)
-
-        for component in gps_receivers:
-            gps = component.get("infix-hardware:gps-receiver", {})
-            name = component.get("name", "unknown")
-            device = gps.get("device", "N/A")
-            activated = gps.get("activated", False)
-            status = "Active" if activated else "Inactive"
-            fix = gps.get("fix-mode", "none").upper()
-
-            sat_vis = gps.get("satellites-visible")
-            sat_used = gps.get("satellites-used")
-            satellites = f"{sat_used}/{sat_vis}" if sat_vis is not None else "N/A"
-
-            lat = gps.get("latitude")
-            lon = gps.get("longitude")
-            alt = gps.get("altitude")
-            if lat is not None and lon is not None:
-                lat_f = float(lat)
-                lon_f = float(lon)
-                lat_dir = "N" if lat_f >= 0 else "S"
-                lon_dir = "E" if lon_f >= 0 else "W"
-                pos = f"{abs(lat_f):.6f}{lat_dir} {abs(lon_f):.6f}{lon_dir}"
-                if alt is not None:
-                    pos += f" {alt}m"
-            else:
-                pos = "N/A"
-
-            pps = "Yes" if gps.get("pps-available", False) else "No"
-
-            gps_table.row(name, device, status, fix, satellites, pos, pps)
-
-        gps_table.print()
-    if usb_ports:
-        Decore.title("USB Ports", width)
-
-        usb_table = SimpleTable([
-            Column('NAME', flexible=True),
-            Column('STATE'),
-            Column('OPER')
-        ], min_width=width)
-
-        for component in usb_ports:
-            port = USBport(component)
-            usb_table.row(port.name, port.state, port.oper)
-
-        usb_table.print()
-
-    if usb_devices:
-        Decore.title("Attached USB Devices", width)
-
-        dev_table = SimpleTable([
-            Column('PORT'),
-            Column('BUS'),
-            Column('VID:PID'),
-            Column('SPEED'),
-            Column('AUTHORIZED'),
-            Column('DESCRIPTION', flexible=True)
-        ], min_width=width)
-
-        for component in usb_devices:
-            dev = USBdevice(component)
-            dev_table.row(dev.port, dev.name, dev.id, dev.speed, dev.authorized,
-                          dev.description)
-
-        dev_table.print()
-
-    if modem_table:
-        Decore.title("Cellular Modems", width)
-        modem_table.adjust_padding(width)
-        modem_table.print()
-
-    if sim_table:
-        Decore.title("SIM Cards", width)
-        sim_table.adjust_padding(width)
-        sim_table.print()
+    width = canvas.get_max_width()
+    print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
+    canvas.render()
 
     if sensors:
         Decore.title("Sensors", width)

@@ -8,21 +8,21 @@ import (
 )
 
 // testdata/sysrepo.startup is trimmed from an x86_64 image with WiFi,
-// GPS, containers and FRR built in.
+// GPS, containers and FRR built in, but not modems.
 func TestSysrepoModules(t *testing.T) {
 	s, err := LoadSysrepoModules("testdata/sysrepo.startup")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for name, on := range s.Enabled() {
-		if !on {
-			t.Errorf("%s: want on", name)
+		if on != (name != Modem) {
+			t.Errorf("%s: want on %v", name, !on)
 		}
 	}
 	if s.Has("ietf-interfaces", "wifi") {
 		t.Error("feature of another module reported")
 	}
-	if s.HasModule("infix-modem") || s.On("modem") {
+	if s.HasModule("infix-modem") {
 		t.Error("module not in the list reported installed")
 	}
 }
@@ -50,7 +50,7 @@ func TestYangLibraryMinimal(t *testing.T) {
 func TestYangLibraryFull(t *testing.T) {
 	s, err := ParseYangLibrary([]byte(`{"ietf-yang-library:yang-library":{"module-set":[{"name":"complete","module":[
 		{"name":"infix-interfaces","feature":["wifi","containers"]},
-		{"name":"infix-hardware","feature":["gps"]},
+		{"name":"infix-hardware","feature":["gps","modem"]},
 		{"name":"ietf-ospf"}]}]}}`))
 	if err != nil {
 		t.Fatal(err)

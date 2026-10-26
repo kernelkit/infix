@@ -762,7 +762,8 @@ func TestRaucCompletedRefreshesSoftware(t *testing.T) {
 		return json.RawMessage(`{"infix-system:software":{"slot":[{"name":"rootfs.1","bundle":{"version":"v2"}}]}}`)
 	}
 
-	sig := &dbus.Signal{Name: raucInstallerInterface + ".Completed", Body: []any{int32(0)}}
+	m.owners = map[string]string{raucBusName: ":1.7"}
+	sig := &dbus.Signal{Sender: ":1.7", Name: raucInstallerInterface + ".Completed", Body: []any{int32(0)}}
 	if err := m.handleSignal(nil, sig); err != nil {
 		t.Fatal(err)
 	}
@@ -825,11 +826,11 @@ func TestRaucAppearingRefreshesSoftware(t *testing.T) {
 		return json.RawMessage(`{"infix-system:software":{"booted":"primary","boot-order":["primary","secondary"]}}`)
 	}
 
-	gone := &dbus.Signal{Name: dbusInterface + ".NameOwnerChanged", Body: []any{raucBusName, ":1.7", ""}}
+	gone := &dbus.Signal{Sender: dbusInterface, Name: dbusInterface + ".NameOwnerChanged", Body: []any{raucBusName, ":1.7", ""}}
 	if err := m.handleSignal(nil, gone); err != nil || calls != 0 {
 		t.Fatalf("rauc leaving: err=%v calls=%d", err, calls)
 	}
-	up := &dbus.Signal{Name: dbusInterface + ".NameOwnerChanged", Body: []any{raucBusName, "", ":1.8"}}
+	up := &dbus.Signal{Sender: dbusInterface, Name: dbusInterface + ".NameOwnerChanged", Body: []any{raucBusName, "", ":1.8"}}
 	if err := m.handleSignal(nil, up); err != nil || calls != 1 {
 		t.Fatalf("rauc appearing: err=%v calls=%d", err, calls)
 	}
@@ -840,5 +841,40 @@ func TestRaucAppearingRefreshesSoftware(t *testing.T) {
 	}
 	if state["infix-system:software"]["booted"] != "primary" {
 		t.Fatalf("booted missing after rauc appeared: %v", state)
+	}
+}
+
+// Any client can send yangerd a signal.  Only the bus itself says who
+// owns a name, and only the owner speaks for a service.
+func TestSpoofedSignalsIgnored(t *testing.T) {
+	tr := tree.New()
+	tr.Set(dhcpTreeKey, json.RawMessage(`{"statistics":{}}`))
+
+	calls := 0
+	m := New(tr, slog.Default())
+	m.owners = map[string]string{raucBusName: ":1.7", dnsmasqBusName: ":1.3"}
+	m.software = func(context.Context) json.RawMessage {
+		calls++
+		return nil
+	}
+
+	for _, sig := range []*dbus.Signal{
+		{Sender: ":1.66", Name: dbusInterface + ".NameOwnerChanged", Body: []any{dnsmasqBusName, ":1.3", ""}},
+		{Sender: ":1.66", Name: raucInstallerInterface + ".Completed", Body: []any{int32(0)}},
+		{Name: raucInstallerInterface + ".Completed", Body: []any{int32(0)}},
+	} {
+		if err := m.handleSignal(nil, sig); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if tr.GetCached(dhcpTreeKey) == nil {
+		t.Error("DHCP data cleared by a spoofed NameOwnerChanged")
+	}
+	if calls != 0 {
+		t.Errorf("software refreshed %d times by spoofed signals", calls)
+	}
+	if m.owners[dnsmasqBusName] != ":1.3" {
+		t.Errorf("dnsmasq owner = %q after a spoofed NameOwnerChanged", m.owners[dnsmasqBusName])
 	}
 }

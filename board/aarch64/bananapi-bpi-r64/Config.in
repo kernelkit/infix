@@ -3,5 +3,6 @@ config BR2_PACKAGE_BANANAPI_BPI_R64
 	depends on BR2_aarch64
 	select BR2_PACKAGE_FEATURE_WIFI
 	select SDCARD_AUX
+	select BR2_PACKAGE_INPUT_EVENT_DAEMON
 	help
 	  Build Banana PI R64 support

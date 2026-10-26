@@ -18,7 +18,6 @@
               hx-target="#hw-locate-result"
               hx-swap="innerHTML">Locate</button>
     </div>
-    <div id="hw-locate-result"></div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
         <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
@@ -27,13 +26,43 @@
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td><span class="num">{{.Board.BaseMAC}}</span></td></tr>{{end}}
       </table>
+      <div id="hw-locate-result" hx-preserve="true"></div>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── Sensors ──────────────────────────────────────────────────────── */}}
+  {{if .SensorGroups}}
+  <div class="info-card">
+    <div class="card-header">Sensors</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{range $g := .SensorGroups}}
+          {{if $g.Parent}}<tr class="sensor-group-hdr"><th colspan="3">{{$g.Parent}}</th></tr>{{end}}
+          {{range $g.Sensors}}
+          <tr{{if $g.Parent}} class="sensor-child"{{end}}>
+            <th>{{.Label}}</th>
+            <td><span class="num">{{.Value}}</span></td>
+            <td style="text-align:right">
+              {{if eq .OperStatus "ok"}}
+              <span class="status-dot status-up" title="ok"></span>
+              {{else if eq .OperStatus ""}}
+              <span class="text-muted">&mdash;</span>
+              {{else}}
+              <span class="status-dot status-down" title="{{.OperStatus}}"></span><span class="text-muted">{{.OperStatus}}</span>
+              {{end}}
+            </td>
+          </tr>
+          {{end}}
+        {{end}}
+      </table>
     </div>
   </div>
   {{end}}
 
   {{/* ── USB Ports ────────────────────────────────────────────────────── */}}
   {{if .USBPorts}}
-  <div class="info-card">
+  <div class="info-card info-grid-span-2">
     <div class="card-header">USB Ports
       <a href="/configure/hardware"
          hx-get="/configure/hardware"
@@ -98,7 +127,7 @@
         <tbody>
           {{range .WiFiRadios}}
           <tr>
-            <td>{{.Name}}</td>
+            <td><a href="/wifi#radio-{{.Name}}" hx-get="/wifi" hx-target="#content" hx-push-url="/wifi#radio-{{.Name}}">{{.Name}}</a></td>
             <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
             <td>{{if .Bands}}{{.Bands}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
             <td>{{if .Standards}}{{.Standards}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
@@ -111,27 +140,31 @@
   </div>
   {{end}}
 
-  {{/* ── GPS Receivers ────────────────────────────────────────────────── */}}
-  {{if .GPSReceivers}}
-  <div class="info-card">
-    <div class="card-header">GPS Receivers</div>
+  {{/* ── Cellular Modems ─────────────────────────────────────────────── */}}
+  {{if .Modems}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Cellular Modems</div>
     <div class="data-table-wrap">
       <table class="data-table">
         <thead>
           <tr>
             <th>Name</th>
-            <th>Manufacturer</th>
             <th>Model</th>
-            <th>HW Rev</th>
+            <th>State</th>
+            <th>Network</th>
+            <th>Signal</th>
+            <th>SIM</th>
           </tr>
         </thead>
         <tbody>
-          {{range .GPSReceivers}}
+          {{range .Modems}}
           <tr>
-            <td>{{.Name}}</td>
-            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
-            <td>{{if .ModelName}}{{.ModelName}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
-            <td>{{if .HardwareRev}}{{.HardwareRev}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><a href="/hardware/modem/{{.Name}}" hx-get="/hardware/modem/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+            <td>{{if .Model}}{{.Model}}{{if .Manufacturer}} <span class="text-muted">{{.Manufacturer}}</span>{{end}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><span class="status-dot {{.StateClass}}"></span>{{.State}}</td>
+            <td>{{if .Network}}{{.Network}}{{if .Operator}} <span class="text-muted">&middot; {{.Operator}}{{if .Roaming}}, roaming{{end}}</span>{{end}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{template "modem-signal" .}}</td>
+            <td>{{with .SIM}}<span class="status-dot {{.StateClass}}"></span>{{.Name}} <span class="text-muted">{{.State}}</span>{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
           </tr>
           {{end}}
         </tbody>
@@ -140,30 +173,32 @@
   </div>
   {{end}}
 
-  {{/* ── Sensors ──────────────────────────────────────────────────────── */}}
-  {{if .SensorGroups}}
+  {{/* ── GPS Receivers ────────────────────────────────────────────────── */}}
+  {{if .GPSReceivers}}
   <div class="info-card info-grid-span-2">
-    <div class="card-header">Sensors</div>
-    <div class="card-body" style="padding:0">
-      <table class="info-table">
-        {{range $g := .SensorGroups}}
-          {{if $g.Parent}}<tr class="sensor-group-hdr"><th colspan="3">{{$g.Parent}}</th></tr>{{end}}
-          {{range $g.Sensors}}
-          <tr{{if $g.Parent}} class="sensor-child"{{end}}>
-            <th>{{.Label}}</th>
-            <td><span class="num">{{.Value}}</span></td>
-            <td style="text-align:right">
-              {{if eq .OperStatus "ok"}}
-              <span class="status-dot status-up" title="ok"></span>
-              {{else if eq .OperStatus ""}}
-              <span class="text-muted">&mdash;</span>
-              {{else}}
-              <span class="status-dot status-down" title="{{.OperStatus}}"></span><span class="text-muted">{{.OperStatus}}</span>
-              {{end}}
-            </td>
+    <div class="card-header">GPS Receivers</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Device</th>
+            <th>Fix</th>
+            <th>Satellites</th>
+            <th>Position</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .GPSReceivers}}
+          <tr>
+            <td><a href="/hardware/gps/{{.Name}}" hx-get="/hardware/gps/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+            <td>{{if .Device}}{{.Device}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td><span class="status-dot {{.FixClass}}"></span>{{.Fix}}</td>
+            <td>{{if .Satellites}}{{.Satellites}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Position}}{{.Position}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
           </tr>
           {{end}}
-        {{end}}
+        </tbody>
       </table>
     </div>
   </div>

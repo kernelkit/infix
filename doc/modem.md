@@ -33,13 +33,13 @@ Cellular modem support is built in three layers:
      - Configured via `ietf-hardware` with class `infix-hardware:modem`
      - `admin-state` controls whether the cellular subsystem is active
      - Holds physical-layer config: allowed bands, preferred mode, location
-     - Auto-discovered into factory-default config when the modem is
-       present at first boot
+     - Pinned to its USB port with a `uri`
+     - Always added by the user, never part of the factory configuration
 
 2. **SIM hardware component (sim0)**: the SIM card slot
      - Configured via `ietf-hardware` with class `infix-hardware:sim`
      - Holds PIN/PUK credentials and carrier profile
-     - Auto-discovered into factory-default config alongside the modem
+     - Always added by the user, never part of the factory configuration
 
 3. **Network interface (wwan0)**: data bearer to the cellular network
      - Configured via `ietf-interfaces` with type `infix-if-type:modem`
@@ -123,45 +123,10 @@ control interface.
 
 ### 1. Hardware Detection
 
-At first boot, USB modems detected by the kernel are written to
-`/run/system.json` and added as hardware components in the
-factory-default configuration.  Verify the modem appears:
-
-<pre class="cli"><code>admin@example:/> <b>show modem</b>
-──────────────────────────────────────────────────────────────
-<span class="title">Cellular Modems</span>
-NAME    MANUFACTURER  MODEL   STATE       NETWORK  SIGNAL
-modem0  Quectel       EM06-E  registered  lte      good
-──────────────────────────────────────────────────────────────
-<span class="title">SIM Cards</span>
-NAME  SLOT  STATE     OPERATOR
-sim0  1     unlocked  Tele2
-</code></pre>
-
-The `STATE`, `SIM STATE`, and `SIGNAL` columns are color-coded so the
-healthy / attention / problem cases are visible at a glance: green for
-`registered`, `connected`, `unlocked`, `excellent`, `good`; yellow for
-transient or attention states like `enabling`, `pin-required`, `poor`;
-red for `failed`, `not-inserted`, `bad`.
-
-If `modem0` does not appear:
-
-- Verify the kernel sees the modem (`dmesg | grep -i mbim` or
-  `dmesg | grep -i qmi`).  Without a kernel driver no further setup
-  is possible.
-- On boards with a custom factory configuration, or after replacing
-  hardware on a running system, the components may need to be added
-  manually.  See Step 2.
-
-### 2. Hardware Components
-
-If `show modem` already lists `modem0` and `sim0`, the components were
-auto-discovered into the factory-default configuration and you can skip
-ahead to Step 3.
-
-Otherwise, add them manually.  Start by finding the modem's USB
-attachment point.  Detected modems are always visible in the hardware
-detail view, even before they are configured:
+USB modems detected by the kernel at boot are listed in the hardware
+detail view, even before they are configured.  Modems are never part of
+the factory configuration, the `modem0` and `sim0` components are always
+added by you, see Step 2.  Verify that the system has found the modem:
 
 <pre class="cli"><code>admin@example:/> <b>show hardware modem0</b>
 <span class="header">COMPONENT: modem0                                             </span>
@@ -174,12 +139,21 @@ detail view, even before they are configured:
 See 'show modem modem0' for cellular status.
 </code></pre>
 
-Copy the `URI` value into the component configuration.  It anchors the
-component to the physical USB port, so the data interface always gets
-the name you configured, no matter in which order the hardware
-enumerates.  Anchoring also acts as a lock: once every modem component
-is anchored, a modem plugged into any other port is detected and shown,
-but stays unmanaged until it too is configured.
+If `modem0` does not appear, verify that the kernel sees the modem
+(`dmesg | grep -i mbim` or `dmesg | grep -i qmi`).  Without a kernel
+driver no further setup is possible.
+
+### 2. Hardware Components
+
+Copy the `URI` value from Step 1 into the component configuration.  It
+anchors the component to the physical USB port, so the modem and its
+data interface always get the names you configured, no matter in which
+order the hardware enumerates.  Without it, a modem that resets, e.g.,
+after a firmware crash, comes back as `modem1`, `modem2`, and so on,
+and the configuration for `modem0` no longer applies.  Anchoring also
+acts as a lock: once every modem component is anchored, a modem plugged
+into any other port is detected and shown, but stays unmanaged until it
+too is configured.
 
 The class is inferred from the component name (`modemN` →
 `infix-hardware:modem`, `simN` → `infix-hardware:sim`).  The
@@ -311,6 +285,25 @@ admin@example:/config/hardware/component/sim0/> <b>leave</b>
 
 ### 6. Verify Connectivity
 
+`show modem` gives an overview of all modems and SIM cards:
+
+<pre class="cli"><code>admin@example:/> <b>show modem</b>
+──────────────────────────────────────────────────────────────
+<span class="title">Cellular Modems</span>
+NAME    MANUFACTURER  MODEL   STATE       NETWORK  SIGNAL
+modem0  Quectel       EM06-E  registered  lte      good
+──────────────────────────────────────────────────────────────
+<span class="title">SIM Cards</span>
+NAME  SLOT  STATE     OPERATOR
+sim0  1     unlocked  Tele2
+</code></pre>
+
+The `STATE`, `SIM STATE`, and `SIGNAL` columns are color-coded so the
+healthy / attention / problem cases are visible at a glance: green for
+`registered`, `connected`, `unlocked`, `excellent`, `good`; yellow for
+transient or attention states like `enabling`, `pin-required`, `poor`;
+red for `failed`, `not-inserted`, `bad`.
+
 Once connected, the `wwan0` interface receives an IP address from the
 carrier and the default route is installed automatically:
 
@@ -322,8 +315,8 @@ mtu                 : 1500
 operational status  : up
 ip forwarding       : enabled
 physical address    : 12:34:56:78:9a:bc
-ipv4 addresses      : 10.142.87.33/30 (wwan)
-ipv6 addresses      : 2001:db8:1:2::1/64 (wwan)
+ipv4 addresses      : 10.142.87.33/30 (other)
+ipv6 addresses      : 2001:db8:1:2::1/64 (other)
 in-octets           : 84213
 out-octets          : 31456
 </code></pre>
@@ -371,6 +364,16 @@ The default `route-preference` (200) is deliberately higher than the
 distances used by wired Ethernet (udhcpc default: 5) and WiFi.  When a
 wired link is up it takes precedence automatically; cellular becomes
 the active path only if higher-priority routes are withdrawn.
+
+The route preference is the administrative distance of the route, shown
+in the `PREF` column of `show ip route`, e.g. `200/0`.  It is not the
+metric of the route in the kernel routing table:
+
+<pre class="cli"><code>admin@example:/> <b>show ip route</b>
+<span class="header">   DESTINATION            PREF NEXT-HOP         PROTO     UPTIME</span>
+>* 0.0.0.0/0             200/0 10.69.40.40      static  00:24:50
+>* 10.69.40.32/28          0/0 wwan0            direct  00:24:50
+</code></pre>
 
 A default route via the bearer is always installed when the bearer
 connects.  To adjust the failover priority between two cellular modems,
@@ -530,3 +533,34 @@ is required; the modem only needs to be registered on the network:
 - Use `show modem modem0` to check signal quality and RSRP
 - Signal below -110 dBm RSRP typically indicates poor coverage
 - Consider repositioning the antenna or the device
+
+### USB 3.0 Modem in a Mini PCIe Slot
+
+Mini PCIe has no USB 3.0 pins, so modems like the Quectel EP06 and the
+Sierra Wireless MC7455 put their SuperSpeed lines on the PCIe lane
+pins.  In a slot that has those pins wired to a PCIe controller the
+modem never connects, not even at USB 2.0 speed, and does not show up
+in `lsusb`.
+
+Turn off USB 3.0 in the modem: connect it to a USB port with a Mini
+PCIe to USB adapter and run the commands below on its AT port, usually
+`ttyUSB2`.  The modem stores the setting, so this is only needed once.
+Power off, put the modem back in the slot, and power on.
+
+Quectel:
+
+```
+AT+QUSBCFG="SS",0
+AT+CFUN=1,1
+```
+
+Sierra Wireless, where `A710` is the default password:
+
+```
+AT!ENTERCND="A710"
+AT!USBSPEED=0
+AT!RESET
+```
+
+Older Sierra Wireless firmware answers `ERROR` to `AT!USBSPEED`, update
+the modem firmware first.

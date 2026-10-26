@@ -135,7 +135,7 @@ static void add(const char *ifname, struct lyd_node *cfg)
 	else
 		snprintf(vendor, sizeof(vendor), "-V \"\"");
 
-	fp = fopenf("w", "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
+	fp = fopenfp(0644, NULL, "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
 	if (!fp) {
 	generr:
 		ERRNO("failed creating DHCP client %s: %s", ifname, strerror(errno));

@@ -38,7 +38,6 @@
 #define JOURNAL_DIR   "/var/lib/statd"
 #define DUMP_FILE     JOURNAL_DIR "/operational.json"
 #define DUMP_INTERVAL 300.0	/* seconds of rest between snapshots */
-#define CHUNK_DELAY   50000	/* us breather between module reads */
 #define CHUNK_TIMEOUT 10000	/* ms, keep short: the read holds module locks
 				 * that configuration changes wait on */
 
@@ -150,8 +149,6 @@ static struct lyd_node *dump_modules(sr_session_ctx_t *ses, const struct ly_ctx 
 				ERROR("Error, merging %s data", mod->name);
 			sr_release_data(data);
 		}
-
-		usleep(CHUNK_DELAY);
 	}
 
 	return tree;

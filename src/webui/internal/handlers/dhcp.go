@@ -87,7 +87,7 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 			} `json:"statistics"`
 		} `json:"infix-dhcp-server:dhcp-server"`
 	}
-	if err := h.RC.Get(ctx, "/data/infix-dhcp-server:dhcp-server", &raw); err != nil {
+	if err := h.RC.Get(ctx, "/data/infix-dhcp-server:dhcp-server", &raw); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("restconf dhcp-server: %v", err)
 		data.Error = "Failed to fetch DHCP data"
 	} else {

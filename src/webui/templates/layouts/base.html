@@ -20,13 +20,17 @@
   <div hidden hx-get="/device-status" hx-trigger="every 5s" hx-swap="none"></div>
   <div class="topbar">
     <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
-      {{template "icon-menu"}}
+      {{template "icon-jack-menu"}}
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
     {{/* Device identity (hostname + location/contact popover), loaded async so
          it stays out of every page's data path. Replaces itself on load. */}}
     <div class="topbar-identity-slot" hx-get="/identity" hx-trigger="load" hx-swap="outerHTML"></div>
     <div class="topbar-right">
+      <button type="button" class="topbar-link refresh-indicator" id="refresh-indicator" hidden
+              title="Auto-refresh of this page, change it in the user menu">
+        {{template "icon-refresh"}}<span class="refresh-indicator-text"></span>
+      </button>
       {{if .Capabilities.Has "docs"}}
       {{/* On-device User's Guide (static mkdocs site at /guide/). */}}
       <a class="topbar-link" href="/guide/" target="_blank" rel="noopener"
@@ -57,6 +61,7 @@
               {{template "icon-chevron-down"}}
             </button>
             <div class="user-dropdown" id="user-dropdown">
+              <div class="dropdown-user">{{.Username}}</div>
               <div class="dropdown-section-label">Theme</div>
               <button class="dropdown-item theme-opt" data-theme="auto">
                 {{template "icon-contrast"}}
@@ -91,6 +96,29 @@
                 {{template "icon-check"}}
               </button>
               <button class="dropdown-item timeout-opt" data-timeout="0">
+                {{template "icon-circle-slash"}}
+                Off
+                {{template "icon-check"}}
+              </button>
+              <div class="dropdown-note" title="Sessions end 24 hours after login, also with Auto-logout off">Logs out 24 h after login</div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section-label">Auto-refresh</div>
+              <button class="dropdown-item refresh-opt" data-refresh="2">
+                {{template "icon-refresh"}}
+                2 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="10">
+                {{template "icon-refresh"}}
+                10 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="30">
+                {{template "icon-refresh"}}
+                30 s
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item refresh-opt" data-refresh="0">
                 {{template "icon-circle-slash"}}
                 Off
                 {{template "icon-check"}}

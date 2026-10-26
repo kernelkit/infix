@@ -226,7 +226,7 @@ a:hover {
   width: 100%;
   padding: 2rem;
   overflow-y: auto;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -311,11 +311,20 @@ a:hover {
   min-width: 4.5rem;
 }
 
-/* Narrow screens: the hamburger takes over — drop identity so it never
-   competes with the menu button. */
+/* Narrow screens: hostname next to the menu button, shortcuts and the
+   username only in the user menu */
 @media (max-width: 1024px) {
-  .topbar-identity,
-  .topbar-identity-slot { display: none; }
+  .topbar-logo,
+  .topbar-link:not(.refresh-indicator) { display: none; }
+  .topbar-identity {
+    position: relative;
+    left: 0;
+    padding-left: 0;
+  }
+  .topbar-identity::before { display: none; }
+}
+@media (max-width: 600px) {
+  .user-menu-btn > span { display: none; }
 }
 
 .sidebar-nav {
@@ -522,7 +531,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
   align-items: stretch;
@@ -643,6 +652,9 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   font-weight: 500;
   text-align: left;
 }
+
+/* Labels line up with the first line of a multi-line value */
+.info-table th, .info-table td { vertical-align: baseline; }
 
 /* Disk usage widget (one entry per mount point) */
 .disk-item {
@@ -1289,7 +1301,8 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 /* mDNS toggle column and chevron button */
 .mdns-toggle-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
-.data-table td.mdns-toggle-col,
+/* Level with the first line of the row, like the interface markers */
+.data-table td.mdns-toggle-col { vertical-align: top; padding-top: 0.75rem !important; }
 .data-table th.mdns-toggle-col { vertical-align: middle; }
 .mdns-addr-toggle {
   background: none;
@@ -1414,6 +1427,8 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 /* Forwarding flag column */
 .iface-fwd-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
+/* Level with the first line of the row, not its middle */
+.data-table td.iface-fwd-col { padding-top: 0.75rem !important; }
 .iface-fwd-flag { font-size: 0.8rem; color: var(--primary); user-select: none; }
 
 /* Tree connector column — pseudo-elements draw the continuous vertical/horizontal lines.
@@ -1426,17 +1441,19 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   overflow: visible;
   text-align: center;
 }
-/* These two narrow icon columns must stay middle-aligned even though the rest of the
-   table uses vertical-align: top. Use td.class for higher specificity (0-1-1 beats 0-1-0). */
+/* The forwarding flag, the collapse toggle and the tree connectors follow the first
+   line of a row, at its padding plus half a line of 0.9rem text.  Use td.class for
+   higher specificity (0-1-1 beats 0-1-0). */
 .data-table td.iface-tree-col,
-.data-table td.iface-fwd-col,
+.data-table td.iface-fwd-col { vertical-align: top; }
 .data-table th.iface-fwd-col { vertical-align: middle; }
+.data-table td.iface-tree-col { --first-line: calc(0.75rem + 0.675rem); }
 
-/* Parent row: draw a vertical line from row center down to the bottom edge */
+/* Parent row: draw a vertical line from the first line down to the bottom edge */
 .iface-tree-col.tree-parent::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; bottom: 0;
+  left: 50%; top: var(--first-line); bottom: 0;
   width: 2px; margin-left: -1px;
   background: var(--border);
 }
@@ -1452,23 +1469,23 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .iface-tree-col.tree-mid::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; right: 0;
+  left: 50%; top: var(--first-line); right: 0;
   height: 2px; margin-top: -1px;
   background: var(--border);
 }
 
-/* Last member: vertical line top-to-center + horizontal arm right */
+/* Last member: vertical line down to the first line + horizontal arm right */
 .iface-tree-col.tree-last::before {
   content: '';
   position: absolute;
-  left: 50%; top: 0; bottom: 50%;
+  left: 50%; top: 0; height: var(--first-line);
   width: 2px; margin-left: -1px;
   background: var(--border);
 }
 .iface-tree-col.tree-last::after {
   content: '';
   position: absolute;
-  left: 50%; top: 50%; right: 0;
+  left: 50%; top: var(--first-line); right: 0;
   height: 2px; margin-top: -1px;
   background: var(--border);
 }
@@ -1485,7 +1502,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: calc(var(--first-line) - 0.325rem) 0 0;
   color: var(--fg-muted);
   font-size: 0.65rem;
   line-height: 1;
@@ -2295,18 +2312,13 @@ details[open] > .cfg-multi-summary {
 
 .hamburger-btn {
   background: none;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  padding: 0.375rem;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  color: var(--fg-muted);
   display: none;
   align-items: center;
 }
-.hamburger-btn:hover {
-  color: var(--fg);
-  border-color: var(--fg-muted);
-}
+.hamburger-btn:hover { opacity: 0.8; }
 
 /* External web-app shortcuts (console, network browser) in the topbar */
 .topbar-link {
@@ -2372,11 +2384,30 @@ details[open] > .cfg-multi-summary {
   transform: translateY(-4px);
   transition: opacity 0.15s, transform 0.15s;
 }
-.user-menu:hover .user-dropdown,
 .user-menu-btn[aria-expanded="true"] + .user-dropdown {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+/* Hover only where there is a mouse, a tap would leave it stuck open */
+@media (hover: hover) {
+  .user-menu:hover .user-dropdown {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+/* Who is logged in, for phones where the button shows only an icon */
+.dropdown-user {
+  display: none;
+  padding: 0.4rem 1rem 0.6rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.375rem;
+}
+@media (max-width: 600px) {
+  .dropdown-user { display: block; }
 }
 
 .dropdown-section-label {
@@ -2386,6 +2417,12 @@ details[open] > .cfg-multi-summary {
   text-transform: uppercase;
   color: var(--fg-muted);
   padding: 0.25rem 0.875rem 0.125rem;
+}
+
+.dropdown-note {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  padding: 0.125rem 0.875rem 0.25rem;
 }
 
 .dropdown-divider {
@@ -2424,10 +2461,9 @@ details[open] > .cfg-multi-summary {
 .dropdown-item-danger:hover svg,
 .dropdown-item-danger:focus svg { color: var(--danger); }
 
-/* Theme checkmark — hidden by default, shown on active option */
+/* Checkmark in the user menu — hidden by default, shown on the chosen option */
 .theme-check { margin-left: auto; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
-.theme-opt.is-active .theme-check,
-.timeout-opt.is-active .theme-check { opacity: 1; }
+.dropdown-item.is-active .theme-check { opacity: 1; }
 
 /* Login page floating theme button */
 .login-theme-btn {
@@ -3477,7 +3513,9 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--border);
 }
-.update-card-error { margin: 0.75rem 1.25rem; }
+/* An action's result inside a card, below its content */
+.card-alert { margin: 0.75rem 1.25rem; }
+.locate-active { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 
 /* Icon flags in the card, meaning on hover */
 .card-flag {
@@ -3504,7 +3542,11 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   border: 1px solid var(--border);
   border-radius: 0.4rem;
   font-size: 0.8rem;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s;
 }
+.port-chip:hover { border-color: var(--fg-muted); }
 .port-name {
   display: flex;
   align-items: center;
@@ -3519,3 +3561,23 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Auto-refresh indicator in the topbar, status pages only */
+.refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.refresh-indicator[hidden] { display: none; }
+.refresh-indicator.is-off { opacity: 0.6; }
+
+/* Modem signal: a short bar before the percent and its word */
+.modem-signal { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+.modem-signal-bar { display: inline-block; width: 60px; }
+.modem-signal-bar .health-bar-fill { display: block; }
+.modem-signal-detail { font-size: 0.8rem; margin-top: 0.25rem; }

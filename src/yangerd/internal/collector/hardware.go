@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/mmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
@@ -53,6 +54,7 @@ type HardwareCollector struct {
 	enableWifi bool
 	enableGPS  bool
 	gpsPoll    func(context.Context) map[string]interface{}
+	modems     func() []mmmonitor.Modem
 
 	mu       sync.Mutex
 	gps      []interface{}                     // last GPS poll
@@ -60,6 +62,10 @@ type HardwareCollector struct {
 	radios   []interface{}                     // radio capabilities
 	wifiInfo map[string]map[string]interface{} // PHY info the radios were built from
 	reported map[string]bool                   // duplicate names already warned about
+
+	sysMu     sync.Mutex
+	sysRaw    []byte                 // system.json as last read
+	sysParsed map[string]interface{} // and parsed, shared, never modified
 
 	radioRefresh chan struct{}
 }
@@ -150,6 +156,7 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 	inventory = append(inventory, c.motherboardComponent(systemjson)...)
 	inventory = append(inventory, c.vpdComponents(systemjson)...)
 	inventory = append(inventory, c.usbPortComponents(systemjson)...)
+	inventory = append(inventory, c.modemComponents(c.readModems(systemjson), systemjson)...)
 
 	c.mu.Lock()
 	radios := cloneComponents(c.radios)
@@ -206,13 +213,56 @@ func (c *HardwareCollector) sensorComponents(ctx context.Context, wifiInfo map[s
 		}
 	}
 	sensors = append(sensors, c.hwmonSensorComponents(ctx, mirrored)...)
+
+	drivers := c.radioDrivers(wifiInfo)
+	for _, raw := range sensors {
+		component := raw.(map[string]interface{})
+		name, _ := component["name"].(string)
+		if radio, ok := drivers[strings.TrimRight(name, "0123456789")]; ok {
+			component["name"] = radio
+		}
+	}
 	return adoptWifiSensors(sensors, wifiInfo)
 }
 
+// radioDrivers maps a driver to the one radio it drives.  Some drivers
+// name their sensor after themselves, e.g. iwlwifi_1, not after the
+// radio, and with one radio per driver the sensor can only be its.
+func (c *HardwareCollector) radioDrivers(wifiInfo map[string]map[string]interface{}) map[string]string {
+	radios := make(map[string]string)
+	seen := make(map[string]int)
+	for radio := range wifiInfo {
+		data, err := c.fs.ReadFile("/sys/class/ieee80211/" + radio + "/device/uevent")
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			if driver, ok := strings.CutPrefix(line, "DRIVER="); ok && driver != "" {
+				radios[driver] = radio
+				seen[driver]++
+			}
+		}
+	}
+	for driver, n := range seen {
+		if n > 1 {
+			delete(radios, driver)
+		}
+	}
+	return radios
+}
+
+// readSystemJSON parses system.json again only when it has changed,
+// which after boot is never.  The map is shared, callers only read it.
 func (c *HardwareCollector) readSystemJSON() map[string]interface{} {
 	data, err := c.fs.ReadFile("/run/system.json")
 	if err != nil {
 		return map[string]interface{}{}
+	}
+
+	c.sysMu.Lock()
+	defer c.sysMu.Unlock()
+	if c.sysParsed != nil && bytes.Equal(data, c.sysRaw) {
+		return c.sysParsed
 	}
 
 	out := make(map[string]interface{})
@@ -220,6 +270,7 @@ func (c *HardwareCollector) readSystemJSON() map[string]interface{} {
 		log.Printf("collector hardware: system.json: %v", err)
 		return map[string]interface{}{}
 	}
+	c.sysRaw, c.sysParsed = data, out
 
 	return out
 }

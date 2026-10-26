@@ -1,0 +1,49 @@
+#include <arm64/rockchip/rk3568-bpi-r2-pro.dts>
+
+/ {
+	chosen {
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&usb_host0_xhci>, <&usb_host1_xhci>;
+			usb-port-names = "usb1", "usb2";
+		};
+	};
+};
+
+/* USB lines of the Mini PCIe (CN11) and M.2 Key-E (CN13) slots */
+&usb_host0_ehci {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	device@1 {
+		reg = <1>;
+	};
+};
+
+&usb_host0_ohci {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	device@1 {
+		reg = <1>;
+	};
+};
+
+&usb_host1_ehci {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	device@1 {
+		reg = <1>;
+	};
+};
+
+&usb_host1_ohci {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	device@1 {
+		reg = <1>;
+	};
+};

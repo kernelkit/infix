@@ -48,6 +48,7 @@ type NLMonitor struct {
 	ethRefresh func(string)
 	linkSet    func()
 	queriers   func() []mcd.Querier
+	wwan       func() map[string]any
 	log        *slog.Logger
 	fc         iface.FileChecker
 
@@ -167,6 +168,12 @@ func (m *NLMonitor) SetLinkSetChange(fn func()) {
 // state on every GET.
 func (m *NLMonitor) SetQuerierSource(fn func() []mcd.Querier) {
 	m.queriers = fn
+}
+
+// SetWwanSource sets an optional function asked for the wwan augment
+// of each modem interface, by name, on every GET.
+func (m *NLMonitor) SetWwanSource(fn func() map[string]any) {
+	m.wwan = fn
 }
 
 func (m *NLMonitor) linkSetChanged() {
@@ -1128,14 +1135,14 @@ func (m *NLMonitor) OnDemand() json.RawMessage {
 		stamps[k] = v
 	}
 	m.mu.Unlock()
-	if len(stamps) == 0 && m.fc == nil && m.queriers == nil {
+	if len(stamps) == 0 && m.fc == nil && m.queriers == nil && m.wwan == nil {
 		return nil
 	}
 
-	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc, m.queriers)
+	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc, m.queriers, m.wwan)
 }
 
-func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker, queriers func() []mcd.Querier) json.RawMessage {
+func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker, queriers func() []mcd.Querier, wwan func() map[string]any) json.RawMessage {
 	var root map[string]any
 	if err := json.Unmarshal(doc, &root); err != nil {
 		return nil
@@ -1147,6 +1154,7 @@ func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc
 
 	uppers := vlanUppers(ifaceArr)
 	var qs []mcd.Querier
+	var modems map[string]any
 	for _, entry := range ifaceArr {
 		ifaceObj, ok := entry.(map[string]any)
 		if !ok {
@@ -1166,6 +1174,14 @@ func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc
 				qs = queriers()
 			}
 			applyQueriers(br, name, qs, uppers)
+		}
+		if ifaceObj["type"] == "infix-if-type:modem" && wwan != nil {
+			if modems == nil {
+				modems = wwan()
+			}
+			if w, ok := modems[name]; ok {
+				ifaceObj["infix-interfaces:wwan"] = w
+			}
 		}
 	}
 

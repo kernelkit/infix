@@ -175,6 +175,14 @@ enable/disable setting for the other Web services (Web console,
 RESTCONF and Netbrowse).  Disabling it stops all of them, regardless
 of their own settings.
 
+> [!NOTE]
+> The WebUI keeps login sessions in memory only, never on disk, so a
+> reboot or upgrade ends them all and you log in again.  A device that
+> has been switched off for a while checks your password against its
+> current user accounts, and there is no stored key that could be used
+> to forge or decrypt a session.  A login lasts at most 24 hours, also
+> with Auto-logout turned off in the user menu.
+
 ### Enable/disable Web Console
 
 The Web console service provides a terminal service similar to Console

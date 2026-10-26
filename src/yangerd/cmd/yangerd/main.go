@@ -30,6 +30,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/kernelrib"
 	"github.com/kernelkit/infix/src/yangerd/internal/lldpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/mcd"
+	"github.com/kernelkit/infix/src/yangerd/internal/mmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
@@ -107,6 +108,12 @@ func main() {
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
 	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, feat.On(features.WiFi), feat.On(features.GPS))
+	var modems *mmmonitor.Monitor
+	if feat.On(features.Modem) {
+		modems = mmmonitor.New(slogLog)
+		spawn("mmmonitor", modems.Run)
+		hardware.SetModemSource(modems.Modems)
+	}
 	ntp := collector.NewNTPCollector(cmd, cfg.PollNTP)
 	t.RegisterProvider("ietf-ntp:ntp", ntp.Live)
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
@@ -164,6 +171,9 @@ func main() {
 
 	nlmon := monitor.New(linkBatch, addrBatch, neighBatch, brBatch, t, osFileChecker{}, slogLog)
 	t.RegisterProvider("ietf-interfaces:interfaces", nlmon.OnDemand)
+	if modems != nil {
+		nlmon.SetWwanSource(hardware.WwanStates)
+	}
 	// Without mcd every bridge reports its querier off.
 	nlmon.SetQuerierSource(func() []mcd.Querier {
 		qs, err := mcd.Read(mcd.SocketPath, 500*time.Millisecond)

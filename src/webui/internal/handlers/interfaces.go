@@ -53,6 +53,7 @@ type ifaceJSON struct {
 	Vlan        *vlanCfgJSON    `json:"infix-interfaces:vlan"`
 	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
 	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
+	Wwan        *wwanJSON       `json:"infix-interfaces:wwan"`
 }
 
 // customPhysAddress mirrors infix-interfaces:custom-phys-address. Only the
@@ -629,6 +630,9 @@ type ifaceDetailData struct {
 	WiFiStationCount string // e.g. "3" for AP mode
 	WiFiPeerCount    string // mesh mode
 	WiFiStaTitle     string // "Connected Stations" or "Mesh Peers"
+	Cellular         *modemSummary // modem of a wwan interface
+	BearerConnected  string        // how long the data connection has been up
+	BearerFailure    string        // why it is not
 	WGPeerSummary    string // e.g. "3 peers (2 up)"
 	Counters         ifaceCounters
 	EthFrameStats    []kvEntry
@@ -1064,6 +1068,9 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	data := buildDetailData(r, iface)
 	data.PageData = newPageData(w, r, "interfaces", name)
 	data.Desc = h.fieldDescriptions()
+	if iface.Wwan != nil {
+		h.cellularDetail(r, iface.Wwan, &data)
+	}
 
 	tmplName := "iface-detail.html"
 	if r.Header.Get("HX-Request") == "true" {
@@ -1072,6 +1079,33 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	if err := h.DetailTemplate.ExecuteTemplate(w, tmplName, data); err != nil {
 		log.Printf("template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// cellularDetail adds the modem and bearer of a wwan interface.
+func (h *InterfacesHandler) cellularDetail(r *http.Request, w *wwanJSON, d *ifaceDetailData) {
+	if bs := w.BearerState; bs != nil {
+		if bs.Connected && bs.TotalDuration > 0 {
+			d.BearerConnected = formatUptime(uint32(bs.TotalDuration))
+		}
+		if !bs.Connected {
+			d.BearerFailure = bs.FailedReason
+		}
+	}
+	if w.Modem == "" {
+		return
+	}
+	var hw hardwareWrapper
+	if err := h.RC.Get(r.Context(), "/data/ietf-hardware:hardware", &hw); err != nil {
+		log.Printf("restconf hardware (%s): %v", w.Modem, err)
+		return
+	}
+	for _, c := range hw.Hardware.Component {
+		if c.Name == w.Modem && shortClass(c.Class) == classModem {
+			m := summarizeModem(c)
+			d.Cellular = &m
+			return
+		}
 	}
 }
 

@@ -22,6 +22,7 @@ pidfile = "/run/modemd.pid"
 debug   = False
 threads = []
 reload_event = threading.Event()
+terminating = threading.Event()
 
 # Vendor-specific AT commands to enable / disable raw NMEA output on the
 # modem's dedicated GPS port.  Used when the udev rules in
@@ -199,12 +200,13 @@ def runcmdp(cmd1, cmd2, check=True):
         return ret
 
 
-def runcmd(cmd, check=True):
+def runcmd(cmd, check=True, timeout=None):
     dbg("Running: %s" % " ".join(cmd))
     ret = None
     try:
         res = subprocess.run(cmd, check=check, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True)
+                             stderr=subprocess.PIPE, text=True,
+                             timeout=timeout)
         if res.returncode == 0:
             if res.stdout:
                 ret = res.stdout.strip()
@@ -278,11 +280,24 @@ def list_sms(modem):
     return smslist
 
 
-def load_config():
-    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
-    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+def running(xpath):
+    """Running config at xpath, {} when there is none, None on error"""
+    output = runcmd(["copy", "running-config", "-x", xpath])
+    if output is None:
+        return None
+    if output is True:
+        return {}
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return None
 
-    ks = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-keystore"])
+
+def load_config():
+    hw = running("/ietf-hardware:hardware")
+    ifaces = running("/ietf-interfaces:interfaces")
+
+    ks = running("/ietf-keystore:keystore")
     keys = {}
     if ks:
         for key in ks.get("ietf-keystore:keystore", {}) \
@@ -405,6 +420,8 @@ def load_config():
             "ip-type": bearer_cfg.get("ip-type", "ipv4v6"),
             "roaming": bearer_cfg.get("roaming", False),
             "route-preference": bearer_cfg.get("route-preference", 200),
+            "ipv4-forwarding": iface.get("ietf-ip:ipv4", {}).get("forwarding", False),
+            "ipv6-forwarding": iface.get("ietf-ip:ipv6", {}).get("forwarding", False),
         }
         if auth:
             bearer["username"] = auth.get("username", "")
@@ -575,7 +592,6 @@ class ModemThread(threading.Thread):
         self.index = cfg["index"]
         super().__init__(daemon=True, name="modem%d" % self.index)
         self.stopevent = threading.Event()
-        self.exited = False
 
         self.cfg = cfg
         self.port = cfg.get("usb-port")
@@ -607,6 +623,7 @@ class ModemThread(threading.Thread):
         # Retract the component -> port binding so modem-info does not
         # keep reporting this modem under a stale component identity.
         rmf("%s/port" % self.rundir)
+        rmf("%s/device" % self.rundir)
         self.stopevent.set()
 
     def stopped(self):
@@ -769,6 +786,10 @@ class ModemThread(threading.Thread):
         self.init()
 
     def notif(self, msg):
+        # sysrepo goes down with the system, sending blocks until killed
+        if terminating.is_set():
+            return
+
         data = {
           "ietf-hardware:hardware": {
             "component": [{
@@ -781,7 +802,7 @@ class ModemThread(threading.Thread):
         }
         note = "%s/notif" % self.rundir
         fwritej(note, data)
-        if runcmd(["sysrepocfg", "-f", "json", "-N", note]):
+        if runcmd(["sysrepocfg", "-f", "json", "-N", note], timeout=2):
             self.dbg("Sent notification: %s" % msg)
         rmf(note)
 
@@ -967,6 +988,17 @@ class ModemThread(threading.Thread):
 
         return True
 
+    def forwarding(self, ifname, bearer):
+        """Apply forwarding from the configuration, a modem reset re-creates
+        the interface with kernel defaults."""
+        for path, leaf in (("ipv4/conf/%s/forwarding", "ipv4-forwarding"),
+                           ("ipv6/conf/%s/force_forwarding", "ipv6-forwarding")):
+            try:
+                with open("/proc/sys/net/" + path % ifname, "w") as fd:
+                    fd.write("1" if bearer.get(leaf) else "0")
+            except OSError as e:
+                self.err("Unable to set forwarding on %s: %s" % (ifname, e))
+
     def linkup(self, iface):
         self.iplink(iface["name"], "up")
 
@@ -978,6 +1010,8 @@ class ModemThread(threading.Thread):
         if len(addrs) == 0:
             self.err("No addresses yet")
             return False
+
+        self.forwarding(iface["name"], iface["bearer"])
 
         # Flush any stale wwan-protocol addresses before adding new ones.
         # The 'proto wwan' tag (rt_addrprotos entry 7) allows precise cleanup
@@ -1506,6 +1540,8 @@ class ModemThread(threading.Thread):
             return False
         # Optional, must not block the data connection, see check_location()
         self.prepare_location()
+        # Extended signal values, RSSI, RSRP and more, every 5 s
+        self._mmcli("--signal-setup=5", check=False)
 
         self.info("Waiting for network")
         return True
@@ -1543,7 +1579,10 @@ class ModemThread(threading.Thread):
                 runcmd(["ip", "link", "del", "dev", name], check=False)
             self.info("Starting PPP on %s as %s" % (iface["name"], name))
             self.ppp[name] = ppp.start(iface["name"], name, iface["bearer"])
-        return ppp.is_up(name)
+        if not ppp.is_up(name):
+            return False
+        self.forwarding(name, iface["bearer"])
+        return True
 
     def dhcp_renew(self):
         """Apply a DHCP lease that changed while the bearer is up."""
@@ -1651,6 +1690,13 @@ class ModemThread(threading.Thread):
             if elapsed > 30 and not self._reset_unsupported:
                 self.err("Resetting after being 30s in state failed")
                 self.reset()
+
+        # modem disabled under us, e.g. by a ModemManager restart
+        elif self.state in (State.ENABLED, State.CONNECTING, State.CONNECTED) and \
+                self.status.get("state", "") in ("initializing", "disabling",
+                                                  "disabled"):
+            self.info("Modem is %s, starting over" % self.status.get("state"))
+            self.pulldown()
 
         # state down
         elif self.state == State.DOWN:
@@ -1920,6 +1966,9 @@ class ModemThread(threading.Thread):
         if self.port:
             fwrite("%s/port" % self.rundir, self.port)
 
+        # USB device of the modem this component manages, pinned or not
+        fwrite("%s/device" % self.rundir, modem.get("devpath", ""))
+
         self.path = modem.get("path")
         self.dbg("Got path %s" % self.path)
         return True
@@ -1964,26 +2013,21 @@ class ModemThread(threading.Thread):
         rmrf(self.rundir)
 
         self.dbg("Exiting")
-        self.exited = True
         return True
 
 
 def sighandler(signum, frame):
     global threads
 
+    terminating.set()
     for th in threads:
         th.stop()
 
-    timeout = 0
-    while timeout < 3:
-        exited = True
-        for th in threads:
-            if isinstance(th, ModemThread) and not th.exited:
-                exited = False
-        if exited:
-            break
-        time.sleep(1)
-        timeout += 1
+    # Exit before finit's SIGKILL, 3 s after SIGTERM
+    deadline = time.monotonic() + 2.5
+    for th in threads:
+        if isinstance(th, ModemThread):
+            th.join(max(0, deadline - time.monotonic()))
 
     if signum == 15:
         sys.exit(0)

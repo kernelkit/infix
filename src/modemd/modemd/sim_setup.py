@@ -7,6 +7,8 @@ import syslog
 import sys
 import os
 
+from . import running
+
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_SYSLOG)
 
 def log(msg):
@@ -36,18 +38,6 @@ def runcmd(cmd):
         return None
     finally:
         return ret
-
-
-def runcmdj(cmd):
-    output = runcmd(cmd)
-    if not output:
-        return None
-    try:
-        data = json.loads(output)
-    except json.JSONDecodeError:
-        return None
-    finally:
-        return data
 
 
 def fread(path):
@@ -171,9 +161,9 @@ def swapslot(slot):
 def sim_setup(setup):
     changed = False
 
-    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
-    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
-    if not hw or not ifaces:
+    hw = running("/ietf-hardware:hardware")
+    ifaces = running("/ietf-interfaces:interfaces")
+    if hw is None or ifaces is None:
         err("Cannot read config")
         return False
 

@@ -44,3 +44,25 @@ func TestValidCSRFFormBodies(t *testing.T) {
 		}
 	}
 }
+
+// An auto-refresh of a status page is background polling, it must not
+// keep an idle session alive.
+func TestIsPolling(t *testing.T) {
+	for _, tc := range []struct {
+		path, header string
+		want         bool
+	}{
+		{"/device-status", "", true},
+		{"/interfaces/eth0/counters", "", true},
+		{"/interfaces", "", false},
+		{"/interfaces", "1", true},
+	} {
+		r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+		if tc.header != "" {
+			r.Header.Set("X-Auto-Refresh", tc.header)
+		}
+		if got := isPolling(r); got != tc.want {
+			t.Errorf("%s (X-Auto-Refresh %q): polling %v, want %v", tc.path, tc.header, got, tc.want)
+		}
+	}
+}

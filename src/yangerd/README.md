@@ -94,6 +94,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
 | | `description` | on demand | sysfs `ifalias`, the link row is only current for interfaces that are up |
+| | modem bearer | event | ModemManager D-Bus signals |
 | | bridge IGMP/MLD querier | on demand | mcd IPC socket, `show interfaces json` |
 | | interfaces in container network namespaces | event | podman events and netlink in each container netns, re-read with `podman ps` and `ip -n` |
 | `ietf-routing:routing` | `ribs` | event | zebra ZAPI redistribution, or rtnetlink route events without FRR |
@@ -110,6 +111,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 | | radio channel survey | on demand | nl80211 survey dump |
 | | sensors | on demand | hwmon, thermal zones |
 | | GPS receivers | poll 10 s | gpsd |
+| | modems, SIM cards | event | ModemManager D-Bus signals, `/run/modemd` |
 | `ietf-ntp:ntp` | associations, clock state, server stats | on demand | chronyd cmdmon |
 | | presence, listening port | poll 60 s | chronyd cmdmon, `ss` |
 | `ieee1588-ptp-tt:ptp` | port state, time status, parent | event | ptp4l subscription, near-static sets refreshed every 30 s |
@@ -191,7 +193,7 @@ Environment from `/etc/default/yangerd`, installed from
 | `YANGERD_POLL_INTERVAL_STP` | `5s` |
 
 Which optional parts run is not configured, it follows the YANG model:
-WiFi, containers and GPS are features of `infix-interfaces` and
+WiFi, containers, GPS and modems are features of `infix-interfaces` and
 `infix-hardware`, and the routing protocol modules are installed only
 with FRR.  confd enables them at build time from the same Buildroot
 options that build the daemons, and `ietf-yang-library` reports them

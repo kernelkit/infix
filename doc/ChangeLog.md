@@ -29,6 +29,11 @@ All notable changes to the project are documented in this file.
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
   R64, NanoPi R2S and Vero W6M now has IPv6 enabled, so the router has a
   link-local address on the LAN side like its ports already had
+- The factory config of the Banana Pi R2 Pro, R3, R3 mini, R4, R64,
+  NanoPi R2S and Vero W6M now checks for a new release every Sunday at
+  03:00, and installs and reboots to it unattended.  Pre-releases are
+  not installed.  To stay on a release, remove `unattended-update` from
+  the software settings
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
   included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see
   [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
@@ -61,11 +66,24 @@ All notable changes to the project are documented in this file.
   per port, and a Health card listing services that are not running, a
   pending reboot, and sensor readings.  Disk Usage no longer lists the
   read-only root filesystem
+- WebUI: status pages refresh themselves, every 10 seconds by default.  The
+  interval, 2, 10 or 30 seconds, or off, is set in the user menu
+- WebUI: cellular modems and SIM cards on the Hardware page, with a page
+  per modem much like `show modem modem0`, and a Restart button.  The page
+  of a modem interface shows its modem, operator, network and signal
+- WebUI: a login lasts at most 24 hours, also with Auto-logout set to Off
+- RESTCONF accepts at most 10 requests a second, with bursts of 20, from
+  each host other than the device itself, which slows down password
+  guessing.  More gets HTTP 429
 - CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
   or mismatched PVID, which drops untagged frames or puts them in the wrong
   VLAN, issue #354
 - Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
   build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
+- Add support for the Banana Pi BPI-R2 Pro (Rockchip RK3568) to the Aarch64
+  build, a five port router with 4x LAN switch ports and 1x WAN.  New
+  `bpi_r2_pro_boot_defconfig` builds one bootloader for SD card and eMMC
+- Support for Intel AX210 WiFi cards in the Aarch64 build
 - New `iitoctl` tool, shows which rule drives each LED and why, and can
   start locate, the board's LEDs blink as configured: `iitoctl locate on`
 - New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
@@ -189,6 +207,9 @@ All notable changes to the project are documented in this file.
   to syslog and to their own file, `/var/log/web`, which is rotated like
   the other logs.  The old log directory, `/var/log/nginx`, is removed
   at boot
+- The factory config of the Banana Pi R3, R3 mini, R4, R64, NanoPi R2S
+  and Vero W6M now enables IPv4 and IPv6 forwarding on the LAN and WAN
+  interfaces.  Without it, LAN clients could not reach the Internet
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters

@@ -881,3 +881,39 @@ func TestHardwareGPSStaleFix(t *testing.T) {
 		})
 	}
 }
+
+// system.json is parsed once, and again only when it changes.
+func TestHardwareSystemJSONParsedOnChange(t *testing.T) {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json": []byte(`{"vendor":"Acme"}`),
+	}, Globs: map[string][]string{}}
+	c := newHardwareCollector(&testutil.MockRunner{}, fs)
+
+	first := c.readSystemJSON()
+	if second := c.readSystemJSON(); reflect.ValueOf(second).Pointer() != reflect.ValueOf(first).Pointer() {
+		t.Error("unchanged system.json parsed again")
+	}
+	fs.Files["/run/system.json"] = []byte(`{"vendor":"Acme Inc"}`)
+	if got := c.readSystemJSON()["vendor"]; got != "Acme Inc" {
+		t.Errorf("vendor = %v after system.json changed", got)
+	}
+}
+
+// iwlwifi names its thermal zone after itself, iwlwifi_1, and that is
+// the radio's sensor when it is the only radio the driver drives.
+func TestHardwareRadioDriverSensor(t *testing.T) {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/sys/class/ieee80211/radio0/device/uevent": []byte("DRIVER=iwlwifi\nPCI_ID=8086:2725\n"),
+		"/sys/class/thermal/thermal_zone2/type":     []byte("iwlwifi_1\n"),
+		"/sys/class/thermal/thermal_zone2/temp":     []byte("45000\n"),
+	}, Globs: map[string][]string{
+		"/sys/class/thermal/*": {"/sys/class/thermal/thermal_zone2"},
+	}}
+	c := newHardwareCollector(&testutil.MockRunner{}, fs)
+
+	got := c.sensorComponents(context.Background(), map[string]map[string]interface{}{"radio0": {}})
+	temp := getComponentByName(got, "radio0-temp")
+	if temp == nil || temp["parent"] != "radio0" {
+		t.Fatalf("iwlwifi sensor not adopted by radio0: %v", got)
+	}
+}

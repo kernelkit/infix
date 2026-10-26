@@ -56,20 +56,23 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 /* Hubs stay authorized so the devices behind them stay listed */
 static int is_hub(const char *dir)
 {
-	char class[8] = "";
-	FILE *fp;
+	char class[8];
 
-	fp = fopenf("r", "%s/bDeviceClass", dir);
-	if (!fp)
-		return 0;
-	if (!fgets(class, sizeof(class), fp))
-		class[0] = 0;
-	fclose(fp);
-
-	return !strncmp(class, "09", 2);
+	return readsnf(class, sizeof(class), "%s/bDeviceClass", dir) &&
+		!strcmp(class, "09");
 }
 
-/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hubs or the root hub (usb1) */
+/* Devices on ports the device tree marks as hard-wired, e.g. a modem slot */
+static int is_hardwired(const char *dir)
+{
+	char type[16];
+
+	return readsnf(type, sizeof(type), "%s/port/connect_type", dir) &&
+		!strcmp(type, "hardwired");
+}
+
+/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hubs, hard-wired
+ * devices or the root hub (usb1) */
 static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
 	char dir[PATH_MAX];
@@ -81,7 +84,7 @@ static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, str
 	strlcpy(dir, fpath, sizeof(dir));
 	dirname(dir);
 	dev = basename(dir);
-	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hub(dir))
+	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hub(dir) || is_hardwired(dir))
 		return 0;
 
 	if (writedf(0, "w", "%s", fpath))
@@ -97,7 +100,8 @@ static int usb_authorize_bus(const char *path, int enabled)
 	snprintf(apath, sizeof(apath), "%s/authorized_default", path);
 
 	if (!enabled) {
-		if (fexist(apath) && writedf(0, "w", "%s", apath)) {
+		/* 2: only devices on hard-wired ports, as at boot */
+		if (fexist(apath) && writedf(2, "w", "%s", apath)) {
 			ERROR("Failed to unauthorize %s", apath);
 			return 1;
 		}
@@ -2002,7 +2006,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (num_gps > 0) {
 				FILE *fp;
 
-				fp = fopen(GPSD_CONF_NEXT, "w");
+				fp = fopenp(GPSD_CONF_NEXT, 0644, NULL);
 				if (!fp) {
 					ERRNO("Could not open " GPSD_CONF_NEXT);
 					return SR_ERR_INTERNAL;
@@ -2129,6 +2133,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	 */
 	if (wifi_changed) {
 		struct lyd_node *cifs;
+		bool lar_scan = false;
 		glob_t gl = { 0 };
 		size_t i;
 
@@ -2148,6 +2153,8 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 				if (!n) {
 					unlink(gl.gl_pathv[i]);
 					erasef(HOSTAPD_CONF_NEXT, radio);
+				} else if (iface_has_quirk(radio, "lar-needs-scan")) {
+					lar_scan = true;
 				}
 			}
 			globfree(&gl);
@@ -2157,7 +2164,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		if (glob("/etc/hostapd-*.conf", 0, NULL, &gl) == 0 && gl.gl_pathc > 0) {
 			FILE *fp;
 
-			fp = fopen(HOSTAPD_SERVICE, "w");
+			fp = fopenp(HOSTAPD_SERVICE, 0644, NULL);
 			if (!fp) {
 				ERRNO("Could not open " HOSTAPD_SERVICE);
 				rc = SR_ERR_INTERNAL;
@@ -2166,6 +2173,8 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 				/* kill:10 gives the stop script time to hand over clients */
 				fprintf(fp, "service <!> name:hostapd pid:!/run/hostapd.pid kill:10"
 					" stop:/usr/libexec/infix/wifi-handover.sh \\\n");
+				if (lar_scan)
+					fprintf(fp, "\tpre:60,/usr/libexec/infix/wifi-scan-lar.sh \\\n");
 				fprintf(fp, "\t[2345] hostapd -g /run/hostapd.global -P /run/hostapd.pid");
 				for (i = 0; i < gl.gl_pathc; i++)
 					fprintf(fp, " %s", gl.gl_pathv[i]);

@@ -218,7 +218,7 @@ handle_ntp()
 		done
 
 		if [ "$ntp_found" -eq 1 ]; then
-			chronyc reload sources >/dev/null 2>&1
+			chronyc -m 'retries 0' 'reload sources' >/dev/null 2>&1
 		else
 			dbg "option 56 received but no NTP server addresses found (consider using option 31/SNTP)"
 		fi
@@ -265,7 +265,7 @@ log "state: $state"
 			rm -f "$RESOLV_CONF"
 			rm -f "$NTPFILE"
 			resolvconf -u
-			chronyc reload sources >/dev/null 2>&1
+			chronyc -m 'retries 0' 'reload sources' >/dev/null 2>&1
 			;;
 	esac
 ) 9>/tmp/odhcp6c.lock.${interface}
