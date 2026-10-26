@@ -1131,12 +1131,14 @@ class Iface:
         self.speed = get_json_data('', self.data, 'speed')
         self.pmd_type = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'pmd-type')
         self.phy_type = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'phy-type')
-        self.advertised = get_json_data([], self.data, 'ieee802-ethernet-interface:ethernet',
-                                       'auto-negotiation',
-                                       'infix-ethernet-interface:advertised-pmd-types')
-        self.supported = get_json_data([], self.data,
-                                       'ieee802-ethernet-interface:ethernet',
-                                       'infix-ethernet-interface:supported-pmd-types')
+        self.advertised = sorted(get_json_data([], self.data, 'ieee802-ethernet-interface:ethernet',
+                                               'auto-negotiation',
+                                               'infix-ethernet-interface:advertised-pmd-types'),
+                                 key=self._pmd_rate)
+        self.supported = sorted(get_json_data([], self.data,
+                                              'ieee802-ethernet-interface:ethernet',
+                                              'infix-ethernet-interface:supported-pmd-types'),
+                                key=self._pmd_rate)
         self.phys_address = data.get('phys-address', '')
 
         self.br_mdb = get_json_data({}, self.data, 'infix-interfaces:bridge', 'multicast-filters')
@@ -1295,6 +1297,21 @@ class Iface:
             colon = ':' if first else ' '
             print(f"{key:<{19}}{colon} {value}")
             first = False
+
+    @staticmethod
+    def _pmd_rate(identity):
+        """Line rate in Mb/s of an IEEE pmd-type identity, from its name.
+
+        The name starts with the rate, '10BASE-T', '2.5GBASE-T', '10GBASE-SR',
+        so the lists sort the same way whatever order the datastore keeps
+        them in.  A name without a rate sorts first.
+        """
+        name = identity.rsplit("-type-", 1)[-1]
+        digits = len(name) - len(name.lstrip("0123456789."))
+        if not digits:
+            return 0
+        rate = float(name[:digits])
+        return rate * 1000 if name[digits:digits + 1] == "G" else rate
 
     @staticmethod
     def _pmd_label(identity):
