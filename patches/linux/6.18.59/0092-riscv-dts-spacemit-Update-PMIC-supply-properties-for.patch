@@ -1,0 +1,49 @@
+From e4ba95346ad7d9bfe031ee82cf2d5f08e658a6b6 Mon Sep 17 00:00:00 2001
+From: Guodong Xu <guodong@riscstar.com>
+Date: Fri, 6 Feb 2026 10:32:04 +0800
+Subject: [PATCH 092/108] riscv: dts: spacemit: Update PMIC supply properties
+ for BPI-F3 and Jupiter
+
+Use per-regulator supply names in pmic "spacemit,p1" node to specify
+each board's power tree topology and match the updated dt-binding.
+
+Signed-off-by: Guodong Xu <guodong@riscstar.com>
+Reviewed-by: Alex Elder <elder@riscstar.com>
+Link: https://lore.kernel.org/r/20260206-spacemit-p1-v4-3-8f695d93811e@riscstar.com
+Signed-off-by: Yixun Lan <dlan@kernel.org>
+[ backport: Jupiter hunks dropped, its 6.18 DT lacks the PMIC node ]
+(cherry picked from commit 108c77b34b929e6bdb7ac9613ed65c90da8bcb9f)
+---
+ arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
+index 371ce71a4985..a1ba3f212690 100644
+--- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
++++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
+@@ -120,7 +120,15 @@ pmic@41 {
+ 		compatible = "spacemit,p1";
+ 		reg = <0x41>;
+ 		interrupts = <64>;
+-		vin-supply = <&reg_vcc_4v>;
++		vin1-supply = <&reg_vcc_4v>;
++		vin2-supply = <&reg_vcc_4v>;
++		vin3-supply = <&reg_vcc_4v>;
++		vin4-supply = <&reg_vcc_4v>;
++		vin5-supply = <&reg_vcc_4v>;
++		vin6-supply = <&reg_vcc_4v>;
++		aldoin-supply = <&reg_vcc_4v>;
++		dldoin1-supply = <&buck5>;
++		dldoin2-supply = <&buck5>;
+ 
+ 		regulators {
+ 			buck1 {
+@@ -151,7 +159,7 @@ buck4 {
+ 				regulator-always-on;
+ 			};
+ 
+-			buck5 {
++			buck5: buck5 {
+ 				regulator-min-microvolt = <500000>;
+ 				regulator-max-microvolt = <3450000>;
+ 				regulator-ramp-delay = <5000>;
