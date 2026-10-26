@@ -3831,6 +3831,10 @@ channels per band.  A radio that has no interface yet can be surveyed too,
 which helps when picking a band and channel for it.  Add <code>passive</code> to listen longer on each channel without sending
 probe requests, which gives a steadier utilization reading at the cost of a
 longer pause.</p>
+<p>Not every driver reports channel survey data.  On Intel cards, e.g., the
+AX210, the survey fails with <em>the driver reports no per-channel survey
+data</em>, use <code>show hardware radio0 scan</code> to see which channels other networks
+use.</p>
 <p>In the WebUI, each radio on the WiFi page has a <strong>Scan channels</strong> button that
 draws the same survey as a chart.</p>
 <p>Over NETCONF or RESTCONF the survey is the <code>channel-survey</code> action on the

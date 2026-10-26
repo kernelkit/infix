@@ -1519,6 +1519,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usb-30-modem-in-a-mini-pcie-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        USB 3.0 Modem in a Mini PCIe Slot
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2985,6 +3002,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usb-30-modem-in-a-mini-pcie-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        USB 3.0 Modem in a Mini PCIe Slot
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -3087,8 +3121,8 @@ the modem chipset uses USB on the connector (the typical case for
 <li>Configured via <code>ietf-hardware</code> with class <code>infix-hardware:modem</code></li>
 <li><code>admin-state</code> controls whether the cellular subsystem is active</li>
 <li>Holds physical-layer config: allowed bands, preferred mode, location</li>
-<li>Auto-discovered into factory-default config when the modem is
-   present at first boot</li>
+<li>Pinned to its USB port with a <code>uri</code></li>
+<li>Always added by the user, never part of the factory configuration</li>
 </ul>
 </li>
 <li>
@@ -3096,7 +3130,7 @@ the modem chipset uses USB on the connector (the typical case for
 <ul>
 <li>Configured via <code>ietf-hardware</code> with class <code>infix-hardware:sim</code></li>
 <li>Holds PIN/PUK credentials and carrier profile</li>
-<li>Auto-discovered into factory-default config alongside the modem</li>
+<li>Always added by the user, never part of the factory configuration</li>
 </ul>
 </li>
 <li>
@@ -3194,41 +3228,10 @@ are not supported, since the cellular subsystem assumes a USB-attached
 control interface.</p>
 <h2 id="step-by-step-setup">Step-by-step Setup<a class="headerlink" href="#step-by-step-setup" title="Permanent link">¶</a></h2>
 <h3 id="1-hardware-detection">1. Hardware Detection<a class="headerlink" href="#1-hardware-detection" title="Permanent link">¶</a></h3>
-<p>At first boot, USB modems detected by the kernel are written to
-<code>/run/system.json</code> and added as hardware components in the
-factory-default configuration.  Verify the modem appears:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show modem</b>
-──────────────────────────────────────────────────────────────
-<span class="title">Cellular Modems</span>
-NAME    MANUFACTURER  MODEL   STATE       NETWORK  SIGNAL
-modem0  Quectel       EM06-E  registered  lte      good
-──────────────────────────────────────────────────────────────
-<span class="title">SIM Cards</span>
-NAME  SLOT  STATE     OPERATOR
-sim0  1     unlocked  Tele2
-</code></pre>
-
-<p>The <code>STATE</code>, <code>SIM STATE</code>, and <code>SIGNAL</code> columns are color-coded so the
-healthy / attention / problem cases are visible at a glance: green for
-<code>registered</code>, <code>connected</code>, <code>unlocked</code>, <code>excellent</code>, <code>good</code>; yellow for
-transient or attention states like <code>enabling</code>, <code>pin-required</code>, <code>poor</code>;
-red for <code>failed</code>, <code>not-inserted</code>, <code>bad</code>.</p>
-<p>If <code>modem0</code> does not appear:</p>
-<ul>
-<li>Verify the kernel sees the modem (<code>dmesg | grep -i mbim</code> or
-  <code>dmesg | grep -i qmi</code>).  Without a kernel driver no further setup
-  is possible.</li>
-<li>On boards with a custom factory configuration, or after replacing
-  hardware on a running system, the components may need to be added
-  manually.  See Step 2.</li>
-</ul>
-<h3 id="2-hardware-components">2. Hardware Components<a class="headerlink" href="#2-hardware-components" title="Permanent link">¶</a></h3>
-<p>If <code>show modem</code> already lists <code>modem0</code> and <code>sim0</code>, the components were
-auto-discovered into the factory-default configuration and you can skip
-ahead to Step 3.</p>
-<p>Otherwise, add them manually.  Start by finding the modem's USB
-attachment point.  Detected modems are always visible in the hardware
-detail view, even before they are configured:</p>
+<p>USB modems detected by the kernel at boot are listed in the hardware
+detail view, even before they are configured.  Modems are never part of
+the factory configuration, the <code>modem0</code> and <code>sim0</code> components are always
+added by you, see Step 2.  Verify that the system has found the modem:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show hardware modem0</b>
 <span class="header">COMPONENT: modem0                                             </span>
   Name                : modem0
@@ -3240,12 +3243,19 @@ detail view, even before they are configured:</p>
 See 'show modem modem0' for cellular status.
 </code></pre>
 
-<p>Copy the <code>URI</code> value into the component configuration.  It anchors the
-component to the physical USB port, so the data interface always gets
-the name you configured, no matter in which order the hardware
-enumerates.  Anchoring also acts as a lock: once every modem component
-is anchored, a modem plugged into any other port is detected and shown,
-but stays unmanaged until it too is configured.</p>
+<p>If <code>modem0</code> does not appear, verify that the kernel sees the modem
+(<code>dmesg | grep -i mbim</code> or <code>dmesg | grep -i qmi</code>).  Without a kernel
+driver no further setup is possible.</p>
+<h3 id="2-hardware-components">2. Hardware Components<a class="headerlink" href="#2-hardware-components" title="Permanent link">¶</a></h3>
+<p>Copy the <code>URI</code> value from Step 1 into the component configuration.  It
+anchors the component to the physical USB port, so the modem and its
+data interface always get the names you configured, no matter in which
+order the hardware enumerates.  Without it, a modem that resets, e.g.,
+after a firmware crash, comes back as <code>modem1</code>, <code>modem2</code>, and so on,
+and the configuration for <code>modem0</code> no longer applies.  Anchoring also
+acts as a lock: once every modem component is anchored, a modem plugged
+into any other port is detected and shown, but stays unmanaged until it
+too is configured.</p>
 <p>The class is inferred from the component name (<code>modemN</code> →
 <code>infix-hardware:modem</code>, <code>simN</code> → <code>infix-hardware:sim</code>).  The
 <code>admin-state</code> must be set explicitly.  There is no implicit default,
@@ -3359,6 +3369,23 @@ admin@example:/config/hardware/component/sim0/&gt; <b>leave</b>
 </code></pre>
 
 <h3 id="6-verify-connectivity">6. Verify Connectivity<a class="headerlink" href="#6-verify-connectivity" title="Permanent link">¶</a></h3>
+<p><code>show modem</code> gives an overview of all modems and SIM cards:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show modem</b>
+──────────────────────────────────────────────────────────────
+<span class="title">Cellular Modems</span>
+NAME    MANUFACTURER  MODEL   STATE       NETWORK  SIGNAL
+modem0  Quectel       EM06-E  registered  lte      good
+──────────────────────────────────────────────────────────────
+<span class="title">SIM Cards</span>
+NAME  SLOT  STATE     OPERATOR
+sim0  1     unlocked  Tele2
+</code></pre>
+
+<p>The <code>STATE</code>, <code>SIM STATE</code>, and <code>SIGNAL</code> columns are color-coded so the
+healthy / attention / problem cases are visible at a glance: green for
+<code>registered</code>, <code>connected</code>, <code>unlocked</code>, <code>excellent</code>, <code>good</code>; yellow for
+transient or attention states like <code>enabling</code>, <code>pin-required</code>, <code>poor</code>;
+red for <code>failed</code>, <code>not-inserted</code>, <code>bad</code>.</p>
 <p>Once connected, the <code>wwan0</code> interface receives an IP address from the
 carrier and the default route is installed automatically:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface wwan0</b>
@@ -3369,8 +3396,8 @@ mtu                 : 1500
 operational status  : up
 ip forwarding       : enabled
 physical address    : 12:34:56:78:9a:bc
-ipv4 addresses      : 10.142.87.33/30 (wwan)
-ipv6 addresses      : 2001:db8:1:2::1/64 (wwan)
+ipv4 addresses      : 10.142.87.33/30 (other)
+ipv6 addresses      : 2001:db8:1:2::1/64 (other)
 in-octets           : 84213
 out-octets          : 31456
 </code></pre>
@@ -3415,6 +3442,15 @@ out-octets          : 31456
 distances used by wired Ethernet (udhcpc default: 5) and WiFi.  When a
 wired link is up it takes precedence automatically; cellular becomes
 the active path only if higher-priority routes are withdrawn.</p>
+<p>The route preference is the administrative distance of the route, shown
+in the <code>PREF</code> column of <code>show ip route</code>, e.g. <code>200/0</code>.  It is not the
+metric of the route in the kernel routing table:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ip route</b>
+<span class="header">   DESTINATION            PREF NEXT-HOP         PROTO     UPTIME</span>
+&gt;* 0.0.0.0/0             200/0 10.69.40.40      static  00:24:50
+&gt;* 10.69.40.32/28          0/0 wwan0            direct  00:24:50
+</code></pre>
+
 <p>A default route via the bearer is always installed when the bearer
 connects.  To adjust the failover priority between two cellular modems,
 or to prefer cellular over WiFi, set <code>route-preference</code> explicitly:</p>
@@ -3562,6 +3598,27 @@ restricts outgoing SMS and calls to a pre-configured whitelist.  If
 <li>Signal below -110 dBm RSRP typically indicates poor coverage</li>
 <li>Consider repositioning the antenna or the device</li>
 </ul>
+<h3 id="usb-30-modem-in-a-mini-pcie-slot">USB 3.0 Modem in a Mini PCIe Slot<a class="headerlink" href="#usb-30-modem-in-a-mini-pcie-slot" title="Permanent link">¶</a></h3>
+<p>Mini PCIe has no USB 3.0 pins, so modems like the Quectel EP06 and the
+Sierra Wireless MC7455 put their SuperSpeed lines on the PCIe lane
+pins.  In a slot that has those pins wired to a PCIe controller the
+modem never connects, not even at USB 2.0 speed, and does not show up
+in <code>lsusb</code>.</p>
+<p>Turn off USB 3.0 in the modem: connect it to a USB port with a Mini
+PCIe to USB adapter and run the commands below on its AT port, usually
+<code>ttyUSB2</code>.  The modem stores the setting, so this is only needed once.
+Power off, put the modem back in the slot, and power on.</p>
+<p>Quectel:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>AT+QUSBCFG="SS",0
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>AT+CFUN=1,1
+</code></pre></div>
+<p>Sierra Wireless, where <code>A710</code> is the default password:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>AT!ENTERCND="A710"
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>AT!USBSPEED=0
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>AT!RESET
+</code></pre></div>
+<p>Older Sierra Wireless firmware answers <code>ERROR</code> to <code>AT!USBSPEED</code>, update
+the modem firmware first.</p>
 
 
 
