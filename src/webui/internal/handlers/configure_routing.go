@@ -64,8 +64,8 @@ type cfgOSPFJSON struct {
 	Areas    struct {
 		Area []cfgOSPFAreaJSON `json:"area"`
 	} `json:"areas"`
-	Redistribute rtRedistJSON  `json:"infix-routing:redistribute"`
-	DefaultRoute rtEnabledJSON `json:"infix-routing:default-route-advertise"`
+	Redistribute rtRedistJSON  `json:"infix-ospf:redistribute"`
+	DefaultRoute rtEnabledJSON `json:"infix-ospf:default-route-advertise"`
 }
 
 type cfgOSPFAreaJSON struct {
@@ -87,7 +87,7 @@ type cfgRIPJSON struct {
 			Interface string `json:"interface"`
 		} `json:"interface"`
 	} `json:"interfaces"`
-	Redistribute rtRedistJSON  `json:"infix-routing:redistribute"`
+	Redistribute rtRedistJSON  `json:"infix-rip:redistribute"`
 	DefaultRoute rtEnabledJSON `json:"originate-default-route"`
 }
 
@@ -371,13 +371,13 @@ func routingDescriptions(mgr *schema.Manager) map[string]string {
 		"proto-type":        schema.DescriptionOf(mgr, cppSchemaPath+"/type"),
 		"router-id":         schema.DescriptionOf(mgr, ospf+"/explicit-router-id"),
 		"bfd":               schema.DescriptionOf(mgr, ospfBFDSchemaPath),
-		"redistribute":      schema.DescriptionOf(mgr, ospf+"/infix-routing:redistribute/redistribute"),
-		"default-route":     schema.DescriptionOf(mgr, ospf+"/infix-routing:default-route-advertise/enabled"),
+		"redistribute":      schema.DescriptionOf(mgr, ospf+"/infix-ospf:redistribute/redistribute"),
+		"default-route":     schema.DescriptionOf(mgr, ospf+"/infix-ospf:default-route-advertise/enabled"),
 		"area-id":           schema.DescriptionOf(mgr, ospf+"/areas/area/area-id"),
 		"area-type":         schema.DescriptionOf(mgr, ospf+"/areas/area/area-type"),
 		"area-ifaces":       schema.DescriptionOf(mgr, ospf+"/areas/area/interfaces/interface"),
 		"rip-ifaces":        schema.DescriptionOf(mgr, rip+"/interfaces/interface"),
-		"rip-redistribute":  schema.DescriptionOf(mgr, rip+"/infix-routing:redistribute/redistribute"),
+		"rip-redistribute":  schema.DescriptionOf(mgr, rip+"/infix-rip:redistribute/redistribute"),
 		"rip-default-route": schema.DescriptionOf(mgr, rip+"/originate-default-route/enabled"),
 	}
 }
@@ -512,16 +512,17 @@ func patchInstance(p *restconf.YangPatch, typ, name string, removes []string, bo
 }
 
 // redistEdit returns the protocols to add to the redistribute list, and
-// appends the removal of those shown but not to be redistributed.  Any
-// other redistributed protocol is left alone.
-func redistEdit(removes *[]string, base string, cur rtRedistJSON, want map[string]bool) []map[string]any {
+// appends the removal of those shown but not to be redistributed from the
+// redistribute container at path.  Any other redistributed protocol is left
+// alone.
+func redistEdit(removes *[]string, path string, cur rtRedistJSON, want map[string]bool) []map[string]any {
 	var list []map[string]any
 	for _, proto := range []string{"connected", "static"} {
 		switch {
 		case want[proto]:
 			list = append(list, map[string]any{"protocol": proto})
 		case hasRedist(cur, proto):
-			*removes = append(*removes, base+"/infix-routing:redistribute/redistribute="+proto)
+			*removes = append(*removes, path+"/redistribute="+proto)
 		}
 	}
 	return list
@@ -607,11 +608,11 @@ func ospfGlobalEdit(base string, cur *cfgOSPFJSON, f ospfGlobalForm, bfd bool) (
 			o["areas"] = map[string]any{"area": areas}
 		}
 	}
-	if list := redistEdit(&removes, ob, cur.Redistribute, map[string]bool{"connected": f.Connected, "static": f.Static}); len(list) > 0 {
-		o["infix-routing:redistribute"] = map[string]any{"redistribute": list}
+	if list := redistEdit(&removes, ob+"/infix-ospf:redistribute", cur.Redistribute, map[string]bool{"connected": f.Connected, "static": f.Static}); len(list) > 0 {
+		o["infix-ospf:redistribute"] = map[string]any{"redistribute": list}
 	}
 	if f.DefaultRoute || cur.DefaultRoute.Enabled != nil {
-		o["infix-routing:default-route-advertise"] = map[string]any{"enabled": f.DefaultRoute}
+		o["infix-ospf:default-route-advertise"] = map[string]any{"enabled": f.DefaultRoute}
 	}
 	return removes, map[string]any{"ietf-ospf:ospf": o}
 }
@@ -716,8 +717,8 @@ func ripEdit(base string, cur *cfgRIPJSON, ifaces []string, connected, static, d
 	if len(list) > 0 {
 		o["interfaces"] = map[string]any{"interface": list}
 	}
-	if rl := redistEdit(&removes, rb, cur.Redistribute, map[string]bool{"connected": connected, "static": static}); len(rl) > 0 {
-		o["infix-routing:redistribute"] = map[string]any{"redistribute": rl}
+	if rl := redistEdit(&removes, rb+"/infix-rip:redistribute", cur.Redistribute, map[string]bool{"connected": connected, "static": static}); len(rl) > 0 {
+		o["infix-rip:redistribute"] = map[string]any{"redistribute": rl}
 	}
 	if defRoute || cur.DefaultRoute.Enabled != nil {
 		o["originate-default-route"] = map[string]any{"enabled": defRoute}

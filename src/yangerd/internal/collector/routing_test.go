@@ -367,20 +367,20 @@ func TestOSPFNeighbors(t *testing.T) {
 	if n["state"] != "full" {
 		t.Fatalf("neighbor state: expected full, got %v", n["state"])
 	}
-	if n["infix-routing:role"] != "BDR" {
-		t.Fatalf("neighbor role: expected BDR, got %v", n["infix-routing:role"])
+	if n["infix-ospf:role"] != "BDR" {
+		t.Fatalf("neighbor role: expected BDR, got %v", n["infix-ospf:role"])
 	}
 	// Uptime: 120000ms → 120s
-	if toInt(n["infix-routing:uptime"]) != 120 {
-		t.Fatalf("neighbor uptime: expected 120, got %v", n["infix-routing:uptime"])
+	if toInt(n["infix-ospf:uptime"]) != 120 {
+		t.Fatalf("neighbor uptime: expected 120, got %v", n["infix-ospf:uptime"])
 	}
 	// Dead timer: 35000ms → 35s
 	if toInt(n["dead-timer"]) != 35 {
 		t.Fatalf("neighbor dead-timer: expected 35, got %v", n["dead-timer"])
 	}
 	// Interface name augmentation
-	if n["infix-routing:interface-name"] != "e0:192.168.1.1" {
-		t.Fatalf("neighbor interface-name: expected e0:192.168.1.1, got %v", n["infix-routing:interface-name"])
+	if n["infix-ospf:interface-name"] != "e0:192.168.1.1" {
+		t.Fatalf("neighbor interface-name: expected e0:192.168.1.1, got %v", n["infix-ospf:interface-name"])
 	}
 }
 
@@ -1049,7 +1049,7 @@ func TestOSPF6AreasInterfacesNeighbors(t *testing.T) {
 		t.Fatalf("expected 2 neighbors on e6, got %d", len(nbrs))
 	}
 	full := nbrs[0].(map[string]interface{})
-	if full["neighbor-router-id"] != "1.1.1.1" || full["state"] != "full" || full["infix-routing:role"] != "BDR" {
+	if full["neighbor-router-id"] != "1.1.1.1" || full["state"] != "full" || full["infix-ospf:role"] != "BDR" {
 		t.Fatalf("neighbor = %v", full)
 	}
 	if two := nbrs[1].(map[string]interface{}); two["state"] != "2-way" {
@@ -1068,7 +1068,7 @@ func TestOSPF6AreasInterfacesNeighbors(t *testing.T) {
 		t.Fatalf("PtMultipoint has no ietf state, got %v", e7["state"])
 	}
 	p2p := e7["ietf-ospf:neighbors"].(map[string]interface{})["ietf-ospf:neighbor"].([]interface{})[0].(map[string]interface{})
-	if p2p["neighbor-router-id"] != "4.4.4.4" || p2p["infix-routing:role"] != nil {
+	if p2p["neighbor-router-id"] != "4.4.4.4" || p2p["infix-ospf:role"] != nil {
 		t.Fatalf("ifState on a non-broadcast link is not a role: %v", p2p)
 	}
 }

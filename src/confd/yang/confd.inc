@@ -14,12 +14,6 @@ MODULES=(
 	"ietf-routing@2018-03-13.yang"
 	"ietf-ipv6-unicast-routing@2018-03-13.yang"
 	"ietf-ipv4-unicast-routing@2018-03-13.yang"
-	"ietf-ospf@2022-10-19.yang -e auto-cost -e bfd -e explicit-router-id -e hybrid-interface"
-	"ietf-rip@2020-02-20.yang"
-	"iana-bfd-types@2021-10-21.yang"
-	"ietf-bfd-types@2022-09-22.yang"
-	"ietf-bfd@2022-09-22.yang"
-	"ietf-bfd-ip-sh@2022-09-22.yang"
 	"iana-if-type@2023-01-26.yang"
         # NOTE: ietf-tls-client must be version matched with ietf-tls-server, used by netopeer2!
 #	"ietf-tls-client@2023-12-28.yang"

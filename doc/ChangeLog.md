@@ -27,6 +27,12 @@ All notable changes to the project are documented in this file.
   state, or a WebUI status page answers from that data at once, also
   on devices with many interfaces, and reflects a change as soon as it
   has happened
+- Devices without dynamic routing no longer list OSPF, RIP and BFD in
+  the CLI or their YANG library.  The OSPF and RIP settings Infix adds,
+  e.g., `redistribute` and `default-route-advertise`, moved to the new
+  YANG modules `infix-ospf` and `infix-rip`, installed only on devices
+  with dynamic routing.  The startup configuration is converted on
+  upgrade; NETCONF and RESTCONF clients must use the new module names
 - Switch boards advertise one of their port addresses as the LLDP chassis
   ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
