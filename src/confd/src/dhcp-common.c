@@ -22,7 +22,7 @@ int dhcp_option_lookup(const struct lyd_node *id)
 	const struct lysc_node_leaf *leaf;
 	const struct lysc_node *schema;
 	const struct lysc_type *type;
-	LY_ARRAY_COUNT_TYPE u, e;
+	LYA_COUNT_T u, e;
 	const char *name;
 
 	schema = id->schema;
@@ -39,13 +39,13 @@ int dhcp_option_lookup(const struct lyd_node *id)
 	name = lyd_get_value(id);
 
 	/* Look through each type in the union */
-	for (u = 0; u < LY_ARRAY_COUNT(uni->types); u++) {
+	for (u = 0; u < LYA_COUNT(uni->types); u++) {
 		type = uni->types[u];
 
 		if (type->basetype == LY_TYPE_ENUM) {
 			enum_type = (const struct lysc_type_enum *)type;
 
-			for (e = 0; e < LY_ARRAY_COUNT(enum_type->enums); e++) {
+			for (e = 0; e < LYA_COUNT(enum_type->enums); e++) {
 				if (!strcmp(enum_type->enums[e].name, name))
 					return enum_type->enums[e].value;
 			}
