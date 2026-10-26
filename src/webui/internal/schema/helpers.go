@@ -31,12 +31,15 @@ func OptionsFor(mgr *Manager, path string) []IdentityOption {
 	if len(values) == 0 {
 		values = node.Type.Enums
 	}
+	// An identity default is written with the module's own prefix, or none
+	// at all, so only the name tells.
+	def := StripModulePrefix(node.Default)
 	opts := make([]IdentityOption, 0, len(values))
 	for _, v := range values {
 		opts = append(opts, IdentityOption{
 			Value:     v,
 			Label:     StripModulePrefix(v),
-			IsDefault: node.Default != "" && v == node.Default,
+			IsDefault: def != "" && StripModulePrefix(v) == def,
 		})
 	}
 	return opts

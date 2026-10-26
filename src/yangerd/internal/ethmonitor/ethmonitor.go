@@ -246,9 +246,8 @@ func buildEthernetContainer(data ethtoolJSON) (map[string]any, int64) {
 		eth["infix-ethernet-interface:supported-pmd-types"] = supported
 	}
 
-	// Advertised PMD types — suppress when identical to supported (default).
-	advertised := ethtoolModesToPMD(data.AdvertisedLinkModes)
-	if len(advertised) > 0 && !stringSliceEqual(advertised, supported) {
+	// Advertised PMD types, what auto-negotiation announces.
+	if advertised := ethtoolModesToPMD(data.AdvertisedLinkModes); len(advertised) > 0 {
 		autoneg["infix-ethernet-interface:advertised-pmd-types"] = advertised
 	}
 
@@ -415,20 +414,4 @@ func ethtoolModesToPMD(modes []string) []string {
 		out = append(out, "ieee802-ethernet-phy-type:pmd-type-"+pmd)
 	}
 	return out
-}
-
-func stringSliceEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	set := make(map[string]bool, len(a))
-	for _, s := range a {
-		set[s] = true
-	}
-	for _, s := range b {
-		if !set[s] {
-			return false
-		}
-	}
-	return true
 }

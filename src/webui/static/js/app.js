@@ -1566,10 +1566,22 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
-    // If the Configure accordion is already open on page load, fire Enter now.
+    // The Configure accordion is open on page load only on a configure
+    // page, which the server rendered from the candidate as it was: enter
+    // configure mode, then render the page again from the fresh copy.
     var configureDetails = document.getElementById('nav-configure');
     if (configureDetails && configureDetails.open) {
-      enterConfigure();
+      configureEntered = true;
+      var content = document.getElementById('content');
+      if (content) content.classList.add('cfg-entering');
+      htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
+        .then(function() {
+          return htmx.ajax('GET', window.location.pathname + window.location.search,
+                           {target: '#content', swap: 'innerHTML'});
+        })
+        .finally(function() {
+          if (content) content.classList.remove('cfg-entering');
+        });
     }
 
     // Restore saved state — skip Configure so it never auto-reopens on page load.
@@ -1940,6 +1952,26 @@ function openModal(message, onConfirm, opts) {
 
   // Re-attach after HTMX page navigation recreates #content (and #yang-detail).
   document.addEventListener('htmx:afterSwap', attachObserver);
+})();
+
+// Add Routing Protocol dialog: the router ID is an OSPF setting
+(function() {
+  function update() {
+    var sel = document.getElementById('rt-add-proto');
+    var row = document.getElementById('rt-add-router-id');
+    if (!sel || !row) return;
+    var opt = sel.options[sel.selectedIndex];
+    var ospf = !!(opt && opt.dataset.ospf === 'true');
+    row.hidden = !ospf;
+    var hint = document.getElementById('rt-add-ospf-hint');
+    if (hint) hint.hidden = !ospf;
+  }
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'rt-add-proto') update();
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest && e.target.closest('[data-show-modal="rt-add-dialog"]')) setTimeout(update, 0);
+  });
 })();
 
 // ─── Configure: dynamic list row add/delete ────────────────────────────────

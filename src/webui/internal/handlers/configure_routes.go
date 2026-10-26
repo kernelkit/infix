@@ -3,15 +3,17 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/schema"
+
+	"github.com/kernelkit/infix/src/features"
 )
 
 // ─── RESTCONF paths ──────────────────────────────────────────────────────────
@@ -24,22 +26,6 @@ const (
 )
 
 // ─── RESTCONF JSON types ──────────────────────────────────────────────────────
-
-type staticCPPWrapper struct {
-	Routing struct {
-		CPPs struct {
-			CPP []staticCPPJSON `json:"control-plane-protocol"`
-		} `json:"control-plane-protocols"`
-	} `json:"ietf-routing:routing"`
-}
-
-// staticCPPJSON mirrors control-plane-protocol. The ipv4/ipv6 containers are
-// augmented into the child static-routes container, not directly into the CPP.
-type staticCPPJSON struct {
-	Type         string           `json:"type"`
-	Name         string           `json:"name"`
-	StaticRoutes staticRoutesJSON `json:"static-routes"`
-}
 
 type staticRoutesJSON struct {
 	IPv4 *staticIPJSON `json:"ietf-ipv4-unicast-routing:ipv4,omitempty"`
@@ -63,6 +49,7 @@ type staticNextHopJSON struct {
 // ─── Template data ────────────────────────────────────────────────────────────
 
 type cfgRouteEntry struct {
+	Family    string // "ipv4" or "ipv6"
 	Prefix    string
 	NextHop   string
 	Interface string
@@ -70,11 +57,15 @@ type cfgRouteEntry struct {
 
 type cfgRoutesPageData struct {
 	PageData
-	Loading    bool
-	IPv4Routes []cfgRouteEntry
-	IPv6Routes []cfgRouteEntry
-	Desc       map[string]string
-	Error      string
+	Loading bool
+	Routes  []cfgRouteEntry // IPv4, then IPv6
+	Ifaces  []string        // outgoing interfaces to choose from
+	// Routing protocols, in images with FRR
+	Protocols    []rtRow
+	Addable      []rtProto // not yet set up, offered by the add dialog
+	NoForwarding []rtNoForwarding
+	Desc         map[string]string
+	Error        string
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -95,6 +86,26 @@ func (h *ConfigureRoutesHandler) Overview(w http.ResponseWriter, r *http.Request
 
 	mgr := h.Schema.Manager()
 	data.Loading = mgr == nil
+	protocols := mgr != nil && data.Capabilities.Has(features.Routing)
+
+	// The protocols and the interfaces
+	ctx := r.Context()
+	var (
+		cpps   []rtProtoJSON
+		ifaces []ifaceJSON
+		err    error
+		wg     sync.WaitGroup
+	)
+	wg.Add(1)
+	go func() { defer wg.Done(); cpps, err = h.fetchProtocols(ctx) }()
+	wg.Add(1)
+	go func() { defer wg.Done(); ifaces = h.fetchRoutingIfaces(ctx) }()
+	wg.Wait()
+	if err != nil {
+		log.Printf("configure routes: %v", err)
+		data.Error = "Could not read the routing configuration"
+	}
+
 	if mgr != nil {
 		rt := "/ietf-routing:routing/control-plane-protocols/control-plane-protocol/static-routes/ietf-ipv4-unicast-routing:ipv4/route"
 		data.Desc = map[string]string{
@@ -102,18 +113,16 @@ func (h *ConfigureRoutesHandler) Overview(w http.ResponseWriter, r *http.Request
 			"nexthop":   schema.DescriptionOf(mgr, rt+"/next-hop/next-hop-address"),
 			"interface": schema.DescriptionOf(mgr, rt+"/next-hop/outgoing-interface"),
 		}
+		if protocols && err == nil {
+			buildRoutingProtocols(mgr, cpps, ifaces, &data)
+		}
 	}
 
-	cpp, err := h.fetchStaticCPP(r.Context())
-	if err != nil {
-		log.Printf("configure routes: %v", err)
-		data.Error = "Could not read static routes"
-	}
-	if len(cpp.Routing.CPPs.CPP) > 0 {
-		entry := cpp.Routing.CPPs.CPP[0]
+	if entry := findInstance(cpps, "infix-routing:static"); entry != nil {
 		if entry.StaticRoutes.IPv4 != nil {
 			for _, rt := range entry.StaticRoutes.IPv4.Routes {
-				data.IPv4Routes = append(data.IPv4Routes, cfgRouteEntry{
+				data.Routes = append(data.Routes, cfgRouteEntry{
+					Family:    "ipv4",
 					Prefix:    rt.Prefix,
 					NextHop:   rt.NextHop.Address,
 					Interface: rt.NextHop.Interface,
@@ -122,7 +131,8 @@ func (h *ConfigureRoutesHandler) Overview(w http.ResponseWriter, r *http.Request
 		}
 		if entry.StaticRoutes.IPv6 != nil {
 			for _, rt := range entry.StaticRoutes.IPv6.Routes {
-				data.IPv6Routes = append(data.IPv6Routes, cfgRouteEntry{
+				data.Routes = append(data.Routes, cfgRouteEntry{
+					Family:    "ipv6",
 					Prefix:    rt.Prefix,
 					NextHop:   rt.NextHop.Address,
 					Interface: rt.NextHop.Interface,
@@ -130,6 +140,14 @@ func (h *ConfigureRoutesHandler) Overview(w http.ResponseWriter, r *http.Request
 			}
 		}
 	}
+
+	var used []string
+	for _, rt := range data.Routes {
+		if rt.Interface != "" {
+			used = append(used, rt.Interface)
+		}
+	}
+	data.Ifaces = ifaceChoices(ifaces, used)
 
 	tmplName := "configure-routes.html"
 	if r.Header.Get("HX-Request") == "true" {
@@ -153,11 +171,12 @@ func (h *ConfigureRoutesHandler) AddRoute(w http.ResponseWriter, r *http.Request
 	nexthop := strings.TrimSpace(r.FormValue("nexthop"))
 	iface := strings.TrimSpace(r.FormValue("interface"))
 
-	ipKey, _, ok := familyKeys(r.FormValue("family"))
-	if !ok {
-		renderSaveError(w, fmt.Errorf("invalid address family"))
-		return
+	// The family follows from the destination, e.g. 10.0.0.0/8 or 2001:db8::/32
+	family := "ipv4"
+	if strings.Contains(prefix, ":") {
+		family = "ipv6"
 	}
+	ipKey, _, _ := familyKeys(family)
 	if prefix == "" {
 		renderSaveError(w, fmt.Errorf("destination prefix is required"))
 		return
@@ -287,23 +306,4 @@ func familyKeys(family string) (ipKey, suffix string, ok bool) {
 		return "ietf-ipv6-unicast-routing:ipv6", staticIPv6Suffix, true
 	}
 	return "", "", false
-}
-
-// fetchStaticCPP reads the static control-plane-protocol entry from the
-// candidate datastore, falling back to running on 404.
-func (h *ConfigureRoutesHandler) fetchStaticCPP(ctx context.Context) (staticCPPWrapper, error) {
-	var cpp staticCPPWrapper
-	err := h.RC.Get(ctx, candidatePath+staticCPPSuffix, &cpp)
-	if err == nil {
-		return cpp, nil
-	}
-	if !restconf.IsNotFound(err) {
-		return cpp, err
-	}
-	runErr := h.RC.Get(ctx, "/data"+staticCPPSuffix, &cpp)
-	if runErr == nil || restconf.IsNotFound(runErr) {
-		// 404 on fallback = no static routes configured, not an error
-		return cpp, nil
-	}
-	return cpp, runErr
 }

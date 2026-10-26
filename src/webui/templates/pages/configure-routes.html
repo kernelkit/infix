@@ -22,10 +22,10 @@
 
 <section class="info-grid">
 
-  <section class="info-card info-grid-span-2">
-    <div class="card-header">IPv4 Static Routes</div>
+  <section class="info-card info-grid-span-2" id="static-routes">
+    <div class="card-header">Static Routes</div>
     <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="ipv4-routes-table">
+      <table class="data-table cfg-table">
         <thead>
           <tr>
             <th>Destination{{template "field-info" (index $d "prefix")}}</th>
@@ -35,11 +35,11 @@
           </tr>
         </thead>
         <tbody>
-          {{range $i, $rt := .IPv4Routes}}
+          {{range $i, $rt := .Routes}}
           <tr>
             <td class="num">
               <button class="key-row-toggle" type="button"
-                      aria-expanded="false" data-target="ipv4-route-{{$i}}">
+                      aria-expanded="false" data-target="route-{{$i}}">
                 <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Prefix}}
               </button>
             </td>
@@ -47,7 +47,7 @@
             <td>{{.Interface}}</td>
             <td style="text-align:right">
               <button type="button" class="btn-icon btn-icon-danger"
-                      hx-delete="/configure/routes?family=ipv4&prefix={{.Prefix | urlquery}}"
+                      hx-delete="/configure/routes?family={{.Family}}&prefix={{.Prefix | urlquery}}"
                       hx-confirm="Delete route {{.Prefix}}?"
                       hx-swap="none"
                       title="Delete route">
@@ -55,11 +55,11 @@
               </button>
             </td>
           </tr>
-          <tr class="key-detail-row" id="key-detail-ipv4-route-{{$i}}">
+          <tr class="key-detail-row" id="key-detail-route-{{$i}}">
             <td colspan="4" class="key-detail-cell">
               <div class="key-detail-body">
                 <form hx-put="/configure/routes" hx-swap="none">
-                  <input type="hidden" name="family" value="ipv4">
+                  <input type="hidden" name="family" value="{{.Family}}">
                   <input type="hidden" name="prefix" value="{{.Prefix}}">
                   <table class="info-table">
                     <tr>
@@ -69,12 +69,14 @@
                     <tr>
                       <th>Next hop{{template "field-info" (index $d "nexthop")}}</th>
                       <td><input class="cfg-input" type="text" name="nexthop"
-                                 value="{{.NextHop}}" placeholder="e.g. 192.168.1.1"></td>
+                                 value="{{.NextHop}}" placeholder="{{if eq .Family "ipv6"}}e.g. 2001:db8::1{{else}}e.g. 192.168.1.1{{end}}"></td>
                     </tr>
                     <tr>
                       <th>Interface{{template "field-info" (index $d "interface")}}</th>
-                      <td><input class="cfg-input" type="text" name="interface"
-                                 value="{{.Interface}}" placeholder="e.g. eth0"></td>
+                      <td>{{$cur := .Interface}}<select class="cfg-input" name="interface">
+                        <option value="">&mdash;</option>
+                        {{range $.Ifaces}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>{{end}}
+                      </select></td>
                     </tr>
                   </table>
                   <div class="cfg-card-footer" style="padding-left:0">
@@ -85,134 +87,24 @@
               </div>
             </td>
           </tr>
+          {{else}}
+          <tr><td colspan="4" class="yt-table-empty">No static routes</td></tr>
           {{end}}
-
-          {{if not .IPv4Routes}}
-          <tr><td colspan="4" class="yt-table-empty">No IPv4 static routes</td></tr>
-          {{end}}
-
-          {{/* Hidden add row */}}
-          <tr id="ipv4-add-row" hidden>
-            <td colspan="4" class="key-detail-cell">
-              <form hx-post="/configure/routes" hx-swap="none" class="user-add-inline">
-                <input type="hidden" name="family" value="ipv4">
-                <input class="cfg-input" type="text" name="prefix" required
-                       placeholder="0.0.0.0/0">
-                <input class="cfg-input" type="text" name="nexthop"
-                       placeholder="Next hop (e.g. 192.168.1.1)">
-                <input class="cfg-input" type="text" name="interface"
-                       placeholder="Interface (e.g. eth0)">
-                <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                <button type="button" class="btn btn-sm"
-                        data-hide="ipv4-add-row">Cancel</button>
-                <span class="cfg-save-status"></span>
-              </form>
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
     <div class="cfg-card-footer">
-      <button class="btn btn-secondary" data-show="ipv4-add-row">+ Add Route</button>
+      <button class="btn btn-secondary" data-show-modal="route-add-dialog">+ Add Route</button>
     </div>
   </section>
 
-  <section class="info-card info-grid-span-2">
-    <div class="card-header">IPv6 Static Routes</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="ipv6-routes-table">
-        <thead>
-          <tr>
-            <th>Destination{{template "field-info" (index $d "prefix")}}</th>
-            <th>Next Hop{{template "field-info" (index $d "nexthop")}}</th>
-            <th>Interface{{template "field-info" (index $d "interface")}}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {{range $i, $rt := .IPv6Routes}}
-          <tr>
-            <td class="num">
-              <button class="key-row-toggle" type="button"
-                      aria-expanded="false" data-target="ipv6-route-{{$i}}">
-                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Prefix}}
-              </button>
-            </td>
-            <td>{{.NextHop}}</td>
-            <td>{{.Interface}}</td>
-            <td style="text-align:right">
-              <button type="button" class="btn-icon btn-icon-danger"
-                      hx-delete="/configure/routes?family=ipv6&prefix={{.Prefix | urlquery}}"
-                      hx-confirm="Delete route {{.Prefix}}?"
-                      hx-swap="none"
-                      title="Delete route">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          <tr class="key-detail-row" id="key-detail-ipv6-route-{{$i}}">
-            <td colspan="4" class="key-detail-cell">
-              <div class="key-detail-body">
-                <form hx-put="/configure/routes" hx-swap="none">
-                  <input type="hidden" name="family" value="ipv6">
-                  <input type="hidden" name="prefix" value="{{.Prefix}}">
-                  <table class="info-table">
-                    <tr>
-                      <th>Destination</th>
-                      <td><span class="text-muted">{{.Prefix}}</span></td>
-                    </tr>
-                    <tr>
-                      <th>Next hop{{template "field-info" (index $d "nexthop")}}</th>
-                      <td><input class="cfg-input" type="text" name="nexthop"
-                                 value="{{.NextHop}}" placeholder="e.g. 2001:db8::1"></td>
-                    </tr>
-                    <tr>
-                      <th>Interface{{template "field-info" (index $d "interface")}}</th>
-                      <td><input class="cfg-input" type="text" name="interface"
-                                 value="{{.Interface}}" placeholder="e.g. eth0"></td>
-                    </tr>
-                  </table>
-                  <div class="cfg-card-footer" style="padding-left:0">
-                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                    <span class="cfg-save-status"></span>
-                  </div>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {{end}}
-
-          {{if not .IPv6Routes}}
-          <tr><td colspan="4" class="yt-table-empty">No IPv6 static routes</td></tr>
-          {{end}}
-
-          {{/* Hidden add row */}}
-          <tr id="ipv6-add-row" hidden>
-            <td colspan="4" class="key-detail-cell">
-              <form hx-post="/configure/routes" hx-swap="none" class="user-add-inline">
-                <input type="hidden" name="family" value="ipv6">
-                <input class="cfg-input" type="text" name="prefix" required
-                       placeholder="::/0">
-                <input class="cfg-input" type="text" name="nexthop"
-                       placeholder="Next hop (e.g. 2001:db8::1)">
-                <input class="cfg-input" type="text" name="interface"
-                       placeholder="Interface (e.g. eth0)">
-                <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                <button type="button" class="btn btn-sm"
-                        data-hide="ipv6-add-row">Cancel</button>
-                <span class="cfg-save-status"></span>
-              </form>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="cfg-card-footer">
-      <button class="btn btn-secondary" data-show="ipv6-add-row">+ Add Route</button>
-    </div>
-  </section>
+  {{if or .Protocols .Addable}}{{template "rt-protocols" .}}{{end}}
 
 </section>
+
+{{template "route-add-dialog" .}}
+{{if .Addable}}{{template "rt-add-dialog" .}}{{end}}
+{{range .Protocols}}{{if .OSPF}}{{template "rt-area-dialog" .}}{{end}}{{end}}
 
 {{template "configure-toolbar" .}}
 </div>
@@ -220,3 +112,301 @@
 
 {{end}}
 
+
+{{/* Advanced editor link of a protocol instance.  It sits in the fold-out
+     form, whose hx-swap="none" it would otherwise inherit. */}}
+{{define "rt-advanced"}}
+<a class="btn btn-sm btn-outline" href="/configure/tree?path={{.TreeNode | urlquery}}"
+   hx-get="/configure/tree?path={{.TreeNode | urlquery}}" hx-target="#content" hx-swap="innerHTML" hx-push-url="true">{{.Label}} in the advanced editor &rarr;</a>
+{{end}}
+
+{{/* Interfaces in use that do not forward, with a button to fix it */}}
+{{define "rt-forwarding"}}
+{{if .NoForwarding}}
+<form class="alert alert-info rt-forwarding" hx-post="/configure/routes/forwarding" hx-swap="none">
+  <span>Forwarding is off on
+    {{range $i, $n := .NoForwarding}}{{if $i}}, {{end}}<strong>{{$n.Name}}</strong>
+      ({{range $j, $f := $n.Families}}{{if $j}}, {{end}}{{if eq $f "ipv4"}}IPv4{{else}}IPv6{{end}}<input type="hidden" name="forward" value="{{$n.Name}}/{{$f}}">{{end}}){{end}},
+    so this router does not route traffic through {{if gt (len .NoForwarding) 1}}them{{else}}it{{end}}.</span>
+  <button class="btn btn-primary btn-sm" type="submit">Enable forwarding</button>
+  <span class="cfg-save-status"></span>
+</form>
+{{end}}
+{{end}}
+
+{{/* One row per routing protocol, the global settings in a fold-out, and
+     for OSPF a row per area under it, each with its own fold-out */}}
+{{define "rt-protocols"}}
+<section class="info-card info-grid-span-2" id="rt-protocols">
+  <div class="card-header">Routing Protocols</div>
+  {{template "rt-forwarding" .}}
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead><tr><th class="iface-tree-col"></th><th>Protocol{{template "field-info" (index .Desc "proto-type")}}</th><th>Interfaces</th><th></th></tr></thead>
+      <tbody>
+        {{range .Protocols}}
+        <tr>
+          <td class="iface-tree-col {{if .Areas}}tree-parent{{end}}"></td>
+          <td>
+            <button class="key-row-toggle" type="button" aria-expanded="false" data-target="proto-{{.Key}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Label}} <span class="text-muted">({{.FamilyLabel}})</span>
+            </button>
+          </td>
+          <td>{{with .Interfaces}}{{.}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger" title="Delete {{.Label}}"
+                    hx-delete="/configure/routes/protocol/{{.Key}}"
+                    hx-confirm="Delete {{.Label}}?" hx-swap="none">{{template "icon-trash"}}</button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-proto-{{.Key}}">
+          <td class="iface-tree-col {{if .Areas}}tree-line{{end}}"></td>
+          <td colspan="3" class="key-detail-cell">
+            <div class="key-detail-body">
+              {{if .OSPF}}{{template "ospf-foldout" .}}{{else}}{{template "rip-foldout" .}}{{end}}
+            </div>
+          </td>
+        </tr>
+        {{$row := .}}
+        {{range .Areas}}
+        <tr>
+          <td class="iface-tree-col {{if .Last}}tree-last{{else}}tree-mid{{end}}"></td>
+          <td>
+            <button class="key-row-toggle" type="button" aria-expanded="false" data-target="area-{{.Key}}-{{.ID}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Label}}
+            </button>
+          </td>
+          <td>{{with .Ifaces}}{{range $i, $n := .}}{{if $i}}, {{end}}{{$n}}{{end}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger" title="Delete area {{.ID}}"
+                    hx-delete="/configure/routes/protocol/{{.Key}}/areas/{{.ID}}"
+                    hx-confirm="Delete area {{.ID}} from {{$row.Label}}?" hx-swap="none">{{template "icon-trash"}}</button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-area-{{.Key}}-{{.ID}}">
+          <td class="iface-tree-col {{if not .Last}}tree-line{{end}}"></td>
+          <td colspan="3" class="key-detail-cell">
+            <div class="key-detail-body">{{template "area-foldout" .}}</div>
+          </td>
+        </tr>
+        {{end}}
+        {{else}}
+        <tr><td colspan="4" class="yt-table-empty">No routing protocols</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div class="cfg-card-footer">
+    {{if .Addable}}<button class="btn btn-secondary" data-show-modal="rt-add-dialog">+ Add Protocol</button>{{end}}
+    {{range .Protocols}}{{if .OSPF}}<button class="btn btn-secondary" data-show-modal="rt-area-dialog-{{.Key}}">+ Add {{.Label}} Area</button>{{end}}{{end}}
+  </div>
+</section>
+{{end}}
+
+{{/* The add dialog: a protocol, its interfaces, and for OSPF a router ID.
+     OSPF interfaces go in area 0.0.0.0. */}}
+{{define "rt-add-dialog"}}
+<dialog id="rt-add-dialog" class="iface-modal">
+  <form hx-post="/configure/routes/protocol" hx-swap="none" class="iface-modal-form">
+    <header class="iface-modal-header">
+      <h3>Add Routing Protocol</h3>
+      <button type="button" class="btn-close" aria-label="Close" data-close-modal="rt-add-dialog">×</button>
+    </header>
+    <div class="iface-modal-body">
+      <table class="info-table">
+        <tr>
+          <th>Protocol{{template "field-info" (index .Desc "proto-type")}}</th>
+          <td><select class="cfg-input" name="proto" id="rt-add-proto">
+            {{range .Addable}}<option value="{{.Key}}" data-ospf="{{.OSPF}}">{{.Label}} ({{.FamilyLabel}})</option>{{end}}
+          </select></td>
+        </tr>
+        <tr>
+          <th>Interfaces</th>
+          <td><div class="fw-check-scroll"><div class="fw-check-grid">
+            {{range .Ifaces}}<label><input type="checkbox" name="ifaces" value="{{.}}"> {{.}}</label>{{end}}
+          </div></div>
+            <div class="cfg-hint" id="rt-add-ospf-hint">In the backbone area 0.0.0.0.</div></td>
+        </tr>
+        <tr id="rt-add-router-id">
+          <th>Router ID{{template "field-info" (index .Desc "router-id")}}</th>
+          <td><input class="cfg-input" type="text" name="router-id" placeholder="e.g. 10.0.0.1, needed for OSPFv3"></td>
+        </tr>
+      </table>
+    </div>
+    <footer class="iface-modal-footer">
+      <button class="btn btn-primary" type="submit">Add</button>
+      <span class="cfg-save-status"></span>
+    </footer>
+  </form>
+</dialog>
+{{end}}
+
+{{/* The global settings of an OSPF instance */}}
+{{define "ospf-foldout"}}
+{{$d := .Desc}}
+<form hx-put="/configure/routes/protocol/{{.Key}}" hx-swap="none">
+  <table class="info-table">
+    <tr>
+      <th>Router ID{{template "field-info" (index $d "router-id")}}</th>
+      <td><input class="cfg-input" type="text" name="router-id" value="{{.OSPF.RouterID}}"
+                 placeholder="{{if eq .Family "ipv6"}}e.g. 10.0.0.1, needed for OSPFv3{{else}}e.g. 10.0.0.1, or the address of an OSPF interface{{end}}"></td>
+    </tr>
+    {{if .BFD}}
+    <tr>
+      <th>BFD{{template "field-info" (index $d "bfd")}}</th>
+      <td class="fw-check-grid"><label><input type="checkbox" name="bfd" value="on" {{if .OSPF.BFD}}checked{{end}}>
+          On all OSPF interfaces{{if .OSPF.BFDMixed}} <span class="text-muted">(on some today, see the advanced editor)</span>{{end}}</label>
+        <input type="hidden" name="bfd-was" value="{{if .OSPF.BFD}}on{{end}}"></td>
+    </tr>
+    {{end}}
+    <tr>
+      <th>Redistribute{{template "field-info" (index $d "redistribute")}}</th>
+      <td class="fw-check-grid">
+        <label><input type="checkbox" name="redist-connected" value="on" {{if .OSPF.Connected}}checked{{end}}> Connected networks</label>
+        <label><input type="checkbox" name="redist-static" value="on" {{if .OSPF.Static}}checked{{end}}> Static routes</label>
+      </td>
+    </tr>
+    <tr>
+      <th>Default route{{template "field-info" (index $d "default-route")}}</th>
+      <td class="fw-check-grid"><label><input type="checkbox" name="default-route" value="on" {{if .OSPF.DefaultRoute}}checked{{end}}> Advertise</label></td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer" style="padding-left:0">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+    <span class="rt-advanced">{{template "rt-advanced" .}}</span>
+  </div>
+</form>
+{{end}}
+
+{{/* An area's type and interfaces, in its fold-out */}}
+{{define "area-foldout"}}
+<form hx-put="/configure/routes/protocol/{{.Key}}/areas/{{.ID}}" hx-swap="none">
+  <table class="info-table">
+    <tr>
+      <th>Type{{template "field-info" (index .Desc "area-type")}}</th>
+      <td>{{template "area-type-select" .Types}}</td>
+    </tr>
+    <tr>
+      <th>Interfaces{{template "field-info" (index .Desc "area-ifaces")}}</th>
+      <td>{{template "area-ifaces" .Choices}}</td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer" style="padding-left:0">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+  </div>
+</form>
+{{end}}
+
+{{/* The area types of the model, one selected */}}
+{{define "area-type-select"}}
+<select class="cfg-input" name="area-type">
+  {{range .}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>{{end}}
+</select>
+{{end}}
+
+{{/* Interface checkboxes for an area, those in another area greyed out */}}
+{{define "area-ifaces"}}
+<div class="fw-check-scroll"><div class="fw-check-grid">
+  {{range .}}<label{{if .Other}} class="text-muted"{{end}}><input type="checkbox" name="ifaces" value="{{.Name}}" {{if .Checked}}checked{{end}} {{if .Other}}disabled{{end}}> {{.Name}}{{if .Other}} <small>(area {{.Other}})</small>{{end}}</label>{{end}}
+</div></div>
+{{end}}
+
+{{/* Add Area dialog, one per OSPF instance */}}
+{{define "rt-area-dialog"}}
+<dialog id="rt-area-dialog-{{.Key}}" class="iface-modal">
+  <form hx-post="/configure/routes/protocol/{{.Key}}/areas" hx-swap="none" class="iface-modal-form">
+    <header class="iface-modal-header">
+      <h3>Add {{.Label}} Area</h3>
+      <button type="button" class="btn-close" aria-label="Close" data-close-modal="rt-area-dialog-{{.Key}}">×</button>
+    </header>
+    <div class="iface-modal-body">
+      <table class="info-table">
+        <tr>
+          <th>Area{{template "field-info" (index .Desc "area-id")}}</th>
+          <td><input class="cfg-input" type="text" name="area-id" required placeholder="e.g. 0.0.0.1, or 1"></td>
+        </tr>
+        <tr>
+          <th>Type{{template "field-info" (index .Desc "area-type")}}</th>
+          <td>{{template "area-type-select" .AreaTypes}}</td>
+        </tr>
+        <tr>
+          <th>Interfaces{{template "field-info" (index .Desc "area-ifaces")}}</th>
+          <td>{{template "area-ifaces" .NewArea}}</td>
+        </tr>
+      </table>
+    </div>
+    <footer class="iface-modal-footer">
+      <button class="btn btn-primary" type="submit">Add</button>
+      <span class="cfg-save-status"></span>
+    </footer>
+  </form>
+</dialog>
+{{end}}
+
+{{define "rip-foldout"}}
+{{$d := .Desc}}
+<form hx-put="/configure/routes/protocol/{{.Key}}" hx-swap="none">
+  <table class="info-table">
+    <tr>
+      <th>Interfaces{{template "field-info" (index $d "rip-ifaces")}}</th>
+      <td><div class="fw-check-scroll"><div class="fw-check-grid">
+        {{$s := .RIP}}{{range .Ifaces}}<label><input type="checkbox" name="ifaces" value="{{.}}" {{if index $s.IfSet .}}checked{{end}}> {{.}}</label>{{end}}
+      </div></div></td>
+    </tr>
+    <tr>
+      <th>Redistribute{{template "field-info" (index $d "rip-redistribute")}}</th>
+      <td class="fw-check-grid">
+        <label><input type="checkbox" name="redist-connected" value="on" {{if .RIP.Connected}}checked{{end}}> Connected networks</label>
+        <label><input type="checkbox" name="redist-static" value="on" {{if .RIP.Static}}checked{{end}}> Static routes</label>
+      </td>
+    </tr>
+    <tr>
+      <th>Default route{{template "field-info" (index $d "rip-default-route")}}</th>
+      <td class="fw-check-grid"><label><input type="checkbox" name="default-route" value="on" {{if .RIP.DefaultRoute}}checked{{end}}> Advertise</label></td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer" style="padding-left:0">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+    <span class="rt-advanced">{{template "rt-advanced" .}}</span>
+  </div>
+</form>
+{{end}}
+
+{{define "route-add-dialog"}}
+{{$d := .Desc}}
+<dialog id="route-add-dialog" class="iface-modal rt-add-modal">
+  <form hx-post="/configure/routes" hx-swap="none" class="iface-modal-form">
+    <header class="iface-modal-header">
+      <h3>Add Route</h3>
+      <button type="button" class="btn-close" aria-label="Close" data-close-modal="route-add-dialog">×</button>
+    </header>
+    <div class="iface-modal-body">
+      <table class="info-table">
+        <tr>
+          <th>Destination{{template "field-info" (index $d "prefix")}}</th>
+          <td><input class="cfg-input" type="text" name="prefix" required placeholder="e.g. 0.0.0.0/0 or ::/0"></td>
+        </tr>
+        <tr>
+          <th>Next hop{{template "field-info" (index $d "nexthop")}}</th>
+          <td><input class="cfg-input" type="text" name="nexthop" placeholder="e.g. 192.168.1.1 or 2001:db8::1"></td>
+        </tr>
+        <tr>
+          <th>Interface{{template "field-info" (index $d "interface")}}</th>
+          <td><select class="cfg-input" name="interface">
+              <option value="">&mdash;</option>
+              {{range .Ifaces}}<option value="{{.}}">{{.}}</option>{{end}}
+            </select>
+            <div class="cfg-hint">A next hop, an interface, or both.</div></td>
+        </tr>
+      </table>
+    </div>
+    <footer class="iface-modal-footer">
+      <button class="btn btn-primary" type="submit">Add</button>
+      <span class="cfg-save-status"></span>
+    </footer>
+  </form>
+</dialog>
+{{end}}

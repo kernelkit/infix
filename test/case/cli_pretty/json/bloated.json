@@ -83,8 +83,20 @@
         },
         "ieee802-ethernet-interface:ethernet": {
           "auto-negotiation": {
-            "enable": false
-          }
+            "enable": false,
+            "infix-ethernet-interface:advertised-pmd-types": [
+              "ieee802-ethernet-phy-type:pmd-type-1000BASE-T",
+              "ieee802-ethernet-phy-type:pmd-type-100BASE-TX",
+              "ieee802-ethernet-phy-type:pmd-type-10BASE-T"
+            ]
+          },
+          "infix-ethernet-interface:supported-pmd-types": [
+            "ieee802-ethernet-phy-type:pmd-type-other",
+            "ieee802-ethernet-phy-type:pmd-type-10BASE-T",
+            "ieee802-ethernet-phy-type:pmd-type-100BASE-TX",
+            "ieee802-ethernet-phy-type:pmd-type-1000BASE-T",
+            "ieee802-ethernet-phy-type:pmd-type-2.5GBASE-T"
+          ]
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
