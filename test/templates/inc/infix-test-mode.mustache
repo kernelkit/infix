@@ -1,0 +1,7 @@
+# Test mode settings for this node, read at boot by 30-test-mode (fw_cfg
+# opt/test-mode): its port on the mgmt link and its name in the topology.
+mgmt=
+{{#links}}
+case " {{provides}} " in *" mgmt "*) mgmt="{{qn_name}}";; esac
+{{/links}}
+echo "{ \"management-interface\": \"$mgmt\", \"physical-name\": \"{{name}}\" }" > $imgdir/{{name}}.test-mode
