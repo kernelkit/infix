@@ -476,7 +476,7 @@ your own test.
 Read operational data with specific paths rather than whole subtrees,
 NETCONF and RESTCONF do not return the same thing for a whole subtree.
 
-In the virtual topology, WiFi radios with the same index share one
+In the virtual topology, Wi-Fi radios with the same index share one
 cell: every node's `radio0` hears every other `radio0`, but no `radio1`.
 Nodes that should associate must use the same radio index.  Interfaces
 get their MAC address from the node, read it back with

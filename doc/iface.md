@@ -162,9 +162,9 @@ The two most common uses are:
   uplink is up and the address is redistributed into the routing domain.
 
 > [!TIP]
-> WiFi interfaces also use dummies as placeholders when the radio
+> Wi-Fi interfaces also use dummies as placeholders when the radio
 > hardware is not detected at boot (e.g., a USB dongle that was
-> unplugged).  See [WiFi](wifi.md) for details.
+> unplugged).  See [Wi-Fi](wifi.md) for details.
 
 ### Example: Stable OSPF Router-ID
 

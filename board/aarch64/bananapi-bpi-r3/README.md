@@ -6,7 +6,7 @@
 
 The Banana Pi BPI-R3 and BPI-R3 Mini are high-performance networking
 boards with full Infix support for all enabled features including
-Ethernet, WiFi, and SFP interfaces.
+Ethernet, Wi-Fi, and SFP interfaces.
 
 Both boards share the same SoC and most peripherals.  The key
 differences are:
@@ -24,7 +24,7 @@ differences are:
 - microSD card slot (BPI-R3 only)
 - 5x Gigabit Ethernet ports with switch core (BPI-R3 only)
 - 2x SFP cages for fiber connectivity (1G/2.5G) (BPI-R3 only)
-- Dual-band WiFi (2.4 GHz + 5 GHz)
+- Dual-band Wi-Fi (2.4 GHz + 5 GHz)
 - USB 3.0 port
 - Mini PCIe slot
 
@@ -35,7 +35,7 @@ Infix comes preconfigured with:
 - **LAN ports** (lan1-lan4): Bridged for internal networking (BPI-R3 only)
 - **WAN port**: DHCP client enabled for internet connectivity
 - **SFP ports** (sfp1, sfp2): Available for configuration (BPI-R3 only)
-- **WiFi interfaces** (wifi0, wifi1): Available for configuration
+- **Wi-Fi interfaces** (wifi0, wifi1): Available for configuration
 
 ## Getting Started
 
@@ -217,9 +217,9 @@ sync
 The BPI-R3 family has no EEPROM with a factory-programmed MAC address.
 Out of the box every Ethernet port therefore gets a random address on
 each boot, and the hostname, which is derived from the base address,
-changes with it.  Worse, both WiFi radios carry the same MediaTek
+changes with it.  Worse, both Wi-Fi radios carry the same MediaTek
 default address on every board, so two boards cannot even connect to
-each other over WiFi: a client refuses to authenticate to an access
+each other over Wi-Fi: a client refuses to authenticate to an access
 point that has its own address.
 
 Store a product record as `/mnt/aux/vpd.bin`, from the Infix shell,
@@ -232,7 +232,7 @@ echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Sin
 
 Give each board its own base address and serial number, then reboot.
 The base address becomes the hostname suffix, each wired port gets a
-fixed offset from the base, and the WiFi interfaces get addresses
+fixed offset from the base, and the Wi-Fi interfaces get addresses
 derived from it.  With the record above the board is named
 `bpi-ba-01-00`, `lan1` is `02:00:00:ba:01:02`, `wan` is
 `02:00:00:ba:01:08` and `wifi0` is `06:00:00:ba:01:00`.  A port goes

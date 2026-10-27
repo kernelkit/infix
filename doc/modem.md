@@ -71,7 +71,7 @@ Where `N` is a number (0, 1, 2, ...).
 ## Multi-Bearer (Multiple APNs)
 
 Multiple wwan interfaces can reference the same modem component, each
-with a different APN.  Same idea as multi-SSID on a WiFi radio: one
+with a different APN.  Same idea as multi-SSID on a Wi-Fi radio: one
 hardware modem, several independent data connections.
 
 Configure `wwan0` and `wwan1` both pointing to `modem0`:
@@ -200,7 +200,7 @@ seconds for the wwan interface to appear before proceeding.  For most
 modems it is ready in 2-5 seconds.  If the modem has not appeared
 within the timeout, a dummy placeholder interface is created so the
 rest of the configuration can be applied, and a reboot is required
-once the hardware is available, same as for WiFi radios.  Set
+once the hardware is available, same as for Wi-Fi radios.  Set
 `probe-timeout 0` to disable waiting entirely.
 
 > [!NOTE]
@@ -231,7 +231,7 @@ the hardware is unlocked.
   (e.g. `internet`, `data.vodafone.com`, `web.tele2.se`)
 - `route-preference`: Administrative distance for the default route
   (default: `200`).  Higher value = lower priority.  The default of 200
-  places cellular behind wired Ethernet (distance 5) and WiFi, so
+  places cellular behind wired Ethernet (distance 5) and Wi-Fi, so
   cellular acts as a failover when the wired link is up
 - `roaming`: Allow data when roaming on a foreign network
   (default: `false`)
@@ -361,7 +361,7 @@ When the modem is in trouble, the same view shows why.  A
 ## Cellular Failover
 
 The default `route-preference` (200) is deliberately higher than the
-distances used by wired Ethernet (udhcpc default: 5) and WiFi.  When a
+distances used by wired Ethernet (udhcpc default: 5) and Wi-Fi.  When a
 wired link is up it takes precedence automatically; cellular becomes
 the active path only if higher-priority routes are withdrawn.
 
@@ -377,7 +377,7 @@ metric of the route in the kernel routing table:
 
 A default route via the bearer is always installed when the bearer
 connects.  To adjust the failover priority between two cellular modems,
-or to prefer cellular over WiFi, set `route-preference` explicitly:
+or to prefer cellular over Wi-Fi, set `route-preference` explicitly:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface wwan0 wwan bearer</b>
 admin@example:/config/interface/wwan0/wwan/bearer/> <b>set route-preference 100</b>

@@ -21,7 +21,7 @@ All notable changes to the project are documented in this file.
   available in the operational datastore: its address, version, query
   interval and timeout, and whether it is the system itself
 - Operational data is returned much faster.  Interface, routing, bridge,
-  WiFi, container and hardware status is now kept up to date as the
+  Wi-Fi, container and hardware status is now kept up to date as the
   system changes, instead of being gathered from the system on every
   request.  A `show` command, a NETCONF or RESTCONF GET of operational
   state, or a WebUI status page answers from that data at once, also
@@ -49,17 +49,17 @@ All notable changes to the project are documented in this file.
 - Banana Pi BPI-R3 and Acer Connect Vero W6m: ports get permanent
   addresses derived from the chassis MAC instead of random ones at
   every boot
-- WiFi interfaces get a unique address derived from the chassis MAC, so
+- Wi-Fi interfaces get a unique address derived from the chassis MAC, so
   several APs on one radio, or two devices of the same model, no longer
   need `custom-phys-address`
-- WiFi 4-address (WDS) links for wireless bridges and repeaters: a station
+- Wi-Fi 4-address (WDS) links for wireless bridges and repeaters: a station
   with `wds` enabled can be a bridge port, and an access point bridges
   each remote station through a `wds-link` interface, see
   [WDS Backhaul and Repeaters][wds]
-- WiFi station roaming is now configurable with `station roaming`: turn it
+- Wi-Fi station roaming is now configurable with `station roaming`: turn it
   on or off, and set the signal strength below which the station looks for
   a stronger access point more often, see [Station Roaming][roaming]
-- WiFi access points now deliver buffered traffic to power-saving clients
+- Wi-Fi access points now deliver buffered traffic to power-saving clients
   on every beacon and offer them U-APSD, cutting the round-trip latency
   of idle phones and laptops from hundreds of milliseconds to a few
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
@@ -101,7 +101,7 @@ All notable changes to the project are documented in this file.
 - Add support for the Banana Pi BPI-R2 Pro (Rockchip RK3568) to the Aarch64
   build, a five port router with 4x LAN switch ports and 1x WAN.  New
   `bpi_r2_pro_boot_defconfig` builds one bootloader for SD card and eMMC
-- Support for Intel AX210 WiFi cards in the Aarch64 build
+- Support for Intel AX210 Wi-Fi cards in the Aarch64 build
 - New `iitoctl` tool, shows which rule drives each LED and why, and can
   start locate, the board's LEDs blink as configured: `iitoctl locate on`
 - New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
@@ -113,27 +113,27 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
-- The WiFi country code is one setting for the whole system, `hardware
+- The Wi-Fi country code is one setting for the whole system, `hardware
   wifi country-code`, instead of one per radio, and applies as soon as it
   is set.  Existing configurations are migrated
-- WiFi band steering also moves dual-band clients already connected on
+- Wi-Fi band steering also moves dual-band clients already connected on
   2.4 GHz to the 5 or 6 GHz access point of the same SSID
-- WiFi clients are moved to another access point before theirs stops for
+- Wi-Fi clients are moved to another access point before theirs stops for
   a reboot, an upgrade or a configuration change, instead of losing the
   connection.  Access points on different devices now know of each other
   and share a client's keys ahead of a roam
 - 802.11r access points can be given a `key-holder-secret`, a keystore
-  key of their own to protect the key exchange with instead of the WiFi
-  password, see [WiFi documentation](wifi.md#80211r---fast-bss-transition)
-- WiFi channel survey is on request: `show hardware <radio> survey`, the
-  Scan channels button on the WebUI WiFi page, or the `channel-survey`
+  key of their own to protect the key exchange with instead of the Wi-Fi
+  password, see [Wi-Fi documentation](wifi.md#80211r---fast-bss-transition)
+- Wi-Fi channel survey is on request: `show hardware <radio> survey`, the
+  Scan channels button on the WebUI Wi-Fi page, or the `channel-survey`
   action.  The always-on `survey` container under the radio is gone
-- WiFi network scan is on request too: `show hardware <radio> scan`, the
-  Scan networks button on the WebUI WiFi page, or the `scan` action on
-  the radio, which works before any WiFi interface exists.  A WiFi
+- Wi-Fi network scan is on request too: `show hardware <radio> scan`, the
+  Scan networks button on the WebUI Wi-Fi page, or the `scan` action on
+  the radio, which works before any Wi-Fi interface exists.  A Wi-Fi
   interface with only a radio no longer scans in the background, and the
   `scan-results` list under a station is gone, see
-  [WiFi documentation](wifi.md#discovering-available-networks)
+  [Wi-Fi documentation](wifi.md#discovering-available-networks)
 - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
   issue #1576.  The default, 100000 Mbit/s, is the value used before, so
   link costs do not change on upgrade.  The CLI shows it in `show ip ospf`
@@ -142,9 +142,9 @@ All notable changes to the project are documented in this file.
   APNs per modem, SIM PIN configuration, and NMEA routing from modem to
   GPS subsystem.  Not part of the default builds, enable it with the
   `modem` configuration snippet, see the [Modem User's Guide][modem]
-- An MT7615D WiFi card with an unprogrammed EEPROM can run both bands at
+- An MT7615D Wi-Fi card with an unprogrammed EEPROM can run both bands at
   once with the `force_dbdc` option of the `mt7615_common` kernel module
-- Banana Pi BPI-R4: a WiFi card with an unprogrammed EEPROM, e.g., the
+- Banana Pi BPI-R4: a Wi-Fi card with an unprogrammed EEPROM, e.g., the
   BPI-MT7615, can be given an EEPROM image on the aux partition, see the
   board documentation
 - Banana Pi BPI-R4: ports get permanent addresses derived from the chassis
@@ -207,19 +207,19 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
-- Fix #1679: a WiFi station added to a scan-only interface, as in the
+- Fix #1679: a Wi-Fi station added to a scan-only interface, as in the
   Raspberry Pi 4 factory configuration, did not connect until a reboot
-- A WiFi station never connected to a WPA3-only access point, which
+- A Wi-Fi station never connected to a WPA3-only access point, which
   includes every access point on 6 GHz
-- WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Wi-Fi scan results listed WPA3-only networks as WPA2-Personal
 - Fast roaming (802.11r) to an access point on another device failed for
   WPA3 clients
-- Changing the MAC address of a WiFi access point could leave the access
-  points on that radio down until the WiFi service was restarted
+- Changing the MAC address of a Wi-Fi access point could leave the access
+  points on that radio down until the Wi-Fi service was restarted
 - Removing a USB port component from the configuration left the port
   unlocked, now the port is locked
 - Banana Pi BPI-R4: no PCIe card was detected, e.g., an NVMe disk or a
-  WiFi card
+  Wi-Fi card
 - Some web server errors were logged to a file that nothing rotated,
   which could eventually fill up the disk.  All web server logs now go
   to syslog and to their own file, `/var/log/web`, which is rotated like

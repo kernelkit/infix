@@ -15,7 +15,7 @@ learning, prototyping, and lightweight network applications.
 - microSD card slot for storage
 - 4x USB 2.0 ports
 - Fast Ethernet (100 Mbps)
-- Dual-band WiFi (2.4 GHz + 5 GHz) and Bluetooth 4.2
+- Dual-band Wi-Fi (2.4 GHz + 5 GHz) and Bluetooth 4.2
 - HDMI port
 - GPIO header (40-pin)
 
@@ -26,7 +26,7 @@ learning, prototyping, and lightweight network applications.
 - microSD card slot for storage
 - 2x USB 3.0 + 2x USB 2.0 ports
 - Gigabit Ethernet
-- Dual-band WiFi (2.4 GHz + 5 GHz) and Bluetooth 5.0
+- Dual-band Wi-Fi (2.4 GHz + 5 GHz) and Bluetooth 5.0
 - 2x micro-HDMI ports (up to 4K output)
 - GPIO header (40-pin)
 - PoE support (with add-on HAT)
@@ -44,7 +44,7 @@ learning, prototyping, and lightweight network applications.
 Infix comes preconfigured with:
 
 - **Ethernet port**: DHCP client enabled for internet connectivity
-- **WiFi interfaces** (wlan0, wlan1): Available for configuration as AP or client
+- **Wi-Fi interfaces** (wlan0, wlan1): Available for configuration as AP or client
 - **GPIO**: Available but extension boards not currently supported
 
 ### Support Level
@@ -96,13 +96,13 @@ You can find the assigned IP address by:
 
 ## Hardware-Specific Features
 
-### WiFi Configuration
+### Wi-Fi Configuration
 
-Both Pi 3B and Pi 4B include dual-band WiFi that can be configured as a
-client (station mode). See the [Infix WiFi documentation][9] for detailed
+Both Pi 3B and Pi 4B include dual-band Wi-Fi that can be configured as a
+client (station mode). See the [Infix Wi-Fi documentation][9] for detailed
 configuration examples.
 
-To configure WiFi as a client, first store your WiFi password in the keystore:
+To configure Wi-Fi as a client, first store your Wi-Fi password in the keystore:
 
 ```
 admin@infix:/> configure
@@ -114,7 +114,7 @@ Retype passphrase: ************
 admin@infix:/config/keystore/…/mywifi/> leave
 ```
 
-Then configure the WiFi interface using the keystore reference:
+Then configure the Wi-Fi interface using the keystore reference:
 
 ```
 admin@infix:/> configure
@@ -128,8 +128,8 @@ admin@infix:/config/interface/wifi0/> leave
 ```
 
 > [!NOTE]
-> The WiFi password (8-63 characters) is stored securely in the keystore as
-> `mywifi` (or any name you choose), which is then referenced in the WiFi
+> The Wi-Fi password (8-63 characters) is stored securely in the keystore as
+> `mywifi` (or any name you choose), which is then referenced in the Wi-Fi
 > configuration. The country code is one setting for all radios and must
 > match your location for regulatory compliance (e.g., US, SE, DE, JP).
 
@@ -232,11 +232,11 @@ The image shows the standard 40-pin GPIO header pinout. For serial console:
 - Use `nmap` or `arp-scan` to scan your network
 - Connect via serial console and run `ip addr` to see the assigned address
 
-### WiFi not working
+### Wi-Fi not working
 
-- Verify WiFi regulatory domain is set correctly
+- Verify Wi-Fi regulatory domain is set correctly
 - Check that SSID and password are correct
-- Ensure WiFi channel is supported in your region
+- Ensure Wi-Fi channel is supported in your region
 - Try connecting to a 2.4 GHz network first (better compatibility)
 
 ### SD card corruption

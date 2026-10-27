@@ -89,7 +89,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 |---|---|---|---|
 | `ietf-interfaces:interfaces` | links, addresses, neighbours, bridge MDB, VLANs, LAG | event | rtnetlink, re-read with `ip`/`bridge` batch |
 | | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start |
-| | WiFi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
+| | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
@@ -193,7 +193,7 @@ Environment from `/etc/default/yangerd`, installed from
 | `YANGERD_POLL_INTERVAL_STP` | `5s` |
 
 Which optional parts run is not configured, it follows the YANG model:
-WiFi, containers, GPS and modems are features of `infix-interfaces` and
+Wi-Fi, containers, GPS and modems are features of `infix-interfaces` and
 `infix-hardware`, and the routing protocol modules are installed only
 with FRR.  confd enables them at build time from the same Buildroot
 options that build the daemons, and `ietf-yang-library` reports them
@@ -222,7 +222,7 @@ monitor runs; each copes with an absent daemon on its own.
    tests that read right after a change.  If a change seems to need a
    poll, say which event source is missing and stop.  First ask whether
    the data has to be operational at all: a value read only when someone
-   asks, such as the bridge FDB or a WiFi scan, is better as a YANG
+   asks, such as the bridge FDB or a Wi-Fi scan, is better as a YANG
    action or RPC in confd, which reads it on request.  A poll that is
    agreed on goes in the table under *What is reactive, polled and on
    demand*, with its interval variable in the environment table, and

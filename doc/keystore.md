@@ -3,7 +3,7 @@
 The Infix keystore is a centralized storage system for cryptographic keys
 used throughout the system.  It is based on the IETF standards [RFC 9641][1]
 (Keystore) and [RFC 9640][2] (Cryptographic Types), with Infix extensions
-for WiFi and WireGuard key formats.
+for Wi-Fi and WireGuard key formats.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The keystore supports two types of cryptographic keys:
     - WireGuard VPN tunnels (X25519 keys)
 
 2. **Symmetric Keys** — shared secrets used for:
-    - WiFi authentication (WPA2/WPA3 pre-shared keys)
+    - Wi-Fi authentication (WPA2/WPA3 pre-shared keys)
     - WireGuard VPN pre-shared keys
 
 All keys are stored under the `ietf-keystore` configuration path and can be
@@ -31,7 +31,7 @@ managed via CLI, NETCONF, or RESTCONF.
 
 | **Symmetric Key Format**        | **Use Case**                          |
 |-----------------------------|-----------------------------------|
-| `passphrase-key-format`     | Human-readable passphrases (WiFi, PPPoE) |
+| `passphrase-key-format`     | Human-readable passphrases (Wi-Fi, PPPoE) |
 | `octet-string-key-format`   | Raw symmetric keys (WireGuard)    |
 
 ## Asymmetric Keys
@@ -114,9 +114,9 @@ examples.
 Symmetric keys are shared secrets where the same key must be configured on
 all systems that need to communicate.
 
-### WiFi Pre-Shared Keys
+### Wi-Fi Pre-Shared Keys
 
-WiFi networks secured with WPA2 or WPA3 use pre-shared keys stored as
+Wi-Fi networks secured with WPA2 or WPA3 use pre-shared keys stored as
 symmetric keys in the keystore with `passphrase-key-format`.  The
 passphrase must be 8-63 printable ASCII characters.
 
@@ -128,7 +128,7 @@ Passphrase: ************
 Retype passphrase: ************
 </code></pre>
 
-See [WiFi](wifi.md) for complete configuration examples.
+See [Wi-Fi](wifi.md) for complete configuration examples.
 
 ### WireGuard Pre-Shared Keys
 
@@ -151,7 +151,7 @@ See [WireGuard VPN](vpn-wireguard.md) for PSK generation and usage examples.
 ## Viewing Keys
 
 The `show keystore` command in admin-exec mode gives an overview of all
-keys in the keystore.  Passphrases (WiFi passwords) are decoded and shown
+keys in the keystore.  Passphrases (Wi-Fi passwords) are decoded and shown
 in cleartext, while binary keys (WireGuard PSKs) are shown as base64:
 
 <pre class="cli"><code>admin@example:/> <b>show keystore</b>
@@ -209,7 +209,7 @@ admin@example:/config/> <b>leave</b>
 </code></pre>
 
 > [!CAUTION]
-> Deleting a key that is referenced by a service (SSH, WireGuard, WiFi) will
+> Deleting a key that is referenced by a service (SSH, WireGuard, Wi-Fi) will
 > cause that service to fail.  Verify the key is not in use before deletion.
 
 ## Security Considerations
@@ -227,14 +227,14 @@ as sensitive and protected accordingly.
 Symmetric key values are stored as binary (base64-encoded).  The system
 validates them based on their declared format:
 
-- `passphrase-key-format`:  Used by WiFi, must decode to 8-63 ASCII characters
+- `passphrase-key-format`:  Used by Wi-Fi, must decode to 8-63 ASCII characters
 - `octet-string-key-format`: Used by Wireguard, must decode to exactly 32 bytes (256 bits)
 
 ## References
 
 - [RFC 9641 - A YANG Data Model for a Keystore][1]
 - [RFC 9640 - YANG Data Types and Groupings for Cryptography][2]
-- [WiFi Documentation](wifi.md)
+- [Wi-Fi Documentation](wifi.md)
 - [WireGuard VPN Documentation](vpn-wireguard.md)
 - [SSH Management](management.md)
 - [NACM Access Control](nacm.md)

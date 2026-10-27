@@ -15,7 +15,7 @@ The board features:
 
 > [!NOTE]
 > Revision 1.2 of the Pi 2B actually uses a BCM2837 (Cortex-A53) underclocked
-> and without WiFi, making it very similar to the Pi 3B hardware-wise but
+> and without Wi-Fi, making it very similar to the Pi 3B hardware-wise but
 > running in 32-bit mode.  This revision is not supported.
 
 How to Build
