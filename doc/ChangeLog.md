@@ -163,6 +163,14 @@ All notable changes to the project are documented in this file.
   learned and static entries, also those a switch learns on its own, with
   the age of each entry and whether it is offloaded to the switch.  The
   CLI can list one VLAN, one port, or one address, see [FDB][fdb]
+- Secure-by-default access control, issue #1658.  The factory config
+  now denies writes and operations unless a rule permits them, so a new
+  user that is not in a group can only read.  Operators can configure
+  interfaces, routing, firewall, DHCP server, LLDP, hostname, contact,
+  location and time zone, and restart the system.  Other settings, such
+  as users, services and containers, are now admin only.  Existing
+  systems keep their saved access control settings, see [NACM][nacm]
+  for how to switch them over
 
 ### Fixes
 
@@ -239,6 +247,7 @@ All notable changes to the project are documented in this file.
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
+[nacm]: https://www.kernelkit.org/infix/latest/nacm/#global-defaults
 
 [v26.09.0][] - 2026-09-30
 -------------------------
