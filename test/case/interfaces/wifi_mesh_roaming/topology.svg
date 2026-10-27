@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-
 <!-- Title: wifi&#45;mesh&#45;roaming Pages: 1 -->
 <svg width="602pt" height="399pt"
  viewBox="0.00 0.00 602.17 399.03" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -143,8 +142,8 @@
 <g id="edge12" class="edge">
 <title>client:wifi&#45;&#45;ap</title>
 <path fill="none" stroke="orange" stroke-width="2" stroke-dasharray="5,2" d="M478.17,-35.5C478.17,-35.5 423.15,-80.1 391.56,-105.71"/>
-<text text-anchor="start" x="431.86" y="-79.89" font-family="DejaVu Serif, Book" font-size="14.00" fill="orange">roams</text>
-<text text-anchor="start" x="514.86" y="-64.79" font-family="DejaVu Serif, Book" font-size="76.00" fill="orange">⇡</text>
+<text text-anchor="middle" x="424.21" y="-64.8" font-family="DejaVu Serif, Book" font-size="14.00" fill="orange">roams</text>
+<text text-anchor="middle" x="547.82" y="-65.42" font-family="DejaVu Serif, Book" font-size="76.00" fill="orange">⇡</text>
 </g>
 </g>
 </svg>

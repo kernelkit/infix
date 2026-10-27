@@ -85,5 +85,5 @@ graph "wifi-mesh-roaming" {
 	gw1:ap -- ap     [requires="wifi2.4GHz", style="dashed", color="orange"]
 	gw2:ap -- ap     [requires="wifi2.4GHz", style="dashed", color="orange"]
 	gw3:ap -- ap     [requires="wifi2.4GHz", style="dashed", color="orange"]
-	client:wifi -- ap [requires="wifi2.4GHz", style="dashed", taillabel=<<table border="0"><tr><td>roams</td><td width="30"></td><td><font point-size="76">⇡</font></td></tr></table>>, labelangle="-80", labeldistance="5.5", color="orange", fontcolor="orange"]
+	client:wifi -- ap [requires="wifi2.4GHz", style="dashed", taillabel="⇡", labelfontsize="76", labelangle="-106", labeldistance="8.5", label="roams", color="orange", fontcolor="orange"]
 }
