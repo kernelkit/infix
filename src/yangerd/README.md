@@ -78,9 +78,9 @@ first netlink dump, which is when `notify:pid` in finit marks it ready.
 Until then the IPC answers "starting", which statd turns into no data
 plus a warning.
 
-**No CGo, Buildroot's Go, vendored.**  Use only the Go version Buildroot
-ships, 1.26 at the time of writing.  Dependencies are vendored
-(`GOFLAGS=-mod=vendor`).
+**No CGo, Buildroot's Go.**  Use only the Go version Buildroot ships,
+1.26 at the time of writing.  Dependencies are not kept in git, the
+build vendors them from `go.sum`.
 
 
 ## What is reactive, polled and on demand
@@ -275,8 +275,8 @@ monitor runs; each copes with an absent daemon on its own.
 ## Building and testing
 
 ```
-go vet -mod=vendor ./...
-go test -race -mod=vendor ./...
+go vet ./...
+go test -race ./...
 make yangerd-rebuild all        # from the repo root, rebuilds the image
 ```
 

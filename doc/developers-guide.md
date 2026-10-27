@@ -395,7 +395,7 @@ To apply changes, rebuild the image:
 
 The Go unit tests run on the host, from `src/yangerd`:
 
-    go test -mod=vendor ./...
+    go test ./...
 
 On a DUT, `yangerctl` shows what yangerd has, without sysrepo in
 between:
