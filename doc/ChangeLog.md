@@ -27,18 +27,25 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
+- Secure-by-default access control, issue #1658.  The factory config
+  now denies writes and operations unless a rule permits them, so a new
+  user that is not in a group can only read.  Operators can configure
+  interfaces, routing, firewall, DHCP server, LLDP, hostname, contact,
+  location and time zone, and restart the system.  Other settings, such
+  as users, services and containers, are now admin only.  Existing
+  systems keep their saved access control settings, see [NACM][nacm]
+  for how to switch them over
 
 ### Fixes
 
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - NanoPi R2S: the LAN port got a random MAC address on every boot
-
-### Fixes
-
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
 
+
+[nacm]: https://www.kernelkit.org/infix/latest/nacm/#global-defaults
 
 [v26.10.0][] - 2026-10-30
 -------------------------

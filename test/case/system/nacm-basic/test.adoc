@@ -4,14 +4,15 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/nacm-basic]
 
 ==== Description
 
-Test that NACM groups (admin, operator, guest) correctly enforce
-access control with permissive defaults and targeted denials.
-
-The NACM design is "permit by default, deny sensitive items":
+Test that the factory NACM rules for the groups (admin, operator,
+guest) correctly enforce access control.  Write and exec are denied
+by default, each group is given what it needs:
 
 - admin: Full unrestricted access (permit-all rule)
-- operator: Can configure everything EXCEPT passwords, keystore, truststore
-- guest: Read-only access (explicit deny of create/update/delete/exec)
+- operator: Can configure interfaces, routing, firewall, DHCP server,
+  LLDP, hostname, contact, location, and time zone, but not passwords,
+  keystore, truststore
+- guest: Read-only access
 
 Verifies that:
 
@@ -27,7 +28,7 @@ image::topology.svg[Basic NACM Permissions topology, align=center, scaledwidth=7
 ==== Sequence
 
 . Set up topology and attach to target
-. Configure NACM groups, rules, and test users
+. Configure factory NACM rules and test users
 . Verify operator can read configuration
 . Verify operator can modify interface configuration
 . Verify operator can modify hostname
