@@ -5,6 +5,9 @@
 - name: mDNS
   suite: mdns/all.yaml
 
+- name: RESTCONF
+  suite: restconf/all.yaml
+
 - name: SSH
   suite: ssh/all.yaml
 

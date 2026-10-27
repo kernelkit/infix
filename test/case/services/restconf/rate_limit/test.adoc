@@ -1,0 +1,23 @@
+=== RESTCONF Rate Limit
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/restconf/rate_limit]
+
+==== Description
+
+Verify that another host sending RESTCONF requests faster than the
+configured rate limit gets HTTP 429, and that it gets none with the
+limit turned off.
+
+==== Topology
+
+image::topology.svg[RESTCONF Rate Limit topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Limit RESTCONF to 1 request a second with bursts of 5
+. Verify 20 requests in a row from the host get HTTP 429
+. Turn the RESTCONF rate limit off
+. Verify 20 requests in a row from the host all succeed
+
+

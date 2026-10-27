@@ -6005,12 +6005,12 @@ def show_ospf_neighbor(json_data):
         address = neighbor.get('address', '0.0.0.0')
         state = neighbor.get('state', 'down')
         priority = neighbor.get('priority', 1)  # Default priority is 1
-        uptime = neighbor.get('infix-routing:uptime', 0)
+        uptime = neighbor.get('infix-ospf:uptime', 0)
         dead_timer = neighbor.get('dead-timer', 0)
         # Use interface-name (e.g., "e5:10.0.23.1") if available, fallback to interface name
-        interface = neighbor.get('infix-routing:interface-name', neighbor.get('_interface', 'unknown'))
+        interface = neighbor.get('infix-ospf:interface-name', neighbor.get('_interface', 'unknown'))
         area_id = neighbor.get('_area_id', '0.0.0.0')
-        role = neighbor.get('infix-routing:role', '')
+        role = neighbor.get('infix-ospf:role', '')
 
         # Capitalize state and add role if present
         state_base = state.capitalize() if state != '2-way' else '2-Way'
@@ -6070,7 +6070,7 @@ def show_ospf_routes(json_data):
         prefix = route.get('prefix', '0.0.0.0/0')
         route_type = route.get('route-type', 'unknown')
         # Check for area-id with infix-routing prefix (augmented field)
-        area_id = route.get('infix-routing:area-id', route.get('area-id', '-'))
+        area_id = route.get('infix-ospf:area-id', route.get('area-id', '-'))
         metric = route.get('metric', 0)
 
         # Simplify route type display

@@ -31,6 +31,11 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-10-27 {
+    description "Add web/restconf/rate-limit, how fast another host may
+                 send RESTCONF requests.";
+    reference "internal";
+  }
   revision 2026-09-24 {
     description "Add netconf container to ssh, NETCONF is now an SSH subsystem
                  served by the SSH daemon on port 830.";
@@ -348,6 +353,43 @@ module infix-services {
       leaf enabled {
         description "Enable or disable RESTCONF server.";
         type boolean;
+      }
+
+      container rate-limit {
+        description
+          "Limit how fast another host may send RESTCONF requests.
+
+           RESTCONF checks the password on every request, so this slows
+           down password guessing.  Each host is limited on its own, and
+           requests from the device itself, e.g., the WebUI, are never
+           limited.  A host over the limit gets HTTP 429.";
+
+        leaf enabled {
+          description "Limit how fast another host may send requests.";
+          type boolean;
+          default true;
+        }
+
+        leaf rate {
+          description "Requests a second a host may send over time.";
+          type uint16 {
+            range "1..10000";
+          }
+          units "requests/second";
+          default 10;
+        }
+
+        leaf burst {
+          description
+            "Requests a host may send at once, above the rate.
+
+             A client that downloads the YANG modules when it connects
+             sends a burst of a few hundred requests.";
+          type uint16 {
+            range "0..10000";
+          }
+          default 200;
+        }
       }
     }
   }

@@ -1,0 +1,9 @@
+{
+    "infix-services:web": {
+	"restconf": {
+	    "rate-limit": {
+		"enabled": false
+	    }
+	}
+    }
+}

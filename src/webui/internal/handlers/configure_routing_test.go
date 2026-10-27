@@ -27,7 +27,7 @@ const routingFixture = `{"ietf-routing:routing":{"control-plane-protocols":{"con
  {"type":"infix-routing:ospfv2","name":"default","ietf-ospf:ospf":{
   "areas":{"area":[{"area-id":"0.0.0.0","area-type":"normal-area","interfaces":{"interface":[
    {"name":"br0","cost":42,"bfd":{"enabled":true}},{"name":"wan","bfd":{"enabled":true}}]}}]},
-  "infix-routing:redistribute":{"redistribute":[{"protocol":"connected"},{"protocol":"ospf"}]}}},
+  "infix-ospf:redistribute":{"redistribute":[{"protocol":"connected"},{"protocol":"ospf"}]}}},
  {"type":"infix-routing:ripv2","name":"default","ietf-rip:rip":{
   "interfaces":{"interface":[{"interface":"br0"}]}}}]}}}`
 
@@ -159,13 +159,13 @@ func TestOSPFGlobalEdit(t *testing.T) {
 
 	// BFD off everywhere, static added, connected dropped, areas kept
 	removes, body := ospfGlobalEdit(base, cur, ospfGlobalForm{BFDChanged: true, Static: true}, true)
-	if !slices.Equal(removes, []string{ob + "/infix-routing:redistribute/redistribute=connected"}) {
+	if !slices.Equal(removes, []string{ob + "/infix-ospf:redistribute/redistribute=connected"}) {
 		t.Errorf("removes %q", removes)
 	}
 	got, _ := json.Marshal(body)
 	want := `{"ietf-ospf:ospf":{"areas":{"area":[{"area-id":"0.0.0.0","interfaces":{"interface":[` +
 		`{"bfd":{"enabled":false},"name":"br0"},{"bfd":{"enabled":false},"name":"wan"}]}}]},` +
-		`"infix-routing:redistribute":{"redistribute":[{"protocol":"static"}]}}}`
+		`"infix-ospf:redistribute":{"redistribute":[{"protocol":"static"}]}}}`
 	if string(got) != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}
@@ -250,7 +250,7 @@ func TestRIPEdit(t *testing.T) {
 		t.Errorf("removes %q", removes)
 	}
 	got, _ := json.Marshal(body)
-	want := `{"ietf-rip:rip":{"infix-routing:redistribute":{"redistribute":[{"protocol":"connected"}]},"interfaces":{"interface":[{"interface":"wan"}]}}}`
+	want := `{"ietf-rip:rip":{"infix-rip:redistribute":{"redistribute":[{"protocol":"connected"}]},"interfaces":{"interface":[{"interface":"wan"}]}}}`
 	if string(got) != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}

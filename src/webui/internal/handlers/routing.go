@@ -184,9 +184,9 @@ type ospfNeighborJSON struct {
 	Address          string `json:"address"`
 	Priority         int    `json:"priority"`
 	State            string `json:"state"`
-	Role             string `json:"infix-routing:role"`
-	InterfaceName    string `json:"infix-routing:interface-name"`
-	Uptime           uint32 `json:"infix-routing:uptime"`
+	Role             string `json:"infix-ospf:role"`
+	InterfaceName    string `json:"infix-ospf:interface-name"`
+	Uptime           uint32 `json:"infix-ospf:uptime"`
 }
 
 func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {

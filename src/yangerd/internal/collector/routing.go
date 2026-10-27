@@ -389,7 +389,7 @@ func ospfNeighbor(neigh map[string]interface{}) map[string]interface{} {
 	setIfPresentInt(neighbor, "priority", neigh, "nbrPriority")
 
 	if v := neigh["lastPrgrsvChangeMsec"]; v != nil {
-		neighbor["infix-routing:uptime"] = toInt(v) / 1000
+		neighbor["infix-ospf:uptime"] = toInt(v) / 1000
 	}
 	secondsAtLeast1(neighbor, "dead-timer", neigh["routerDeadIntervalTimerDueMsec"])
 
@@ -397,15 +397,15 @@ func ospfNeighbor(neigh map[string]interface{}) map[string]interface{} {
 		neighbor["state"] = frrToIETFNeighborState(s)
 	}
 	if role, ok := neigh["role"].(string); ok && role != "" {
-		neighbor["infix-routing:role"] = frrToIETFNeighborRole(role)
+		neighbor["infix-ospf:role"] = frrToIETFNeighborRole(role)
 	}
 
 	ifName, _ := neigh["ifaceName"].(string)
 	localAddr, _ := neigh["localIfaceAddress"].(string)
 	if ifName != "" && localAddr != "" {
-		neighbor["infix-routing:interface-name"] = ifName + ":" + localAddr
+		neighbor["infix-ospf:interface-name"] = ifName + ":" + localAddr
 	} else if ifName != "" {
-		neighbor["infix-routing:interface-name"] = ifName
+		neighbor["infix-ospf:interface-name"] = ifName
 	}
 
 	setIfPresent(neighbor, "dr-router-id", neigh, "routerDesignatedId")
@@ -482,7 +482,7 @@ func ospfRoute(prefix string, info map[string]interface{}) map[string]interface{
 	}
 
 	if v := info["area"]; v != nil {
-		route["infix-routing:area-id"] = v
+		route["infix-ospf:area-id"] = v
 	}
 	if v := info["cost"]; v != nil {
 		route["metric"] = v
@@ -678,10 +678,10 @@ func ospf6Neighbor(nbr map[string]interface{}) map[string]interface{} {
 	// broadcast link; on other link types it is the interface state.
 	switch role := nbr["ifState"]; role {
 	case "DR", "BDR", "DROther":
-		neighbor["infix-routing:role"] = role
+		neighbor["infix-ospf:role"] = role
 	}
 	if ifname, _ := nbr["interfaceName"].(string); ifname != "" {
-		neighbor["infix-routing:interface-name"] = ifname
+		neighbor["infix-ospf:interface-name"] = ifname
 	}
 
 	return neighbor
@@ -742,7 +742,7 @@ func ospf6Route(prefix string, info map[string]interface{}) map[string]interface
 		}
 	}
 	if v := info["area"]; v != nil {
-		route["infix-routing:area-id"] = v
+		route["infix-ospf:area-id"] = v
 	}
 	if v := info["cost"]; v != nil {
 		route["metric"] = v

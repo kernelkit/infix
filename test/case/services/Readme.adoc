@@ -8,6 +8,7 @@ Tests verifying network services configuration and operation:
  - LLDP (Link Layer Discovery Protocol) service control
  - LLDP per-interface administrative status configuration
  - LLDP IEEE group address forwarding behavior
+ - RESTCONF rate limiting
  - SSH server configuration and access control
  - SSH public key authentication mechanisms
  - TFTP server file serving and operational file listing
@@ -29,6 +30,10 @@ include::lldp/lldp_admin_status/Readme.adoc[]
 <<<
 
 include::lldp/lldp_ieee_group_forward/Readme.adoc[]
+
+<<<
+
+include::restconf/rate_limit/Readme.adoc[]
 
 <<<
 

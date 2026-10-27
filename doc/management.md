@@ -217,6 +217,24 @@ admin@example:/config/web/restconf/>
 > The WebUI uses RESTCONF internally, so disabling RESTCONF only blocks
 > requests from other hosts, and the WebUI keeps working.
 
+### RESTCONF Rate Limit
+
+RESTCONF checks the password on every request, so to slow down password
+guessing each host may send at most 10 requests a second, with bursts of
+up to 200.  A host over the limit gets HTTP 429, *Too Many Requests*.
+Requests from the device itself, e.g., the WebUI, are never limited.
+
+A client that sends many requests in a row, e.g., a script polling
+several values, may need a higher limit:
+
+<pre class="cli"><code>admin@example:/config/web/> <b>edit restconf rate-limit</b>
+admin@example:/config/web/restconf/rate-limit/> <b>set rate 50</b>
+admin@example:/config/web/restconf/rate-limit/> <b>set burst 500</b>
+admin@example:/config/web/restconf/rate-limit/> <b>leave</b>
+</code></pre>
+
+To turn the limit off, `set enabled false`.
+
 ### HTTPS Certificate
 
 The Web server uses a TLS certificate from the central

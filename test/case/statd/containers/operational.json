@@ -903,9 +903,9 @@
                             {
                               "address": "10.1.2.1",
                               "dead-timer": 30,
-                              "infix-routing:interface-name": "e3.8:10.1.1.1",
-                              "infix-routing:role": "DROther",
-                              "infix-routing:uptime": 39,
+                              "infix-ospf:interface-name": "e3.8:10.1.1.1",
+                              "infix-ospf:role": "DROther",
+                              "infix-ospf:uptime": 39,
                               "neighbor-router-id": "10.1.2.1",
                               "state": "full"
                             }
@@ -930,9 +930,9 @@
                             {
                               "address": "10.1.3.1",
                               "dead-timer": 30,
-                              "infix-routing:interface-name": "e4.8:10.1.1.1",
-                              "infix-routing:role": "DROther",
-                              "infix-routing:uptime": 34,
+                              "infix-ospf:interface-name": "e4.8:10.1.1.1",
+                              "infix-ospf:role": "DROther",
+                              "infix-ospf:uptime": 34,
                               "neighbor-router-id": "10.1.3.1",
                               "state": "full"
                             }
@@ -963,9 +963,9 @@
                               "bdr-router-id": "10.1.1.1",
                               "dead-timer": 39,
                               "dr-router-id": "192.168.100.1",
-                              "infix-routing:interface-name": "e6:10.1.1.101",
-                              "infix-routing:role": "DR",
-                              "infix-routing:uptime": 5,
+                              "infix-ospf:interface-name": "e6:10.1.1.101",
+                              "infix-ospf:role": "DR",
+                              "infix-ospf:uptime": 5,
                               "neighbor-router-id": "192.168.100.1",
                               "state": "full"
                             }
@@ -991,7 +991,7 @@
             "local-rib": {
               "route": [
                 {
-                  "infix-routing:area-id": "0.0.0.1",
+                  "infix-ospf:area-id": "0.0.0.1",
                   "metric": 200,
                   "next-hops": {
                     "next-hop": [
@@ -1007,7 +1007,7 @@
                   "route-type": "intra-area"
                 },
                 {
-                  "infix-routing:area-id": "0.0.0.1",
+                  "infix-ospf:area-id": "0.0.0.1",
                   "metric": 101,
                   "next-hops": {
                     "next-hop": [
@@ -1020,7 +1020,7 @@
                   "route-type": "inter-area"
                 },
                 {
-                  "infix-routing:area-id": "0.0.0.1",
+                  "infix-ospf:area-id": "0.0.0.1",
                   "metric": 100,
                   "next-hops": {
                     "next-hop": [
@@ -1033,7 +1033,7 @@
                   "route-type": "intra-area"
                 },
                 {
-                  "infix-routing:area-id": "0.0.0.1",
+                  "infix-ospf:area-id": "0.0.0.1",
                   "metric": 200,
                   "next-hops": {
                     "next-hop": [
