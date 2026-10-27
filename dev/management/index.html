@@ -1837,6 +1837,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#restconf-rate-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RESTCONF Rate Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#https-certificate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2685,6 +2696,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#restconf-rate-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RESTCONF Rate Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#https-certificate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2971,6 +2993,20 @@ admin@example:/config/web/restconf/&gt;
 <p>The WebUI uses RESTCONF internally, so disabling RESTCONF only blocks
 requests from other hosts, and the WebUI keeps working.</p>
 </div>
+<h3 id="restconf-rate-limit">RESTCONF Rate Limit<a class="headerlink" href="#restconf-rate-limit" title="Permanent link">¶</a></h3>
+<p>RESTCONF checks the password on every request, so to slow down password
+guessing each host may send at most 10 requests a second, with bursts of
+up to 200.  A host over the limit gets HTTP 429, <em>Too Many Requests</em>.
+Requests from the device itself, e.g., the WebUI, are never limited.</p>
+<p>A client that sends many requests in a row, e.g., a script polling
+several values, may need a higher limit:</p>
+<pre class="cli"><code>admin@example:/config/web/&gt; <b>edit restconf rate-limit</b>
+admin@example:/config/web/restconf/rate-limit/&gt; <b>set rate 50</b>
+admin@example:/config/web/restconf/rate-limit/&gt; <b>set burst 500</b>
+admin@example:/config/web/restconf/rate-limit/&gt; <b>leave</b>
+</code></pre>
+
+<p>To turn the limit off, <code>set enabled false</code>.</p>
 <h3 id="https-certificate">HTTPS Certificate<a class="headerlink" href="#https-certificate" title="Permanent link">¶</a></h3>
 <p>The Web server uses a TLS certificate from the central
 <a href="../keystore/">keystore</a>.  By default it uses <code>gencert</code>, a self-signed
