@@ -31,13 +31,13 @@ submodule infix-if-wifi {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description
-    "WiFi-specific extensions to the standard IETF interfaces model.
+    "Wi-Fi-specific extensions to the standard IETF interfaces model.
 
-     This submodule defines configuration and operational data for WiFi
+     This submodule defines configuration and operational data for Wi-Fi
      virtual interfaces, supporting both Access Point (AP) and Station
      (client) modes.
 
-     WiFi virtual interfaces are created on top of WiFi radios (PHYs)
+     Wi-Fi virtual interfaces are created on top of Wi-Fi radios (PHYs)
      defined in the infix-wifi-radio module. The radio provides physical
      layer configuration (channel, power, PHY mode), while virtual
      interfaces provide network-layer configuration (SSID, security).
@@ -51,11 +51,11 @@ submodule infix-if-wifi {
 
   revision 2026-10-06 {
     description
-      "Access point and mesh point require the box-wide WiFi country code,
+      "Access point and mesh point require the box-wide Wi-Fi country code,
        the per-radio country-code leaf is gone.  802.11r gets an optional
        key-holder-secret, a key of its own for the access points of a
        mobility domain to hand each other a client's keys with, instead
-       of the WiFi password.  Interfaces without a custom-phys-address
+       of the Wi-Fi password.  Interfaces without a custom-phys-address
        are no longer limited to one per radio.  An open access point is
        rejected on 6 GHz, as the error message always said.";
     reference "internal";
@@ -111,7 +111,7 @@ submodule infix-if-wifi {
   }
 
   feature wifi {
-    description "WiFi support is an optional build-time feature in Infix.";
+    description "Wi-Fi support is an optional build-time feature in Infix.";
   }
 
   typedef mobility-domain {
@@ -144,16 +144,16 @@ submodule infix-if-wifi {
       if-feature wifi;
 
       description
-        "WiFi virtual interface configuration.
+        "Wi-Fi virtual interface configuration.
 
-         Each WiFi interface represents a virtual interface (VAP - Virtual
+         Each Wi-Fi interface represents a virtual interface (VAP - Virtual
          Access Point, or Station) created on a physical radio.
 
          The interface must reference a radio defined in infix-wifi-radio
          module, which provides the physical layer configuration.";
 
       must "radio or wds-link" {
-        error-message "A WiFi interface must reference a radio";
+        error-message "A Wi-Fi interface must reference a radio";
       }
 
       leaf radio {
@@ -161,21 +161,21 @@ submodule infix-if-wifi {
           path "/iehw:hardware/iehw:component/iehw:name";
         }
         must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:wifi')" {
-          error-message "Referenced hardware component must be a WiFi radio (class 'ih:wifi')";
+          error-message "Referenced hardware component must be a Wi-Fi radio (class 'ih:wifi')";
         }
         must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)]) <= 1" {
           error-message "Only one station interface is allowed per radio";
         }
 
         description
-          "Reference to parent WiFi radio (PHY).
+          "Reference to parent Wi-Fi radio (PHY).
 
            References a hardware component with class 'ih:wifi'.
            The radio must exist and be configured before creating
            virtual interfaces.  Not set for a WDS link, which uses
            the radio of its access point.
 
-           Example: 'phy0' for the first WiFi radio.
+           Example: 'phy0' for the first Wi-Fi radio.
 
            All physical layer settings (channel, power, regulatory)
            are inherited from the radio configuration.";
@@ -183,14 +183,14 @@ submodule infix-if-wifi {
 
       choice wifi-mode {
         description
-          "WiFi interface operating mode.
+          "Wi-Fi interface operating mode.
 
            An interface without a mode is created but idle.  To find
            the networks in range, use the scan action on the radio.
 
            Configure one of:
-           - Station mode: Connect to an existing WiFi network
-           - Access Point mode: Create a WiFi network for clients
+           - Station mode: Connect to an existing Wi-Fi network
+           - Access Point mode: Create a Wi-Fi network for clients
            - Mesh Point mode: Create an 802.11s mesh link
            - WDS link: Bridge port for one 4-address station on a local
              access point
@@ -204,17 +204,17 @@ submodule infix-if-wifi {
 
         case station {
           container station {
-            presence "Configure WiFi station (client) mode";
+            presence "Configure Wi-Fi station (client) mode";
 
             description
-              "WiFi Station mode configuration.
+              "Wi-Fi Station mode configuration.
 
-               In station mode, the interface acts as a WiFi client,
+               In station mode, the interface acts as a Wi-Fi client,
                connecting to an existing Access Point.
 
                Only one station interface is allowed per radio.
 
-               Example use case: Connect to upstream WiFi network.";
+               Example use case: Connect to upstream Wi-Fi network.";
 
             leaf wds {
               type boolean;
@@ -284,7 +284,7 @@ submodule infix-if-wifi {
               }
               mandatory true;
               description
-                "WiFi network name (SSID) to connect to.
+                "Wi-Fi network name (SSID) to connect to.
 
                  Case-sensitive, must match the target network exactly.
 
@@ -293,7 +293,7 @@ submodule infix-if-wifi {
 
             container security {
               description
-                "WiFi security configuration.";
+                "Wi-Fi security configuration.";
 
               leaf mode {
                 type enumeration {
@@ -313,7 +313,7 @@ submodule infix-if-wifi {
                 }
                 default auto;
                 description
-                  "Security mode for WiFi connection.
+                  "Security mode for Wi-Fi connection.
 
                    - auto (default): WPA3/WPA2 auto-negotiation (secure)
                    - disabled: Open network (insecure)";
@@ -328,7 +328,7 @@ submodule infix-if-wifi {
 
                    References a symmetric key in the keystore.
 
-                   For WPA2/WPA3 networks, this is the WiFi password.";
+                   For WPA2/WPA3 networks, this is the Wi-Fi password.";
               }
             }
 
@@ -397,18 +397,18 @@ submodule infix-if-wifi {
 
         case access-point {
           container access-point {
-            presence "Configure WiFi Access Point mode";
+            presence "Configure Wi-Fi Access Point mode";
 
             description
-              "WiFi Access Point mode configuration.
+              "Wi-Fi Access Point mode configuration.
 
-               In AP mode, the interface provides a WiFi network that
+               In AP mode, the interface provides a Wi-Fi network that
                clients can connect to.
 
                Multiple AP interfaces can be created on the same radio
                for multi-SSID support (Guest network, IoT network, etc.).
 
-               Example use case: Create WiFi hotspot.";
+               Example use case: Create Wi-Fi hotspot.";
 
             must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:band" {
               error-message "Parent radio must have 'band' configured for Access Point mode";
@@ -419,7 +419,7 @@ submodule infix-if-wifi {
             }
 
             must "/iehw:hardware/ih:wifi/ih:country-code != '00'" {
-              error-message "Set the WiFi country code (hardware wifi country-code) before configuring an access point, the world domain '00' is not allowed.";
+              error-message "Set the Wi-Fi country code (hardware wifi country-code) before configuring an access point, the world domain '00' is not allowed.";
             }
 
             leaf ssid {
@@ -431,10 +431,10 @@ submodule infix-if-wifi {
               }
               mandatory true;
               description
-                "WiFi network name (SSID) to broadcast.
+                "Wi-Fi network name (SSID) to broadcast.
 
                  This is the network name that clients will see when
-                 scanning for WiFi networks.
+                 scanning for Wi-Fi networks.
 
                  Length: 1–32 characters.";
             }
@@ -445,7 +445,7 @@ submodule infix-if-wifi {
               description
                 "Hide the SSID from broadcast beacons.
 
-                 When true, the network will not appear in WiFi scans.
+                 When true, the network will not appear in Wi-Fi scans.
                  Clients must know the exact SSID to connect.
 
                  Note: This provides minimal security benefit and may
@@ -454,7 +454,7 @@ submodule infix-if-wifi {
 
             container security {
               description
-                "WiFi security configuration.";
+                "Wi-Fi security configuration.";
 
               leaf mode {
                 type enumeration {
@@ -496,7 +496,7 @@ submodule infix-if-wifi {
                   error-message "6GHz band requires 'auto' or 'wpa3-personal' security mode.";
                 }
                 description
-                  "WiFi security mode.
+                  "Wi-Fi security mode.
 
                    Determines authentication and encryption methods.
 
@@ -513,7 +513,7 @@ submodule infix-if-wifi {
 
                    References a symmetric key in the keystore.
 
-                   This is the WiFi password that clients must provide
+                   This is the Wi-Fi password that clients must provide
                    to connect to the network.
 
                    Requirements:
@@ -559,7 +559,7 @@ submodule infix-if-wifi {
 
                      References a symmetric key in the keystore.  Set the
                      same key on every device with an access point in the
-                     mobility domain.  Without it the WiFi password is
+                     mobility domain.  Without it the Wi-Fi password is
                      used, which lets anyone who knows the password read
                      the other clients' keys.  Give it a value of its own
                      on networks where that matters.";
@@ -746,7 +746,7 @@ submodule infix-if-wifi {
             }
 
             must "/iehw:hardware/ih:wifi/ih:country-code != '00'" {
-              error-message "Set the WiFi country code (hardware wifi country-code) before configuring a mesh point, the world domain '00' is not allowed.";
+              error-message "Set the Wi-Fi country code (hardware wifi country-code) before configuring a mesh point, the world domain '00' is not allowed.";
             }
 
             must "not(/if:interfaces/if:interface[wifi/access-point][wifi/radio = current()/../radio])" {

@@ -1151,7 +1151,7 @@ submodule infix-if-bridge {
           error-message "Bridge ports cannot have IP addresses configured.";
         }
         must "not(derived-from-or-self(../if:type, 'infix-ift:wifi')) or ../infix-if:wifi/infix-if:access-point or ../infix-if:wifi/infix-if:mesh-point or ../infix-if:wifi/infix-if:wds-link or ../infix-if:wifi/infix-if:station/infix-if:wds = 'true'" {
-          error-message "WiFi interfaces can only be bridge ports as access point, mesh point, WDS link, or station with wds enabled.";
+          error-message "Wi-Fi interfaces can only be bridge ports as access point, mesh point, WDS link, or station with wds enabled.";
         }
         description "Bridge association and port specific settings.";
         uses bridge-port-common;

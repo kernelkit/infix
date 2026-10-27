@@ -44,7 +44,7 @@ MODULES=(
 	"infix-factory-default@2023-06-28.yang"
 	"infix-interfaces@2026-10-22.yang -e vlan-filtering"
 	"ietf-crypto-types -e cleartext-symmetric-keys"
-	"infix-crypto-types@2026-02-14.yang"
+	"infix-crypto-types@2026-10-27.yang"
 	"ietf-keystore -e symmetric-keys"
 	"infix-ntp@2026-06-11.yang"
 	"infix-keystore@2026-09-24.yang"

@@ -45,7 +45,7 @@ Available types can be listed from the CLI:
   veth       Linux virtual Ethernet pair.
   vlan       Layer 2 Virtual LAN using 802.1Q.
   vxlan      Virtual eXtensible LAN tunnel interface.
-  wifi       WiFi (802.11) interface
+  wifi       Wi-Fi (802.11) interface
   wireguard  WireGuard VPN tunnel interface.
 </code></pre>
 
