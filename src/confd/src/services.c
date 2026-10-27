@@ -21,6 +21,8 @@
 #define NGINX_SSL_CONF "/etc/nginx/ssl.conf"
 #define NGINX_RESTCONF_ACCESS       "/etc/nginx/restconf-access.conf"
 #define NGINX_RESTCONF_ACCESS_LOCAL "restconf-access-local.conf"
+#define NGINX_RESTCONF_RATE_ZONE    "/etc/nginx/restconf-rate-zone.conf"
+#define NGINX_RESTCONF_RATE_LIMIT   "/etc/nginx/restconf-rate-limit.conf"
 #define AVAHI_SVC_PATH "/etc/avahi/services"
 
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
@@ -621,6 +623,43 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 	return put(cfg);
 }
 
+static int restconf_rate_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *rl = NULL;
+	sr_data_t *cfg;
+	FILE *fp;
+
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_RESTCONF_XPATH "/rate-limit"))
+		return SR_ERR_OK;
+
+	cfg = get(session, event, WEB_XPATH, &rl, "web", "restconf", "rate-limit", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	fp = fopen(NGINX_RESTCONF_RATE_ZONE, "w");
+	if (!fp) {
+		ERRNO("failed saving %s", NGINX_RESTCONF_RATE_ZONE);
+		goto done;
+	}
+	fprintf(fp, "limit_req_zone $restconf_limit_key zone=restconf:64k rate=%sr/s;\n",
+		lydx_get_cattr(rl, "rate"));
+	fclose(fp);
+
+	fp = fopen(NGINX_RESTCONF_RATE_LIMIT, "w");
+	if (!fp) {
+		ERRNO("failed saving %s", NGINX_RESTCONF_RATE_LIMIT);
+		goto done;
+	}
+	if (lydx_is_enabled(rl, "enabled"))
+		fprintf(fp, "limit_req zone=restconf burst=%s nodelay;\n"
+			"limit_req_status 429;\n", lydx_get_cattr(rl, "burst"));
+	fclose(fp);
+
+	finit_reload("nginx");
+done:
+	return put(cfg);
+}
+
 static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *ssh = NULL, *listen, *host_key;
@@ -910,6 +949,9 @@ int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	if (rc)
 		return rc;
 	rc = restconf_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = restconf_rate_change(session, config, diff, event, confd);
 	if (rc)
 		return rc;
 	rc = netbrowse_change(session, config, diff, event, confd);
