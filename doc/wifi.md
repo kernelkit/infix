@@ -3,32 +3,32 @@
 Infix supports Wi-Fi as a client (Station), as an Access Point, as an
 802.11s mesh point, and as a 4-address (WDS) link for wireless bridges
 and repeaters.  When a compatible Wi-Fi adapter is detected, the system
-automatically creates a WiFi radio (PHY) in factory-config, that can
+automatically creates a Wi-Fi radio (PHY) in factory-config, that can
 host virtual interfaces.
 
 ## Architecture Overview
 
-Infix uses a two-layer WiFi architecture:
+Infix uses a two-layer Wi-Fi architecture:
 
-1. **WiFi Radio (PHY layer)**: Represents the physical wireless hardware
+1. **Wi-Fi Radio (PHY layer)**: Represents the physical wireless hardware
      - Configured via `ietf-hardware` module
      - Controls channel, transmit power, regulatory domain
      - One radio can host multiple virtual interfaces
 
-2. **WiFi Interface (Network layer)**: Virtual interface on a radio
+2. **Wi-Fi Interface (Network layer)**: Virtual interface on a radio
      - Configured via `infix-interfaces` module
      - Operates in Station (client), Access Point, Mesh Point or WDS link mode
      - Each interface references a parent radio
 
 ## Naming Conventions
 
-Like other interface types in Infix, WiFi components follow naming conventions
+Like other interface types in Infix, Wi-Fi components follow naming conventions
 that allow the CLI to automatically infer types:
 
 | **Name Pattern** | **Type**        | **Description**                          |
 |------------------|-----------------|------------------------------------------|
-| `radioN`         | WiFi Radio      | Hardware component for WiFi PHY          |
-| `wifiN`          | WiFi Interface  | Virtual WiFi interface on a radio        |
+| `radioN`         | Wi-Fi Radio     | Hardware component for Wi-Fi PHY         |
+| `wifiN`          | Wi-Fi Interface | Virtual Wi-Fi interface on a radio       |
 
 Where `N` is a number (0, 1, 2, ...).
 
@@ -38,7 +38,7 @@ Where `N` is a number (0, 1, 2, ...).
 > component named `radio0` automatically sets its class to `wifi`, enabling
 > the `wifi-radio` configuration container.
 >
-> **Note:** This inference only works with the CLI.  Configuring WiFi over
+> **Note:** This inference only works with the CLI.  Configuring Wi-Fi over
 > NETCONF or RESTCONF requires setting the class/type explicitly.
 
 ## Current Limitations
@@ -71,9 +71,9 @@ Other Realtek chipsets may work but are not tested.
 > - Firmware requirements vary by chipset
 > - Check kernel logs if your adapter is not detected
 
-### USB WiFi Dongles
+### USB Wi-Fi Dongles
 
-USB WiFi dongles may be slow to initialize at boot due to firmware
+USB Wi-Fi dongles may be slow to initialize at boot due to firmware
 loading. If your USB dongle is not detected reliably, configure a
 `probe-timeout` on the radio to wait for the PHY:
 
@@ -84,13 +84,13 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 </code></pre>
 
 This waits up to 30 seconds for the radio PHY to appear before creating
-WiFi interfaces. If the PHY is not detected within the timeout, a dummy
+Wi-Fi interfaces. If the PHY is not detected within the timeout, a dummy
 interface is created as a placeholder, allowing IP configuration to proceed.
 Reboot when the radio becomes available.
 
 ## Radio Configuration
 
-Before configuring WiFi interfaces, you must first configure the WiFi radio.
+Before configuring Wi-Fi interfaces, you must first configure the Wi-Fi radio.
 Radios are automatically discovered and named `radio0`, `radio1`, etc.
 
 ### Country Code ⚠
@@ -107,7 +107,7 @@ admin@example:/config/> <b>leave</b>
 </code></pre>
 
 > [!IMPORTANT] Legal notice!
-> The country code is **legally required** and determines which WiFi
+> The country code is **legally required** and determines which Wi-Fi
 > channels and power levels are permitted in your location. Using an
 > incorrect country code may violate local wireless regulations.
 
@@ -155,7 +155,7 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 **⚠ Must match your physical location for legal compliance! ⚠**
 
 - `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
-  appropriate WiFi standards:
+  appropriate Wi-Fi standards:
     - 2.4GHz: 802.11n/ax
     - 5GHz: 802.11n/ac/ax
     - 6GHz: 802.11ax
@@ -170,7 +170,7 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
   Enable only when old 2.4GHz-only IoT devices need them to associate.  No
   effect on 5GHz/6GHz.
 - `probe-timeout`: Seconds to wait for PHY detection at boot (default: 0).  Set
-  to a non-zero value (e.g., 30) for USB WiFi dongles that are slow to
+  to a non-zero value (e.g., 30) for USB Wi-Fi dongles that are slow to
   initialize due to firmware loading
 
 > [!NOTE]
@@ -241,12 +241,12 @@ Drawbacks:
   protection, so WPA2-only and open networks are rejected.
 - Indoor power limits cap coverage further.
 
-### WiFi 6 Support
+### Wi-Fi 6 Support
 
-WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
+Wi-Fi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
 performance through features like OFDMA, BSS Coloring, and beamforming.
 
-**WiFi 6 Features (always enabled in AP mode on supported radios):**
+**Wi-Fi 6 Features (always enabled in AP mode on supported radios):**
 
 - **OFDMA**: Better multi-user efficiency in dense environments
 - **BSS Coloring**: Reduced interference from neighboring networks
@@ -255,8 +255,8 @@ performance through features like OFDMA, BSS Coloring, and beamforming.
 **Requirements:**
 
 - Hardware must support 802.11ax
-- Client devices must support WiFi 6 for full benefits
-- Older WiFi 5/4 clients can still connect but won't use WiFi 6 features
+- Client devices must support Wi-Fi 6 for full benefits
+- Older Wi-Fi 5/4 clients can still connect but won't use Wi-Fi 6 features
 
 > [!IMPORTANT]
 > 6 GHz AP operation requires WPA3-Personal (SAE) with mandatory
@@ -265,7 +265,7 @@ performance through features like OFDMA, BSS Coloring, and beamforming.
 
 ## Discovering Available Networks
 
-Before connecting to a WiFi network you need to know which networks are in
+Before connecting to a Wi-Fi network you need to know which networks are in
 range.  A scan lists them, with signal strength and security, and works on
 any radio, whether or not it has an interface yet.  The radio leaves its
 channel for a few seconds during the scan, so traffic on it pauses.
@@ -282,7 +282,7 @@ A hidden network shows up without a name.  Several entries with the same
 SSID are the access points of one roaming network, the BSSID tells them
 apart.
 
-In the WebUI, each radio on the WiFi page has a **Scan networks** button
+In the WebUI, each radio on the Wi-Fi page has a **Scan networks** button
 that lists the same networks.
 
 Over NETCONF or RESTCONF the scan is the `scan` action on the radio's
@@ -312,7 +312,7 @@ AX210, the survey fails with *the driver reports no per-channel survey
 data*, use `show hardware radio0 scan` to see which channels other networks
 use.
 
-In the WebUI, each radio on the WiFi page has a **Scan channels** button that
+In the WebUI, each radio on the Wi-Fi page has a **Scan channels** button that
 draws the same survey as a chart.
 
 Over NETCONF or RESTCONF the survey is the `channel-survey` action on the
@@ -332,7 +332,7 @@ hardware, your passphrase must meet the following criteria:
     - Prohibited: Emojis, accented characters (like á or ñ), and special "control" characters
 
 > [!TIP] Why the limit?
-> Standard WiFi security (WPA2/WPA3) requires a minimum of 8 characters to
+> Standard Wi-Fi security (WPA2/WPA3) requires a minimum of 8 characters to
 > prevent "brute-force" hacking.  The character limit ensures your password
 > works on older routers and various operating systems.  
 > Tips for password strength, see [XKCD #936](https://xkcd.com/936/).
@@ -345,7 +345,7 @@ available networks and identify the SSID you want to connect to.
 
 ### Step 1: Configure Password
 
-Create a keystore entry for your WiFi password (8-63 characters):
+Create a keystore entry for your Wi-Fi password (8-63 characters):
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-key</b>
@@ -386,7 +386,7 @@ signal             : -52 dBm (good)
 
 **Station configuration parameters:**
 
-- `radio`: Reference to the WiFi radio (mandatory)
+- `radio`: Reference to the Wi-Fi radio (mandatory)
 - `station ssid`: Network name to connect to (mandatory)
 - `station security mode`:
       - `auto`: default, WPA2/WPA3 auto-negotiation
@@ -428,16 +428,16 @@ move, see [802.11v](#80211v-bss-transition-management).
 
 ## Access Point Mode
 
-Access Point (AP) mode allows your device to create a WiFi network that
+Access Point (AP) mode allows your device to create a Wi-Fi network that
 other devices can connect to. APs are configured as virtual interfaces on
-a WiFi radio.
+a Wi-Fi radio.
 
 ### Basic AP Configuration
 
 First, ensure the radio is configured (see Radio Configuration above). Then
-create a keystore entry for your WiFi password and configure the AP interface:
+create a keystore entry for your Wi-Fi password and configure the AP interface:
 
-**Step 1: Create keystore entry for the WiFi password**
+**Step 1: Create keystore entry for the Wi-Fi password**
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-secret</b>
@@ -458,12 +458,12 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 </code></pre>
 
 > [!NOTE]
-> Using `wifiN` as the interface name automatically sets the type to WiFi.
+> Using `wifiN` as the interface name automatically sets the type to Wi-Fi.
 > Alternatively, you can use any name and explicitly set `type wifi`.
 
 **Access Point configuration parameters:**
 
-- `radio`: Reference to the WiFi radio (mandatory)
+- `radio`: Reference to the Wi-Fi radio (mandatory)
 - `access-point ssid`: Network name (SSID) to broadcast
 - `access-point hidden`: Set to `true` to hide SSID (optional, default: false)
 - `access-point security mode`: Security mode (see below)
@@ -548,7 +548,7 @@ admin@example:/config/interface/wifi2/> <b>leave</b>
 </code></pre>
 
 > [!NOTE]
-> Each WiFi interface gets its own MAC address, derived from the chassis
+> Each Wi-Fi interface gets its own MAC address, derived from the chassis
 > MAC and numbered per radio.  Only the first two octets change, so it
 > never meets a port address: the locally administered bit is set and
 > the interface's position among the interfaces on its radio, sorted by
@@ -601,7 +601,7 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mob
 ```
 
 The access points hand each other a roaming client's keys, protected
-with a secret they all share.  By default that is the WiFi password,
+with a secret they all share.  By default that is the Wi-Fi password,
 which is fine for a home or small office network.  Anyone who knows the
 password can then also read the other clients' keys, so on a network
 shared with people you do not trust, give the access points a secret of
@@ -697,7 +697,7 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
 Allows APs to suggest better APs to clients, improving roaming decisions.
 
 An access point about to stop, because the device reboots, is upgraded,
-or its WiFi configuration changes, also uses 802.11v to ask its clients
+or its Wi-Fi configuration changes, also uses 802.11v to ask its clients
 to move first, naming the other access points of the SSID it knows of.
 Clients that support it roam to one of them while the radio is still
 up, instead of noticing the loss afterwards and scanning for a new
@@ -808,7 +808,7 @@ For a backhaul with a single root, where multi-hop and self-healing are
 not needed, see [WDS Backhaul and Repeaters](#wds-backhaul-and-repeaters).
 
 > [!NOTE]
-> Not all WiFi hardware supports 802.11s mesh, see the adapter list
+> Not all Wi-Fi hardware supports 802.11s mesh, see the adapter list
 > under [Supported Wi-Fi Adapters](#supported-wi-fi-adapters).
 
 ### 802.11s vs EasyMesh
@@ -897,7 +897,7 @@ off between nodes while the mesh carries backhaul traffic.
 
 ## WDS Backhaul and Repeaters
 
-A WiFi station normally carries only its own traffic and cannot be a
+A Wi-Fi station normally carries only its own traffic and cannot be a
 bridge port.  In 4-address mode, also called WDS, it can forward traffic
 for the devices behind it.  That is what makes a device with a station
 and an access point a repeater, and a device with a station and wired
@@ -1025,9 +1025,9 @@ If issues arise, try the following troubleshooting steps:
    the passphrase matches the network password
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related
    errors
-4. **Regulatory compliance**: Ensure the WiFi country code matches your
+4. **Regulatory compliance**: Ensure the Wi-Fi country code matches your
    location
-5. **Hardware detection**: Confirm the WiFi radio appears in `show
+5. **Hardware detection**: Confirm the Wi-Fi radio appears in `show
    hardware`
 
 If issues persist, check the system log for specific error messages that

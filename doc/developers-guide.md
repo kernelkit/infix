@@ -409,7 +409,7 @@ yangerd logs failed queries.  For more, set `YANGERD_LOG_LEVEL=debug` in
 `/etc/default/yangerd` and run `initctl restart yangerd`.
 
 Values that are expensive to read, or that change the system, are not
-operational data but YANG actions handled by confd, for example the WiFi
+operational data but YANG actions handled by confd, for example the Wi-Fi
 `scan` and the bridge `get-forwarding-database`.
 
 

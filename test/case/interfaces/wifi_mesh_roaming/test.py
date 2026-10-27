@@ -1,45 +1,37 @@
 #!/usr/bin/env python3
-r"""
+"""
 WiFi Mesh backhaul with roaming Access Points
 
-The worked example from doc/whitepaper-wifi-mesh-roaming.md, as a test.
+Verifies the setup from the blog post "Seamless Wi-Fi with Mesh Backhaul
+and Roaming", https://www.kernelkit.org/posts/wifi-mesh-roaming/
 
-Three gateway nodes (gw1, gw2, gw3) each do two jobs on two radios:
+Three gateway nodes, gw1, gw2 and gw3, each have two radios:
 
-  * radio0 -- an 802.11s mesh point.  The three join one mesh ("backhaul")
-    on 5GHz; this carries traffic between the nodes so only gw1 needs a wire
-    to the rest of the LAN.
-  * radio1 -- a WPA2/WPA3-personal Access Point on 2.4GHz.  All three share
-    the same SSID ("campus") and 802.11r mobility domain, so a client roams
-    between them as one network.
+- radio0 is an 802.11s mesh point.  The three join one mesh, "backhaul",
+  on 5GHz.  It carries traffic between the nodes, so only gw1 needs a
+  wire to the rest of the LAN
+- radio1 is a WPA2/WPA3-personal Access Point on 2.4GHz.  All three use
+  the same SSID, "campus", and the same 802.11r mobility domain, so a
+  client roams between them as in one network
 
-Each node bridges its mesh and AP (and, on gw1, the wired uplink) into br0,
-so the mesh is a transparent layer-2 backhaul.  A fourth node is the client.
+Each node bridges its mesh and AP into br0, gw1 also its wired uplink, so
+the mesh is a transparent layer-2 backhaul.  A fourth node is the client.
 
-The test checks the claims the whitepaper makes:
+The test verifies that:
 
-  1. the three nodes form a mesh (each lists the other two as peers, and
-     reports the mesh id and forwarding it runs with);
-  2. the client associates to the "campus" SSID;
-  3. traffic reaches the client across the mesh backhaul (host behind gw1
-     pings the client, which is attached to some gw's AP);
-  4. roaming: the client reports the BSSID it is connected to, which is one
-     of the three gw APs; when that AP is taken down the client moves to
-     another node -- same SSID, same mobility domain -- so the reported
-     BSSID changes to a different gw, and traffic recovers.
+1. the three nodes form a mesh: each lists the other two as peers, and
+   reports its mesh id and that forwarding is enabled
+2. the client associates to the "campus" SSID
+3. traffic reaches the client across the mesh backhaul: the host behind
+   gw1 pings the client, which is attached to one of the gw APs
+4. the client roams: it is connected to one of the three gw APs, and when
+   that AP is taken down it moves to another gw with the same SSID and
+   mobility domain, its BSSID changes, and traffic recovers
 
-In simulation every radio hears every other at one fixed strength, so there
-is no signal gradient to drift the client between APs.  Step 4 forces the
-move instead, which is a stronger check: it proves a second AP accepts the
-client and the backhaul re-converges.
-
-Topology:
-....
-    host ==(mgmt)== gw1 (mesh+AP) ))  ~ mesh ~  (( gw2 (mesh+AP)
-      \\__(lan, wired)__/  \                    /
-                            )  ~ mesh ~  (( gw3 (mesh+AP)
-                            client (((roams between the gw APs)))
-....
+In simulation every radio hears every other at the same strength, so
+nothing makes the client drift between APs.  Step 4 forces the move
+instead, which checks that a second AP accepts the client and that the
+backhaul re-converges.
 """
 import infamy
 import infamy.wifi as wifi

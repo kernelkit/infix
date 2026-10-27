@@ -4,16 +4,16 @@
 
 ## Overview
 
-The Acer Connect Vero W6m is a compact WiFi 6/6E router platform based
+The Acer Connect Vero W6m is a compact Wi-Fi 6/6E router platform based
 on the MediaTek MT7986A SoC.  In Infix it is supported as an eMMC-based
 target that reuses the factory secure boot chain while replacing the
 system partitions with an Infix installation.
 
 The Acer Connect Vero W6m is based on the same MT7986a SoC as the
-BPI-R3, with tri-band WiFi (2.4 GHz + 5 GHz + 6 GHz) using a PCIe
+BPI-R3, with tri-band Wi-Fi (2.4 GHz + 5 GHz + 6 GHz) using a PCIe
 MT7916 module and the SoC's built-in MT7976 DBDC radio.
 
-## Default WiFi Layout
+## Default Wi-Fi Layout
 
 The factory configuration on this branch enables all three radios in AP
 mode and bridges them into the default LAN bridge `br0`:

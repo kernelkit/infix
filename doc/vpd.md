@@ -58,8 +58,8 @@ Every VPD is listed in the _ietf-hardware_ model as a component named
 
 Boards without a VPD EEPROM, such as single board computers, boot with
 a random MAC address on every port and the vendor's default address on
-every WiFi radio.  Two such boards of the same model cannot even talk
-to each other over WiFi, since both radios claim the same address.
+every Wi-Fi radio.  Two such boards of the same model cannot even talk
+to each other over Wi-Fi, since both radios claim the same address.
 
 Such a board can be given an identity by storing an ONIE TLV as
 `/mnt/aux/vpd.bin`.  The boot loader hands the file to the system,
@@ -75,9 +75,9 @@ The file survives upgrades, and removing it returns the board to
 random addresses on the next boot.  A VPD read this way is never
 trusted, so it can only provide identity, never the factory password.
 The ports get their addresses from its base MAC address, each with a
-fixed offset given by the device tree, and WiFi interfaces derive
+fixed offset given by the device tree, and Wi-Fi interfaces derive
 theirs from the base MAC as described in
-[WiFi](wifi.md#multi-ssid-configuration).
+[Wi-Fi](wifi.md#multi-ssid-configuration).
 
 This is currently supported on the Banana Pi BPI-R3 family, the Banana
 Pi BPI-R4 family, and the Acer Connect Vero W6m.

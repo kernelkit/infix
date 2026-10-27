@@ -34,13 +34,13 @@ module infix-hardware {
   }
 
   revision 2026-10-06 {
-    description "Move the WiFi country code from each radio to the box-wide
+    description "Move the Wi-Fi country code from each radio to the box-wide
                  hardware/wifi container, the regulatory domain is one setting.";
     reference "internal";
   }
 
   revision 2026-10-05 {
-    description "Replace the WiFi radio survey container with the channel-survey
+    description "Replace the Wi-Fi radio survey container with the channel-survey
                  action, survey data is collected on request only.";
     reference "internal";
   }
@@ -91,7 +91,7 @@ module infix-hardware {
     reference "internal";
   }
   feature wifi {
-    description "WiFi support is an optional build-time feature in Infix.";
+    description "Wi-Fi support is an optional build-time feature in Infix.";
   }
 
   feature gps {
@@ -111,7 +111,7 @@ module infix-hardware {
   }
 
   /*
-   * WiFi-specific typedefs
+   * Wi-Fi-specific typedefs
    */
 
   typedef wifi-radio-ref {
@@ -119,8 +119,8 @@ module infix-hardware {
       path "/iehw:hardware/iehw:component/iehw:name";
     }
     description
-      "Reference to a WiFi radio hardware component.
-       WiFi radios are hardware components with class 'ih:wifi'.";
+      "Reference to a Wi-Fi radio hardware component.
+       Wi-Fi radios are hardware components with class 'ih:wifi'.";
   }
 
   typedef gps-receiver-ref {
@@ -141,10 +141,10 @@ module infix-hardware {
         description "5 GHz band (less congestion, higher throughput, recommended)";
       }
       enum "6GHz" {
-        description "6 GHz band (WiFi 6E, requires compatible hardware)";
+        description "6 GHz band (Wi-Fi 6E, requires compatible hardware)";
       }
     }
-    description "WiFi frequency band selection.";
+    description "Wi-Fi frequency band selection.";
   }
 
   typedef wifi-channel-width {
@@ -166,7 +166,7 @@ module infix-hardware {
       }
     }
     description
-      "WiFi channel bandwidth selection.
+      "Wi-Fi channel bandwidth selection.
 
        Wider channels provide higher throughput but increase
        interference and reduce the number of non-overlapping channels.
@@ -493,7 +493,7 @@ module infix-hardware {
   identity wifi {
     if-feature wifi;
     base iahw:hardware-class;
-    description "This identity is used to describe a WiFi radio/PHY";
+    description "This identity is used to describe a Wi-Fi radio/PHY";
   }
 
   identity gps {
@@ -565,19 +565,19 @@ module infix-hardware {
   }
   augment "/iehw:hardware" {
     description
-      "Settings shared by every WiFi radio in the system.";
+      "Settings shared by every Wi-Fi radio in the system.";
 
     container wifi {
       if-feature wifi;
       description
-        "WiFi settings that apply to all radios.";
+        "Wi-Fi settings that apply to all radios.";
 
       leaf country-code {
         type iwcc:country-code;
         default "00";
         description
           "Two-letter ISO 3166-1 country code, the regulatory domain for
-           every WiFi radio in the system.  It decides which channels
+           every Wi-Fi radio in the system.  It decides which channels
            and transmit power levels the radios may use.
 
            The default '00' is the world domain: no 6 GHz, the 5 GHz
@@ -724,19 +724,19 @@ module infix-hardware {
     }
 
     /*
-     * WiFi Radio configuration (when class = 'ih:wifi')
+     * Wi-Fi Radio configuration (when class = 'ih:wifi')
      */
 
     container wifi-radio {
       if-feature wifi;
       when "derived-from-or-self(../iehw:class, 'ih:wifi')";
-      presence "WiFi radio configuration";
+      presence "Wi-Fi radio configuration";
       description
-        "WiFi radio/PHY configuration and operational data.
+        "Wi-Fi radio/PHY configuration and operational data.
 
          This container is present when the hardware component represents
-         a WiFi radio (class 'ih:wifi'). WiFi radios are physical devices
-         that can host multiple virtual WiFi interfaces (APs or Stations).";
+         a Wi-Fi radio (class 'ih:wifi'). Wi-Fi radios are physical devices
+         that can host multiple virtual Wi-Fi interfaces (APs or Stations).";
 
       leaf channel {
         type union {
@@ -764,7 +764,7 @@ module infix-hardware {
            Common channels:
            - 2.4 GHz: 1-14 (channels 12-14 restricted in some countries)
            - 5 GHz: 36, 40, 44, 48, 149, 153, 157, 161, 165 (varies by region)
-           - 6 GHz: 1-233 (WiFi 6E, where permitted)
+           - 6 GHz: 1-233 (Wi-Fi 6E, where permitted)
 
            Set to 'auto' for automatic channel selection.";
       }
@@ -821,9 +821,9 @@ module infix-hardware {
         description
           "Seconds to wait for PHY detection at boot.
 
-           USB WiFi dongles may be slow to initialize due to firmware
+           USB Wi-Fi dongles may be slow to initialize due to firmware
            loading. Set this to a non-zero value (e.g., 30) to wait
-           for the radio PHY to appear before creating WiFi interfaces.
+           for the radio PHY to appear before creating Wi-Fi interfaces.
 
            If the PHY is not detected within the timeout, interface
            creation is skipped gracefully instead of failing.
@@ -875,7 +875,7 @@ module infix-hardware {
 
            Channels depend on:
            - Hardware capabilities
-           - The system's WiFi country code
+           - The system's Wi-Fi country code
            - Band selection
 
            This list reflects actual usable channels after applying
@@ -905,7 +905,7 @@ module infix-hardware {
         config false;
         type string;
         description
-          "WiFi driver name (e.g., mt798x-wmac, ath10k).";
+          "Wi-Fi driver name (e.g., mt798x-wmac, ath10k).";
       }
 
       container max-interfaces {
@@ -959,7 +959,7 @@ module infix-hardware {
         leaf he-capable {
           type boolean;
           description
-            "High Efficiency (802.11ax/WiFi 6) support.";
+            "High Efficiency (802.11ax/Wi-Fi 6) support.";
         }
       }
 
@@ -1072,7 +1072,7 @@ module infix-hardware {
 
       action scan {
         description
-          "Scan for WiFi networks in range of the radio.
+          "Scan for Wi-Fi networks in range of the radio.
 
            Reports every access point heard.  The radio leaves its
            operating channel for the duration of the scan, a few

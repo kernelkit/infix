@@ -8,7 +8,7 @@ module infix-wifi-country-codes {
   contact        "kernelkit@googlegroups.com";
 
   description
-    "Country codes for the WiFi regulatory domain, ISO 3166-1 alpha-2,
+    "Country codes for the Wi-Fi regulatory domain, ISO 3166-1 alpha-2,
      limited to the countries the Linux wireless regulatory database
      has rules for.";
 
@@ -221,7 +221,7 @@ module infix-wifi-country-codes {
       enum "ZW" { description "Zimbabwe"; }
     }
     description
-      "ISO 3166-1 alpha-2 country codes for the WiFi regulatory domain,
+      "ISO 3166-1 alpha-2 country codes for the Wi-Fi regulatory domain,
        limited to the countries the Linux wireless regulatory database
        has rules for, plus '00' for the world domain.";
     reference

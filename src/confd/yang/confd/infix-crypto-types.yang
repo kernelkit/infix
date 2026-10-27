@@ -6,6 +6,9 @@ module infix-crypto-types {
     prefix ct;
   }
 
+  revision 2026-10-27 {
+    description "Spell Wi-Fi the way the Wi-Fi Alliance does.";
+  }
   revision 2026-02-14 {
     description "Add X.509 public key format for TLS certificates.";
   }
@@ -64,7 +67,7 @@ module infix-crypto-types {
     base ct:symmetric-key-format;
     base symmetric-key-format;
     description
-      "Human-readable passphrase, e.g., WiFi WPA2/WPA3 passwords.";
+      "Human-readable passphrase, e.g., Wi-Fi WPA2/WPA3 passwords.";
   }
 
   identity x25519-public-key-format {

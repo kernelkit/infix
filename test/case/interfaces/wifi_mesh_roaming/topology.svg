@@ -1,148 +1,149 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-
 <!-- Title: wifi&#45;mesh&#45;roaming Pages: 1 -->
-<svg width="1388pt" height="870pt"
- viewBox="0.00 0.00 1387.63 869.58" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 865.58)">
+<svg width="602pt" height="399pt"
+ viewBox="0.00 0.00 602.17 399.03" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 395.03)">
 <title>wifi&#45;mesh&#45;roaming</title>
-<polygon fill="white" stroke="transparent" points="-4,4 -4,-865.58 1383.63,-865.58 1383.63,4 -4,4"/>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-395.03 598.17,-395.03 598.17,4 -4,4"/>
 <!-- host -->
 <g id="node1" class="node">
 <title>host</title>
-<polygon fill="none" stroke="black" points="0,-367.54 0,-482.54 108,-482.54 108,-367.54 0,-367.54"/>
-<text text-anchor="middle" x="25" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
-<polyline fill="none" stroke="black" points="50,-367.54 50,-482.54 "/>
-<text text-anchor="middle" x="79" y="-467.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
-<polyline fill="none" stroke="black" points="50,-459.54 108,-459.54 "/>
-<text text-anchor="middle" x="79" y="-444.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
-<polyline fill="none" stroke="black" points="50,-436.54 108,-436.54 "/>
-<text text-anchor="middle" x="79" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt3</text>
-<polyline fill="none" stroke="black" points="50,-413.54 108,-413.54 "/>
-<text text-anchor="middle" x="79" y="-398.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt4</text>
-<polyline fill="none" stroke="black" points="50,-390.54 108,-390.54 "/>
-<text text-anchor="middle" x="79" y="-375.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">lan</text>
+<polygon fill="none" stroke="gray" points="0,-132.27 0,-247.27 108,-247.27 108,-132.27 0,-132.27"/>
+<text text-anchor="middle" x="25" y="-186.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">host</text>
+<polyline fill="none" stroke="gray" points="50,-132.27 50,-247.27 "/>
+<text text-anchor="middle" x="79" y="-232.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">lan</text>
+<polyline fill="none" stroke="gray" points="50,-224.27 108,-224.27 "/>
+<text text-anchor="middle" x="79" y="-209.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">mgmt1</text>
+<polyline fill="none" stroke="gray" points="50,-201.27 108,-201.27 "/>
+<text text-anchor="middle" x="79" y="-186.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">mgmt2</text>
+<polyline fill="none" stroke="gray" points="50,-178.27 108,-178.27 "/>
+<text text-anchor="middle" x="79" y="-163.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">mgmt3</text>
+<polyline fill="none" stroke="gray" points="50,-155.27 108,-155.27 "/>
+<text text-anchor="middle" x="79" y="-140.07" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="gray">mgmt4</text>
 </g>
 <!-- gw1 -->
 <g id="node2" class="node">
 <title>gw1</title>
-<polygon fill="none" stroke="black" points="585.56,-769.08 585.56,-861.08 692.56,-861.08 692.56,-769.08 585.56,-769.08"/>
-<text text-anchor="middle" x="618.56" y="-845.88" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
-<polyline fill="none" stroke="black" points="585.56,-838.08 651.56,-838.08 "/>
-<text text-anchor="middle" x="618.56" y="-822.88" font-family="DejaVu Sans Mono, Book" font-size="14.00">uplink</text>
-<polyline fill="none" stroke="black" points="585.56,-815.08 651.56,-815.08 "/>
-<text text-anchor="middle" x="618.56" y="-799.88" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
-<polyline fill="none" stroke="black" points="585.56,-792.08 651.56,-792.08 "/>
-<text text-anchor="middle" x="618.56" y="-776.88" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
-<polyline fill="none" stroke="black" points="651.56,-769.08 651.56,-861.08 "/>
-<text text-anchor="middle" x="672.06" y="-811.38" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw1</text>
+<polygon fill="none" stroke="black" points="250.03,-321.53 250.03,-390.53 390.03,-390.53 390.03,-321.53 250.03,-321.53"/>
+<text text-anchor="middle" x="283.03" y="-375.33" font-family="DejaVu Sans Mono, Book" font-size="14.00">uplink</text>
+<polyline fill="none" stroke="black" points="250.03,-367.53 316.03,-367.53 "/>
+<text text-anchor="middle" x="283.03" y="-352.33" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="250.03,-344.53 316.03,-344.53 "/>
+<text text-anchor="middle" x="283.03" y="-329.33" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
+<polyline fill="none" stroke="black" points="316.03,-321.53 316.03,-390.53 "/>
+<text text-anchor="middle" x="336.53" y="-352.33" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw1</text>
+<polyline fill="none" stroke="black" points="357.03,-321.53 357.03,-390.53 "/>
+<text text-anchor="middle" x="373.53" y="-352.33" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
 </g>
 <!-- host&#45;&#45;gw1 -->
 <g id="edge1" class="edge">
 <title>host:mgmt1&#45;&#45;gw1:mgmt</title>
-<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-471.04C108,-471.04 585.06,-850.08 585.06,-850.08"/>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-212.77C108,-212.77 250.03,-356.03 250.03,-356.03"/>
 </g>
 <!-- host&#45;&#45;gw1 -->
 <g id="edge5" class="edge">
 <title>host:lan&#45;&#45;gw1:uplink</title>
-<path fill="none" stroke="black" stroke-width="2" d="M108,-379.04C108,-379.04 585.06,-827.08 585.06,-827.08"/>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-235.77C108,-235.77 250.03,-379.03 250.03,-379.03"/>
 </g>
 <!-- gw2 -->
 <g id="node3" class="node">
 <title>gw2</title>
-<polygon fill="none" stroke="black" points="886.09,-390.54 886.09,-459.54 977.09,-459.54 977.09,-390.54 886.09,-390.54"/>
-<text text-anchor="middle" x="911.09" y="-444.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
-<polyline fill="none" stroke="black" points="886.09,-436.54 936.09,-436.54 "/>
-<text text-anchor="middle" x="911.09" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
-<polyline fill="none" stroke="black" points="886.09,-413.54 936.09,-413.54 "/>
-<text text-anchor="middle" x="911.09" y="-398.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
-<polyline fill="none" stroke="black" points="936.09,-390.54 936.09,-459.54 "/>
-<text text-anchor="middle" x="956.59" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw2</text>
+<polygon fill="none" stroke="black" points="258.03,-166.77 258.03,-212.77 382.03,-212.77 382.03,-166.77 258.03,-166.77"/>
+<text text-anchor="middle" x="283.03" y="-197.57" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
+<polyline fill="none" stroke="black" points="258.03,-189.77 308.03,-189.77 "/>
+<text text-anchor="middle" x="283.03" y="-174.57" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="308.03,-166.77 308.03,-212.77 "/>
+<text text-anchor="middle" x="328.53" y="-186.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw2</text>
+<polyline fill="none" stroke="black" points="349.03,-166.77 349.03,-212.77 "/>
+<text text-anchor="middle" x="365.53" y="-186.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
 </g>
 <!-- host&#45;&#45;gw2 -->
 <g id="edge2" class="edge">
 <title>host:mgmt2&#45;&#45;gw2:mgmt</title>
-<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-448.04C108,-448.04 885.59,-448.04 885.59,-448.04"/>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-189.77C108,-189.77 258.03,-177.77 258.03,-177.77"/>
 </g>
 <!-- gw3 -->
 <g id="node4" class="node">
 <title>gw3</title>
-<polygon fill="none" stroke="black" points="593.56,-0.5 593.56,-69.5 684.56,-69.5 684.56,-0.5 593.56,-0.5"/>
-<text text-anchor="middle" x="618.56" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
-<polyline fill="none" stroke="black" points="593.56,-46.5 643.56,-46.5 "/>
-<text text-anchor="middle" x="618.56" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
-<polyline fill="none" stroke="black" points="593.56,-23.5 643.56,-23.5 "/>
-<text text-anchor="middle" x="618.56" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
-<polyline fill="none" stroke="black" points="643.56,-0.5 643.56,-69.5 "/>
-<text text-anchor="middle" x="664.06" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw3</text>
+<polygon fill="none" stroke="black" points="258.03,-0.5 258.03,-46.5 382.03,-46.5 382.03,-0.5 258.03,-0.5"/>
+<text text-anchor="middle" x="283.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh</text>
+<polyline fill="none" stroke="black" points="258.03,-23.5 308.03,-23.5 "/>
+<text text-anchor="middle" x="283.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="308.03,-0.5 308.03,-46.5 "/>
+<text text-anchor="middle" x="328.53" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">gw3</text>
+<polyline fill="none" stroke="black" points="349.03,-0.5 349.03,-46.5 "/>
+<text text-anchor="middle" x="365.53" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
 </g>
 <!-- host&#45;&#45;gw3 -->
-<g id="edge3" class="edge">
-<title>host:mgmt3&#45;&#45;gw3:mgmt</title>
-<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-425.04C108,-425.04 593.06,-58 593.06,-58"/>
+<g id="edge4" class="edge">
+<title>host:mgmt4&#45;&#45;gw3:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-143.77C108,-143.77 258.03,-11.5 258.03,-11.5"/>
 </g>
 <!-- client -->
 <g id="node5" class="node">
 <title>client</title>
-<polygon fill="none" stroke="black" points="1263.63,-402.04 1263.63,-448.04 1379.63,-448.04 1379.63,-402.04 1263.63,-402.04"/>
-<text text-anchor="middle" x="1288.63" y="-432.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
-<polyline fill="none" stroke="black" points="1263.63,-425.04 1313.63,-425.04 "/>
-<text text-anchor="middle" x="1288.63" y="-409.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
-<polyline fill="none" stroke="black" points="1313.63,-402.04 1313.63,-448.04 "/>
-<text text-anchor="middle" x="1346.63" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
+<polygon fill="none" stroke="black" points="478.17,-0.5 478.17,-46.5 594.17,-46.5 594.17,-0.5 478.17,-0.5"/>
+<text text-anchor="middle" x="503.17" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="478.17,-23.5 528.17,-23.5 "/>
+<text text-anchor="middle" x="503.17" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="528.17,-0.5 528.17,-46.5 "/>
+<text text-anchor="middle" x="561.17" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
 </g>
 <!-- host&#45;&#45;client -->
-<g id="edge4" class="edge">
-<title>host:mgmt4&#45;&#45;client:mgmt</title>
-<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-402.04C108,-402.04 1263.63,-437.04 1263.63,-437.04"/>
+<g id="edge3" class="edge">
+<title>host:mgmt3&#45;&#45;client:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-166.77C108,-166.77 268.71,-112.44 392.03,-56.5 431.37,-38.66 478.17,-11.5 478.17,-11.5"/>
 </g>
 <!-- mesh -->
 <g id="node6" class="node">
 <title>mesh</title>
-<polygon fill="none" stroke="black" points="593.56,-407.04 593.56,-443.04 684.56,-443.04 684.56,-407.04 593.56,-407.04"/>
-<text text-anchor="middle" x="639.06" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">mesh&#45;cell</text>
+<ellipse fill="none" stroke="cornflowerblue" stroke-dasharray="5,2" cx="275.13" cy="-272.9" rx="80.69" ry="18"/>
+<text text-anchor="middle" x="275.13" y="-269.2" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="cornflowerblue">mesh backhaul</text>
 </g>
 <!-- gw1&#45;&#45;mesh -->
 <g id="edge6" class="edge">
 <title>gw1:mesh&#45;&#45;mesh</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M585.06,-803.08C585.06,-803.08 625.67,-518.79 636.45,-443.27"/>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M283.03,-321.03C283.03,-321.03 280.35,-304.73 278.12,-291.1"/>
 </g>
 <!-- ap -->
 <g id="node7" class="node">
 <title>ap</title>
-<polygon fill="none" stroke="black" points="1089.61,-407.04 1089.61,-443.04 1163.61,-443.04 1163.61,-407.04 1089.61,-407.04"/>
-<text text-anchor="middle" x="1126.61" y="-421.34" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap&#45;cell</text>
+<ellipse fill="none" stroke="orange" stroke-dasharray="5,2" cx="369.91" cy="-123.26" rx="80.69" ry="18"/>
+<text text-anchor="middle" x="369.91" y="-119.56" font-family="DejaVu Sans Mono, Book" font-size="14.00" fill="orange">client access</text>
 </g>
 <!-- gw1&#45;&#45;ap -->
 <g id="edge9" class="edge">
 <title>gw1:ap&#45;&#45;ap</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M618.06,-769.08C618.06,-769.08 995.34,-513.84 1099.98,-443.05"/>
+<path fill="none" stroke="orange" stroke-width="2" stroke-dasharray="5,2" d="M374.03,-321.03C374.03,-321.03 450.49,-176.58 430.15,-139.6 429.48,-138.36 428.32,-137.21 426.78,-136.14"/>
 </g>
 <!-- gw2&#45;&#45;mesh -->
 <g id="edge7" class="edge">
 <title>gw2:mesh&#45;&#45;mesh</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M885.59,-425.04C885.59,-425.04 755.8,-425.04 684.56,-425.04"/>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M283.03,-212.77C283.03,-212.77 279.83,-237.15 277.5,-254.86"/>
 </g>
 <!-- gw2&#45;&#45;ap -->
 <g id="edge10" class="edge">
 <title>gw2:ap&#45;&#45;ap</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M910.59,-390.04C910.59,-390.04 1027.71,-409.02 1089.47,-419.02"/>
+<path fill="none" stroke="orange" stroke-width="2" stroke-dasharray="5,2" d="M366.03,-166.77C366.03,-166.77 367.22,-153.38 368.28,-141.46"/>
 </g>
 <!-- gw3&#45;&#45;mesh -->
 <g id="edge8" class="edge">
 <title>gw3:mesh&#45;&#45;mesh</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M593.06,-35C593.06,-35 627.89,-330.3 636.93,-407.01"/>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M283.03,-46.5C283.03,-46.5 228.43,-145.34 248.03,-222.77 250.89,-234.09 256.87,-245.62 262.49,-254.77"/>
 </g>
 <!-- gw3&#45;&#45;ap -->
 <g id="edge11" class="edge">
 <title>gw3:ap&#45;&#45;ap</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M618.06,0C618.06,0 1007.42,-325.42 1104.76,-406.78"/>
+<path fill="none" stroke="orange" stroke-width="2" stroke-dasharray="5,2" d="M366.03,-46.5C366.03,-46.5 367.84,-82.37 368.99,-105.07"/>
 </g>
 <!-- client&#45;&#45;ap -->
 <g id="edge12" class="edge">
 <title>client:wifi&#45;&#45;ap</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M1263.63,-413.04C1263.63,-413.04 1204.27,-418.24 1163.69,-421.79"/>
+<path fill="none" stroke="orange" stroke-width="2" stroke-dasharray="5,2" d="M478.17,-35.5C478.17,-35.5 423.15,-80.1 391.56,-105.71"/>
+<text text-anchor="middle" x="424.21" y="-64.8" font-family="DejaVu Serif, Book" font-size="14.00" fill="orange">roams</text>
+<text text-anchor="middle" x="547.82" y="-65.42" font-family="DejaVu Serif, Book" font-size="76.00" fill="orange">⇡</text>
 </g>
 </g>
 </svg>

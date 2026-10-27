@@ -46,12 +46,12 @@ submodule infix-if-modem {
 
      Multi-bearer: configure multiple wwan interfaces referencing the same
      modem component, each with a different APN.  modemd manages them all in
-     one thread per hardware modem, analogous to multi-SSID on a WiFi radio.
+     one thread per hardware modem, analogous to multi-SSID on a Wi-Fi radio.
 
      Routes are written by modemd to /etc/net.d/<ifname>.conf and installed
      by staticd/zebra through FRR.  The default route is always installed when
      the bearer is connected; route-preference controls administrative distance
-     so that cellular acts as a natural failover path behind wired and WiFi.";
+     so that cellular acts as a natural failover path behind wired and Wi-Fi.";
 
   revision 2026-10-11 {
     description "Initial revision.";
@@ -120,7 +120,7 @@ submodule infix-if-modem {
            /etc/net.d/<ifname>.conf so that staticd/zebra installs it via FRR.
            The route-preference leaf controls the administrative distance,
            making cellular a natural failover behind lower-preference routes
-           such as wired Ethernet (udhcpc default 5) and WiFi.";
+           such as wired Ethernet (udhcpc default 5) and Wi-Fi.";
 
         leaf apn {
           type string {
@@ -162,7 +162,7 @@ submodule infix-if-modem {
              via /etc/net.d/<ifname>.conf into staticd/zebra.
 
              Higher values mean lower priority.  Default 200 places cellular
-             behind wired Ethernet (udhcpc typically uses 5) and WiFi, making
+             behind wired Ethernet (udhcpc typically uses 5) and Wi-Fi, making
              it a natural failover path.  Adjust when multiple cellular modems
              need relative priority ordering.";
         }

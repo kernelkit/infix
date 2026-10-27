@@ -90,7 +90,7 @@ typically provision a unique per-device password stored in EEPROM/VPD.
 
 ## Supported hardware
 
-- **Raspberry Pi 2B/3B/4B/CM4** - a good starting point; built-in WiFi and Ethernet
+- **Raspberry Pi 2B/3B/4B/CM4** - a good starting point; built-in Wi-Fi and Ethernet
 - **Banana Pi-R64/R3/R3 Mini/R4** - multi-port routers and gateways
 - **NanoPi R2S** - compact dual-port router
 - **x86_64** - VMs and mini PCs, for development or production
@@ -103,7 +103,7 @@ typically provision a unique per-device password stored in EEPROM/VPD.
 - **StarFive VisionFive2** - RISC-V board
 
 *Why start with Raspberry Pi?* It's cheap, easy to get hold of, has
-built-in WiFi and Ethernet, and runs the same Infix you'd deploy in
+built-in Wi-Fi and Ethernet, and runs the same Infix you'd deploy in
 production — so what you learn on it carries straight over.
 
 > [!TIP]
@@ -130,7 +130,7 @@ compromised service or container can't rewrite the OS underneath it.
 ## Use cases
 
 1. **Home labs & hobbyists**:  
-   Turn a Raspberry Pi into a router with WiFi  
+   Turn a Raspberry Pi into a router with Wi-Fi  
 1. **IoT & edge**:  
    Build gateways you can update in the field  
 1. **Small business networks**:  

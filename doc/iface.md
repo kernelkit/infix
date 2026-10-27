@@ -45,7 +45,7 @@ Available types can be listed from the CLI:
   veth       Linux virtual Ethernet pair.
   vlan       Layer 2 Virtual LAN using 802.1Q.
   vxlan      Virtual eXtensible LAN tunnel interface.
-  wifi       WiFi (802.11) interface
+  wifi       Wi-Fi (802.11) interface
   wireguard  WireGuard VPN tunnel interface.
 </code></pre>
 
@@ -162,9 +162,9 @@ The two most common uses are:
   uplink is up and the address is redistributed into the routing domain.
 
 > [!TIP]
-> WiFi interfaces also use dummies as placeholders when the radio
+> Wi-Fi interfaces also use dummies as placeholders when the radio
 > hardware is not detected at boot (e.g., a USB dongle that was
-> unplugged).  See [WiFi](wifi.md) for details.
+> unplugged).  See [Wi-Fi](wifi.md) for details.
 
 ### Example: Stable OSPF Router-ID
 

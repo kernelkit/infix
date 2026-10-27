@@ -98,7 +98,7 @@ Available information per receiver:
 ### Configure GPS receiver
 
 GPS receivers are hardware components with class `gps`.  The class is
-auto-inferred from the component name, similar to WiFi radios (`radioN`):
+auto-inferred from the component name, similar to Wi-Fi radios (`radioN`):
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>set hardware component gps0</b>
@@ -246,7 +246,7 @@ speed.  Locking it locks both.
 The same information is available over NETCONF and RESTCONF.  Each
 device is a hardware component of class `infix-hardware:usb-device`
 whose `parent` is the USB port and whose `uri` is the attachment
-point.  A WiFi radio, GPS receiver or cellular modem on USB has the
+point.  A Wi-Fi radio, GPS receiver or cellular modem on USB has the
 device it lives on as its `parent`.
 
 ### Configure USB port

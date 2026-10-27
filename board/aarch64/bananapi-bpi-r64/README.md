@@ -14,7 +14,7 @@ The Banana Pi BPI-R64 is a networking board based on the MediaTek MT7622
 - 8 GB eMMC storage
 - microSD card slot
 - MT7531 Gigabit Ethernet switch (4x LAN + 1x WAN)
-- MT7622 WMAC built-in 2.4 GHz 802.11ac WiFi
+- MT7622 WMAC built-in 2.4 GHz 802.11ac Wi-Fi
 - USB 3.0 port
 - 2x Mini PCIe slots
 
@@ -24,7 +24,7 @@ Infix comes preconfigured with:
 
 - **LAN ports** (lan0-lan3): Bridged for internal networking
 - **WAN port**: DHCP client enabled for internet connectivity
-- **WiFi** (wifi0-ap): Bridged to LAN (MT7622 WMAC, 2.4 GHz; or MT7615 PCIe card if fitted)
+- **Wi-Fi** (wifi0-ap): Bridged to LAN (MT7622 WMAC, 2.4 GHz; or MT7615 PCIe card if fitted)
 
 ## Boot Switch Reference
 
@@ -113,7 +113,7 @@ mmc partconf 0 1 1 0
 
 ## Platform Notes
 
-### WiFi
+### Wi-Fi
 
 The MT7622 SoC includes a built-in WMAC that provides 2.4 GHz 802.11b/g/n/ac
 (2×2) — there is no 5 GHz capability from the onboard radio.

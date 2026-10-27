@@ -12,7 +12,7 @@ a browser-friendly format.
 - **Dashboard** -- system info, hardware, sensors, and interface summary
   with bridge member grouping
 - **Interfaces** -- list with status, addresses, and per-type detail;
-  click through to a detail page with live-updating counters, WiFi
+  click through to a detail page with live-updating counters, Wi-Fi
   station and mesh peer tables, WireGuard peers, and
   ethernet frame statistics
 - **Firewall** -- zone-to-zone policy matrix

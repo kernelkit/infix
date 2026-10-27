@@ -41,7 +41,7 @@ Linux 6.18:
  - SD card limited to 3.3V signalling (`no-1-8-v`), no UHS modes
  - PDMA disabled in the board DT, its probe hangs the boot
  - No temperature sensors, the K1 thermal driver landed in v7.2
- - No PCIe, so no WiFi or NVMe, the K1 PCIe drivers landed after 6.18
+ - No PCIe, so no Wi-Fi or NVMe, the K1 PCIe drivers landed after 6.18
  - No USB, the K1 USB2 PHY driver landed after 6.18
  - The P1 RTC cannot be read at boot, the clock starts from the build default
 

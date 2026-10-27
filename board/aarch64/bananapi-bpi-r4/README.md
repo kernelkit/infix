@@ -11,8 +11,8 @@ cores to out-of-order Cortex-A73 cores, and the MT7531 switch is now part of
 the SOC. The base model comes with two SFP+ cages supporting 1.25/2.5/5/10
 Gbps, and the R4P model comes with one SFP+ cage and one 2.5 Gbps RJ45 jack,
 which with an optional PoE board means the board can act as PD.  Unlike the
-BPi-R3, however, there is no on-board WiFi support, that requires an external
-tri-band WiFi 7 (IEEE 802.11be) card.
+BPi-R3, however, there is no on-board Wi-Fi support, that requires an external
+tri-band Wi-Fi 7 (IEEE 802.11be) card.
 
 ### Variants
 
@@ -44,9 +44,9 @@ distinct system architectures:
 | CPU architecture | ARMv8-A, out-of-order    | ARMv8-A, in-order         |
 | Internal switch  | 1 Gbps per port          | 1 Gbps per port           |
 | Uplinks          | USXGMII (native 10 Gbps) | USXGMII (native 2.5 Gbps) |
-| WiFi             | MT7996E PCIe module      | MT7915E (built-in)        |
-| WiFi standard    | WiFi 7 (802.11be)        | WiFi 6 (802.11ax)         |
-| WiFi bands       | 2.4 / 5 / 6 GHz          | 2.4 / 5 GHz               |
+| Wi-Fi            | MT7996E PCIe module      | MT7915E (built-in)        |
+| Wi-Fi standard   | Wi-Fi 7 (802.11be)       | Wi-Fi 6 (802.11ax)        |
+| Wi-Fi bands      | 2.4 / 5 / 6 GHz          | 2.4 / 5 GHz               |
 | Hardware crypto  | EIP-197 NPU              | EIP-93                    |
 | PCIe slots       | 4 (2x mPCIe, 2x M.2)     | 1 mPCIe                   |
 | Boot ROM offset  | Sector 1024 (0x80000)    | Sector 1024 (0x80000)     |
@@ -59,7 +59,7 @@ distinct system architectures:
 - **Storage:** 8 GB eMMC, microSD card slot, SPI NAND flash
 - **Ethernet switch:** 4-port 1 GbE (10/100/1000) internal DSA switch
 - **SFP+ ports:** 2x 10 Gbps USXGMII (standard R4) or 1x SFP+ (R4-2g5/R4P)
-- **WiFi:** optional MediaTek MT7996E PCIe module — tri-band WiFi 7 (2.4/5/6 GHz)
+- **Wi-Fi:** optional MediaTek MT7996E PCIe module — tri-band Wi-Fi 7 (2.4/5/6 GHz)
 - **USB:** 1x USB 3.0 (xHCI)
 - **PCIe:** 2x mPCIe (SIM2/SIM3), 1x M.2 Key-B (SIM1), 1x M.2 Key-M (SSD)
 - **RTC:** PCF8563 on I2C
@@ -83,13 +83,13 @@ Infix ships with the following factory defaults.
 - **SFP+ port** (`sfp1`): Present but unconfigured
 
 > [!NOTE]
-> If an optional WiFi 7 (MT7996E) PCIe card is installed, the radio interfaces
-> are bridged into the LAN as access points.  WiFi is not included with the board
+> If an optional Wi-Fi 7 (MT7996E) PCIe card is installed, the radio interfaces
+> are bridged into the LAN as access points.  Wi-Fi is not included with the board
 > and is not part of the factory default configuration.
 
-### WiFi Cards Without an EEPROM
+### Wi-Fi Cards Without an EEPROM
 
-Some mPCIe WiFi cards, e.g., the BPI-MT7615, ship with an unprogrammed
+Some mPCIe Wi-Fi cards, e.g., the BPI-MT7615, ship with an unprogrammed
 EEPROM.  The card then comes up with a random MAC address and, for an
 MT7615D, with one radio instead of one per band:
 
@@ -98,7 +98,7 @@ mt7615e 0001:01:00.0: Invalid MAC address, using random address 06:0e:56:91:b5:1
 ```
 
 Such a card can be given an EEPROM image as `/mnt/aux/wifi-eeprom.bin`,
-which the boot loader hands to the WiFi driver.  This requires:
+which the boot loader hands to the Wi-Fi driver.  This requires:
 
 - The card in mPCIe slot CN14, the slot next to SIM3
 - A boot loader from v26.10.0 or later
@@ -316,7 +316,7 @@ echo '{"mac-address":"02:00:00:ba:04:00","serial-number":"banana4","vendor":"Sin
 
 Give each board its own base address and serial number, then reboot.
 The base address becomes the hostname suffix, each wired port gets a
-fixed offset from the base, and the WiFi interfaces get addresses
+fixed offset from the base, and the Wi-Fi interfaces get addresses
 derived from it.  With the record above the board is named
 `bpi-ba-04-00`, `lan1` is `02:00:00:ba:04:03`, `sfp1` is
 `02:00:00:ba:04:07` and `wifi0` is `06:00:00:ba:04:00`.
