@@ -73,8 +73,9 @@ admin@example:/config/system/…/example@host/> <b>leave</b>
 
 The factory configuration provides three hierarchical user group levels by
 default: **guest ⊂ operator ⊂ admin**.  These levels work out-of-the-box
-with sensible permissions - operators can configure the system immediately,
-while sensitive items (passwords, cryptographic keys) remain protected.
+with sensible permissions - operators can configure the network
+immediately, while sensitive items (passwords, cryptographic keys)
+remain protected.  A user that is not in any group can only read.
 
 The default levels provide different access to system resources and
 configuration:
@@ -83,10 +84,12 @@ configuration:
   restart the system, and modify all configuration including network
   settings, routing, and firewall rules.
 
-- **Operator**: Configuration access - can modify most system settings
-  including network interfaces, routing, firewall, hostname, and more.
-  *Cannot access* password hashes, cryptographic keys, or perform
-  sensitive operations (factory reset, software upgrade).
+- **Operator**: Network configuration access - can modify network
+  interfaces, routing, firewall, DHCP server, LLDP, hostname, contact,
+  location, and time zone, and restart the system.  *Cannot* manage
+  users, read password hashes or cryptographic keys, change other
+  system settings, or perform sensitive operations (factory reset,
+  software upgrade).
 
 - **Guest**: Read-only access - can view operational state and
   configuration but cannot modify anything or execute operations.
@@ -112,8 +115,8 @@ command:
 <pre class="cli"><code>admin@example:/> <b>show nacm</b>
 enabled              : yes
 default read access  : permit
-default write access : permit
-default exec access  : permit
+default write access : deny
+default exec access  : deny
 denied operations    : 0
 denied data writes   : 0
 denied notifications : 0
@@ -152,7 +155,7 @@ members          : jacky
 read permission  : restricted
 write permission : restricted
 exec permission  : restricted
-applicable rules : 4
+applicable rules : 29
 ──────────────────────────────────────────────────────────────────────
 <span class="title">permit-system-rpcs</span>
   action     : permit
@@ -161,25 +164,12 @@ applicable rules : 4
   comment    : Operators can reboot, shutdown, and set system time.
 
 ──────────────────────────────────────────────────────────────────────
-<span class="title">deny-password-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : /ietf-system:system/authentication/user/password
-  comment    : No user except admins can access password hashes.
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-keystore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-keystore
-  comment    : No user except admins can access cryptographic keys.
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-truststore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-truststore
-  comment    : No user except admins can access trust store.
+<span class="title">permit-interfaces</span>
+  action     : permit
+  operations : create update delete
+  target     : /ietf-interfaces:interfaces
+  comment    : Operators can configure interfaces.
+...
 </code></pre>
 
 For user details:
@@ -282,26 +272,29 @@ and shell access configured for each user:
 - **Operator**: `clish` — CLI-only access without UNIX system exposure
 - **Guest**: `false` — no shell access
 
-| Feature                | Admin | Operator | Guest     |
-|------------------------|-------|----------|-----------|
-| Network interfaces     | ✓     | ✓        | Read only |
-| Routing (FRR)          | ✓     | ✓        | Read only |
-| Firewall rules         | ✓     | ✓        | Read only |
-| VLANs/bridges          | ✓     | ✓        | Read only |
-| Containers             | ✓     | ✓        | Read only |
-| Hostname/system config | ✓     | ✓        | Read only |
-| CLI/SSH access         | ✓     | ✓        | ✗         |
-| System restart         | ✓     | ✓        | ✗         |
-| Set date/time          | ✓     | ✓        | ✗         |
-| System reboot          | ✓     | ✓        | ✗         |
-| System shutdown        | ✓     | ✓        | ✗         |
-| User management        | ✓     | ✗        | Read only |
-| Keystore (certs/keys)  | ✓     | ✗        | ✗         |
-| Truststore             | ✓     | ✗        | ✗         |
-| Read passwords/secrets | ✓     | ✗        | ✗         |
-| NACM rules             | ✓     | ✗        | ✗         |
-| Factory reset          | ✓     | ✗        | ✗         |
-| Software upgrade       | ✓     | ✗        | ✗         |
+| Feature                                | Admin | Operator  | Guest     |
+|----------------------------------------|-------|-----------|-----------|
+| Network interfaces                     | ✓     | ✓         | Read only |
+| Routing (FRR)                          | ✓     | ✓         | Read only |
+| Firewall rules                         | ✓     | ✓         | Read only |
+| VLANs/bridges                          | ✓     | ✓         | Read only |
+| DHCP server, LLDP                      | ✓     | ✓         | Read only |
+| Hostname, contact, location, time zone | ✓     | ✓         | Read only |
+| Other system config                    | ✓     | Read only | Read only |
+| Containers                             | ✓     | Read only | Read only |
+| CLI/SSH access                         | ✓     | ✓         | ✗         |
+| System restart                         | ✓     | ✓         | ✗         |
+| Set date/time                          | ✓     | ✓         | ✗         |
+| System reboot                          | ✓     | ✓         | ✗         |
+| System shutdown                        | ✓     | ✓         | ✗         |
+| User management                        | ✓     | ✗         | Read only |
+| Keystore (certs/keys)                  | ✓     | ✗         | ✗         |
+| Truststore                             | ✓     | ✗         | ✗         |
+| Read passwords/secrets                 | ✓     | ✗         | ✗         |
+| NACM rules                             | ✓     | ✗         | ✗         |
+| Factory reset                          | ✓     | ✗         | ✗         |
+| Software upgrade                       | ✓     | ✗         | ✗         |
+| Firewall lockdown                      | ✓     | ✗         | ✗         |
 
 ### Security Aspects
 
@@ -325,10 +318,18 @@ tooling, which can be very useful for debugging, but please use with
 care -- the system is designed to be managed through the CLI and
 NETCONF, not directly via shell commands.
 
-**Operator users** use the permit-by-default NACM model (`write-default:
-"permit"`), which means they can configure most system settings without
-explicit permit rules. This design is "future proof" - when new features
-are added, operators can immediately use them.
+The factory defaults deny writes and operations (`write-default:
+"deny"`, `exec-default: "deny"`), so a user can only change what a rule
+for one of its groups permits.  A new feature is admin-only until a
+rule gives it to another group.
+
+**Operator users** have permit rules for writing the network
+configuration: interfaces, routing, firewall, DHCP server, LLDP, and
+the hostname, contact, location, and time zone.  They may also restart
+and shut down the system, set the time, clear the DHCP server
+statistics, manage the dynamic entries of firewall address sets, and
+use the NETCONF operations for changing and saving configuration.
+Firewall lockdown is left to admins, it cuts all remote access.
 
 The following are explicitly denied to operators through global NACM rules:
 
@@ -344,9 +345,12 @@ Operators are automatically added to the UNIX `operator` and `frrvty`
 groups, granting them `sudo` privileges for network operations and FRR
 access.
 
-**Guest users** have read-only NACM access through an explicit deny rule
-that blocks all write and exec operations (`create update delete exec`),
-while `read-default: "permit"` allows viewing configuration and state.
+**Guest users** have read-only NACM access: the defaults deny writes and
+operations, and an explicit deny rule blocks all write and exec
+operations (`create update delete exec`) also if the defaults are
+changed.  Only the read-only operations, like `show bridge fdb`, are
+permitted to them, before that rule.  `read-default: "permit"` allows
+viewing configuration and state.
 Guests receive no special UNIX group memberships. The shell setting
 determines whether guests can access the CLI (`clish`) or are restricted
 from shell access entirely (`false`).
