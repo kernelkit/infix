@@ -1190,7 +1190,7 @@
   <span class="md-ellipsis">
     
   
-    Wireless LAN (WiFi)
+    Wireless LAN (Wi-Fi)
   
 
     
@@ -2828,8 +2828,8 @@ be marked <code>infix,trusted</code>:</p>
 <h2 id="vpd-file-on-the-aux-partition">VPD File on the Aux Partition<a class="headerlink" href="#vpd-file-on-the-aux-partition" title="Permanent link">¶</a></h2>
 <p>Boards without a VPD EEPROM, such as single board computers, boot with
 a random MAC address on every port and the vendor's default address on
-every WiFi radio.  Two such boards of the same model cannot even talk
-to each other over WiFi, since both radios claim the same address.</p>
+every Wi-Fi radio.  Two such boards of the same model cannot even talk
+to each other over Wi-Fi, since both radios claim the same address.</p>
 <p>Such a board can be given an identity by storing an ONIE TLV as
 <code>/mnt/aux/vpd.bin</code>.  The boot loader hands the file to the system,
 which reads it like any other VPD.  The <code>onieprom</code> tool encodes the
@@ -2841,9 +2841,9 @@ JSON form described <a href="#json-encoding">below</a>:</p>
 random addresses on the next boot.  A VPD read this way is never
 trusted, so it can only provide identity, never the factory password.
 The ports get their addresses from its base MAC address, each with a
-fixed offset given by the device tree, and WiFi interfaces derive
+fixed offset given by the device tree, and Wi-Fi interfaces derive
 theirs from the base MAC as described in
-<a href="../wifi/#multi-ssid-configuration">WiFi</a>.</p>
+<a href="../wifi/#multi-ssid-configuration">Wi-Fi</a>.</p>
 <p>This is currently supported on the Banana Pi BPI-R3 family, the Banana
 Pi BPI-R4 family, and the Acer Connect Vero W6m.</p>
 <h2 id="product-vpd">Product VPD<a class="headerlink" href="#product-vpd" title="Permanent link">¶</a></h2>

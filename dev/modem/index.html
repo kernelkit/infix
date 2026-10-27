@@ -1192,7 +1192,7 @@
   <span class="md-ellipsis">
     
   
-    Wireless LAN (WiFi)
+    Wireless LAN (Wi-Fi)
   
 
     
@@ -3184,7 +3184,7 @@ over NETCONF or RESTCONF the class and type must be set explicitly.</p>
 </div>
 <h2 id="multi-bearer-multiple-apns">Multi-Bearer (Multiple APNs)<a class="headerlink" href="#multi-bearer-multiple-apns" title="Permanent link">¶</a></h2>
 <p>Multiple wwan interfaces can reference the same modem component, each
-with a different APN.  Same idea as multi-SSID on a WiFi radio: one
+with a different APN.  Same idea as multi-SSID on a Wi-Fi radio: one
 hardware modem, several independent data connections.</p>
 <p>Configure <code>wwan0</code> and <code>wwan1</code> both pointing to <code>modem0</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>edit interface wwan0 wwan
@@ -3296,7 +3296,7 @@ seconds for the wwan interface to appear before proceeding.  For most
 modems it is ready in 2-5 seconds.  If the modem has not appeared
 within the timeout, a dummy placeholder interface is created so the
 rest of the configuration can be applied, and a reboot is required
-once the hardware is available, same as for WiFi radios.  Set
+once the hardware is available, same as for Wi-Fi radios.  Set
 <code>probe-timeout 0</code> to disable waiting entirely.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -3324,7 +3324,7 @@ the hardware is unlocked.</p>
   (e.g. <code>internet</code>, <code>data.vodafone.com</code>, <code>web.tele2.se</code>)</li>
 <li><code>route-preference</code>: Administrative distance for the default route
   (default: <code>200</code>).  Higher value = lower priority.  The default of 200
-  places cellular behind wired Ethernet (distance 5) and WiFi, so
+  places cellular behind wired Ethernet (distance 5) and Wi-Fi, so
   cellular acts as a failover when the wired link is up</li>
 <li><code>roaming</code>: Allow data when roaming on a foreign network
   (default: <code>false</code>)</li>
@@ -3439,7 +3439,7 @@ out-octets          : 31456
 <code>not-inserted</code> or <code>pin-required</code> to match.</p>
 <h2 id="cellular-failover">Cellular Failover<a class="headerlink" href="#cellular-failover" title="Permanent link">¶</a></h2>
 <p>The default <code>route-preference</code> (200) is deliberately higher than the
-distances used by wired Ethernet (udhcpc default: 5) and WiFi.  When a
+distances used by wired Ethernet (udhcpc default: 5) and Wi-Fi.  When a
 wired link is up it takes precedence automatically; cellular becomes
 the active path only if higher-priority routes are withdrawn.</p>
 <p>The route preference is the administrative distance of the route, shown
@@ -3453,7 +3453,7 @@ metric of the route in the kernel routing table:</p>
 
 <p>A default route via the bearer is always installed when the bearer
 connects.  To adjust the failover priority between two cellular modems,
-or to prefer cellular over WiFi, set <code>route-preference</code> explicitly:</p>
+or to prefer cellular over Wi-Fi, set <code>route-preference</code> explicitly:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface wwan0 wwan bearer</b>
 admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>set route-preference 100</b>
 admin@example:/config/interface/wwan0/wwan/bearer/&gt; <b>leave</b>

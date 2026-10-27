@@ -1190,7 +1190,7 @@
   <span class="md-ellipsis">
     
   
-    Wireless LAN (WiFi)
+    Wireless LAN (Wi-Fi)
   
 
     
@@ -1815,10 +1815,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#wifi-pre-shared-keys" class="md-nav__link">
+  <a href="#wi-fi-pre-shared-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WiFi Pre-Shared Keys
+        Wi-Fi Pre-Shared Keys
       
     </span>
   </a>
@@ -2758,10 +2758,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#wifi-pre-shared-keys" class="md-nav__link">
+  <a href="#wi-fi-pre-shared-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WiFi Pre-Shared Keys
+        Wi-Fi Pre-Shared Keys
       
     </span>
   </a>
@@ -2917,7 +2917,7 @@
 <p>The Infix keystore is a centralized storage system for cryptographic keys
 used throughout the system.  It is based on the IETF standards <a href="https://datatracker.ietf.org/doc/html/rfc9641">RFC 9641</a>
 (Keystore) and <a href="https://datatracker.ietf.org/doc/html/rfc9640">RFC 9640</a> (Cryptographic Types), with Infix extensions
-for WiFi and WireGuard key formats.</p>
+for Wi-Fi and WireGuard key formats.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">¶</a></h2>
 <p>The keystore supports two types of cryptographic keys:</p>
 <ol>
@@ -2932,7 +2932,7 @@ for WiFi and WireGuard key formats.</p>
 <li>
 <p><strong>Symmetric Keys</strong> — shared secrets used for:</p>
 <ul>
-<li>WiFi authentication (WPA2/WPA3 pre-shared keys)</li>
+<li>Wi-Fi authentication (WPA2/WPA3 pre-shared keys)</li>
 <li>WireGuard VPN pre-shared keys</li>
 </ul>
 </li>
@@ -2976,7 +2976,7 @@ managed via CLI, NETCONF, or RESTCONF.</p>
 <tbody>
 <tr>
 <td><code>passphrase-key-format</code></td>
-<td>Human-readable passphrases (WiFi, PPPoE)</td>
+<td>Human-readable passphrases (Wi-Fi, PPPoE)</td>
 </tr>
 <tr>
 <td><code>octet-string-key-format</code></td>
@@ -3047,8 +3047,8 @@ examples.</p>
 <h2 id="symmetric-keys">Symmetric Keys<a class="headerlink" href="#symmetric-keys" title="Permanent link">¶</a></h2>
 <p>Symmetric keys are shared secrets where the same key must be configured on
 all systems that need to communicate.</p>
-<h3 id="wifi-pre-shared-keys">WiFi Pre-Shared Keys<a class="headerlink" href="#wifi-pre-shared-keys" title="Permanent link">¶</a></h3>
-<p>WiFi networks secured with WPA2 or WPA3 use pre-shared keys stored as
+<h3 id="wi-fi-pre-shared-keys">Wi-Fi Pre-Shared Keys<a class="headerlink" href="#wi-fi-pre-shared-keys" title="Permanent link">¶</a></h3>
+<p>Wi-Fi networks secured with WPA2 or WPA3 use pre-shared keys stored as
 symmetric keys in the keystore with <code>passphrase-key-format</code>.  The
 passphrase must be 8-63 printable ASCII characters.</p>
 <p>Since symmetric keys are stored as binary (base64-encoded), the CLI
@@ -3058,7 +3058,7 @@ Passphrase: ************
 Retype passphrase: ************
 </code></pre>
 
-<p>See <a href="../wifi/">WiFi</a> for complete configuration examples.</p>
+<p>See <a href="../wifi/">Wi-Fi</a> for complete configuration examples.</p>
 <h3 id="wireguard-pre-shared-keys">WireGuard Pre-Shared Keys<a class="headerlink" href="#wireguard-pre-shared-keys" title="Permanent link">¶</a></h3>
 <p>WireGuard supports optional pre-shared keys (PSK) that add a layer of
 symmetric encryption alongside Curve25519.  PSKs use the standard IETF
@@ -3075,7 +3075,7 @@ cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
 <p>See <a href="../vpn-wireguard/">WireGuard VPN</a> for PSK generation and usage examples.</p>
 <h2 id="viewing-keys">Viewing Keys<a class="headerlink" href="#viewing-keys" title="Permanent link">¶</a></h2>
 <p>The <code>show keystore</code> command in admin-exec mode gives an overview of all
-keys in the keystore.  Passphrases (WiFi passwords) are decoded and shown
+keys in the keystore.  Passphrases (Wi-Fi passwords) are decoded and shown
 in cleartext, while binary keys (WireGuard PSKs) are shown as base64:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show keystore</b>
 ────────────────────────────────────────────────────────────────────────
@@ -3132,7 +3132,7 @@ admin@example:/config/&gt; <b>leave</b>
 
 <div class="admonition warning">
 <p class="admonition-title">Caution</p>
-<p>Deleting a key that is referenced by a service (SSH, WireGuard, WiFi) will
+<p>Deleting a key that is referenced by a service (SSH, WireGuard, Wi-Fi) will
 cause that service to fail.  Verify the key is not in use before deletion.</p>
 </div>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">¶</a></h2>
@@ -3146,14 +3146,14 @@ as sensitive and protected accordingly.</p>
 <p>Symmetric key values are stored as binary (base64-encoded).  The system
 validates them based on their declared format:</p>
 <ul>
-<li><code>passphrase-key-format</code>:  Used by WiFi, must decode to 8-63 ASCII characters</li>
+<li><code>passphrase-key-format</code>:  Used by Wi-Fi, must decode to 8-63 ASCII characters</li>
 <li><code>octet-string-key-format</code>: Used by Wireguard, must decode to exactly 32 bytes (256 bits)</li>
 </ul>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
 <ul>
 <li><a href="https://datatracker.ietf.org/doc/html/rfc9641">RFC 9641 - A YANG Data Model for a Keystore</a></li>
 <li><a href="https://datatracker.ietf.org/doc/html/rfc9640">RFC 9640 - YANG Data Types and Groupings for Cryptography</a></li>
-<li><a href="../wifi/">WiFi Documentation</a></li>
+<li><a href="../wifi/">Wi-Fi Documentation</a></li>
 <li><a href="../vpn-wireguard/">WireGuard VPN Documentation</a></li>
 <li><a href="../management/">SSH Management</a></li>
 <li><a href="../nacm/">NACM Access Control</a></li>
