@@ -43,6 +43,7 @@ RUN apk add --no-cache \
     qemu-img \
     qemu-system-x86_64 \
     ruby-mustache \
+    setpriv \
     skopeo \
     socat \
     squashfs-tools \
@@ -79,14 +80,18 @@ COPY docker/qemu-ifup /etc
 # Needed to let qeneth find mustache(1)
 ENV PATH="${PATH}:/usr/lib/ruby/gems/3.2.0/bin"
 
+# Tests run as this user, see entrypoint.sh
+RUN adduser -D -u 1000 infamy && adduser infamy wireshark
+ENV HOME=/home/infamy
+
 # Install all python packages used by the tests
-COPY docker/init-venv.sh /root
-COPY docker/pip-requirements.txt /root
+COPY docker/init-venv.sh /home/infamy
+COPY docker/pip-requirements.txt /home/infamy
 
 # Add bootstrap YANG models, the rest will be downloaded from the device
-ADD docker/yang /root/yang
+ADD docker/yang /home/infamy/yang
 
-RUN ~/init-venv.sh ~/pip-requirements.txt
+RUN ~/init-venv.sh ~/pip-requirements.txt && chown -R infamy:infamy /home/infamy
 
 # Download container images for upgrade testing
 COPY case/containers/upgrade/download.sh /tmp/download.sh
