@@ -3430,7 +3430,7 @@ system can report it.</p>
 <div class="highlight"><pre><span></span><code>make yangerd-rebuild statd-rebuild all
 </code></pre></div>
 <p>The Go unit tests run on the host, from <code>src/yangerd</code>:</p>
-<div class="highlight"><pre><span></span><code>go test -mod=vendor ./...
+<div class="highlight"><pre><span></span><code>go test ./...
 </code></pre></div>
 <p>On a DUT, <code>yangerctl</code> shows what yangerd has, without sysrepo in
 between:</p>
