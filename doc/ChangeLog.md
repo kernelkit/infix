@@ -172,6 +172,10 @@ All notable changes to the project are documented in this file.
   transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
   fixed boot-time queue setup, see [QoS][]
 - Add a per-port egress rate limit to the new [QoS][] subsystem
+- QoS profiles: the classification and traffic class settings of a port
+  can be defined once by name under `system qos profile` and referenced
+  from any number of ports, so ports in the same role stay identical and
+  a change applies to all of them, see [QoS][]
 - Transmission selection uses the `ets` scheduler on every
   port, so drivers that offload it take the class algorithms and weights
   into the switch fabric, not only the priority to class map
