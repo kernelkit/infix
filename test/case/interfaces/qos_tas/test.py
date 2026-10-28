@@ -34,23 +34,16 @@ def gates(port, entries, enabled=True):
     }
 
 
-def config(port, table, egress=None):
+def config(port, table, qos=None):
     iface = {"name": port, "enabled": True,
              "ieee802-dot1dc-sched-if:gate-parameter-table": table}
-    if egress:
-        iface["infix-interfaces:qos"] = {"egress": egress}
+    if qos:
+        iface["infix-interfaces:qos"] = qos
     return {"ietf-interfaces": {"interfaces": {"interface": [iface]}}}
 
 
 def must_reject(target, cfg, what, reason):
-    try:
-        target.put_config_dicts(cfg)
-    except Exception as err:
-        text = getattr(getattr(err, "response", None), "text", None) or str(err)
-        assert reason in text, f"{what} rejected for another reason:\n{text}"
-        print(f"Rejected as expected: {reason}")
-        return
-    raise AssertionError(f"{what} was accepted")
+    qos.must_reject(what, lambda: target.put_config_dicts(cfg), reason)
 
 
 def oper_table(target, port):
@@ -82,7 +75,7 @@ with infamy.Test() as test:
 
     with test.step("Reject a gate control list together with a weighted class"):
         must_reject(target, config(port, gates(port, entries),
-                                   {"traffic-class": [{"id": 0, "algorithm": ETS, "bandwidth": 100}]}),
+                                   {"egress": {"traffic-class": [{"id": 0, "algorithm": ETS, "bandwidth": 100}]}}),
                     "gates with a weighted class", "cannot be gated")
 
     with test.step("Reject an empty gate control list"):
