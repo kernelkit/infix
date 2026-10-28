@@ -239,10 +239,12 @@ func (c *Client) PutDatastore(ctx context.Context, datastore string, body json.R
 	return c.writeJSON(ctx, http.MethodPut, "/ds/ietf-datastores:"+datastore, body)
 }
 
-// CopyDatastore copies the full contents of src into dst.
-// Mirrors the Infamy test framework's copy() operation.
+// CopyDatastore copies the full contents of src into dst.  The read
+// trims defaults: a candidate carries empty non-presence containers
+// left by earlier edits, and written back they would stand in for a
+// choice case the config no longer has.
 func (c *Client) CopyDatastore(ctx context.Context, src, dst string) error {
-	data, err := c.GetDatastore(ctx, src)
+	data, err := c.GetRaw(ctx, "/ds/ietf-datastores:"+src+"?with-defaults=trim")
 	if err != nil {
 		return fmt.Errorf("copy datastore: read %s: %w", src, err)
 	}

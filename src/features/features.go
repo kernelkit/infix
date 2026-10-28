@@ -36,6 +36,9 @@ const (
 	GPS        = "gps"
 	Modem      = "modem"
 	Routing    = "routing"
+	QoS        = "qos"
+	TSN        = "tsn"
+	RateLimit  = "rate-limit"
 )
 
 // Optionals is the table of optional parts.  Extend here, both the
@@ -47,6 +50,9 @@ var Optionals = []Optional{
 	{Name: Modem, Module: "infix-hardware", Feature: "modem"},
 	// The routing protocol modules are installed only with FRR.
 	{Name: Routing, Module: "ietf-ospf"},
+	{Name: QoS, Module: "infix-qos"},
+	{Name: TSN, Module: "infix-tsn"},
+	{Name: RateLimit, Module: "infix-interfaces", Feature: "rate-limit"},
 }
 
 // Set is the installed modules and their enabled features.
