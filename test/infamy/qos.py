@@ -232,7 +232,7 @@ def slow_port(port, until):
             "interfaces": {
                 "interface": [{
                     "name": port.name,
-                    "infix-interfaces:qos": {"egress": {"rate-limit": {"rate": 10_000_000}}}
+                    "infix-interfaces:qos": {"rate-limit": {"rate": 10_000_000}}
                 }]
             }
         }})
@@ -376,3 +376,19 @@ def run_flows(talker, listener, dst, flows):
               f"{lost} lost ({f.result['lost_percent']:.1f}%)")
 
     return total
+
+
+def must_reject(what, func, *reasons):
+    """func must fail its commit, and the error must name one of the reasons
+
+    With no reasons any error will do; a rejected delete over RESTCONF
+    carries no message, so the test checks the effect instead."""
+    try:
+        func()
+    except Exception as err:
+        text = getattr(getattr(err, "response", None), "text", None) or str(err)
+        matched = [reason for reason in reasons if reason in text]
+        assert matched or not reasons, f"{what} rejected for another reason:\n{text}"
+        print(f"Rejected as expected: {matched[0] if matched else what}")
+        return
+    raise AssertionError(f"{what} was accepted")

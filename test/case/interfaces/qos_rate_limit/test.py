@@ -62,9 +62,7 @@ with infamy.Test() as test:
                         "name": td1,
                         "enabled": True,
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
-                        "infix-interfaces:qos": {
-                            "egress": {"rate-limit": {"rate": LIMIT}}
-                        }
+                        "infix-interfaces:qos": {"rate-limit": {"rate": LIMIT}}
                     },
                 ]
             }
