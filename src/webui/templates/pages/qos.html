@@ -1,0 +1,48 @@
+{{define "qos.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">QoS
+    <a href="/configure/qos"
+       hx-get="/configure/qos"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  {{if .Rows}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>QoS profile</th>
+          <th>Traffic classes</th>
+          <th>Rate limit</th>
+          <th>Offload</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+          <td>{{if .Profile}}{{.Profile}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.TrafficClasses}}</td>
+          <td>{{if .RateLimit}}{{.RateLimit}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.Offload}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-muted" style="padding:0.5rem 0.75rem">A port with no profile is configured on its own.  Offload lists the stages the switch fabric runs; the rest run in the kernel.</p>
+  {{else if not .Error}}
+  <p class="empty-message">No ports report QoS state.</p>
+  {{end}}
+</section>
+{{end}}

@@ -31,6 +31,7 @@ untouched.
 | nacm.svg          | users                 |
 | netbrowse.svg     | radar                 |
 | ntp.svg           | clock                 |
+| qos.svg           | sliders-horizontal    |
 | routes.svg        | git-compare-arrows    |
 | routing.svg       | git-compare-arrows    |
 | services.svg      | library-big           |
