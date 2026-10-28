@@ -130,6 +130,10 @@ func (m *DBusMonitor) session(ctx context.Context) error {
 	}
 	defer conn.Close()
 
+	sigCh := make(chan *dbus.Signal, 128)
+	conn.Signal(sigCh)
+	defer conn.RemoveSignal(sigCh)
+
 	if err := m.subscribe(conn); err != nil {
 		return err
 	}
@@ -154,7 +158,7 @@ func (m *DBusMonitor) session(ctx context.Context) error {
 	// and nothing else fills in booted and the slots.
 	m.refreshSoftware()
 
-	return m.processSignals(ctx, conn)
+	return m.processSignals(ctx, conn, sigCh)
 }
 
 func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
@@ -228,11 +232,7 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	return nil
 }
 
-func (m *DBusMonitor) processSignals(ctx context.Context, conn *dbus.Conn) error {
-	sigCh := make(chan *dbus.Signal, 128)
-	conn.Signal(sigCh)
-	defer conn.RemoveSignal(sigCh)
-
+func (m *DBusMonitor) processSignals(ctx context.Context, conn *dbus.Conn, sigCh <-chan *dbus.Signal) error {
 	for {
 		select {
 		case <-ctx.Done():
