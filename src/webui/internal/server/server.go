@@ -264,7 +264,7 @@ func New(
 	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
 	cfgAdv := &handlers.ConfigureAdvancedHandler{Template: cfgAdvTmpl, RC: rc, Schema: schemaCache}
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
-	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc}
+	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc, Schema: schemaCache}
 	cfgQoS := &handlers.ConfigureQoSHandler{Template: cfgQoSTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}

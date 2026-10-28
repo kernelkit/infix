@@ -131,7 +131,7 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		`name="cycle"`, `name="entry_open_1" value="5" checked`, `name="entry_interval_0"`,
 		`id="gate-entry-tpl-e1"`, `data-template="gate-entry-tpl-e1"`, `name="entry_interval___N__"`, `name="maxsdu_5"`,
 		"running 2 entries, cycle 100 µs, change pending",
-		"No class on this port is shaped", `hx-post="/configure/interfaces/e2/gates"`,
+		"No shaped class.", `hx-post="/configure/interfaces/e2/gates"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)

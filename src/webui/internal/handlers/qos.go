@@ -10,11 +10,13 @@ import (
 	"strings"
 
 	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 type QoSHandler struct {
 	Template *template.Template
 	RC       restconf.Fetcher
+	Schema   *schema.Cache
 }
 
 type qosRow struct {
@@ -29,6 +31,7 @@ type qosPageData struct {
 	PageData
 	Error string
 	Rows  []qosRow
+	Desc  map[string]string // column help, from the model
 }
 
 // Overview lists what each port runs: the profile the daemon applied,
@@ -36,6 +39,16 @@ type qosPageData struct {
 // fabric took.  Operational data only.
 func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := qosPageData{PageData: newPageData(w, r, "qos", "QoS")}
+	if h.Schema != nil {
+		mgr := h.Schema.Manager()
+		qos := "/ietf-interfaces:interfaces/interface/infix-interfaces:qos"
+		data.Desc = map[string]string{
+			"profile":    schema.DescriptionOf(mgr, qos+"/profile"),
+			"classes":    schema.DescriptionOf(mgr, qos+"/capabilities/max-traffic-classes"),
+			"rate-limit": schema.DescriptionOf(mgr, qos+"/rate-limit"),
+			"offload":    schema.DescriptionOf(mgr, qos+"/capabilities/offload"),
+		}
+	}
 
 	var raw interfacesWrapper
 	if err := h.RC.Get(r.Context(), "/data/ietf-interfaces:interfaces", &raw); err != nil {

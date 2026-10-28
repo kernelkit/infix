@@ -20,11 +20,12 @@
     <table class="data-table">
       <thead>
         <tr>
+          {{$d := .Desc}}
           <th>Port</th>
-          <th>QoS profile</th>
-          <th>Traffic classes</th>
-          <th>Rate limit</th>
-          <th>Offload</th>
+          <th>QoS profile{{template "field-info" (index $d "profile")}}</th>
+          <th>Traffic classes{{template "field-info" (index $d "classes")}}</th>
+          <th>Rate limit{{template "field-info" (index $d "rate-limit")}}</th>
+          <th>Offload{{template "field-info" (index $d "offload")}}</th>
         </tr>
       </thead>
       <tbody>
@@ -40,7 +41,6 @@
       </tbody>
     </table>
   </div>
-  <p class="text-muted" style="padding:0.5rem 0.75rem">A port with no profile is configured on its own.  Offload lists the stages the switch fabric runs; the rest run in the kernel.</p>
   {{else if not .Error}}
   <p class="empty-message">No ports report QoS state.</p>
   {{end}}

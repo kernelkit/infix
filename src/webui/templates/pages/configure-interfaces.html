@@ -388,10 +388,9 @@
                         <a href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-push-url="true"
                            style="margin-left:0.5rem">Edit profiles</a>
                         {{if .QoSCustom}}
-                        <div class="text-muted" style="margin-top:0.25rem">This port carries its own classification and traffic class settings; edit them under
-                          <a href="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
-                             hx-get="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
-                             hx-target="#content" hx-push-url="true">Advanced</a>.  Picking a profile replaces them.</div>
+                        <a href="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
+                           hx-get="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
+                           hx-target="#content" hx-push-url="true" style="margin-left:0.5rem">Edit the port's own settings</a>
                         {{end}}
                       </td>
                     </tr>
@@ -435,7 +434,7 @@
                   </div>
                 </form>
                 {{else}}
-                <div class="text-muted">No class on this port is shaped.  Set a class to credit-based-shaper in the profile to reserve bandwidth for it.</div>
+                <div class="text-muted">No shaped class.</div>
                 {{end}}
 
                 {{/* ── Gate Control List ────────────────────────────── */}}
