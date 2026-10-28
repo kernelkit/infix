@@ -259,7 +259,7 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 ### Rate Limit
 
 A port can be held below its link speed with one token bucket on the
-whole port, configured under `qos egress rate-limit`.  `rate` is the
+whole port, configured under `qos rate-limit`.  `rate` is the
 sustained rate in bits per second and `burst` how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
@@ -267,9 +267,9 @@ frame.  The bucket sits above the traffic classes: it bounds what the
 port sends in total, and transmission selection decides which class
 gets the bounded rate.
 
-<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/> <b>set rate-limit rate 10000000</b>
-admin@example:/config/interface/…/egress/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/> <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/…/qos/> <b>leave</b>
 </code></pre>
 
 On a port without offload the limit applies to the frames the CPU
@@ -434,6 +434,38 @@ Apply it on ports where reserved streams are expected:
 admin@example:/config/interface/…/traffic-class-table/> <b>set preset ieee-sr</b>
 admin@example:/config/interface/…/traffic-class-table/> <b>leave</b>
 </code></pre>
+
+
+## Profiles
+
+Ports in the same role share their classification and traffic class
+settings, and a switch with many such ports would repeat them per
+port.  A profile holds one port's `ingress` and `egress` settings under
+a name, defined once under `system qos`, and a port references it
+instead of carrying the settings inline:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos profile edge</b>
+admin@example:/config/system/…/edge/> <b>set ingress trust dscp-pcp</b>
+admin@example:/config/system/…/edge/> <b>set egress remark dscp from-priority</b>
+admin@example:/config/system/…/edge/> <b>leave</b>
+admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set interface e3 qos profile edge</b>
+admin@example:/config/> <b>set interface e4 qos profile edge</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+A port holds either a profile reference or inline settings, never
+both: setting one replaces the other.  A profile has no effect until a
+port references it, and a profile that ports still reference cannot be
+deleted.  Changing a profile applies the change on every port that
+references it.  The profile is validated against each port it is
+applied to, so a class table that reaches beyond a port's traffic
+classes is rejected with the port and the profile named.
+
+What stays on the port is what follows the link rather than the role:
+the `rate-limit`, the credit-based shaper reservations and the gate
+control list.  The operational datastore shows the profile a port
+runs under `qos profile`.
 
 
 ## Hardware Offload
