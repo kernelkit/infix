@@ -66,8 +66,9 @@ func (f fakeFetcher) Get(_ context.Context, path string, target any) error {
 	for key := range f.modules {
 		name, rev, _ := strings.Cut(key, "@")
 		ms.ModulesState.Module = append(ms.ModulesState.Module, struct {
-			Name      string `json:"name"`
-			Revision  string `json:"revision"`
+			Name      string   `json:"name"`
+			Revision  string   `json:"revision"`
+			Feature   []string `json:"feature"`
 			Submodule []struct {
 				Name     string `json:"name"`
 				Revision string `json:"revision"`

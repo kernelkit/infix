@@ -162,7 +162,7 @@
 {{/* A select filled from the schema; while the schema loads the current
      value is the only option, so a save keeps it. */}}
 {{define "schema-select"}}
-<select class="cfg-input cfg-input-sm" name="{{.Name}}">
+<select class="cfg-input" name="{{.Name}}" style="width:auto;max-width:100%">
   {{$sel := .Selected}}
   {{range .Options}}
   <option value="{{.Value}}" title="{{.Description}}" {{if eq $sel .Value}}selected{{end}}>{{.Label}}</option>
