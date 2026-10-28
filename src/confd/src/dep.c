@@ -29,6 +29,7 @@
 #define COMP     "/ietf-hardware:hardware/component"
 #define HOSTNAME "/ietf-system:system/hostname"
 #define COUNTRY  "/ietf-hardware:hardware/infix-hardware:wifi/country-code"
+#define QOSPROF  "/ietf-system:system/infix-qos:qos-profile"
 
 struct dep_ref {
 	const char *changed;	/* Nodes in the diff */
@@ -68,6 +69,12 @@ static bool is_changed_bridge_port(struct dep *d, struct lyd_node *iface)
 			       lydx_get_cattr(iface, "name")) != NULL;
 }
 
+/* A description edit changes nothing on the ports */
+static bool is_qos_settings(struct dep *d, struct lyd_node *profile)
+{
+	return lydx_get_child(profile, "ingress") || lydx_get_child(profile, "egress");
+}
+
 static const struct dep_ref dep_refs[] = {
 	{ SYMKEY,   NULL,                   WIFI "/station/security/secret[.='%s']" },
 	{ SYMKEY,   NULL,                   WIFI "/access-point/security/secret[.='%s']" },
@@ -87,6 +94,8 @@ static const struct dep_ref dep_refs[] = {
 
 	{ IFACE,    is_changed_bridge_port, VLAN "/tagged[.='%s']" },
 	{ IFACE,    is_changed_bridge_port, VLAN "/untagged[.='%s']" },
+
+	{ QOSPROF,  is_qos_settings,        IFACE "/infix-interfaces:qos/profile[.='%s']" },
 
 	{ HOSTNAME, NULL,                   "/infix-services:mdns/enabled[.='true']" },
 	{ HOSTNAME, NULL,                   IFACE "/ietf-ip:ipv4/infix-dhcp-client:dhcp" },
