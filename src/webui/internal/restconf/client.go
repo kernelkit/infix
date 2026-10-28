@@ -90,11 +90,15 @@ func checkPath(path string) error {
 
 // doRequest builds and executes an HTTP request against the RESTCONF server,
 // setting Accept and Basic Auth from the context. The caller must close Body.
-func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Response, error) {
+func (c *Client) doRequest(ctx context.Context, method, path string, query url.Values) (*http.Response, error) {
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, nil)
+	u := c.baseURL + path
+	if q := query.Encode(); q != "" {
+		u += "?" + q
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +125,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Resp
 // 8040 examples may suggest.  Wrapper structs must model the nesting from
 // the top-level container down, or the decode silently matches nothing.
 func (c *Client) Get(ctx context.Context, path string, target any) error {
-	resp, err := c.doRequest(ctx, http.MethodGet, path)
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return err
 	}
@@ -148,7 +152,7 @@ func (c *Client) Get(ctx context.Context, path string, target any) error {
 // Post sends a POST request to a RESTCONF RPC endpoint.
 // Used for operations like system-restart that return no body.
 func (c *Client) Post(ctx context.Context, path string) error {
-	resp, err := c.doRequest(ctx, http.MethodPost, path)
+	resp, err := c.doRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return err
 	}
@@ -222,7 +226,7 @@ func (c *Client) Patch(ctx context.Context, path string, body any) error {
 
 // Delete removes a RESTCONF config resource.
 func (c *Client) Delete(ctx context.Context, path string) error {
-	resp, err := c.doRequest(ctx, http.MethodDelete, path)
+	resp, err := c.doRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}
@@ -244,10 +248,13 @@ func (c *Client) PutDatastore(ctx context.Context, datastore string, body json.R
 	return c.writeJSON(ctx, http.MethodPut, "/ds/ietf-datastores:"+datastore, body)
 }
 
-// CopyDatastore copies the full contents of src into dst.
-// Mirrors the Infamy test framework's copy() operation.
+// CopyDatastore copies the full contents of src into dst.  The read
+// trims defaults: a candidate carries empty non-presence containers
+// left by earlier edits, and written back they would stand in for a
+// choice case the config no longer has.
 func (c *Client) CopyDatastore(ctx context.Context, src, dst string) error {
-	data, err := c.GetDatastore(ctx, src)
+	data, err := c.getRawQuery(ctx, "/ds/ietf-datastores:"+src,
+		url.Values{"with-defaults": {"trim"}})
 	if err != nil {
 		return fmt.Errorf("copy datastore: read %s: %w", src, err)
 	}
@@ -332,7 +339,13 @@ func (c *Client) GetYANG(ctx context.Context, name, revision string) ([]byte, er
 
 // GetRaw fetches a RESTCONF resource and returns the raw JSON bytes.
 func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, error) {
-	resp, err := c.doRequest(ctx, http.MethodGet, path)
+	return c.getRawQuery(ctx, path, nil)
+}
+
+// getRawQuery is GetRaw with RFC 8040 query parameters, such as
+// with-defaults, which the path itself must not carry.
+func (c *Client) getRawQuery(ctx context.Context, path string, query url.Values) ([]byte, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, path, query)
 	if err != nil {
 		return nil, err
 	}

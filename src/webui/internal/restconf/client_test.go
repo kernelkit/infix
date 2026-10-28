@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -38,6 +39,33 @@ func TestCheckPath(t *testing.T) {
 		if err := checkPath(p); err == nil {
 			t.Errorf("%q accepted", p)
 		}
+	}
+}
+
+// The copy reads the source with defaults trimmed.  The query must reach
+// the server as a query: checkPath refuses one inside the path.
+func TestCopyDatastoreTrimsDefaults(t *testing.T) {
+	var got []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = append(got, r.Method+" "+r.URL.RequestURI())
+		if r.Method == http.MethodGet {
+			w.Write([]byte(`{"ietf-system:system":{}}`))
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL+"/restconf", false)
+	if err := c.CopyDatastore(context.Background(), "running", "candidate"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"GET /restconf/ds/ietf-datastores:running?with-defaults=trim",
+		"PUT /restconf/ds/ietf-datastores:candidate",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("requests %v, want %v", got, want)
 	}
 }
 

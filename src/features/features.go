@@ -37,6 +37,9 @@ const (
 	Modem      = "modem"
 	Routing    = "routing"
 	Alarms     = "alarms"
+	QoS        = "qos"
+	TSN        = "tsn"
+	RateLimit  = "rate-limit"
 )
 
 // Optionals is the table of optional parts.  Extend here, both the
@@ -50,6 +53,9 @@ var Optionals = []Optional{
 	{Name: Routing, Module: "ietf-ospf"},
 	// Alarms arrived in a later release, older devices have no list.
 	{Name: Alarms, Module: "ietf-alarms"},
+	{Name: QoS, Module: "infix-qos"},
+	{Name: TSN, Module: "infix-tsn"},
+	{Name: RateLimit, Module: "infix-interfaces", Feature: "rate-limit"},
 }
 
 // Set is the installed modules and their enabled features.
