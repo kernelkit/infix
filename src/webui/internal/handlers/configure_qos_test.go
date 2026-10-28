@@ -47,7 +47,7 @@ func repoSchema(t *testing.T, rc restconf.Fetcher) *schema.Cache {
 
 func TestConfigureQoSOverview(t *testing.T) {
 	mock := testutil.NewMockFetcher()
-	mock.SetResponse(candidatePath+qosProfilesPath, map[string]any{
+	mock.SetResponse(candidatePath+qosProfilesPath, map[string]any{"ietf-system:system": map[string]any{
 		"infix-qos:qos": map[string]any{"profile": []map[string]any{
 			{"name": "edge", "description": "cameras",
 				"ingress": map[string]any{"trust": "dscp-pcp"},
@@ -59,7 +59,7 @@ func TestConfigureQoSOverview(t *testing.T) {
 				"traffic-class-table": map[string]any{"preset": "ieee-sr"},
 				"traffic-class":       []map[string]any{{"id": 7, "algorithm": qosAlgoCBS}, {"id": 6, "algorithm": qosAlgoCBS}},
 			}},
-		}},
+		}}},
 	})
 	mock.SetResponse(candidatePath+"/ietf-interfaces:interfaces", map[string]any{
 		"ietf-interfaces:interfaces": map[string]any{"interface": []map[string]any{

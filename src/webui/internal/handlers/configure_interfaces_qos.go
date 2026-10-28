@@ -14,10 +14,9 @@ import (
 	"infix/webui/internal/restconf"
 )
 
-// SaveQoS sets the port's profile reference and rate limit.  The profile
-// leaf and the inline settings are a YANG choice, so writing the leaf
-// drops the inline settings and deleting it leaves the port on the
-// defaults.  An empty rate removes the limit.
+// SaveQoS sets the port's profile reference and rate limit.  An empty
+// profile leaves the port on its own settings or the defaults, an empty
+// rate removes the limit.
 // POST /configure/interfaces/{name}/qos
 func (h *ConfigureInterfacesHandler) SaveQoS(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -28,13 +27,21 @@ func (h *ConfigureInterfacesHandler) SaveQoS(w http.ResponseWriter, r *http.Requ
 	qosPath := ifacePath(name) + "/infix-interfaces:qos"
 	ctx := r.Context()
 
+	// The profile leaf and the inline containers are the two cases of a
+	// choice; a merge into the candidate keeps both, so the other case
+	// is removed first.
 	qos := map[string]any{}
+	drop := []string{"/profile"}
 	if profile := strings.TrimSpace(r.FormValue("profile")); profile != "" {
 		qos["profile"] = profile
-	} else if err := h.RC.Delete(ctx, qosPath+"/profile"); err != nil && !restconf.IsNotFound(err) {
-		log.Printf("configure interfaces %s qos profile delete: %v", name, err)
-		renderSaveError(w, err)
-		return
+		drop = []string{"/ingress", "/egress"}
+	}
+	for _, node := range drop {
+		if err := h.RC.Delete(ctx, qosPath+node); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("configure interfaces %s qos delete %s: %v", name, node, err)
+			renderSaveError(w, err)
+			return
+		}
 	}
 
 	if rate := strings.TrimSpace(r.FormValue("rate")); rate != "" {

@@ -35,8 +35,12 @@ type ConfigureQoSHandler struct {
 
 // RESTCONF JSON for /ietf-system:system/infix-qos:qos.
 
+// qosSystemWrapper is the shape a GET of the qos container returns: the
+// datastore wraps it in the system container it augments.
 type qosSystemWrapper struct {
-	QoS qosSystemJSON `json:"infix-qos:qos"`
+	System struct {
+		QoS qosSystemJSON `json:"infix-qos:qos"`
+	} `json:"ietf-system:system"`
 }
 
 type qosSystemJSON struct {
@@ -277,8 +281,9 @@ func fetchQoSProfiles(ctx context.Context, rc restconf.Fetcher) ([]qosProfileJSO
 	if err != nil && !restconf.IsNotFound(err) {
 		return nil, err
 	}
-	sort.Slice(raw.QoS.Profile, func(i, j int) bool { return raw.QoS.Profile[i].Name < raw.QoS.Profile[j].Name })
-	return raw.QoS.Profile, nil
+	profiles := raw.System.QoS.Profile
+	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
+	return profiles, nil
 }
 
 // qosProfilePorts maps profile name to the interfaces that reference it.
@@ -465,6 +470,17 @@ func (h *ConfigureQoSHandler) SaveProfile(w http.ResponseWriter, r *http.Request
 // DELETE /configure/qos/profiles/{name}
 func (h *ConfigureQoSHandler) DeleteProfile(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+	// The leafref is checked at commit; refusing here names the ports.
+	var ifaces interfacesWrapper
+	if err := h.RC.Get(r.Context(), candidatePath+"/ietf-interfaces:interfaces", &ifaces); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure qos delete profile %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	if ports := qosProfilePorts(ifaces.Interfaces.Interface)[name]; len(ports) > 0 {
+		renderSaveError(w, fmt.Errorf("profile %s is used by %s, take the ports off it first", name, strings.Join(ports, ", ")))
+		return
+	}
 	if err := h.RC.Delete(r.Context(), qosProfileCandPath(name)); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("configure qos delete profile %q: %v", name, err)
 		renderSaveError(w, err)
