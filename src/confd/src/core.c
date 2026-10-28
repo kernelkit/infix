@@ -799,6 +799,53 @@ static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct 
 	return result;
 }
 
+/* A QoS profile change is applied on every interface that references it. */
+static confd_dependency_t dep_qos_profiles(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct ly_set *profiles, *ifaces;
+	uint32_t i, j;
+
+	profiles = lydx_find_xpathf(*diff, "/ietf-system:system/infix-qos:qos/profile");
+	if (!profiles)
+		return CONFD_DEP_DONE;
+
+	for (i = 0; i < profiles->count; i++) {
+		const char *name = lydx_get_cattr(profiles->dnodes[i], "name");
+
+		/* A description edit changes nothing on the ports */
+		if (!lydx_get_child(profiles->dnodes[i], "ingress") &&
+		    !lydx_get_child(profiles->dnodes[i], "egress"))
+			continue;
+
+		ifaces = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface"
+					  "[infix-interfaces:qos/profile='%s']", name);
+		if (!ifaces)
+			continue;
+
+		for (j = 0; j < ifaces->count; j++) {
+			const char *ifname = lydx_get_cattr(ifaces->dnodes[j], "name");
+			char xpath[256];
+
+			snprintf(xpath, sizeof(xpath), "/ietf-interfaces:interfaces/interface[name='%s']"
+				 "/infix-interfaces:qos/profile", ifname);
+			result = add_dependencies(diff, xpath, name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add %s to diff for QoS profile %s", ifname, name);
+				ly_set_free(ifaces, NULL);
+				ly_set_free(profiles, NULL);
+				return result;
+			}
+			if (result == CONFD_DEP_ADDED)
+				DEBUG("Added %s to diff for QoS profile %s", ifname, name);
+		}
+		ly_set_free(ifaces, NULL);
+	}
+	ly_set_free(profiles, NULL);
+
+	return result;
+}
+
 static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result;
@@ -828,6 +875,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_schedule_consumers(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_qos_profiles(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 
