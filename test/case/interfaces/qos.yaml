@@ -23,6 +23,9 @@
 - name: QoS Rate Limit
   case: qos_rate_limit/test.py
 
+- name: QoS Profiles
+  case: qos_profile/test.py
+
 - name: QoS Strict Priority
   case: qos_strict_priority/test.py
 

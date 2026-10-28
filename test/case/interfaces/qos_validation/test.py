@@ -15,6 +15,7 @@ The last two apply on ports with fewer than eight classes.  A valid
 layout must still be accepted afterwards.
 """
 import infamy
+import infamy.qos as qos
 
 STRICT = "ieee802-dot1q-types:strict-priority"
 ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
@@ -34,16 +35,7 @@ def egress_config(port, egress):
 
 
 def must_reject(target, port, egress, what, *reasons):
-    """The commit must fail, and the error must name one of the reasons"""
-    try:
-        target.put_config_dicts(egress_config(port, egress))
-    except Exception as err:
-        text = getattr(getattr(err, "response", None), "text", None) or str(err)
-        matched = [reason for reason in reasons if reason in text]
-        assert matched, f"{what} rejected for another reason:\n{text}"
-        print(f"Rejected as expected: {matched[0]}")
-        return
-    raise AssertionError(f"{what} was accepted")
+    qos.must_reject(what, lambda: target.put_config_dicts(egress_config(port, egress)), *reasons)
 
 
 with infamy.Test() as test:
