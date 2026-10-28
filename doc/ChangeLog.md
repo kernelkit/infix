@@ -12,6 +12,9 @@ All notable changes to the project are documented in this file.
   - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
     products built with the TSN feature, configured and read back with
     the IEEE 802.1DC interface modules
+  - QoS profiles, the classification and traffic class settings of a
+    port defined once under `system qos profile` and shared by any
+    number of ports
 
 [v26.10.0][] - 2026-10-30
 -------------------------
