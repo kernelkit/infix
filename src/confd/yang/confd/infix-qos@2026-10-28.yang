@@ -1,0 +1,462 @@
+module infix-qos {
+  yang-version 1.1;
+  namespace "urn:infix:qos:ns:yang:1.0";
+  prefix qos;
+
+  import ietf-system {
+    prefix sys;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ieee802-dot1q-types {
+    prefix dot1q-types;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Quality of Service profiles and the pipeline groupings.
+
+     Ingress classification to a (priority, drop precedence) pair,
+     priority-to-traffic-class binding, per-traffic-class transmission
+     selection, and egress remarking, as groupings.  infix-if-qos
+     instantiates them on every interface, inline or by reference to a
+     profile; the profile list instantiates them once per name.  IEEE
+     802.1Q names and types are used where 802.1Q defines the concept.";
+
+  revision 2026-10-28 {
+    description "Initial revision: the pipeline groupings and the
+                 qos-profile list under /system.";
+    reference "internal";
+  }
+
+  /*
+   * Features
+   */
+
+  /*
+   * Reachable from Linux on the PCP paths only.  The DCB APP PCP
+   * selector indexes 16 values, PCP plus DEI, so dcb app pcp-prio keys
+   * on both; on egress dcb rewr prio-pcp takes the nd/de suffix.  The
+   * DSCP paths carry no second dimension.
+   */
+  feature drop-eligible {
+    description "Platform carries a drop-eligible bit with the priority.
+
+       This is the drop_eligible parameter of IEEE 802.1Q-2022 6.9.3.";
+    reference "6.9.3 of IEEE Std 802.1Q-2022";
+  }
+
+  /*
+   * No Linux interface assigns more than the one bit.  Platforms with
+   * more levels program them through a platform-specific path.
+   */
+  feature drop-precedence {
+    description "Platform carries more than two drop precedence levels.
+
+       The levels hold through classification, policing and queue
+       admission.  Supersedes drop-eligible.  A platform advertising
+       this need not advertise drop-eligible as well; one advertising
+       only drop-eligible accepts values 0 and 1.";
+  }
+
+  /*
+   * Typedefs and groupings
+   */
+
+  typedef trust-order-type {
+    type enumeration {
+      enum none {
+        description "No field, every frame gets the port default.";
+      }
+      enum pcp {
+        description "PCP of tagged frames, then the port default.";
+      }
+      enum dscp {
+        description "DSCP of IP frames, then the port default.";
+      }
+      enum dscp-pcp {
+        description "DSCP, then PCP, then the port default.";
+      }
+      enum pcp-dscp {
+        description "PCP, then DSCP, then the port default.";
+      }
+    }
+    description "Header fields to classify by, in order of preference.";
+  }
+
+  typedef drop-precedence-type {
+    type uint8 {
+      range "0..3";
+    }
+    description "Drop precedence assigned during ingress classification.
+
+       0 is least likely to be discarded under congestion.  IEEE
+       802.1Q-2022 models a single drop_eligible bit (6.9.3); this is its
+       generalisation.  Platforms with two levels use 0 and 1.  Read
+       max-drop-precedence-levels for the depth implemented; values at or
+       above it are rejected.";
+    reference "6.9.3 of IEEE Std 802.1Q-2022";
+  }
+
+  grouping classified-result {
+    description "What ingress classification yields for one frame.";
+
+    leaf priority {
+      type dot1q-types:priority-type;
+      mandatory true;
+      description "Internal priority, 0 to 7.";
+      reference "6.9.3 of IEEE Std 802.1Q-2022";
+    }
+
+    leaf drop-precedence {
+      if-feature "drop-eligible or drop-precedence";
+      type drop-precedence-type;
+      description "Drop precedence.
+
+         Platforms with fewer levels than the value given reject it; see
+         max-drop-precedence-levels.";
+    }
+  }
+
+  grouping ingress {
+    description "Ingress classification, as a container.";
+
+    container ingress {
+      description "Classification of received frames.";
+
+      /* Applied as dcb apptrust, which has the same ordering semantics. */
+      leaf trust {
+        type trust-order-type;
+        default "pcp";
+        description "Header fields to classify by, in order of preference.
+
+           The first field the frame carries decides its priority, and
+           a frame with none of them falls back to default-priority and
+           default-drop-precedence.  The default is pcp, the 802.1Q
+           bridge behaviour: the tag decides, and untagged frames get
+           the port defaults.  Edge
+           ports that classify on behalf of the network set dscp or
+           dscp-pcp.  none turns classification off, assigning
+           default-priority and default-drop-precedence to every
+           frame.  Platforms constrain the available orders; see
+           supported-trust-order.";
+      }
+
+      /* Applied as dcb app default-prio. */
+      leaf default-priority {
+        type dot1q-types:priority-type;
+        default 0;
+        description "Priority of frames no trusted field classifies.";
+        reference "12.6.2 of IEEE Std 802.1Q-2022";
+      }
+
+      leaf default-drop-precedence {
+        if-feature "drop-eligible or drop-precedence";
+        type drop-precedence-type;
+        default 0;
+        description "Drop precedence of frames no trusted field classifies.";
+      }
+
+      /*
+       * Applied as dcb app pcp-prio, which carries the priority
+       * only; drop precedence needs a platform-specific path.
+       */
+      container pcp-map {
+        description "PCP and DEI to priority and drop precedence.
+
+           The PCP and DEI are read from the outermost VLAN tag.";
+        reference "6.9.3 of IEEE Std 802.1Q-2022";
+
+        choice mode {
+          default "preset";
+          description "A named preset, or an explicit table.";
+
+          case preset {
+            leaf preset {
+              type enumeration {
+                enum ieee {
+                  description "PCP n maps to priority n.
+
+                     The 8P0D default of IEEE 802.1Q-2022 Table 6-3.";
+                }
+              }
+              default "ieee";
+              description "Named PCP mapping.";
+              reference "6.9.3, Table 6-3 of IEEE Std 802.1Q-2022";
+            }
+          }
+
+          case custom {
+            list entry {
+              key "pcp dei";
+              description "Explicit per-(PCP, DEI) mapping.
+
+                 Omitted combinations fall back to default-priority and
+                 default-drop-precedence.";
+
+              leaf pcp {
+                type dot1q-types:priority-type;
+                description "PCP value in the tag.";
+              }
+
+              leaf dei {
+                type boolean;
+                description "DEI bit in the tag.";
+              }
+
+              uses classified-result;
+            }
+          }
+        }
+      }
+
+      /* Applied as dcb app dscp-prio. */
+      container dscp-map {
+        description "DSCP to priority and drop precedence.";
+
+        choice mode {
+          default "preset";
+          description "A named preset, or an explicit table.";
+
+          case preset {
+            leaf preset {
+              type enumeration {
+                enum msb {
+                  description "Top three DSCP bits select the priority.
+
+                     Priority 0 to 7, the class selector part.";
+                }
+                enum ietf {
+                  description "RFC 4594 per-hop-behaviour groups.
+
+                     Unmapped codepoints fall back to
+                     default-priority.";
+                }
+              }
+              default "ietf";
+              description "Named DSCP mapping.";
+              reference "RFC 4594";
+            }
+          }
+
+          case custom {
+            list entry {
+              key "dscp";
+              description "Explicit per-codepoint mapping.";
+
+              leaf dscp {
+                type inet:dscp;
+                description "Codepoint in the IP header.";
+              }
+
+              leaf trusted {
+                type boolean;
+                default true;
+                description "Whether this codepoint is trusted.
+
+                   When false the codepoint is ignored and the frame
+                   falls through to the next trusted field, or to
+                   default-priority.";
+              }
+
+              uses classified-result;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping egress {
+    description "Traffic classes, selection and remarking, as a container.";
+
+    container egress {
+      description "Traffic-class binding, selection, and remarking.";
+
+      /*
+       * Values at or above the active class count are rejected by
+       * the daemon.
+       */
+      container traffic-class-table {
+        description "Priority to traffic-class binding.
+
+           Node names follow the IEEE 802.1Q-2022 traffic class
+           table.";
+        reference "12.6.3, 8.6.6 of IEEE Std 802.1Q-2022";
+
+        choice mode {
+          default "preset";
+          description "A named preset, or an explicit table.";
+
+          case preset {
+            leaf preset {
+              type enumeration {
+                enum ieee {
+                  description "The ordinary bridge mapping.
+
+                     This is IEEE 802.1Q-2022 Table 8-5, the column for
+                     the port's traffic class count,
+                     capabilities/max-traffic-classes.";
+                }
+                enum ieee-sr {
+                  description "The TSN mapping, SR classes on top.
+
+                     IEEE 802.1Q-2022 Table 34-1: SR classes A and B on
+                     the two highest traffic classes.  The map only;
+                     transmission selection algorithms are set per
+                     traffic class.";
+                }
+              }
+              default "ieee";
+              description "Named priority to traffic-class mapping.";
+              reference "Table 8-5, Table 34-1 of IEEE Std
+                 802.1Q-2022";
+            }
+          }
+
+          case custom {
+            /*
+             * A priority left unset falls back to the ieee preset's
+             * value for it.
+             */
+            leaf priority0 { type dot1q-types:traffic-class-type; }
+            leaf priority1 { type dot1q-types:traffic-class-type; }
+            leaf priority2 { type dot1q-types:traffic-class-type; }
+            leaf priority3 { type dot1q-types:traffic-class-type; }
+            leaf priority4 { type dot1q-types:traffic-class-type; }
+            leaf priority5 { type dot1q-types:traffic-class-type; }
+            leaf priority6 { type dot1q-types:traffic-class-type; }
+            leaf priority7 { type dot1q-types:traffic-class-type; }
+          }
+        }
+      }
+
+      list traffic-class {
+        key "id";
+        max-elements 8;
+        description "Per-traffic-class transmission selection.
+
+           A class with no entry runs strict-priority.";
+
+        /* Ids at or above capabilities/max-traffic-classes are
+         * rejected by the daemon.
+         */
+        leaf id {
+          type dot1q-types:traffic-class-type;
+          description "Traffic class index.";
+        }
+
+        leaf algorithm {
+          type identityref {
+            base dot1q-types:transmission-selection-algorithm;
+          }
+          default "dot1q-types:strict-priority";
+          description "Transmission selection algorithm.
+
+             Selecting credit-based-shaper turns the shaper on; its
+             parameters live in ieee802-dot1dc-cbsa-if, per port.";
+          reference "12.20.2, 8.6.8 and Table 8-6 of IEEE Std
+             802.1Q-2022";
+        }
+
+        /* Applied as a tc ets quantum: the share times a full-size frame. */
+        leaf bandwidth {
+          when "derived-from-or-self(../algorithm, 'dot1q-types:"
+             + "enhanced-transmission-selection')";
+          type uint8 {
+            range "1..100";
+          }
+          units "percent";
+          must "sum(../../traffic-class[derived-from-or-self("
+             + "algorithm, 'dot1q-types:enhanced-transmission-"
+             + "selection')]/bandwidth) = 100" {
+            error-message "The ETS shares on a port must sum to 100.";
+          }
+          mandatory true;
+          description "Share of the bandwidth for this class, in percent.
+
+             TCBandwidth: the percentage of the bandwidth left by the
+             strict and CBS classes that this class is assigned.  The
+             ETS classes on a port sum to 100.";
+          reference "37.2, 37.3 of IEEE Std 802.1Q-2022";
+        }
+      }
+
+      /* Applied as dcb rewr, whose prio-pcp values carry the DEI bit. */
+      container remark {
+        description "Rewrite of PCP, DEI and DSCP on transmit.
+
+           The new values derive from the internal priority and drop
+           precedence.";
+        reference "12.6.2.9, 6.9.3 of IEEE Std 802.1Q-2022";
+
+        leaf pcp {
+          type enumeration {
+            enum none {
+              description "No rewrite is configured.
+
+                 The PCP a tagged frame leaves with is what the
+                 forwarding path gives it: the received PCP where
+                 frames pass the kernel, the frame's priority on a
+                 switch fabric that encodes it as 6.9.3 of IEEE Std
+                 802.1Q-2022 specifies.";
+            }
+            enum from-priority {
+              description "PCP and DEI from the classification result.";
+            }
+          }
+          default "none";
+          description "PCP and DEI rewrite on transmit.";
+        }
+
+        leaf dscp {
+          type enumeration {
+            enum none {
+              description "Leave DSCP untouched.";
+            }
+            enum from-priority {
+              description "DSCP from the classification result.";
+            }
+          }
+          default "none";
+          description "DSCP rewrite on transmit.";
+        }
+      }
+    }
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  /* No qos container: the CLI hides a container holding only a list. */
+  augment "/sys:system" {
+    description "QoS profiles.";
+
+    list qos-profile {
+      key "name";
+      description "Named QoS settings that interfaces can share.
+
+         A profile holds classification and egress settings, and has
+         no effect until an interface references it.  Rate limits,
+         reservations and gate schedules stay per port.";
+
+      leaf name {
+        type string {
+          length "1..64";
+          pattern "[A-Za-z0-9_][A-Za-z0-9_.-]*";
+        }
+        description "Profile name, referenced by interfaces.";
+      }
+
+      leaf description {
+        type string;
+        description "Free-text description of the profile.";
+      }
+
+      uses ingress;
+      uses egress;
+    }
+  }
+}
