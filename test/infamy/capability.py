@@ -34,6 +34,16 @@ class Port:
         return qos.get("capabilities", {})
 
     @property
+    def profile(self):
+        """The QoS profile the port runs, None when it runs its own settings"""
+        data = self.target.get_data(
+            f"/ietf-interfaces:interfaces/interface[name='{self.name}']"
+            "/infix-interfaces:qos")
+        iface = next(iter(data["interfaces"]["interface"]), {}) if data else {}
+        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
+        return qos.get("profile")
+
+    @property
     def switched(self):
         """Whether the port belongs to a switch fabric.
 

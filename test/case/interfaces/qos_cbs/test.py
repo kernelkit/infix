@@ -52,14 +52,7 @@ def config(td0, td1, top, egress, cbsa):
 
 
 def must_reject(target, cfg, what, reason):
-    try:
-        target.put_config_dicts(cfg)
-    except Exception as err:
-        text = getattr(getattr(err, "response", None), "text", None) or str(err)
-        assert reason in text, f"{what} rejected for another reason:\n{text}"
-        print(f"Rejected as expected: {reason}")
-        return
-    raise AssertionError(f"{what} was accepted")
+    qos.must_reject(what, lambda: target.put_config_dicts(cfg), reason)
 
 
 def oper_idle_slope(target, port, tc):

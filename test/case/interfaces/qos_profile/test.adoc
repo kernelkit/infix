@@ -1,0 +1,28 @@
+=== QoS Profiles
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_profile]
+
+==== Description
+
+Define one QoS profile and put two ports on it: both must run the
+profile's traffic class table and report the profile as the one in
+use.  Change the profile's table and both ports must follow without
+being touched themselves.  Deleting a profile that ports still use must
+be rejected.  A port taken off the profile runs its own settings, and
+once no port uses the profile it can be deleted.
+
+==== Topology
+
+image::topology.svg[QoS Profiles topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Define profile 'sr' with the ieee-sr traffic class table and put both ports on it
+. Verify both ports report profile 'sr' in use
+. Change the profile to the ieee table, both ports must follow
+. Reject deleting the profile while ports use it
+. Take the first port off the profile and give it inline settings
+. Take the second port off the profile and delete it
+
+
