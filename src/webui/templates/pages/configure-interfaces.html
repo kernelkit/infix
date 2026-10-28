@@ -369,6 +369,142 @@
               {{end}}{{/* TypeSlug ethernet */}}
 
 
+              {{/* ── QoS ─────────────────────────────────────────────── */}}
+              {{if and $.Capabilities ($.Capabilities.Has "qos") (ne .TypeSlug "loopback")}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">QoS</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/qos" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Profile{{template "field-info" (index $d "qos-profile")}}</th>
+                      <td>
+                        <select class="cfg-input cfg-input-sm" name="profile">
+                          <option value="" {{if not .QoSProfile}}selected{{end}}>{{if .QoSCustom}}None (custom){{else}}None (defaults){{end}}</option>
+                          {{$sel := .QoSProfile}}
+                          {{range $.QoSProfiles}}
+                          <option value="{{.}}" {{if eq . $sel}}selected{{end}}>{{.}}</option>
+                          {{end}}
+                        </select>
+                        <a href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-push-url="true"
+                           style="margin-left:0.5rem">Edit profiles</a>
+                        {{if .QoSCustom}}
+                        <div class="text-muted" style="margin-top:0.25rem">This port carries its own classification and traffic class settings; edit them under
+                          <a href="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
+                             hx-get="/configure/tree?path=/ietf-interfaces:interfaces/interface={{.Name}}/infix-interfaces:qos"
+                             hx-target="#content" hx-push-url="true">Advanced</a>.  Picking a profile replaces them.</div>
+                        {{end}}
+                      </td>
+                    </tr>
+                    {{if $.Capabilities.Has "rate-limit"}}
+                    <tr>
+                      <th>Rate limit (Mbit/s){{template "field-info" (index $d "qos-rate-limit")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="rate"
+                                 value="{{.QoSRateMbit}}" placeholder="no limit" style="width:8rem"></td>
+                    </tr>
+                    {{end}}
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save QoS</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+
+                {{if $.Capabilities.Has "tsn"}}
+                {{/* ── Credit-Based Shaper ──────────────────────────── */}}
+                <h4 class="cfg-section-head" style="margin-top:1rem">Credit-Based Shaper{{template "field-info" (index $d "tsn-cbs")}}</h4>
+                {{if .QoSShapers}}
+                <form hx-post="/configure/interfaces/{{.Name}}/cbs" hx-swap="none">
+                  <table class="info-table" style="max-width:34rem">
+                    <tr>
+                      <th>Class</th>
+                      <th>Idle slope (Mbit/s){{template "field-info" (index $d "tsn-idle")}}</th>
+                      <th>In effect{{template "field-info" (index $d "tsn-in-effect")}}</th>
+                    </tr>
+                    {{range .QoSShapers}}
+                    <tr>
+                      <td>Class {{.ID}}{{if not .Shaped}} <span class="text-muted">(not shaped)</span>{{end}}</td>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="idle_{{.ID}}"
+                                 value="{{.IdleMbit}}" placeholder="—" style="width:7rem"></td>
+                      <td class="text-muted">{{if .OperMbit}}{{.OperMbit}}{{else}}—{{end}}</td>
+                    </tr>
+                    {{end}}
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save shaper</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+                {{else}}
+                <div class="text-muted">No class on this port is shaped.  Set a class to credit-based-shaper in the profile to reserve bandwidth for it.</div>
+                {{end}}
+
+                {{/* ── Gate Control List ────────────────────────────── */}}
+                {{$g := .QoSGates}}
+                <h4 class="cfg-section-head" style="margin-top:1rem">Gate Control List{{template "field-info" (index $d "tsn-gates")}}</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/gates" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Enabled</th>
+                      <td><label class="diag-check"><input type="checkbox" name="gate_enabled" value="on" {{if $g.Enabled}}checked{{end}}> Run the list on this port</label>
+                        <span class="text-muted" style="margin-left:0.75rem">{{$g.Running}}</span></td>
+                    </tr>
+                    <tr>
+                      <th>Cycle (µs){{template "field-info" (index $d "tsn-cycle")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="cycle"
+                                 value="{{$g.CycleUs}}" placeholder="sum of entries" style="width:9rem"></td>
+                    </tr>
+                    <tr>
+                      <th>Base time{{template "field-info" (index $d "tsn-base")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="1" name="base_s"
+                                 value="{{$g.BaseSeconds}}" aria-label="Base time seconds" style="width:9rem"> <span class="text-muted">s</span>
+                        <input class="cfg-input cfg-input-sm" type="number" min="0" max="999999999" step="1" name="base_ns"
+                               value="{{$g.BaseNs}}" aria-label="Base time nanoseconds" style="width:9rem;margin-left:0.5rem"> <span class="text-muted">ns</span></td>
+                    </tr>
+                  </table>
+                  <table class="info-table" style="margin-top:0.5rem">
+                    <thead>
+                      <tr><th>Entry</th><th>Open gates, class {{index $g.Classes 0}} to 0</th><th>Interval (µs)</th><th></th></tr>
+                    </thead>
+                    <tbody id="gate-entries-{{.Name}}">
+                      {{range $g.Entries}}
+                      {{template "gate-entry" (dict "N" .Index "Classes" $g.Classes "Open" .Open "Interval" .IntervalUs)}}
+                      {{end}}
+                    </tbody>
+                  </table>
+                  <template id="gate-entry-tpl-{{.Name}}">
+                    {{template "gate-entry" (dict "N" "__N__" "Classes" $g.Classes "Open" $g.MaxSDU "Interval" "")}}
+                  </template>
+                  <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}">+ Add entry</button>
+
+                  <details style="margin-top:0.5rem">
+                    <summary>Advanced</summary>
+                    <table class="info-table">
+                      <tr>
+                        <th>Cycle time extension (µs){{template "field-info" (index $d "tsn-extension")}}</th>
+                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="extension"
+                                   value="{{$g.ExtensionUs}}" placeholder="0" style="width:9rem"></td>
+                      </tr>
+                      <tr>
+                        <th>Max SDU per class (bytes){{template "field-info" (index $d "tsn-max-sdu")}}</th>
+                        <td>
+                          {{range $c := $g.Classes}}
+                          <label class="diag-check" style="margin-right:0.6rem">{{$c}} <input class="cfg-input cfg-input-sm" type="number" min="1" step="1" name="maxsdu_{{$c}}"
+                                 value="{{index $g.MaxSDU $c}}" placeholder="no limit" aria-label="Max SDU class {{$c}}" style="width:5.5rem"></label>
+                          {{end}}
+                        </td>
+                      </tr>
+                    </table>
+                  </details>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save schedule</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+                {{end}}{{/* tsn */}}
+              </div>
+              {{end}}{{/* qos */}}
+
+
               {{/* ── WiFi interface editor ───────────────────────────── */}}
               {{/* Radio + PSK pickers mirror the Add-Interface wizard
                    pattern: each picker has Edit / + New buttons that
@@ -1991,4 +2127,21 @@
                   <span class="cfg-save-status{{if .SavedMsg}} saved{{end}}" data-cfg-status-for="{{$ipv6Form}}">{{if .SavedMsg}}✓ {{.SavedMsg}}{{end}}</span>
                 </div>
 </div>
+{{end}}
+
+{{/* One gate control entry.  Open is indexed by class; the <template>
+     copy passes the row number as __N__ for app.js to fill in. */}}
+{{define "gate-entry"}}
+<tr>
+  <td data-row-index>{{.N}}</td>
+  <td>
+    {{$open := .Open}}
+    {{range $c := .Classes}}
+    <label class="diag-check"><input type="checkbox" name="entry_open_{{$.N}}" value="{{$c}}" {{if index $open $c}}checked{{end}}>{{$c}}</label>
+    {{end}}
+  </td>
+  <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="entry_interval_{{.N}}"
+             value="{{.Interval}}" aria-label="Entry {{.N}} interval" style="width:6rem"></td>
+  <td><button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">{{template "icon-trash"}}</button></td>
+</tr>
 {{end}}

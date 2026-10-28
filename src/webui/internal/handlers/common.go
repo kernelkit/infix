@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"infix/webui/internal/schema"
 	"net/http"
 	"strings"
 
@@ -83,8 +84,10 @@ func newPageData(w http.ResponseWriter, r *http.Request, page, leaf string) Page
 // parsed with. Exported so tests can parse the real template the same way.
 func IfaceTemplateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"shortPMD": ShortenPMD,
-		"add":      func(a, b int) int { return a + b },
+		"shortPMD":    ShortenPMD,
+		"add":         func(a, b int) int { return a + b },
+		"join":        strings.Join,
+		"stripPrefix": schema.StripModulePrefix,
 		"deref": func(v any) any {
 			switch p := v.(type) {
 			case *bool:
