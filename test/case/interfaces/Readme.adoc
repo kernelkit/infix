@@ -142,14 +142,6 @@ include::qos_profile/Readme.adoc[]
 
 <<<
 
-include::qos_cbs/Readme.adoc[]
-
-<<<
-
-include::qos_tas/Readme.adoc[]
-
-<<<
-
 include::verify_all_interface_types/Readme.adoc[]
 
 <<<
