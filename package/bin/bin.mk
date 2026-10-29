@@ -10,7 +10,7 @@ BIN_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/bin
 BIN_LICENSE = BSD-3-Clause
 BIN_LICENSE_FILES = LICENSE
 BIN_REDISTRIBUTE = NO
-BIN_DEPENDENCIES = sysrepo libite \
+BIN_DEPENDENCIES = sysrepo libite libsrx \
 	host-python3 python3 host-python-pypa-build host-python-installer \
 	host-python-poetry-core
 BIN_CONF_OPTS = --disable-silent-rules

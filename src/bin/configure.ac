@@ -16,6 +16,7 @@ AC_PROG_LN_S
 PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([libite],  [libite  >= 2.5.0])
+PKG_CHECK_MODULES([libsrx],  [libsrx  >= 1.0.0])
 PKG_CHECK_MODULES([libyang], [libyang >= 3.0.0])
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 

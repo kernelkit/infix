@@ -59,6 +59,8 @@ int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, const char
 		  const char *node, const char *fmt, ...)
 	__attribute__ ((format (printf, 5, 6)));
 
+size_t lydx_redact(struct lyd_node **first);
+
 static inline int lydx_is_enabled(struct lyd_node *parent, const char *name)
 {
 	const char *attr;
