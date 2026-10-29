@@ -1,14 +1,17 @@
 // Package qosmonitor keeps the QoS operational state of each port: its
-// capabilities and the shapers in effect.  The qdisc tree is read
-// through a long-lived `tc` batch process and the DCB tables over
-// rtnetlink, one query per port, on rtnetlink TC and DCB events and on
-// link events.
+// capabilities, the profile it runs, the rate limit and the shapers in
+// effect.  The qdisc tree is read through a long-lived `tc` batch
+// process and the DCB tables over rtnetlink, one query per port, on
+// rtnetlink TC and DCB events, on link events and on changes to
+// /run/qos, where confd records the profile a port runs.
 package qosmonitor
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,11 +22,14 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
+	"github.com/kernelkit/infix/src/yangerd/internal/inotify"
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
 )
 
 const (
+	runDir = "/run/qos"
+
 	// settle lets a confd script finish its tc and dcb commands, each
 	// one an event, before the ports are read.
 	settle = 50 * time.Millisecond
@@ -59,7 +65,8 @@ type Monitor struct {
 	log      *slog.Logger
 	onUpdate func(map[string]json.RawMessage)
 
-	sysfs string
+	runDir string
+	sysfs  string
 
 	mu         sync.Mutex
 	pending    map[string]struct{}
@@ -78,6 +85,7 @@ func New(tc Querier, dcb DCBReader, mods Modules, links func() json.RawMessage, 
 		mods:       mods,
 		links:      links,
 		log:        log,
+		runDir:     runDir,
 		sysfs:      "/sys/class/net",
 		pending:    make(map[string]struct{}),
 		pendingIdx: make(map[int]struct{}),
@@ -128,10 +136,15 @@ func (m *Monitor) Sweep() {
 	m.wake()
 }
 
-// Run serves refresh requests and the rtnetlink stream until ctx is
-// cancelled.
+// Run serves refresh requests, the rtnetlink stream and the profile
+// directory until ctx is cancelled.
 func (m *Monitor) Run(ctx context.Context) error {
 	go m.worker(ctx)
+	go func() {
+		if err := backoff.Retry(ctx, m.log, "qos profiles", m.watchProfiles); err != nil && ctx.Err() == nil {
+			m.log.Warn("qosmonitor: profiles not watched", "err", err)
+		}
+	}()
 	return backoff.Retry(ctx, m.log, "qosmonitor", m.receive)
 }
 
@@ -197,6 +210,46 @@ func dcbIfname(data []byte) string {
 		}
 	}
 	return ""
+}
+
+// watchProfiles refreshes a port when confd records, changes or removes
+// its profile.  confd creates the directory on first use, so it is made
+// here to have something to watch.
+func (m *Monitor) watchProfiles(ctx context.Context) error {
+	if err := os.MkdirAll(m.runDir, 0o755); err != nil {
+		return err
+	}
+	w, err := inotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("inotify: %w", err)
+	}
+	defer w.Close()
+	if err := w.Add(m.runDir); err != nil {
+		return fmt.Errorf("watch %s: %w", m.runDir, err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ev, ok := <-w.Events:
+			if !ok {
+				return errors.New("watcher closed")
+			}
+			if filepath.Dir(ev.Name) == m.runDir {
+				m.Refresh(filepath.Base(ev.Name))
+			}
+		case err, ok := <-w.Errors:
+			if !ok {
+				return errors.New("watcher error channel closed")
+			}
+			if errors.Is(err, inotify.ErrEventOverflow) {
+				m.Sweep()
+				continue
+			}
+			m.log.Warn("qosmonitor: inotify error", "err", err)
+		}
+	}
 }
 
 func (m *Monitor) worker(ctx context.Context) {
@@ -287,6 +340,9 @@ func (m *Monitor) read(l link) port {
 		if p.App, p.Rewr, err = m.dcb.Tables(l.Name); err != nil {
 			m.log.Debug("qosmonitor: dcb", "ifname", l.Name, "err", err)
 		}
+	}
+	if data, err := os.ReadFile(filepath.Join(m.runDir, l.Name)); err == nil {
+		p.Profile = string(bytes.TrimSpace(data))
 	}
 	return p
 }
