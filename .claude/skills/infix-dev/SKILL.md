@@ -10,7 +10,8 @@ when_to_use: >-
   Building or flashing an Infix image; running `make test` / writing a test case;
   editing src/confd/yang or wiring a YANG model into a daemon; changing confd,
   netd, statd or yangerd; changing src/webui pages, handlers or templates; debugging the
-  QEMU dev build; writing a commit, doc page or ChangeLog entry.
+  QEMU dev build; writing a commit, doc page or ChangeLog entry; committing or
+  pushing changes.
 allowed-tools: Read, Grep, Glob, Bash(make *), Bash(go *), Bash(git submodule *), Bash(git status), Bash(git log:*), Bash(ls *)
 ---
 
