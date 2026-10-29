@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 )
 
 // trustOrders are the orders a driver's dcb apptrust accepts, by driver
@@ -30,6 +32,7 @@ type port struct {
 	App      bool            // PCP or DSCP entries in the DCB app table
 	Rewr     bool            // PCP or DSCP entries in the DCB rewrite table
 	Qdiscs   json.RawMessage // tc qdisc show
+	Profile  string          // the profile confd applied, from /run/qos
 }
 
 type qdisc struct {
@@ -39,6 +42,11 @@ type qdisc struct {
 	Root      bool            `json:"root"`
 	Offloaded bool            `json:"offloaded"`
 	Options   json.RawMessage `json:"options"`
+}
+
+type tbfOpts struct {
+	Rate  json.Number `json:"rate"`
+	Burst json.Number `json:"burst"`
 }
 
 type cbsOpts struct {
@@ -71,6 +79,12 @@ func build(p port, mods Modules) map[string]any {
 	qos := map[string]any{}
 	if caps := capabilities(p, qdiscs); len(caps) > 0 {
 		qos["capabilities"] = caps
+	}
+	if p.Profile != "" {
+		qos["profile"] = p.Profile
+	}
+	if limit := rateLimit(qdiscs); limit != nil {
+		qos["rate-limit"] = limit
 	}
 
 	out := shapers(qdiscs, mods)
@@ -138,6 +152,30 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["offload"] = offload
 	}
 	return caps
+}
+
+// rateLimit is the port rate limit in effect, from a tbf root.  tc gives
+// the rate in bytes per second, the model wants bits.
+func rateLimit(qdiscs []qdisc) map[string]any {
+	for _, q := range qdiscs {
+		if q.Kind != "tbf" || !q.Root {
+			continue
+		}
+		var o tbfOpts
+		if json.Unmarshal(q.Options, &o) != nil {
+			return nil
+		}
+		rate := numconv.Uint64(o.Rate)
+		if rate == 0 {
+			return nil
+		}
+		limit := map[string]any{"rate": strconv.FormatUint(rate*8, 10)}
+		if burst, err := o.Burst.Int64(); err == nil && burst > 0 {
+			limit["burst"] = burst
+		}
+		return limit
+	}
+	return nil
 }
 
 // shapers is the IEEE 802.1DC credit-based and time-aware shaper state

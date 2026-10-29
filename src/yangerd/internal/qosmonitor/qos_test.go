@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -34,17 +36,22 @@ func TestBuildNothing(t *testing.T) {
 func TestBuildSwitchPort(t *testing.T) {
 	p := port{
 		TxQueues: 4,
-		Driver:   "sparx5-switch",
+		Driver:   "mv88e6085",
 		App:      true,
-		Qdiscs:   json.RawMessage(`[{"kind":"ets","handle":"8001:","root":true,"offloaded":true,"options":{"bands":4}}]`),
+		Qdiscs: json.RawMessage(`[
+			{"kind":"tbf","handle":"8001:","root":true,"offloaded":true,"options":{"rate":12500000,"burst":15000}},
+			{"kind":"ets","handle":"8002:","parent":"8001:1","offloaded":true,"options":{"bands":4}}]`),
+		Profile: "edge",
 	}
 	got := buildJSON(t, p, Modules{})
 	want := map[string]any{"infix-interfaces:qos": map[string]any{
 		"capabilities": map[string]any{
 			"max-traffic-classes":   4.0,
-			"supported-trust-order": []any{"pcp", "dscp", "dscp-pcp"},
-			"offload":               []any{"classification", "transmission-selection"},
+			"supported-trust-order": []any{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
+			"offload":               []any{"classification", "rate-limit", "transmission-selection"},
 		},
+		"profile":    "edge",
+		"rate-limit": map[string]any{"rate": "100000000", "burst": 15000.0},
 	}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got  %v\nwant %v", got, want)
@@ -123,9 +130,10 @@ func (f fakeBatch) Query(cmd string) (json.RawMessage, error) {
 func TestDrainOnlyOnChange(t *testing.T) {
 	dir := t.TempDir()
 	tc := fakeBatch{"qdisc show dev if7": `[{"kind":"ets","handle":"1:","root":true,"offloaded":true,"options":{"bands":8}}]`}
-	links := `[{"ifname":"e1","ifindex":7,"num_tx_queues":4}]`
+	links := `[{"ifname":"e1","ifindex":7,"num_tx_queues":8}]`
 	m := New(tc, fakeDCB{}, Modules{}, func() json.RawMessage { return json.RawMessage(links) },
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
+	m.runDir = dir
 	m.sysfs = dir
 
 	var calls []map[string]json.RawMessage
@@ -139,10 +147,17 @@ func TestDrainOnlyOnChange(t *testing.T) {
 		t.Fatalf("want one update for unchanged state, got %v", calls)
 	}
 
+	os.WriteFile(filepath.Join(dir, "e1"), []byte("edge\n"), 0o644)
+	m.Refresh("e1")
+	m.drain()
+	if len(calls) != 2 || string(calls[1]["e1"]) != `{"infix-interfaces:qos":{"capabilities":{"offload":["transmission-selection"]},"profile":"edge"}}` {
+		t.Fatalf("profile not picked up: %v", calls)
+	}
+
 	links = `[]`
 	m.Refresh("e1")
 	m.drain()
-	if got, ok := calls[len(calls)-1]["e1"]; len(calls) != 2 || !ok || got != nil {
+	if got, ok := calls[len(calls)-1]["e1"]; len(calls) != 3 || !ok || got != nil {
 		t.Fatalf("want removal, got %v", calls)
 	}
 }
