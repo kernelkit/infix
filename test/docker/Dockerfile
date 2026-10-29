@@ -104,7 +104,7 @@ RUN ~/init-venv.sh ~/pip-requirements.txt && chown -R infamy:infamy /home/infamy
 
 # Download container images for upgrade testing
 COPY case/containers/upgrade/download.sh /tmp/download.sh
-RUN /tmp/download.sh /srv && rm /tmp/download.sh
+RUN /tmp/download.sh /srv && rm /tmp/download.sh && chown -R infamy:infamy /srv
 
 COPY docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

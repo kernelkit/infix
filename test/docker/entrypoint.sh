@@ -12,7 +12,7 @@ if [ -n "$INFAMY_UID" ]; then
     if [ "$(id -u infamy):$(id -g infamy)" != "$INFAMY_UID:$INFAMY_GID" ]; then
 	sed -i "s/^infamy:x:[0-9]*:[0-9]*:/infamy:x:$INFAMY_UID:$INFAMY_GID:/" /etc/passwd
 	sed -i "s/^infamy:x:[0-9]*:/infamy:x:$INFAMY_GID:/" /etc/group
-	chown -R infamy:infamy /home/infamy
+	chown -R infamy:infamy /home/infamy /srv
     fi
 
     # /dev/kvm keeps its host group, let infamy use it
