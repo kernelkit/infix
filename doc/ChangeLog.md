@@ -6,6 +6,18 @@ All notable changes to the project are documented in this file.
 [v26.10.0][UNRELEASED]
 -------------------------
 
+> [!IMPORTANT]
+> This release includes **breaking changes** for x86_64 systems.  The
+> bootloader and disk layout are new, see [Boot Procedure][boot], so an
+> existing x86_64 installation cannot be upgraded with a bundle:
+>
+> - Back up your `startup-config.cfg`
+> - Reinstall from the new disk image, `infix-x86_64.disk`, or replace
+>   the disk of a virtual machine with `infix-x86_64.qcow2`
+> - Restore your `startup-config.cfg`
+>
+> Other architectures are not affected.
+
 ### Changes
 
 - Upgrade Linux kernel to 6.18.59 (LTS)
@@ -163,6 +175,16 @@ All notable changes to the project are documented in this file.
   learned and static entries, also those a switch learns on its own, with
   the age of each entry and whether it is offloaded to the switch.  The
   CLI can list one VLAN, one port, or one address, see [FDB][fdb]
+- x86_64: GRUB is replaced by Barebox, and the system image is now a
+  signed Discoverable Disk Image (DDI).  With UEFI Secure Boot
+  enabled, the bootloader, kernel and root filesystem are all verified
+  before the system starts.  The system disk uses LVM: the two system
+  images and the persistent storage are volumes on one partition,
+  which is grown to fill the disk on first boot, when the second
+  system image is also created, see [Boot Procedure][boot].  The disk
+  layout is new, so existing x86_64 installations must be reinstalled
+  from the new disk image, `infix-x86_64.disk` or `.qcow2`, they
+  cannot be upgraded with a bundle
 
 ### Fixes
 
@@ -238,6 +260,7 @@ All notable changes to the project are documented in this file.
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
+[boot]: https://www.kernelkit.org/infix/latest/boot/
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
 
 [v26.09.0][] - 2026-09-30

@@ -60,7 +60,7 @@ bootloader's validation procedure, user configuration is kept to a
 minimum.  Two settings are available:
 
 **Boot order**: Since Infix maintains two copies of its software image,
-and as some bootloaders support [netbooting][2], the order in which boot
+and as both bootloaders support [netbooting][2], the order in which boot
 sources are considered can be configured. To select the active
 source, use [RAUC][]:
 
@@ -73,9 +73,13 @@ Where `<slot>` is one of:
 
 | **`<slot>`** | **Source**                |
 |--------------|---------------------------|
-| `rootfs.0`   | Primary partition         |
-| `rootfs.1`   | Secondary partition       |
+| `rootfs.0`   | Primary image             |
+| `rootfs.1`   | Secondary image           |
 | `net.0`      | Netboot (where supported) |
+
+On U-Boot systems the primary and secondary images are stored in disk
+partitions, on Barebox systems they are logical volumes, see [Image
+Formats](#image-formats).
 
 **Debug**: By default, the kernel will only output errors to the
 console during boot. Optionally, this can be altered such that all
@@ -84,17 +88,8 @@ enabled messages are logged.
 On systems using _U-Boot_, this can be enabled by running `fw_setenv
 DEBUG 1`. To restore the default behavior, run `fw_setenv DEBUG`.
 
-On systems running _GRUB_, this can be enabled by running:
-
-```
-root@example:~# grub-editenv /mnt/aux/grub/grubenv set DEBUG=1
-```
-
-To restore the default behavior, run:
-
-```
-root@example:~# grub-editenv /mnt/aux/grub/grubenv unset DEBUG
-```
+On systems using _Barebox_, the kernel command line is part of the
+signed boot entry in the image, so this setting is not available.
 
 ### U-Boot
 
@@ -103,8 +98,8 @@ _integrity_ and _authenticity_ of an Infix image.  As such, it can be
 used as a part of a _Secure Boot_ chain, given that the preceding
 links are able to do the same.
 
-Supports booting Infix from a block device using the [Disk
-Image](#disk-image) layout. Currently, Virtio and MMC disks are
+Supports booting Infix from a block device using the [ITB Disk
+Image](#itb-disk-image) layout. Currently, Virtio and MMC disks are
 supported.
 
 An [FIT Framed Squash Image](#fit-framed-squash-image) can be used to
@@ -115,23 +110,53 @@ Access to U-Boot's shell is disabled to prevent side-loading of
 malicious software.  To configure the active boot partition, refer to
 the [Bootloader Configuration](#configuration) section.
 
-### GRUB
+### Barebox
 
-Used on _x86_64_ based systems.  Neither the _integrity_ nor the
-_authenticity_ of the Infix image is verified.  It is only intended to
-provide a way of booting a [Disk Image](#disk-image), such that a
-standard [System Upgrade](#system-upgrade) can be performed on
-virtualized instances.
+Used on _x86_64_ based systems, where it is started by the system's
+UEFI firmware from the [EFI System Partition](#esp-esp-backup-efi-system-partitions).
+It boots Infix from a [Discoverable Disk Image](#discoverable-disk-image-ddi)
+(DDI), either from one of the logical volumes of the [DDI Disk
+Image](#ddi-disk-image), or over the network.
 
-Access to the GRUB shell is not limited in any way, and the boot
-partition can be selected interactively at boot using the arrow keys. It
-is also possible to permanently configure the default partition from
-Infix using the [Bootloader Configuration](#configuration).
+When UEFI _Secure Boot_ is enabled, Barebox verifies both the
+_integrity_ and _authenticity_ of the Infix image before booting it:
+
+1. The UEFI firmware only starts Barebox if its signature can be
+   validated by a certificate in the firmware's signature database
+   (`db`).
+1. Barebox validates the signature of the DDI's dm-verity root hash
+   against the same database.  The root hash, in turn, protects every
+   block of the root filesystem.
+1. Barebox validates the signature of the Linux kernel, which carries
+   its initramfs, before starting it.
+
+Once Linux is running, the initramfs sets up the dm-verity protected
+root filesystem using the root hash passed on by Barebox, such that
+any modification of the image is detected when the affected blocks
+are read.
+
+With _Secure Boot_ disabled, e.g., in virtualized instances without
+enrolled keys, the same images are booted but none of the signatures
+are required to be valid.
+
+The boot order is managed by Barebox' _bootchooser_, using a set of
+priorities and remaining boot attempts for each target, stored in the
+[`barebox-state`](#barebox-state-bootloader-state) partition.  Each
+boot of an image consumes one attempt, and once Infix has successfully
+loaded its `startup-config` the image is marked as good, which resets
+its attempts to three.  An image that fails to boot three times in a
+row is skipped in favor of the next one in order.  To configure the
+active image, refer to the [Bootloader Configuration](#configuration)
+section.
+
+When netbooting, Barebox uses DHCP to configure the network and TFTP
+to fetch the DDI named in the DHCP bootfile option.  The image is
+booted from RAM, using the same validation as when booting from disk.
 
 ## System Boot
 
-After the system firmware (BIOS or and [boot loader](boot.md) start
-Linux the following happens.  The various failure modes, e.g., missing
+After the system firmware and [boot loader](#bootloader) start Linux
+the following happens.  The various failure modes, e.g., missing
 password in VPD, are detailed later in this section.
 
 ![System boot flowchart](img/fail-secure.svg)
@@ -230,15 +255,36 @@ root@example:~# rauc install <file|url>
 ...
 ```
 
-Where the file or URL points to a [RAUC Upgrade Bundle](#rauc-upgrade-bundle).
+Where the file or URL points to a RAUC Upgrade Bundle, i.e., a [DDI
+RAUC Upgrade Bundle](#ddi-rauc-upgrade-bundle) or an [ITB RAUC Upgrade
+Bundle](#itb-rauc-upgrade-bundle), depending on the system.
 
-This will upgrade the partition not currently running.  After a
+This will upgrade the image not currently running.  After a
 successful upgrade is completed, you can reboot your system, which
-will then boot from the newly installed image.  Since the partition
-from which you were originally running is now inactive, running the
-same upgrade command again will bring both partitions into sync.
+will then boot from the newly installed image.  Since the image from
+which you were originally running is now inactive, running the same
+upgrade command again will bring both images into sync.
 
 ## Image Formats
+
+Infix is built in one of two families of image formats, depending on
+the bootloader used by the target:
+
+- **DDI based**: used with [Barebox](#barebox), currently on _x86_64_.
+  The root filesystem is distributed as a [Discoverable Disk
+  Image](#discoverable-disk-image-ddi), and the system disk is managed
+  using LVM.
+- **ITB based**: used with [U-Boot](#u-boot), on _aarch64_.  The root
+  filesystem is distributed as a [FIT Framed Squash
+  Image](#fit-framed-squash-image), and the system disk uses a fixed
+  partition layout.
+
+Common to both is the [SquashFS Image](#squashfs-image), which holds
+Infix's Linux kernel and root filesystem.
+
+In the names below, `${ARTIFACT}` is the image name of the build,
+e.g. `infix-x86_64`, with the release version appended for release
+builds.
 
 ### SquashFS Image
 
@@ -248,10 +294,141 @@ The central read-only filesystem image containing Infix's Linux
 kernel, device trees, and root filesystem. All other images bundle
 this image, or is dependent on it, in one way or another.
 
-On its own, it can be used as an [initrd][] to efficiently boot a
-virtual instance of Infix.
+On ITB based systems, it can be used on its own as an [initrd][] to
+efficiently boot a virtual instance of Infix.
 
-### FIT Framed Squash Image
+### DDI Based Images
+
+#### Discoverable Disk Image (DDI)
+
+**Canonical Name**: `${ARTIFACT}.raw`
+
+A GPT partitioned image following the [Discoverable Disk Image][DDI]
+specification, holding three partitions:
+
+| **Partition**     | **Contents**                                         |
+|-------------------|------------------------------------------------------|
+| `root`            | The [SquashFS Image](#squashfs-image)                |
+| `root-verity`     | The dm-verity hash tree of the SquashFS image        |
+| `root-verity-sig` | A signature of the hash tree's root hash, as JSON    |
+
+The partition type UUIDs follow the [Discoverable Partitions][DPS]
+specification, so that the partitions can be located without any
+external metadata.  The partition UUIDs of `root` and `root-verity`
+are derived from the root hash itself, which lets the bootloader and
+the initramfs find the partitions belonging to a particular root hash.
+
+Since the signature covers the root hash, and the root hash covers
+every block of the root filesystem, a single signature check is enough
+to establish trust in the entire image.
+
+The DDI is the unit that is installed on the system disk, carried in
+the [DDI RAUC Upgrade Bundle](#ddi-rauc-upgrade-bundle), and used to
+[netboot](#barebox) the system.
+
+#### DDI RAUC Upgrade Bundle
+
+**Canonical Name**: `${ARTIFACT}.pkg`
+
+A signed, verity formatted, [RAUC][] bundle containing the
+[DDI](#discoverable-disk-image-ddi).  On installation, the logical
+volume of the inactive image is resized to fit the new DDI, which is
+then written to it.
+
+When performing a [System Upgrade](#system-upgrade), this is the format
+to use.
+
+#### DDI Disk Image
+
+**Canonical Names**: `${ARTIFACT}.disk`, `${ARTIFACT}.qcow2`
+
+A full system image, used to provision a new system, either by writing
+`.disk` to its block device or by using `.qcow2` as the disk of a
+virtual machine.  The disk uses the GPT partitioning scheme:
+
+```
+.--------------.
+|  GPT Table   |
+:--------------:
+|     esp      |
+:--------------:
+|  esp-backup  |
+:--------------:
+| barebox-state|
+:--------------:
+|              |
+|   internal   |
+|              |
+'--------------'
+```
+
+##### `esp`, `esp-backup` - EFI System Partitions
+
+| **Parameter** | **Value**        |
+|---------------|------------------|
+| Required      | Yes              |
+| Size          | 16 MiB           |
+| Format        | VFAT filesystem  |
+
+Holds the signed Barebox EFI binary, started by the UEFI firmware, as
+well as marker files shared between Infix and its bootloader, e.g., a
+pending factory reset.  The partitions are mounted at `/boot/efi` and
+`/boot/efi-backup`, respectively.
+
+##### `barebox-state` - Bootloader State
+
+| **Parameter** | **Value**              |
+|---------------|------------------------|
+| Required      | Yes                    |
+| Size          | 2 KiB                  |
+| Format        | Raw Barebox state data |
+
+Holds the bootchooser's priority and remaining boot attempts of each
+boot target.  Infix manages it through [RAUC][], see [Bootloader
+Configuration](#configuration).
+
+##### `internal` - Internal Volume Group
+
+| **Parameter** | **Value**            |
+|---------------|----------------------|
+| Required      | Yes                  |
+| Size          | Rest of the disk     |
+| Format        | LVM2 physical volume |
+
+An LVM physical volume, belonging to the volume group `internal`,
+holding the following logical volumes:
+
+| **Volume**  | **Contents**                                           |
+|-------------|--------------------------------------------------------|
+| `primary`   | A [DDI](#discoverable-disk-image-ddi)                  |
+| `secondary` | A [DDI](#discoverable-disk-image-ddi)                  |
+| `rw`        | BTRFS filesystem holding all persistent data           |
+
+Two copies of the system image exist so that an incomplete upgrade
+does not brick the system, and to allow fast rollbacks when upgrading
+to a new version.
+
+The `rw` volume holds one BTRFS subvolume each for `/cfg`, `/var`,
+`/root`, and `/home`.  If it cannot be mounted, Infix falls back to
+temporary storage in RAM for all of them, and the system will not
+retain any changes across reboots.
+
+To keep the distributed image small, it only contains the `primary`
+volume.  On the first boot, the system:
+
+1. Grows the `internal` partition, and its physical volume, to cover
+   the entire disk.
+1. Creates the `secondary` volume as a copy of `primary`, provided
+   there is enough free space.
+1. Creates the `rw` volume, using half of the remaining free space,
+   leaving the rest for future growth of the system images.
+
+A [factory reset](#system-boot) removes the `rw` volume, which is then
+recreated, empty, during the following boot.
+
+### ITB Based Images
+
+#### FIT Framed Squash Image
 
 **Canonical Name**: `rootfs.itb`
 
@@ -269,9 +446,9 @@ stored in the `/boot` directory of the filesystem.
 On disk, this image is then stored broken up into its two components;
 the _FIT header_ (`rootfs.itbh`) and the SquashFS image.  The header
 is stored on the [Auxiliary Data](#aux-auxiliary-data) partition of
-the [Disk Image](#disk-image), while the SquashFS image is stored in
-one of the [Root Filesystem](#primarysecondary-root-filesystems)
-partitions.
+the [ITB Disk Image](#itb-disk-image), while the SquashFS image is
+stored in one of the [Root
+Filesystem](#primary-secondary-root-filesystems) partitions.
 
 When the system boots, U-Boot will concatenate the two parts to
 validate the SquashFS's contents. This path was chosen because:
@@ -285,14 +462,14 @@ validate the SquashFS's contents. This path was chosen because:
   root filesystem.
 
 - It lets us use standard interfaces to boot Linux, like SYSLINUX.  It
-  also plays well with traditional bootloaders, like GRUB.
+  also plays well with traditional bootloaders.
 
 In its full form, it can be used to netboot Infix, as it contains all
 the information needed by U-Boot in a single file.
 
-### RAUC Upgrade Bundle
+#### ITB RAUC Upgrade Bundle
 
-**Canonical Name**: `infix-${ARCH}.pkg`
+**Canonical Name**: `${ARTIFACT}.pkg`
 
 Itself a SquashFS image, this bundle (sometimes referred to package)
 contains the Infix [SquashFS Image](#squashfs-image) along with the
@@ -303,7 +480,7 @@ system.
 When performing a [System Upgrade](#system-upgrade), this is the format
 to use.
 
-### Disk Image
+#### ITB Disk Image
 
 **Canonical Name**: `disk.img`
 
@@ -335,7 +512,7 @@ scheme. Partitions marked with an asterisk are optional.
 '-----------'
 ```
 
-#### `boot` - Bootloader
+##### `boot` - Bootloader
 
 | **Parameter** | **Value**                               |
 |---------------|-----------------------------------------|
@@ -346,10 +523,7 @@ scheme. Partitions marked with an asterisk are optional.
 Optional partition containing the system's bootloader. May also reside
 in a separate storage device, e.g. a serial FLASH.
 
-On x86_64, this partition holds the EFI system partition, containing
-the GRUB bootloader.
-
-#### `aux` - Auxiliary Data
+##### `aux` - Auxiliary Data
 
 | **Parameter** | **Value**       |
 |---------------|-----------------|
@@ -379,7 +553,7 @@ Note that the bootloader's primary environment is bundled in the
 binary - `uboot.env` is only used to import a few settings that is
 required to configure the boot order.
 
-#### `primary`/`secondary` - Root Filesystems
+##### `primary`, `secondary` - Root Filesystems
 
 | **Parameter** | **Value**         |
 |---------------|-------------------|
@@ -391,7 +565,7 @@ Holds the [SquashFS Image](#squashfs-image). Two copies exist so that
 an incomplete upgrade does not brick the system, and to allow fast
 rollbacks when upgrading to a new version.
 
-#### `cfg` - Configuration Data
+##### `cfg` - Configuration Data
 
 | **Parameter** | **Value**       |
 |---------------|-----------------|
@@ -402,7 +576,7 @@ rollbacks when upgrading to a new version.
 Non-volatile storage of the system configuration and user data.
 Concretely, user data is everything stored under `/root` and `/home`.
 
-#### `var` - Variable Data
+##### `var` - Variable Data
 
 | **Parameter** | **Value**       |
 |---------------|-----------------|
@@ -432,6 +606,8 @@ If `var` is not available, Infix will still persist `/var/lib` using
     between previously isolated VLANs.
 
 [2]:      netboot.md
+[DDI]:    https://uapi-group.org/specifications/specs/discoverable_disk_image/
+[DPS]:    https://uapi-group.org/specifications/specs/discoverable_partitions_specification/
 [FIT]:    https://u-boot.readthedocs.io/en/latest/usage/fit.html
 [RAUC]:   https://rauc.io
 [initrd]: https://docs.kernel.org/admin-guide/initrd.html
