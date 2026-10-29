@@ -290,3 +290,54 @@ int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, const char
 
 	return rc;
 }
+
+/* Models tag their secrets nacm:default-deny-all, the user password in
+ * ietf-system being the one that predates the convention */
+static bool lydx_is_secret(const struct lysc_node *snode)
+{
+	LYA_COUNT_T u;
+
+	LYA_FOR(snode->exts, u) {
+		const struct lysc_ext *def = snode->exts[u].def;
+
+		if (!strcmp(def->name, "default-deny-all") &&
+		    !strcmp(def->module->name, "ietf-netconf-acm"))
+			return true;
+	}
+
+	if (!strcmp(snode->name, "password") && snode->parent &&
+	    !strcmp(snode->parent->name, "user") &&
+	    !strcmp(snode->module->name, "ietf-system"))
+		return true;
+
+	return false;
+}
+
+/* Drops secret nodes, subtree included, like NACM does for a user
+ * without read access.  Freeing a first sibling moves *first. */
+size_t lydx_redact(struct lyd_node **first)
+{
+	struct lyd_node *node, *next;
+	size_t num = 0;
+
+	LY_LIST_FOR_SAFE(*first, next, node) {
+		if (!node->schema)
+			continue;
+
+		if (lydx_is_secret(node->schema)) {
+			if (node == *first)
+				*first = next;
+			lyd_free_tree(node);
+			num++;
+			continue;
+		}
+
+		if (node->schema->nodetype & (LYS_CONTAINER | LYS_LIST)) {
+			struct lyd_node *child = lyd_child(node);
+
+			num += lydx_redact(&child);
+		}
+	}
+
+	return num;
+}
