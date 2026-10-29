@@ -62,6 +62,12 @@ RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOO
 RUN cd /tmp/ && tar zxvf mtools-$MTOOL_VERSION.tar.gz
 RUN cd /tmp/mtools-$MTOOL_VERSION && make && make install
 
+# Alpine's sysklogd is the ancient 1.5.1, build the same release as Infix
+ARG SYSKLOGD_VERSION="2.8.0"
+RUN wget https://github.com/troglobit/sysklogd/releases/download/v$SYSKLOGD_VERSION/sysklogd-$SYSKLOGD_VERSION.tar.gz -O /tmp/sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/ && tar zxf sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/sysklogd-$SYSKLOGD_VERSION && ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var && make && make install
+
 # trafgen and mausezahn, traffic generators for the QoS tests.  Alpine
 # has no netsniff-ng package, and mausezahn needs libcli, which is only
 # in edge/testing, so both are built from their release tarballs.
