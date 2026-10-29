@@ -32,11 +32,13 @@ RUN apk add --no-cache \
     libyang-dev \
     linux-headers \
     make \
+    mtools \
     ncurses-dev \
     net-snmp-tools \
     nmap \
     openssh-client \
     openssl \
+    ovmf \
     pandoc-cli \
     pkgconf \
     python3-dev \
@@ -44,6 +46,7 @@ RUN apk add --no-cache \
     qemu-system-x86_64 \
     ruby-mustache \
     setpriv \
+    sfdisk \
     skopeo \
     socat \
     squashfs-tools \
