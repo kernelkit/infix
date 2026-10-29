@@ -14,6 +14,7 @@ We verify operation with two scenarios:
 
 """
 import infamy
+from infamy.util import until
 from time import sleep
 
 UNIQUE_MARKER = "infix-reflector-test"
@@ -37,6 +38,17 @@ def mdns_reflect_test():
     out3 = snif3.packets()
 
     return (UNIQUE_MARKER in out2, UNIQUE_MARKER in out3)
+
+
+def expect_reflection(expected):
+    """Retry the reflection test until avahi has settled after the config change"""
+    def matches():
+        reflected = mdns_reflect_test()
+        if reflected != expected:
+            raise AssertionError(f"Expected reflection {expected}, got {reflected}")
+        return True
+
+    until(matches, attempts=5)
 
 
 def disable_reflector():
@@ -120,17 +132,13 @@ with infamy.Test() as test:
             hdata2.must_receive("port 5353")
             hdata3.must_receive("port 5353")
 
-            reflected = mdns_reflect_test()
-            if reflected != (True, True):
-                test.fail(f"Expected reflection (True, True), got {reflected}")
+            expect_reflection((True, True))
 
         with test.step("Verify mDNS from host:data1 is not reflected after disabling reflector"):
             disable_reflector()
             hdata2.must_receive("port 5353")
             hdata3.must_receive("port 5353")
 
-            reflected = mdns_reflect_test()
-            if reflected != (False, False):
-                test.fail(f"Expected no reflection (False, False), got {reflected}")
+            expect_reflection((False, False))
 
     test.succeed()
