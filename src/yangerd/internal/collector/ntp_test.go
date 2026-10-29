@@ -65,12 +65,24 @@ func v4(a, b, c, d uint8) net.IP {
 	return net.IPv4(a, b, c, d)
 }
 
+func chronyIP(ip net.IP) *chrony.IPAddr {
+	a := &chrony.IPAddr{}
+	if ip4 := ip.To4(); ip4 != nil {
+		copy(a.IP[:], ip4)
+		a.Family = chrony.IPAddrInet4
+	} else if ip != nil {
+		copy(a.IP[:], ip.To16())
+		a.Family = chrony.IPAddrInet6
+	}
+	return a
+}
+
 func sourceData(ip net.IP, mode chrony.ModeType, state chrony.SourceStateType,
 	stratum uint16, poll int16, reach uint16, since uint32,
 	latestMeas, latestMeasErr float64) *chrony.ReplySourceData {
 	return &chrony.ReplySourceData{
 		SourceData: chrony.SourceData{
-			IPAddr:        ip,
+			IPAddr:        chronyIP(ip),
 			Poll:          poll,
 			Stratum:       stratum,
 			State:         state,
