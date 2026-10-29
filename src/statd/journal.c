@@ -32,6 +32,7 @@
 #include <sysrepo.h>
 
 #include <srx/common.h>
+#include <srx/lyx.h>
 
 #include "journal.h"
 
@@ -150,6 +151,9 @@ static struct lyd_node *dump_modules(sr_session_ctx_t *ses, const struct ly_ctx 
 			sr_release_data(data);
 		}
 	}
+
+	if (tree)
+		lydx_redact(&tree);
 
 	return tree;
 }
