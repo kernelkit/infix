@@ -104,6 +104,17 @@ func NewBridge(ctx context.Context, log *slog.Logger) (*Batch, error) {
 	return Start(ctx, log, []string{"bridge", "-json", "-d", "-force", "-batch", "-"}, "vlan show dev lo")
 }
 
+// NewTC starts `tc -json -force -batch -`.
+func NewTC(ctx context.Context, log *slog.Logger) (*Batch, error) {
+	return Start(ctx, log, []string{"tc", "-json", "-force", "-batch", "-"}, "qdisc show dev lo")
+}
+
+// NewDCB starts `dcb -j -f -b -`; unlike ip and tc, dcb only takes
+// getopt options.  No show command succeeds on every system, help does.
+func NewDCB(ctx context.Context, log *slog.Logger) (*Batch, error) {
+	return Start(ctx, log, []string{"dcb", "-j", "-f", "-b", "-"}, "help")
+}
+
 // Start runs argv as a batch subprocess and keeps it running, restarting
 // it with backoff when it dies.  canary is a command that must succeed,
 // used to validate a restarted subprocess.

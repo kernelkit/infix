@@ -46,6 +46,7 @@ type NLMonitor struct {
 	brBatch    *ipbatch.Batch
 	tree       *tree.Tree
 	ethRefresh func(string)
+	onLink     func(string)
 	linkSet    func()
 	queriers   func() []mcd.Querier
 	wwan       func() map[string]any
@@ -73,6 +74,7 @@ type NLMonitor struct {
 	wifi      map[string]json.RawMessage // ifname → wifi JSON
 	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
 	lastWG    string
+	qos       map[string]json.RawMessage // ifname → QoS members of the entry
 
 	// vlans is `bridge vlan show` by interface, vlanGlobals the
 	// per-bridge `bridge vlan global show`.  Both are replaced whole
@@ -146,6 +148,7 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 		ethernet:       make(map[string]json.RawMessage),
 		wifi:           make(map[string]json.RawMessage),
 		wireguard:      make(map[string]json.RawMessage),
+		qos:            make(map[string]json.RawMessage),
 		containers:     make(map[string]json.RawMessage),
 		lastOperStatus: make(map[string]string),
 		lastChange:     make(map[string]time.Time),
@@ -156,6 +159,18 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 // when an ethernet interface sees a link event.
 func (m *NLMonitor) SetEthRefresh(fn func(string)) {
 	m.ethRefresh = fn
+}
+
+// SetLinkRefresh sets an optional callback run with the name of any
+// interface that changed, appeared or went away.
+func (m *NLMonitor) SetLinkRefresh(fn func(string)) {
+	m.onLink = fn
+}
+
+func (m *NLMonitor) linkRefreshed(name string) {
+	if m.onLink != nil && name != "" {
+		m.onLink(name)
+	}
 }
 
 // SetLinkSetChange sets an optional callback run when an interface
@@ -201,6 +216,21 @@ func (m *NLMonitor) SetEthernetData(ifname string, data json.RawMessage) {
 func (m *NLMonitor) SetWifiData(ifname string, data json.RawMessage) {
 	m.mu.Lock()
 	m.wifi[ifname] = data
+	m.mu.Unlock()
+	m.rebuild()
+}
+
+// SetQoSData updates the QoS members of interface entries, nil drops
+// them, and rebuilds the YANG document once for all of them.
+func (m *NLMonitor) SetQoSData(changed map[string]json.RawMessage) {
+	m.mu.Lock()
+	for ifname, data := range changed {
+		if data == nil {
+			delete(m.qos, ifname)
+		} else {
+			m.qos[ifname] = data
+		}
+	}
 	m.mu.Unlock()
 	m.rebuild()
 }
@@ -480,6 +510,7 @@ func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
 
 	if update.Header.Type == syscall.RTM_DELLINK {
 		defer m.linkSetChanged()
+		defer m.linkRefreshed(old)
 		changed := m.removeInterface(index)
 		if wasBridge {
 			m.refreshBridgeVLANs()
@@ -738,7 +769,9 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 
 	if old != name {
 		m.linkSetChanged()
+		m.linkRefreshed(old)
 	}
+	m.linkRefreshed(name)
 	if m.ethRefresh != nil && iface.IsEthernet(linkRaw, m.fc) {
 		m.ethRefresh(name)
 	}
@@ -761,6 +794,7 @@ func (m *NLMonitor) rebuild() {
 		mdb:         copyStringMap(m.mdb),
 		rtrPorts:    maps.Clone(m.rtrPorts),
 		wireguard:   copyStringMap(m.wireguard),
+		qos:         copyStringMap(m.qos),
 		vlans:       maps.Clone(m.vlans),
 		vlanGlobals: maps.Clone(m.vlanGlobals),
 	}
@@ -824,7 +858,7 @@ func writeSortedRaw(b *strings.Builder, prefix string, m map[string]json.RawMess
 // augments is everything merged into the document iface.Transform
 // produced, keyed by interface name unless noted.
 type augments struct {
-	ethernet, wifi, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage
+	ethernet, wifi, mdb, bridgeSTP, portSTP, wireguard, qos map[string]json.RawMessage
 
 	rtrPorts    map[string][]string           // bridge multicast router ports, by bridge
 	bridges     map[string]iface.BridgeInfo   // by bridge name, from the link dump
@@ -834,7 +868,8 @@ type augments struct {
 
 func (a *augments) empty() bool {
 	return len(a.ethernet) == 0 && len(a.wifi) == 0 && len(a.mdb) == 0 &&
-		len(a.bridgeSTP) == 0 && len(a.portSTP) == 0 && len(a.wireguard) == 0 && len(a.bridges) == 0
+		len(a.bridgeSTP) == 0 && len(a.portSTP) == 0 && len(a.wireguard) == 0 && len(a.qos) == 0 &&
+		len(a.bridges) == 0
 }
 
 // mergeAugments adds ethernet, wifi, and bridge data into the
@@ -965,6 +1000,13 @@ func mergeAugments(doc json.RawMessage, a augments) json.RawMessage {
 			var wgObj any
 			if err := json.Unmarshal(wgData, &wgObj); err == nil {
 				ifaceObj["infix-interfaces:wireguard"] = wgObj
+			}
+		}
+
+		if qosData, ok := a.qos[name]; ok {
+			var members map[string]any
+			if err := json.Unmarshal(qosData, &members); err == nil {
+				maps.Copy(ifaceObj, members)
 			}
 		}
 
