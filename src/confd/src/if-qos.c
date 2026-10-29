@@ -690,30 +690,14 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
  * bands in band order, one frame per percent of share so no band gets
  * less than a frame of credit per round.
  */
-static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
+static void gen_ets(FILE *fp, const char *ifname, struct qos_egress *eg, const char *attach)
 {
-	const char *attach = "root";
 	int i, nstrict = 0;
-
-	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
-
-	/*
-	 * The rate limit is one bucket on the whole port, so it takes
-	 * the root and the scheduler hangs below it.
-	 */
-	if (eg->rate) {
-		fprintf(fp, "tc qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
-			" latency 100ms\n", ifname, eg->rate, eg->burst);
-		attach = "parent 1:1 handle 2:";
-	}
-
-	if (eg->num_tc < 2)
-		return;
 
 	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] == TSA_STRICT; i--)
 		nstrict++;
 
-	fprintf(fp, "tc qdisc add dev %s %s ets bands %d strict %d", ifname, attach, eg->num_tc, nstrict);
+	fprintf(fp, "qdisc add dev %s %s ets bands %d strict %d", ifname, attach, eg->num_tc, nstrict);
 	if (nstrict < eg->num_tc) {
 		fputs(" quanta", fp);
 		for (i = eg->num_tc - 1 - nstrict; i >= 0; i--)
@@ -725,6 +709,31 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	fputc('\n', fp);
 }
 
+static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
+{
+	const char *attach = "root";
+
+	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
+	if (!eg->rate && eg->num_tc < 2)
+		return;
+
+	fputs("tc -force -batch - <<EOF\n", fp);
+
+	/*
+	 * The rate limit is one bucket on the whole port, so it takes
+	 * the root and the scheduler hangs below it.
+	 */
+	if (eg->rate) {
+		fprintf(fp, "qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
+			" latency 100ms\n", ifname, eg->rate, eg->burst);
+		attach = "parent 1:1 handle 2:";
+	}
+
+	if (eg->num_tc >= 2)
+		gen_ets(fp, ifname, eg, attach);
+	fputs("EOF\n", fp);
+}
+
 static int gen_reset(struct dagger *net, const char *ifname)
 {
 	FILE *fp;
@@ -733,12 +742,15 @@ static int gen_reset(struct dagger *net, const char *ifname)
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
-	fprintf(fp, "tc qdisc del dev %s clsact 2>/dev/null\n", ifname);
-	fprintf(fp, "dcb app flush dev %s default-prio pcp-prio dscp-prio 2>/dev/null\n", ifname);
-	fprintf(fp, "dcb rewr flush dev %s%s prio-dscp 2>/dev/null\n", ifname,
-		qos_pcp_encoded(ifname) ? "" : " prio-pcp");
-	fprintf(fp, "dcb apptrust set dev %s order 2>/dev/null\n", ifname);
+	fputs("tc -force -batch - 2>/dev/null <<EOF\n", fp);
+	fprintf(fp, "qdisc del dev %s root\n", ifname);
+	fprintf(fp, "qdisc del dev %s clsact\n", ifname);
+	fputs("EOF\n", fp);
+	fputs("dcb -f -b - 2>/dev/null <<EOF\n", fp);
+	fprintf(fp, "app flush dev %s default-prio pcp-prio dscp-prio\n", ifname);
+	fprintf(fp, "rewr flush dev %s%s prio-dscp\n", ifname, qos_pcp_encoded(ifname) ? "" : " prio-pcp");
+	fprintf(fp, "apptrust set dev %s order\n", ifname);
+	fputs("EOF\n", fp);
 	fputs("exit 0\n", fp);
 	fclose(fp);
 
