@@ -12,7 +12,8 @@ import (
 
 // fakeBatch behaves like `ip -force -batch -`: one JSON line per good
 // command, "Command failed -:N" on stderr for a bad one (after a stray
-// "[]" for "junk"), a stall for "hang", and exit for "die".
+// "[]" for "junk"), a stall for "hang", exit for "die", and for "later"
+// an answer, then unasked output and exit.
 const fakeBatch = `#!/bin/sh
 n=0
 while read -r cmd; do
@@ -23,6 +24,8 @@ while read -r cmd; do
 	junk*) echo "[]"; echo "Cannot find device" >&2; echo "Command failed -:$n" >&2 ;;
 	hang*) sleep 30 ;;
 	die*)  exit 1 ;;
+	later*) (sleep 0.2; i=0; while [ $i -lt 20 ]; do echo noise; i=$((i+1)); done; kill $$) &
+		echo "[\"$cmd\"]" ;;
 	*)     echo "[\"$cmd\"]" ;;
 	esac
 done
@@ -104,6 +107,22 @@ func TestQueryDeadThenRestart(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatal("subprocess was not restarted")
+}
+
+// A subprocess that exits between queries is noticed, even with more
+// output than the reader can queue left behind.
+func TestExitBetweenQueries(t *testing.T) {
+	b := startFake(t)
+	if _, err := b.Query("later"); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for b.Alive() {
+		if time.Now().After(deadline) {
+			t.Fatal("exit not noticed")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 // A command that gets no answer at all times out and kills the process.

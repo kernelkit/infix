@@ -176,13 +176,25 @@ func (b *Batch) start() error {
 	b.alive.Store(true)
 	b.mu.Unlock()
 
-	go b.readLines(r, lines, quit, gen)
+	go b.readLines(r, lines, quit)
+	go b.wait(cmd, gen)
 	return nil
 }
 
+// wait reaps one subprocess and marks it dead if it is still current.
+// Its output may still sit unread in lines, so exit is not left to the
+// reader to notice.
+func (b *Batch) wait(cmd *exec.Cmd, gen int64) {
+	err := cmd.Wait()
+	if b.gen.Load() == gen {
+		b.log.Debug(b.argv[0]+" batch: subprocess exited", "err", err)
+		b.markDead()
+	}
+}
+
 // readLines feeds the merged stdout and stderr of one subprocess to
-// lines until it exits or is replaced.
-func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan struct{}, gen int64) {
+// lines until it exits, is replaced or the Batch is closed.
+func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan struct{}) {
 	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -194,9 +206,6 @@ func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan stru
 		}
 	}
 	close(lines)
-	if b.gen.Load() == gen {
-		b.markDead()
-	}
 }
 
 func (b *Batch) markDead() {
@@ -295,7 +304,6 @@ func reap(cmd *exec.Cmd, stdin io.Closer) {
 	}
 	if cmd != nil && cmd.Process != nil {
 		cmd.Process.Kill()
-		go cmd.Wait()
 	}
 }
 
@@ -314,6 +322,10 @@ func (b *Batch) Close() {
 	}
 	if b.cmd != nil && b.cmd.Process != nil {
 		b.cmd.Process.Kill()
+	}
+	if b.quit != nil {
+		close(b.quit)
+		b.quit = nil
 	}
 	b.alive.Store(false)
 }
