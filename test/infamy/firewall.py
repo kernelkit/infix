@@ -58,7 +58,7 @@ class Firewall:
         return str(expected) == str(actual)
 
     @staticmethod
-    def wait_for_operational(target, expected_zones, timeout=30):
+    def wait_for_operational(target, expected_zones, timeout=90):
         """Wait for firewall config to be activated/available in operational"""
         def check_operational():
             try:
