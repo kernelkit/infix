@@ -32,11 +32,13 @@ RUN apk add --no-cache \
     libyang-dev \
     linux-headers \
     make \
+    mtools \
     ncurses-dev \
     net-snmp-tools \
     nmap \
     openssh-client \
     openssl \
+    ovmf \
     pandoc-cli \
     pkgconf \
     python3-dev \
@@ -44,6 +46,7 @@ RUN apk add --no-cache \
     qemu-system-x86_64 \
     ruby-mustache \
     setpriv \
+    sfdisk \
     skopeo \
     socat \
     squashfs-tools \
@@ -58,6 +61,12 @@ ARG MTOOL_VERSION="3.0"
 RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz
 RUN cd /tmp/ && tar zxvf mtools-$MTOOL_VERSION.tar.gz
 RUN cd /tmp/mtools-$MTOOL_VERSION && make && make install
+
+# Alpine's sysklogd is the ancient 1.5.1, build the same release as Infix
+ARG SYSKLOGD_VERSION="2.8.0"
+RUN wget https://github.com/troglobit/sysklogd/releases/download/v$SYSKLOGD_VERSION/sysklogd-$SYSKLOGD_VERSION.tar.gz -O /tmp/sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/ && tar zxf sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/sysklogd-$SYSKLOGD_VERSION && ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var && make && make install
 
 # trafgen and mausezahn, traffic generators for the QoS tests.  Alpine
 # has no netsniff-ng package, and mausezahn needs libcli, which is only
@@ -95,7 +104,7 @@ RUN ~/init-venv.sh ~/pip-requirements.txt && chown -R infamy:infamy /home/infamy
 
 # Download container images for upgrade testing
 COPY case/containers/upgrade/download.sh /tmp/download.sh
-RUN /tmp/download.sh /srv && rm /tmp/download.sh
+RUN /tmp/download.sh /srv && rm /tmp/download.sh && chown -R infamy:infamy /srv
 
 COPY docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
