@@ -45,6 +45,8 @@ var ErrBatchDead = errors.New("batch process is dead")
 // command, typically because the device it names does not exist.
 var ErrCommandFailed = errors.New("batch command failed")
 
+var errTimeout = errors.New("timeout waiting for response")
+
 const (
 	queryTimeout = 5 * time.Second
 
@@ -117,7 +119,7 @@ func NewDCB(ctx context.Context, log *slog.Logger) (*Batch, error) {
 
 // Start runs argv as a batch subprocess and keeps it running, restarting
 // it with backoff when it dies.  canary is a command that must succeed,
-// used to validate a restarted subprocess.
+// used to validate the first subprocess and every restarted one.
 func Start(ctx context.Context, log *slog.Logger, argv []string, canary string) (*Batch, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	b := &Batch{
@@ -128,8 +130,10 @@ func Start(ctx context.Context, log *slog.Logger, argv []string, canary string) 
 		cancel: cancel,
 		died:   make(chan struct{}, 1),
 	}
-	if err := b.start(); err != nil {
-		cancel()
+	// A subprocess that rejects the canary or exits will not do better
+	// on a restart, one that is only slow to answer may.
+	if err := b.Refresh(); err != nil && !errors.Is(err, errTimeout) {
+		b.Close()
 		return nil, err
 	}
 	go b.restartLoop()
@@ -257,7 +261,7 @@ func (b *Batch) Query(command string) (json.RawMessage, error) {
 			if b.cmd.Process != nil {
 				b.cmd.Process.Kill()
 			}
-			return nil, fmt.Errorf("timeout waiting for response to: %s", command)
+			return nil, fmt.Errorf("%w to: %s", errTimeout, command)
 		}
 	}
 }

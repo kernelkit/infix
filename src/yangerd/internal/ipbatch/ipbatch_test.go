@@ -28,18 +28,34 @@ while read -r cmd; do
 done
 `
 
-func startFake(t *testing.T) *Batch {
+func fakeScript(t *testing.T) string {
 	t.Helper()
 	script := filepath.Join(t.TempDir(), "fake")
 	if err := os.WriteFile(script, []byte(fakeBatch), 0755); err != nil {
 		t.Fatal(err)
 	}
-	b, err := Start(context.Background(), slog.Default(), []string{script}, "canary")
+	return script
+}
+
+func startFake(t *testing.T) *Batch {
+	t.Helper()
+	b, err := Start(context.Background(), slog.Default(), []string{fakeScript(t)}, "canary")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(b.Close)
 	return b
+}
+
+// A subprocess that rejects the canary, or exits at once, as when it
+// is given options it does not take, fails Start.
+func TestStartChecksCanary(t *testing.T) {
+	if _, err := Start(context.Background(), slog.Default(), []string{fakeScript(t)}, "fail"); !errors.Is(err, ErrCommandFailed) {
+		t.Fatalf("rejected canary: err = %v, want ErrCommandFailed", err)
+	}
+	if _, err := Start(context.Background(), slog.Default(), []string{"false"}, "canary"); err == nil {
+		t.Fatal("exited subprocess: Start succeeded")
+	}
 }
 
 func TestQueryAnswers(t *testing.T) {
