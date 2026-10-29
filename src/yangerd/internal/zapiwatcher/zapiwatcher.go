@@ -321,7 +321,7 @@ func (w *ZAPIWatcher) collectRoutes(ctx context.Context, family string) ([]json.
 var protocolMap = map[string]string{
 	"kernel":    "infix-routing:kernel",
 	"connected": "ietf-routing:direct",
-	"local":     "ietf-routing:direct",
+	"local":     "infix-routing:kernel",
 	"static":    "ietf-routing:static",
 	"ospf":      "ietf-ospf:ospfv2",
 	"ospf6":     "ietf-ospf:ospfv3",
