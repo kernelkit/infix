@@ -179,8 +179,12 @@ static void snapshot_process(void)
 	NOTE("Starting operational datastore snapshot");
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
-	if (mkdir(JOURNAL_DIR, 0755) && errno != EEXIST)
+	/* The dump is read without NACM, so only root may read it back */
+	umask(077);
+	if (mkdir(JOURNAL_DIR, 0700) && errno != EEXIST)
 		ERROR("Error, creating directory " JOURNAL_DIR ": %s", strerror(errno));
+	if (chmod(JOURNAL_DIR, 0700))
+		ERROR("Error, setting mode on " JOURNAL_DIR ": %s", strerror(errno));
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
 		ERROR("Error, connecting to sysrepo");
