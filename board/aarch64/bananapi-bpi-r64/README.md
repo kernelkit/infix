@@ -134,8 +134,16 @@ Give each board its own base address and serial number, then reboot.
 The base address becomes the hostname suffix, each wired port gets a
 fixed offset from the base, and the Wi-Fi interfaces get addresses
 derived from it.  With the record above the board is named
-`bpi-ba-64-00` and `wifi0` is `06:00:00:ba:64:00`.  A port goes back
-to its VPD address when a custom MAC address is removed from it.
+`bpi-ba-64-00`, `wan` is `02:00:00:ba:64:02`, `lan0` is
+`02:00:00:ba:64:03` and `wifi0` is `06:00:00:ba:64:00`.  A port goes
+back to its VPD address when a custom MAC address is removed from it.
+
+| Offset | Port             |
+|--------|------------------|
+| +1     | CPU switch port  |
+| +2     | `wan`            |
+| +3..+6 | `lan0`..`lan3`   |
+| +7     | Second CPU port  |
 
 A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
 lab.  For boards that will share a network with other equipment, use a

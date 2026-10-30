@@ -3,8 +3,11 @@
 		infix {
 			/* Default admin user password: 'admin' */
 			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			vpds = <&vpd>;
 			usb-ports = <&ssusb>;
 			usb-port-names = "usb";
 		};
 	};
 };
+
+#include "mt7622-bananapi-bpi-r64-vpd.dtsi"
