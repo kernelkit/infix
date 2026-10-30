@@ -245,8 +245,7 @@ func addAssociations(ntp map[string]interface{}, srcs []ntpSource) {
 	for _, src := range srcs {
 		d := src.data
 
-		// Skip reference clocks — they have refids, not addresses
-		if d.Mode == chrony.SourceModeRef {
+		if !resolved(d) {
 			continue
 		}
 
@@ -320,6 +319,16 @@ var sourceModeMap = map[chrony.ModeType]string{
 	chrony.SourceModeRef:    "local-clock",
 }
 
+// resolved reports whether a chrony source has an IP address: refclocks
+// carry a refid instead, and a server named by hostname has only a
+// placeholder ID until DNS answers.
+func resolved(d *chrony.ReplySourceData) bool {
+	if d.Mode == chrony.SourceModeRef || d.IPAddr == nil {
+		return false
+	}
+	return d.IPAddr.Family == chrony.IPAddrInet4 || d.IPAddr.Family == chrony.IPAddrInet6
+}
+
 // addSources builds the infix-system:ntp/sources/source list.
 // Reference clocks and sources with invalid stratum are skipped,
 // matching the Python yanger ietf_system.py add_ntp() behaviour.
@@ -328,7 +337,7 @@ func addSources(srcs []ntpSource) map[string]interface{} {
 	for _, src := range srcs {
 		d := src.data
 
-		if d.Mode == chrony.SourceModeRef {
+		if !resolved(d) {
 			continue
 		}
 		if d.Stratum > 16 {
