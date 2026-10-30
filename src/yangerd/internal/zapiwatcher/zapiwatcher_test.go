@@ -66,7 +66,7 @@ func TestProtocolName(t *testing.T) {
 	cases := map[string]string{
 		"kernel":    "infix-routing:kernel",
 		"connected": "ietf-routing:direct",
-		"local":     "ietf-routing:direct",
+		"local":     "infix-routing:kernel", // host route for own addr -> kernel
 		"static":    "ietf-routing:static",
 		"ospf":      "ietf-ospf:ospfv2",
 		"rip":       "ietf-rip:rip",
