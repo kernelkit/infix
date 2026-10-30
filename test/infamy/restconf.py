@@ -36,18 +36,17 @@ class Location:
 
 def xpath_to_uri(xpath, extra=None):
     """Convert xpath to HTTP URI"""
-    pattern = r'\[(.*?)=["\'](.*?)["\']\]'
-    matches = re.findall(pattern, xpath)
+    predicate = r'\[([^\]=]+)=["\']([^"\']*)["\']\]'
 
-    uri_path = xpath
-    if matches:
-        for key, value in matches:
-            # A key value is one path segment, so it is percent-encoded,
-            # e.g. 10.0.0.0/24 or a MAC address, RFC 8040 sec. 3.5.3
-            value_uri = urllib.parse.quote(value, safe='')
+    def keys(match):
+        # The key values of one list entry follow its name as =v1,v2,
+        # each percent-encoded since it is one path segment, e.g.
+        # 10.0.0.0/24 or a MAC address, RFC 8040 sec. 3.5.3
+        values = [urllib.parse.quote(value, safe='')
+                  for _, value in re.findall(predicate, match.group(0))]
+        return "=" + ",".join(values)
 
-            # replace [key=value] with =value
-            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value_uri}', uri_path)
+    uri_path = re.sub(rf'(?:{predicate})+', keys, xpath)
 
     # Append extra if provided
     if extra is not None:
