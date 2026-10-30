@@ -1,0 +1,68 @@
+#!/bin/sh
+
+set -e
+
+alias bbs="barebox-state -i /etc/barebox/state.dtb"
+
+LOADERINFO=/sys/firmware/efi/efivars/LoaderInfo-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+
+available()
+{
+    [ -f $LOADERINFO ] || exit 1
+    tr -c -d '[a-z]' <$LOADERINFO | grep -q '^barebox'
+}
+
+slotprios()
+{
+    bbs -d | awk -F. '
+    	/^bootstate\.[a-z0-9-]+\.priority=/ {
+		sub("priority=", "", $3);
+		sub(/^internal-/, "", $2);
+		print($3, $2);
+	}'
+}
+
+order_get()
+{
+    local _enabled_slots=$(slotprios | grep -v '^0 ' | sort -nr | cut -d" " -f2)
+    echo $_enabled_slots
+}
+
+order_set_args()
+{
+    local _attempts
+    local _base
+
+    slotprios | while read prio slot; do
+	case "$slot" in
+	    "primary"|"secondary") _base="bootstate.internal-${slot}" ;;
+	    *)                     _base="bootstate.${slot}" ;;
+	esac
+
+	_attempts=3
+
+	echo -n " -s ${_base}.priority="
+	case "$slot" in
+	    "$1") echo -n $(($# * 10 -  0));;
+	    "$2") echo -n $(($# * 10 - 10));;
+	    "$3") echo -n $(($# * 10 - 20));;
+	    *)    echo -n 0; _attempts=0;;
+	esac
+
+	echo -n " -s ${_base}.remaining_attempts=${_attempts}"
+    done
+}
+
+order_set()
+{
+    eval "bbs $(order_set_args $@)"
+}
+
+cmd=$1
+shift
+
+case $cmd in
+    --available) available ;;
+    --get-order) order_get ;;
+    --set-order) order_set "$@" ;;
+esac

@@ -13,6 +13,7 @@ $(1): $$($(2)_DEPENDENCIES)
 	WORKDIR=$$(BUILD_DIR)/$(1) \
 	BINARIES_DIR=$$(BINARIES_DIR) \
 	TARGET_DIR=$$(TARGET_DIR) \
+	BR2_ARCH=$$(BR2_ARCH) \
 	BR2_EXTERNAL_INFIX_PATH=$$(BR2_EXTERNAL_INFIX_PATH) \
 	ARTIFACT=$$(INFIX_ARTIFACT) \
 	COMPATIBLE=$$(IX_COMPATIBLE) \
@@ -22,6 +23,7 @@ $(1): $$($(2)_DEPENDENCIES)
 
 ifeq ($$($(3)),y)
 TARGETS_ROOTFS += $(1)
+BR2_ROOTFS_OVERLAY := "$$(realpath $$(pkgdir)/rootfs) $$(call qstrip,$$(BR2_ROOTFS_OVERLAY))"
 endif
 
 endef

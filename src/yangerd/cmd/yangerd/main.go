@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -366,15 +367,22 @@ func main() {
 		Debounce: 200 * time.Millisecond,
 		UseMerge: true,
 	}
-	// Watch the parent directory, not the file: fw_setenv (U-Boot) and
-	// grub-editenv may rewrite the env via a temp file + rename, which
-	// gives it a new inode that a direct file watch never sees.  Watching
-	// the directory catches the Create/Rename (and still catches in-place
-	// writes), so a boot-order change after a RAUC install is reflected
-	// without waiting for a reboot.
-	for _, path := range []string{"/mnt/aux/grub/grubenv", "/mnt/aux/uboot.env"} {
-		if err := fsw.WatchSymlink(path, bootOrderHandler); err != nil {
-			slogLog.Debug("fswatcher boot-order watch skipped", "path", path, "err", err)
+	// Watch the parent directory, not the file: fw_setenv (U-Boot) may
+	// rewrite the env via a temp file + rename, which gives it a new
+	// inode that a direct file watch never sees.  Watching the directory
+	// catches the Create/Rename (and still catches in-place writes), so a
+	// boot-order change after a RAUC install is reflected without waiting
+	// for a reboot.
+	if err := fsw.WatchSymlink("/mnt/aux/uboot.env", bootOrderHandler); err != nil {
+		slogLog.Debug("fswatcher boot-order watch skipped", "path", "/mnt/aux/uboot.env", "err", err)
+	}
+	// barebox-state writes the partition in place through its device
+	// node, so watch the node the by-partuuid link resolves to.
+	if link := collector.BareboxStateDevice(fs); link != "" {
+		if dev, err := filepath.EvalSymlinks(link); err != nil {
+			slogLog.Debug("fswatcher boot-order watch skipped", "path", link, "err", err)
+		} else if err := fsw.Watch(dev, bootOrderHandler); err != nil {
+			slogLog.Warn("fswatcher watch failed", "path", dev, "err", err)
 		}
 	}
 	dnsHandler := fswatcher.WatchHandler{

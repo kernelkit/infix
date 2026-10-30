@@ -1,15 +1,20 @@
 Netboot HowTo
 =============
 
-This document describes how to set up network booting U-Boot devices on
-a LAN, e.g., when working with an evaluation board or other embedded
+This document describes how to set up network booting of devices on a
+LAN, e.g., when working with an evaluation board or other embedded
 system.  The most secure way to do this is with a local LAN between a PC
 and the device.
 
-Instead of setting up everything in U-Boot to download the Linux Image,
-device tree, and initramfs, we will let U-Boot download a script with
-instructions to run.  When you have multiple systems (boards) this
-quickly becomes a lot easier to manage.
+Both bootloaders used by Infix can netboot, see [Boot Procedure][boot]:
+
+- [Barebox](#barebox), on _x86_64_, downloads and boots a [Discoverable
+  Disk Image][ddi] (DDI)
+- [U-Boot](#u-boot), on _aarch64_, downloads either a script with
+  instructions to run, or a `rootfs.itb`
+
+The [network interface](#network-interface-setup) and [DHCP/TFTP
+server](#dhcptftp-server-setup) setup is the same for both.
 
 > [!NOTE]
 > Instructions in this HowTo assume a Debian based development system,
@@ -85,7 +90,57 @@ dhcp-range=192.168.0.100,192.168.0.199,1h
 dhcp-boot=tag:eth2,bootfile-eth2
 ```
 
-## Bootfile netboot.scr
+## Barebox
+
+### Bootfile
+
+Barebox downloads whatever the DHCP server hands out as the boot file,
+and boots it as a DDI from RAM.  Point it straight at the DDI of the
+build, `${ARTIFACT}.raw`, e.g.:
+
+```
+cd /srv/ftp
+ln -sf ix/x86_64/infix-x86_64.raw /srv/ftp/bootfile-eth2
+```
+
+The image is validated the same way as when booting from disk: with
+UEFI _Secure Boot_ enabled, Barebox only boots a DDI whose signature
+can be validated by a certificate in the firmware's signature database.
+The running system uses the RAUC slot `net.0`, so it knows it came off
+the network rather than from a slot.
+
+### Starting a Netboot
+
+The netboot target is disabled by default.  To netboot once, interrupt
+the Barebox autoboot from the console and run:
+
+```
+barebox@host:/# boot net
+```
+
+To make the system netboot on every boot, mark the netboot target
+active from a running Infix:
+
+```
+root@example:~# rauc status mark-active net.0
+```
+
+Should the netboot fail three times in a row, the bootchooser falls
+back to the images on disk.  See [Bootloader
+Configuration][boot-cfg] for how to change back.
+
+### QEMU
+
+The same scenario can be tried in QEMU, using the scripts in the build's
+`images/qemu` directory.  In `make run-menuconfig`, select user mode
+networking and *Enable netbooting* to have QEMU's built-in DHCP and
+TFTP server hand out the DDI.  Combined with an empty system disk, this
+simulates an initial deployment.
+
+
+## U-Boot
+
+### Bootfile netboot.scr
 
 The bootfile U-Boot retrieves from the TFTP server is a script that
 looks like this, `netboot.sh`:
@@ -114,7 +169,7 @@ The output is `netboot.scr` which we symlink to above in the dnsmasq
 setup step.
 
 
-## Bootfile rootfs.itb
+### Bootfile rootfs.itb
 
 By default, the U-Boot downloads whatever the DHCP server hands out as
 the boot file, so point that straight at a `rootfs.itb`:
@@ -140,7 +195,7 @@ and goes straight to DHCP.  A factory fresh board therefore reaches a
 running system with nobody at the console.
 
 
-## Installing to Onboard Storage
+### Installing to Onboard Storage
 
 A netbooted device is a complete system, so it can install itself.
 Build the bootloader and the Infix image separately, then combine them:
@@ -183,7 +238,7 @@ header with `sgdisk -e`, grows the last partition to fill the medium, and
 resizes the filesystem, in two stages with a reboot in between.
 
 
-## Netboot with a Vendor U-Boot
+### Netboot with a Vendor U-Boot
 
 The [Novarq Tactical 1000][tactical] ships with a vendor U-Boot that
 netboots but has neither `blkmap`, SquashFS support, nor `sysboot`, so it
@@ -212,7 +267,7 @@ bootm 0x70000000#boot
 `brd.rd_size` is the SquashFS size in KiB.  `fdt_high` and `initrd_high`
 need all 64 bits set, the shipped environment has a 32-bit `fdt_high`.
 
-### Unattended
+#### Unattended
 
 The `boot.scr` script runs the same steps.  With the TFTP server on another
 host than the DHCP server, name it in `bootcmd`:
@@ -242,7 +297,7 @@ dhcp-boot=boot.scr
 The image name is `${bootfile}` with `.scr` replaced by `.itb`.  If the fetch
 fails the board resets after five seconds.
 
-### Separate Artifacts
+#### Separate Artifacts
 
 For trying a kernel or device tree without rebuilding the image:
 
@@ -270,7 +325,7 @@ DRAM starts at `0x60000000`.
 
 [tactical]: https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md
 
-## U-Boot Commands
+### U-Boot Commands
 
 U-Boot is a maze of environment variables, some with values, some wrap
 commands, and most are undocumented.  We will use a prefix for our
@@ -282,5 +337,11 @@ later.
 ==> saveenv
 ```
 
+
+[boot]:     boot.md
+[boot-cfg]: boot.md#configuration
+[ddi]:      boot.md#discoverable-disk-image-ddi
+[ddi-disk]: boot.md#ddi-disk-image
+[upgrade]:  boot.md#system-upgrade
 
 [^1]: To prevent NetworkManager from automatically managing the interfaces.

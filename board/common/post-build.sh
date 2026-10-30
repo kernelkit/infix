@@ -91,6 +91,11 @@ rm -f "$TARGET_DIR/etc/os-release"
     fi
 } > "$TARGET_DIR/etc/os-release"
 
+if [ -f "$TARGET_DIR"/loader/entries/os.conf ]; then
+    sed -i "s/@TITLE@/$IX_NAME $INFIX_VERSION/" \
+	"$TARGET_DIR"/loader/entries/os.conf
+fi
+
 echo "$IX_TAGLINE $INFIX_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 ixmsg "Creating /etc/version: $(cat "$TARGET_DIR/etc/version")"
 

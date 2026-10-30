@@ -1,0 +1,9 @@
+config IX_IMAGE_LVM_STUB
+	bool "LVM2 stub image"
+	default y if IX_IMAGE_DDI
+	depends on IX_IMAGE_BAREBOX_ESP
+	help
+	  A disk image with Barebox and an empty LVM2 physical volume
+	  attached to the internal volume group. This is useful as a
+	  base image for persistent storage in QEMU emulation
+	  scenarios where the OS is supplied in a separate image.

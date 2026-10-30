@@ -173,7 +173,7 @@ func TestBootSoftwareAllCommandsFail(t *testing.T) {
 		Errors: map[string]error{
 			"rauc status --detailed --output-format=json": fmt.Errorf("not found"),
 			"fw_printenv BOOT_ORDER":                      fmt.Errorf("not found"),
-			"grub-editenv /mnt/aux/grub/grubenv list":     fmt.Errorf("not found"),
+			"/usr/libexec/confd/bareboxcfg --get-order":   fmt.Errorf("not found"),
 		},
 	}
 
@@ -204,10 +204,10 @@ func TestReadBootOrderFwPrintenv(t *testing.T) {
 	}
 }
 
-func TestReadBootOrderGrubFallback(t *testing.T) {
+func TestReadBootOrderBareboxFallback(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{
-			"grub-editenv /mnt/aux/grub/grubenv list": []byte("ORDER=B A\n"),
+			"/usr/libexec/confd/bareboxcfg --get-order": []byte("B A\n"),
 		},
 		Errors: map[string]error{
 			"fw_printenv BOOT_ORDER": fmt.Errorf("command not found"),
@@ -224,13 +224,62 @@ func TestReadBootOrderBothFail(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{},
 		Errors: map[string]error{
-			"fw_printenv BOOT_ORDER":                  fmt.Errorf("not found"),
-			"grub-editenv /mnt/aux/grub/grubenv list": fmt.Errorf("not found"),
+			"fw_printenv BOOT_ORDER":                    fmt.Errorf("not found"),
+			"/usr/libexec/confd/bareboxcfg --get-order": fmt.Errorf("not found"),
 		},
 	}
 
 	order := ReadBootOrder(context.Background(), runner)
 	if order != nil {
 		t.Fatalf("expected nil, got %v", order)
+	}
+}
+
+func TestBootSoftwareBareboxBootname(t *testing.T) {
+	runner := &testutil.MockRunner{
+		Results: map[string][]byte{
+			"rauc status --detailed --output-format=json": []byte(`{
+  "booted": "internal-primary",
+  "slots": [{"rootfs.0": {"bootname": "internal-primary", "class": "rootfs", "state": "booted"}}]
+}`),
+			"/usr/libexec/confd/bareboxcfg --get-order": []byte("primary secondary\n"),
+		},
+		Errors: map[string]error{
+			"fw_printenv BOOT_ORDER": fmt.Errorf("not found"),
+		},
+	}
+
+	var result map[string]map[string]interface{}
+	json.Unmarshal(BootSoftware(context.Background(), runner), &result)
+	sw := result["infix-system:software"]
+
+	if sw["booted"] != "primary" {
+		t.Fatalf("booted: expected 'primary', got %v", sw["booted"])
+	}
+	slot := sw["slot"].([]interface{})[0].(map[string]interface{})
+	if slot["bootname"] != "primary" {
+		t.Fatalf("bootname: expected 'primary', got %v", slot["bootname"])
+	}
+}
+
+func TestBareboxStateDevice(t *testing.T) {
+	fs := &testutil.MockFileReader{
+		Files: map[string][]byte{
+			"/etc/partition-uuid": []byte("AUX_UUID=\"78460f84-de84-4fe7-89bd-4c1f433b2230\"\n" +
+				"BAREBOX_STATE_UUID=\"80ca5554-c020-11f1-ba4d-b3c49d5dbf47\"\n"),
+		},
+	}
+
+	dev := BareboxStateDevice(fs)
+	if dev != "/dev/disk/by-partuuid/80ca5554-c020-11f1-ba4d-b3c49d5dbf47" {
+		t.Fatalf("unexpected device %q", dev)
+	}
+}
+
+func TestBareboxStateDeviceMissing(t *testing.T) {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{}}
+
+	if dev := BareboxStateDevice(fs); dev != "" {
+		t.Fatalf("expected empty, got %q", dev)
 	}
 }

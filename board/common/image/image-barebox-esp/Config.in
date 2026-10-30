@@ -1,0 +1,23 @@
+menuconfig IX_IMAGE_BAREBOX_ESP
+	bool "Barebox EFI System Partition"
+	depends on BR2_TARGET_BAREBOX
+	select BR2_PACKAGE_DT_UTILS
+	help
+	  An EFI System Partition (ESP) with Barebox installed.
+
+config IX_IMAGE_BAREBOX_ESP_KEY
+	string "signing key"
+	depends on IX_IMAGE_BAREBOX_ESP
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private RSA key, in PKCS#8 format, used to sign
+	  the Barebox EFI payload.
+
+config IX_IMAGE_BAREBOX_ESP_CERT
+	string "signing cert"
+	depends on IX_IMAGE_BAREBOX_ESP
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+	help
+	  Path to the X509 certificate whose associated public key can
+	  validate the authenticity of the generated signature.
+

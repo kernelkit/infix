@@ -589,10 +589,10 @@ func TestWatchSymlinkReplace(t *testing.T) {
 	cancel()
 }
 
-// fw_setenv (U-Boot) and grub-editenv rewrite the env via a temp file +
-// atomic rename, so the env gets a new inode.  A direct file watch misses
-// that; the parent-directory watch used for boot-order must catch it,
-// otherwise operational boot-order stays stale until the next reboot.
+// fw_setenv (U-Boot) rewrites the env via a temp file + atomic rename,
+// so the env gets a new inode.  A direct file watch misses that; the
+// parent-directory watch used for boot-order must catch it, otherwise
+// operational boot-order stays stale until the next reboot.
 func TestWatchSymlinkAtomicRename(t *testing.T) {
 	fw, tr := newTestFSWatcher(t)
 

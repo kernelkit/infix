@@ -42,6 +42,9 @@ func BootSoftware(ctx context.Context, cmd CommandRunner) json.RawMessage {
 				software[key] = v
 			}
 		}
+		if booted, ok := software["booted"].(string); ok {
+			software["booted"] = strings.TrimPrefix(booted, "internal-")
+		}
 		if slots := softwareSlots(raucData); slots != nil {
 			software["slot"] = slots
 		}
@@ -69,19 +72,29 @@ func ReadBootOrder(ctx context.Context, cmd CommandRunner) []string {
 		}
 	}
 
-	out, err = cmd.Run(ctx, "grub-editenv", "/mnt/aux/grub/grubenv", "list")
+	out, err = cmd.Run(ctx, "/usr/libexec/confd/bareboxcfg", "--get-order")
 	if err == nil {
-		for _, line := range strings.Split(string(out), "\n") {
-			if strings.Contains(line, "ORDER") {
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) == 2 {
-					return strings.Fields(strings.TrimSpace(parts[1]))
-				}
-			}
+		if order := strings.Fields(string(out)); len(order) > 0 {
+			return order
 		}
 	}
 
 	return nil
+}
+
+// BareboxStateDevice is the by-partuuid link to the barebox-state
+// partition, empty when /etc/partition-uuid does not name one.
+func BareboxStateDevice(fs FileReader) string {
+	data, err := fs.ReadFile("/etc/partition-uuid")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if uuid, ok := strings.CutPrefix(line, "BAREBOX_STATE_UUID="); ok {
+			return "/dev/disk/by-partuuid/" + strings.Trim(uuid, "\"")
+		}
+	}
+	return ""
 }
 
 // softwareSlots lists the RAUC slots, nil when rauc reported none.
@@ -112,6 +125,9 @@ func softwareSlot(name string, val map[string]interface{}) map[string]interface{
 		"bootname": val["bootname"],
 		"class":    val["class"],
 		"state":    val["state"],
+	}
+	if bootname, ok := val["bootname"].(string); ok {
+		s["bootname"] = strings.TrimPrefix(bootname, "internal-")
 	}
 
 	slotStatus, _ := val["slot_status"].(map[string]interface{})
