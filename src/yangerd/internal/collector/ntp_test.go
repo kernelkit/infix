@@ -155,6 +155,16 @@ func fullFakeChrony() *fakeChrony {
 	}
 }
 
+// unresolvedSource is a server configured by hostname that chronyd has
+// not resolved yet; cmdmon reports it with an ID placeholder address.
+func unresolvedSource() *chrony.ReplySourceData {
+	d := sourceData(nil, chrony.SourceModeClient, chrony.SourceStateUnreach,
+		0, 6, 0, 0, 0, 0)
+	d.IPAddr.Family = chrony.IPAddrID
+	d.IPAddr.IP[3] = 1
+	return d
+}
+
 func unsyncFakeChrony() *fakeChrony {
 	return &fakeChrony{
 		tracking: &chrony.ReplyTracking{
@@ -396,6 +406,26 @@ func ntpSourceCount(t *testing.T, tr *tree.Tree) int {
 		t.Fatalf("unmarshal infix-system:ntp: %v", err)
 	}
 	return len(ntp.Sources.Source)
+}
+
+func TestNTPUnresolvedSourceSkipped(t *testing.T) {
+	fake := fullFakeChrony()
+	fake.data = append(fake.data, unresolvedSource())
+	fake.stats = append(fake.stats, nil)
+
+	out, tr := ntpCollect(t, fake)
+	assocs := out["associations"].(map[string]interface{})["association"].([]interface{})
+	if len(assocs) != 3 {
+		t.Fatalf("expected 3 associations, got %d", len(assocs))
+	}
+	for _, a := range assocs {
+		if addr := a.(map[string]interface{})["address"].(string); addr == "ID#0000000001" {
+			t.Fatal("unresolved source leaked into associations")
+		}
+	}
+	if n := ntpSourceCount(t, tr); n != 4 {
+		t.Fatalf("expected 4 NTP sources, got %d", n)
+	}
 }
 
 func TestNTPSourcesEmpty(t *testing.T) {

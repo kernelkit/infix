@@ -140,7 +140,11 @@ q_add_disk()
 q_sect_device_usb()
 {
     if [ -z "$usb_bus_added" ]; then
-	q sect usb
+	case "$IX_QEMU_MACHINE" in
+	    q35*|pc*)
+		q sect device piix3-usb-uhci
+		;;
+	esac
 	q sect device usb-ehci
 	q param id ehci
 	usb_bus_added=YES
