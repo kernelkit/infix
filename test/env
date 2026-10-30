@@ -110,12 +110,21 @@ start_topology()
     sed -i "s/qn_image=\".*\"/qn_image=\"$img_name\"/" "$envdir/qeneth/topology.dot.in"
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
-    INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
+    topology="$envdir/qeneth/topology.dot"
     cat <<EOF >"$envdir/bin/qeneth"
 #!/bin/sh
 cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
 EOF
     chmod +x "$envdir/bin/qeneth"
+}
+
+start_syslog_sink()
+{
+    [ "$topology" ] || return 0
+
+    TEST_SYSLOG="$logdir/syslog-$(date +%Y%m%d-%H%M%S).log"
+    export TEST_SYSLOG
+    "$testdir/syslog-sink" "$topology" "$TEST_SYSLOG" || true
 }
 
 name()
@@ -272,6 +281,7 @@ export PYTHONPATH="$testdir"
 INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
 start_topology "$qenethdir" "$files"
 [ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
+start_syslog_sink
 if [ -n "$INFAMY_EXTRA_ARGS" ]; then
 	INFAMY_ARGS="$INFAMY_ARGS $INFAMY_EXTRA_ARGS"
 fi

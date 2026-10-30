@@ -1,0 +1,47 @@
+#!/bin/sh
+# Collect the logs DUTs in test mode forward to ff02::161 on their mgmt
+# port, all in one file.  See doc/test-arch.md, and utils/syslog_split.py
+set -e
+
+syslogd=/usr/sbin/syslogd
+group=ff02::161
+
+usage()
+{
+    echo "usage: syslog-sink <TOPOLOGY> <LOGFILE>"
+}
+
+[ $# -eq 2 ] || { usage; exit 1; }
+topology=$1
+log=$2
+
+if [ ! -x "$syslogd" ]; then
+    echo "syslog-sink: $syslogd missing, not collecting DUT logs" >&2
+    exit 0
+fi
+
+ports=$(python3 - "$topology" <<'EOF'
+import sys
+import pydot
+from infamy.topology import Topology
+
+top = Topology(pydot.graph_from_dot_file(sys.argv[1])[0])
+ctrl = top.get_ctrl()
+links = [top.get_mgmt_link(ctrl, node) for node in top.get_infixen()]
+print(" ".join(link[0] for link in links if link))
+EOF
+)
+
+dir=$(mktemp -d /tmp/syslog-sink.XXXXXX)
+{
+    echo "secure_mode 0"
+    for port in $ports; do
+	echo "listen [$group%$port]%$port"
+    done
+    echo "*.*	-$log	;RFC5424"
+} > "$dir/syslog.conf"
+
+mkdir -p "$(dirname "$log")"
+$syslogd -f "$dir/syslog.conf" -p "$dir/log.sock" -P "$dir/syslogd.pid" \
+	 -C "$dir/syslogd.cache" -m 0 -8 -H -n -K
+echo "syslog-sink: DUT logs saved in $log"

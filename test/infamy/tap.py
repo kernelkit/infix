@@ -37,6 +37,8 @@ import traceback
 import infamy.netns
 
 class Test:
+    step_hooks = []  # fn(num, msg), called when a step starts
+
     def __init__(self, output=sys.stdout):
         self.out = output
         self.commenter = CommentWriter(self.out)
@@ -92,6 +94,8 @@ class Test:
 
     @contextlib.contextmanager
     def step(self, msg):
+        for hook in self.step_hooks:
+            hook(self.steps + 1, msg)
         try:
             yield
             self._ok(msg)

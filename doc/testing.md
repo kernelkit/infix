@@ -197,6 +197,28 @@ admin@infix-00-00-00:~$
 > "menu" using Ctrl-], compared to standard Telnet this is the BusyBox
 > version so you press 'e' + enter instead of 'q' to quit.
 
+### Reading DUT Logs
+
+When a test fails, the DUTs' logs often show why.  The test environment
+collects the logs of all DUTs in test mode in one file per session, see
+[DUT Logs](test-arch.md#dut-logs).
+Its name is in `$TEST_SYSLOG` inside the environment:
+
+```
+11:42:54 infamy0:test # tail -f $TEST_SYSLOG
+```
+
+Filter it on a test, a device, or both:
+
+```
+11:42:54 infamy0:test # utils/syslog_split.py -t 0006-set-hostname -d dut1 $TEST_SYSLOG
+```
+
+After `make test`, the logs of each test and device are also in
+`test/.log/last/syslog/<test>/<device>.log`, and packed in
+`test/.log/last/logs.tar.gz`.  In CI, download the `dut-syslog`
+artifact.
+
 ### Attaching to MACVLANs
 
 To fully isolate the host's interfaces from one another, many tests
