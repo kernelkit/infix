@@ -35,8 +35,7 @@ func TestBuildSwitchPort(t *testing.T) {
 	p := port{
 		TxQueues: 4,
 		Driver:   "sparx5-switch",
-		App:      json.RawMessage(`{"dscp_prio":[[0,0],[46,6]],"pcp_prio":[]}`),
-		Rewr:     json.RawMessage(`{"prio_pcp":[],"prio_dscp":[]}`),
+		App:      true,
 		Qdiscs:   json.RawMessage(`[{"kind":"ets","handle":"8001:","root":true,"offloaded":true,"options":{"bands":4}}]`),
 	}
 	got := buildJSON(t, p)
@@ -52,6 +51,10 @@ func TestBuildSwitchPort(t *testing.T) {
 	}
 }
 
+type fakeDCB struct{ app, rewr bool }
+
+func (f fakeDCB) Tables(string) (bool, bool, error) { return f.app, f.rewr, nil }
+
 type fakeBatch map[string]string
 
 func (f fakeBatch) Query(cmd string) (json.RawMessage, error) {
@@ -65,7 +68,7 @@ func TestDrainOnlyOnChange(t *testing.T) {
 	dir := t.TempDir()
 	tc := fakeBatch{"qdisc show dev if7": `[{"kind":"ets","handle":"1:","root":true,"offloaded":true,"options":{"bands":8}}]`}
 	links := `[{"ifname":"e1","ifindex":7,"num_tx_queues":4}]`
-	m := New(tc, fakeBatch{}, func() json.RawMessage { return json.RawMessage(links) },
+	m := New(tc, fakeDCB{}, func() json.RawMessage { return json.RawMessage(links) },
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	m.sysfs = dir
 
@@ -89,7 +92,7 @@ func TestDrainOnlyOnChange(t *testing.T) {
 }
 
 func TestDispatch(t *testing.T) {
-	m := New(fakeBatch{}, fakeBatch{}, func() json.RawMessage { return nil },
+	m := New(fakeBatch{}, fakeDCB{}, func() json.RawMessage { return nil },
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	ae := netlink.NewAttributeEncoder()

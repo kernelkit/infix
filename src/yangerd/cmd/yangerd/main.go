@@ -519,7 +519,7 @@ func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string)
 	}
 }
 
-// startQoS starts the QoS monitor and its tc and dcb batches.  Without
+// startQoS starts the QoS monitor, its tc batch and DCB reader.  Without
 // them the ports carry no QoS state, which is no reason to stop.
 func startQoS(ctx context.Context, links func() json.RawMessage, log *slog.Logger) *qosmonitor.Monitor {
 	tc, err := ipbatch.NewTC(ctx, log)
@@ -527,9 +527,9 @@ func startQoS(ctx context.Context, links func() json.RawMessage, log *slog.Logge
 		log.Warn("no QoS state, tc batch did not start", "err", err)
 		return nil
 	}
-	dcb, err := ipbatch.NewDCB(ctx, log)
+	dcb, err := qosmonitor.DialDCB()
 	if err != nil {
-		log.Warn("no QoS state, dcb batch did not start", "err", err)
+		log.Warn("no QoS state, DCB socket did not open", "err", err)
 		tc.Close()
 		return nil
 	}

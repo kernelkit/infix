@@ -2,7 +2,6 @@ package qosmonitor
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 // trustOrders are the orders a driver's dcb apptrust accepts, by driver
@@ -18,8 +17,8 @@ var trustOrders = map[string][]string{
 type port struct {
 	TxQueues int
 	Driver   string
-	App      json.RawMessage // dcb app show, nil when not asked
-	Rewr     json.RawMessage // dcb rewr show, nil when not asked
+	App      bool            // PCP or DSCP entries in the DCB app table
+	Rewr     bool            // PCP or DSCP entries in the DCB rewrite table
 	Qdiscs   json.RawMessage // tc qdisc show
 }
 
@@ -72,18 +71,10 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 	// driver took them.
 	var offload []string
 	if trust != nil {
-		var app struct {
-			DSCP json.RawMessage `json:"dscp_prio"`
-			PCP  json.RawMessage `json:"pcp_prio"`
-		}
-		if json.Unmarshal(p.App, &app) == nil && (nonEmpty(app.DSCP) || nonEmpty(app.PCP)) {
+		if p.App {
 			offload = append(offload, "classification")
 		}
-		var rewr struct {
-			PCP  json.RawMessage `json:"prio_pcp"`
-			DSCP json.RawMessage `json:"prio_dscp"`
-		}
-		if json.Unmarshal(p.Rewr, &rewr) == nil && (nonEmpty(rewr.PCP) || nonEmpty(rewr.DSCP)) {
+		if p.Rewr {
 			offload = append(offload, "remarking")
 		}
 	}
@@ -104,9 +95,4 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["offload"] = offload
 	}
 	return caps
-}
-
-func nonEmpty(raw json.RawMessage) bool {
-	s := strings.TrimSpace(string(raw))
-	return s != "" && s != "null" && s != "[]" && s != "{}"
 }

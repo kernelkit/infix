@@ -63,10 +63,11 @@ yangerd deletes the key rather than storing an empty container, because
 libyang would instantiate a presence container from `{}`.  statd treats
 an empty answer as "nothing to add", not as an error.
 
-**Long-lived helpers instead of forks.**  `ip`, `ip -s -d`, `bridge`,
-`tc` and `dcb` run as `-json -force -batch -` subprocesses
+**Long-lived helpers instead of forks.**  `ip`, `ip -s -d`, `bridge`
+and `tc` run as `-json -force -batch -` subprocesses
 (`internal/ipbatch`), fed one command per event.  chronyd is queried over cmdmon, ptp4l over its
-management socket, FRR over the daemons' vty sockets, all in-process.
+management socket, FRR over the daemons' vty sockets, the DCB tables
+over rtnetlink, all in-process.
 
 **Restart, don't die.**  Every monitor runs under `backoff.Retry`: when
 its source goes away (FRR restart, dnsmasq exit, `lldpcli watch` ending),
@@ -89,7 +90,7 @@ build vendors them from `go.sum`.
 |---|---|---|---|
 | `ietf-interfaces:interfaces` | links, addresses, neighbours, bridge MDB, VLANs, LAG | event | rtnetlink, re-read with `ip`/`bridge` batch |
 | | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start |
-| | QoS capabilities | event | rtnetlink TC and DCB, re-read with `tc`/`dcb` batch |
+| | QoS capabilities | event | rtnetlink TC and DCB, re-read with `tc` batch and DCB over rtnetlink |
 | | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
