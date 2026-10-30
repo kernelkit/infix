@@ -164,6 +164,10 @@ slots.  The [Banana Pi BPI-MT7615][bpi-mt7615] is a purpose-built dual-band
 natural fit.  With it installed, Infix will use it in preference to the onboard
 WMAC for the `wifi0-ap` interface.
 
+For Wi-Fi 6E, a Qualcomm WCN6855 card such as the QCNFA765 works as well.
+It shows up as its own radio on 2.4, 5 and 6 GHz with 802.11ax, next to
+the onboard WMAC.
+
 [bpi-mt7615]: https://docs.banana-pi.org/en/BPI-MT7615/BananaPi_MT7615
 
 ### mmc0 = eMMC, mmc1 = SD

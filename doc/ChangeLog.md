@@ -22,6 +22,8 @@ All notable changes to the project are documented in this file.
   be stored in `/mnt/aux/vpd.bin`, see [VPD][vpd].  The ports then get
   permanent addresses derived from the chassis MAC instead of random
   ones on every boot.  Requires a bootloader from v26.11.0 or later
+- Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
+  2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
 
 
 [v26.10.0][] - 2026-10-30

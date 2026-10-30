@@ -57,6 +57,8 @@ Wi-Fi support is primarily tested with Realtek chipset-based adapters.
 
 - Built-in Wi-Fi on Banana Pi BPi-R3
 - Built-in Wi-Fi on Raspberry Pi 4/CM4
+- Qualcomm WCN6855 PCIe cards, e.g., the QCNFA765: 2.4, 5 and 6 GHz,
+  802.11ax, tested on the Banana Pi BPI-R64
 - Realtek:
     - RTL8188CU
     - RTL8188FU
