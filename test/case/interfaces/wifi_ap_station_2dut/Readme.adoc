@@ -1,1 +1,6 @@
-test.adoc
+include::2_4ghz.adoc[]
+
+<<<
+
+include::5ghz.adoc[]
+

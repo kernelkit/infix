@@ -39,6 +39,7 @@ graph "wifi-ap-station-2dut" {
 	host:mgmt1 -- ap:mgmt [requires="mgmt", color="lightgray"]
 	host:mgmt2 -- station:mgmt [requires="mgmt", color="lightgray"]
 
-	ap:wifi -- cell      [requires="wifi2.4GHz", style="dashed"]
-	station:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+	// wifi-band is the radio band the test runs on, see BandArgumentParser
+	ap:wifi -- cell      [requires="wifi-band", style="dashed"]
+	station:wifi -- cell [requires="wifi-band", style="dashed"]
 }

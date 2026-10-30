@@ -168,6 +168,11 @@ int wifi_mode_changed(struct lyd_node *wifi)
 	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
 		return 1;
 
+	/* Moved to another radio, dependency passes add the leaf without orig-value */
+	node = lydx_get_child(wifi, "radio");
+	if (node && lydx_get_mattr(node, "yang:orig-value"))
+		return 1;
+
 	/* No mode <-> station, and the 4-address flag is set at creation */
 	node = lydx_get_child(wifi, "station");
 	if (node)

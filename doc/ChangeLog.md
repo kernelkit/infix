@@ -211,6 +211,9 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Moving a WiFi access point to another radio left it on the old radio,
+  and the access point did not start.  The radio of an access point can
+  now be changed
 - A bridge port recreated with a new address lost the VLANs it was tagged
   in, only its PVID VLAN came back
 - Removing the DHCPv6 client from an interface could leave its routes

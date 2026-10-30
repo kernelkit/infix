@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 r"""
-WiFi Access Point and Station association across two DUTs
+WiFi Access Point and Station association across two DUTs on {band}
 
 Two DUTs, each with its own radio: the ap runs a WPA2/WPA3-personal Access
-Point, the station associates to it.  The radios are in
+Point on {band}, the station associates to it.  The radios are in
 separate kernels, so the "air" between them is realised differently per
 environment:
 
@@ -42,7 +42,11 @@ LEASE = "192.168.20.100"        # single-address pool -> deterministic lease
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to the ap and the station"):
-        env = infamy.Env()
+        argp = wifi.BandArgumentParser()
+        env = infamy.Env(args=argp, edge_mappings=argp.edge_mappings)
+        band = env.args.band
+        ap_radio = env["ap"]["wifi"]
+        sta_radio = env["station"]["wifi"]
         # Connect to both nodes concurrently to cut setup time.
         ap, station = parallel(
             lambda: env.attach("ap", "mgmt"),
@@ -50,14 +54,14 @@ with infamy.Test() as test:
         )
         wifi.skip_unless_supported(test, ap, station)
 
-    with test.step("Configure the ap as an Access Point and the station on radio0"):
+    with test.step(f"Configure the ap as an Access Point on {band} and the station"):
         parallel(
             lambda: ap.put_config_dicts({
-                "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
+                "ietf-hardware": wifi.hardware(wifi.radio(ap_radio, band=band, channel=wifi.CHANNEL[band])),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", {
-                        "radio": "radio0",
+                        "radio": ap_radio,
                         "access-point": {
                             "ssid": SSID,
                             "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi"},
@@ -70,11 +74,11 @@ with infamy.Test() as test:
                 }]}},
             }),
             lambda: station.put_config_dicts({
-                "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
+                "ietf-hardware": wifi.hardware(wifi.radio(sta_radio)),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", {
-                        "radio": "radio0",
+                        "radio": sta_radio,
                         "station": {
                             "ssid": SSID,
                             "security": {"mode": "auto", "secret": "wifi"},
