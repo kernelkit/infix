@@ -1,6 +1,6 @@
 // Package qosmonitor keeps the QoS operational state of each port, its
-// capabilities.  The qdisc tree and the DCB tables are read through
-// long-lived `tc` and `dcb` batch processes, one query per port, on
+// capabilities.  The qdisc tree is read through a long-lived `tc` batch
+// process and the DCB tables over rtnetlink, one query per port, on
 // rtnetlink TC and DCB events and on link events.
 package qosmonitor
 
@@ -37,6 +37,11 @@ type Querier interface {
 	Query(command string) (json.RawMessage, error)
 }
 
+// DCBReader reads a port's DCB tables, see DCB.
+type DCBReader interface {
+	Tables(ifname string) (app, rewr bool, err error)
+}
+
 // link is the part of an `ip -json -d link show` row used here.
 type link struct {
 	Name     string `json:"ifname"`
@@ -46,7 +51,8 @@ type link struct {
 
 // Monitor follows the QoS state of every port.
 type Monitor struct {
-	tc, dcb  Querier
+	tc       Querier
+	dcb      DCBReader
 	links    func() json.RawMessage
 	log      *slog.Logger
 	onUpdate func(map[string]json.RawMessage)
@@ -61,8 +67,9 @@ type Monitor struct {
 }
 
 // New creates a Monitor reading qdiscs through tc and DCB tables through
-// dcb, for the interfaces in links, an `ip -json -d link show` dump.
-func New(tc, dcb Querier, links func() json.RawMessage, log *slog.Logger) *Monitor {
+// dcb, see DCB, for the interfaces in links, an `ip -json -d link show`
+// dump.
+func New(tc Querier, dcb DCBReader, links func() json.RawMessage, log *slog.Logger) *Monitor {
 	return &Monitor{
 		tc:         tc,
 		dcb:        dcb,
@@ -274,8 +281,9 @@ func (m *Monitor) read(l link) port {
 		m.log.Debug("qosmonitor: tc", "ifname", l.Name, "err", err)
 	}
 	if trustOrders[p.Driver] != nil {
-		p.App, _ = m.dcb.Query("app show dev " + l.Name)
-		p.Rewr, _ = m.dcb.Query("rewr show dev " + l.Name)
+		if p.App, p.Rewr, err = m.dcb.Tables(l.Name); err != nil {
+			m.log.Debug("qosmonitor: dcb", "ifname", l.Name, "err", err)
+		}
 	}
 	return p
 }
