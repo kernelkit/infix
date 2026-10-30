@@ -8,6 +8,9 @@ import (
 
 	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/wpactrl"
+	"github.com/mdlayher/genetlink"
+	"github.com/mdlayher/netlink"
+	"golang.org/x/sys/unix"
 )
 
 func TestBuildWDSData(t *testing.T) {
@@ -104,5 +107,37 @@ func TestAttachDetachRefreshWDSPorts(t *testing.T) {
 	m.onDetach(context.Background(), "wifi-test-none")
 	if want := `{"wds-link":{"connected":true}}`; published["wds0"] != want {
 		t.Errorf("detached: wds0 published %q, want %s", published["wds0"], want)
+	}
+}
+
+// hostapd announces AP-STA-DISCONNECTED up to a second before it
+// unbinds a timed-out station from its port, and the kernel's delete
+// then names the access point, so that event re-reads the ports too.
+func TestNL80211StationEventsRefreshWDSPorts(t *testing.T) {
+	m := New(slog.Default())
+	m.meshState = func(ifname string) meshState {
+		if ifname == "wds0" {
+			return meshState{iftype: "AP_VLAN"}
+		}
+		return meshState{}
+	}
+	m.wdsPorts = func() []string { return []string{"wds0"} }
+
+	published := map[string]string{}
+	m.SetOnUpdate(func(ifname string, raw json.RawMessage) { published[ifname] = string(raw) })
+
+	ae := netlink.NewAttributeEncoder()
+	ae.String(unix.NL80211_ATTR_IFNAME, "wifi-test-none")
+	data, err := ae.Encode()
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	for _, cmd := range []uint8{unix.NL80211_CMD_NEW_STATION, unix.NL80211_CMD_DEL_STATION} {
+		delete(published, "wds0")
+		msg := genetlink.Message{Header: genetlink.Header{Command: cmd}, Data: data}
+		m.handleNL80211(context.Background(), msg, genetlink.Family{})
+		if want := `{"wds-link":{"connected":false}}`; published["wds0"] != want {
+			t.Errorf("cmd %d: wds0 published %q, want %s", cmd, published["wds0"], want)
+		}
 	}
 }

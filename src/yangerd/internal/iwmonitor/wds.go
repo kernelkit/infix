@@ -25,8 +25,10 @@ func buildWDSData(ms meshState) map[string]any {
 }
 
 // refreshWDSPorts re-reads every wds-link port.  hostapd binds a
-// station to its port without any nl80211 event for the port, the
-// AP-STA-CONNECTED on the access point is the cue.
+// station to its port without any nl80211 event for the port, and
+// unbinds it after it has announced the AP-STA-DISCONNECTED, so the
+// station events on the access point are the cue, from hostapd and
+// from the kernel.
 func (m *IWMonitor) refreshWDSPorts(ctx context.Context) {
 	for _, port := range m.wdsPorts() {
 		m.refreshInterface(ctx, port)

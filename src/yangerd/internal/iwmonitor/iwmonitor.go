@@ -153,6 +153,10 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 			m.log.Debug("nl80211: station event", "cmd", cmd, "iface", ifname)
 			m.refreshInterface(ctx, ifname)
 		}
+		// A station leaving a wds-link port is moved back to its
+		// access point before the kernel deletes it, so the event
+		// names the access point, not the port.
+		m.refreshWDSPorts(ctx)
 	case unix.NL80211_CMD_CONNECT:
 		if ifname != "" {
 			m.log.Debug("nl80211: connect", "iface", ifname)
