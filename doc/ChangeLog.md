@@ -18,6 +18,10 @@ All notable changes to the project are documented in this file.
   action on the Ethernet container of the interface, which the `show
   interface <port>` command and the WebUI interface page run.  The octet
   counters of an interface remain in the operational datastore
+- Banana Pi BPI-R64: the board identity, base MAC address included, can
+  be stored in `/mnt/aux/vpd.bin`, see [VPD][vpd].  The ports then get
+  permanent addresses derived from the chassis MAC instead of random
+  ones on every boot.  Requires a bootloader from v26.11.0 or later
 
 
 [v26.10.0][] - 2026-10-30
