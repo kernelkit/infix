@@ -5,5 +5,5 @@ if [ -n "{{qn_usb}}" ]; then
        dd if=/dev/zero of={{qn_usb}} bs=8M count=1 >/dev/null 2>&1
        mkfs.vfat {{qn_usb}}  >/dev/null 2>&1
    fi
-   usb_cmd=" -drive if=none,id=usbstick,format=raw,file={{qn_usb}} -usb -device usb-ehci,id=ehci -device usb-storage,bus=ehci.0,drive=usbstick "
+   usb_cmd=" -drive if=none,id=usbstick,format=raw,file={{qn_usb}} -device piix3-usb-uhci,id=uhci -device usb-ehci,id=ehci -device usb-storage,bus=ehci.0,drive=usbstick "
 fi
