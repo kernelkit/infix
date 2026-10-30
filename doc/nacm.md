@@ -13,11 +13,11 @@ how to write access control policies of your own.
 ## The Factory Defaults Work
 
 You do not need to understand NACM to use the system securely.  The
-factory configuration permits everything by default and denies only the
-sensitive items: passwords, cryptographic keys, and operations such as
-factory reset and software upgrade.  Operators can configure the whole
-system without custom rules, and a new feature is configurable the day
-it lands, since nothing in the policy has to be updated for it.
+factory configuration lets everyone read, except passwords and
+cryptographic keys, but lets nobody change anything or run operations
+unless their group is given that right.  A user that is not in any
+group can look but not touch, and a new feature stays admin-only until
+a rule gives it to someone else.
 
 The three built-in user levels (admin, operator, guest) cover most
 needs.  Read on only if you need to write access control policies of
@@ -54,7 +54,8 @@ Given this configuration:
 ```json
 {
   "read-default": "permit",
-  "write-default": "permit",
+  "write-default": "deny",
+  "exec-default": "deny",
   "rule-list": [
     {
       "name": "operator-acl",
@@ -63,7 +64,14 @@ Given this configuration:
         {
           "name": "permit-system-rpcs",
           "module-name": "ietf-system",
+          "rpc-name": "*",
           "access-operations": "exec",
+          "action": "permit"
+        },
+        {
+          "name": "permit-interfaces",
+          "path": "/ietf-interfaces:interfaces",
+          "access-operations": "create update delete",
           "action": "permit"
         }
       ]
@@ -86,12 +94,13 @@ Given this configuration:
 
 The operator user "jacky" gets the following results:
 
-| Operation              | Matching rule        | Result                                        |
-|------------------------|----------------------|-----------------------------------------------|
-| Read a password        | `deny-passwords`     | Denied                                        |
-| Write interface config | none                 | Permitted by `write-default`                  |
-| Write hostname         | none                 | Permitted by `write-default`                  |
-| Reboot the system      | `permit-system-rpcs` | Permitted, despite `nacm:default-deny-all`    |
+| Operation              | Matching rule        | Result                                     |
+|------------------------|----------------------|--------------------------------------------|
+| Read a password        | `deny-passwords`     | Denied                                     |
+| Read interface config  | none                 | Permitted by `read-default`                |
+| Write interface config | `permit-interfaces`  | Permitted                                  |
+| Add a user account     | none                 | Denied by `write-default`                  |
+| Reboot the system      | `permit-system-rpcs` | Permitted, despite `nacm:default-deny-all` |
 
 ## Global Defaults
 
@@ -100,15 +109,22 @@ NACM has three global defaults that apply when no rule matches:
 ```json
 {
   "read-default": "permit",
-  "write-default": "permit",
-  "exec-default": "permit"
+  "write-default": "deny",
+  "exec-default": "deny"
 }
 ```
 
-These are also the factory settings: any user may read, modify, and
-execute anything that no rule or YANG annotation denies.  Combined with
-a few denials for sensitive items, this keeps the rule set small, and a
-new YANG module needs no NACM changes before operators can use it.
+These are also the factory settings: any user may read what no rule or
+YANG annotation denies, but changing anything or running an operation
+takes a permit rule.  A user that is not in any group, or whose group
+has no rules, therefore has read-only access.
+
+> [!NOTE]
+> Systems upgraded from a release where the factory settings were
+> `"permit"` keep their saved defaults.  To get the same protection as a
+> new installation, set `write-default` and `exec-default` to `"deny"`
+> and add the operator rules shown in
+> [Example: Factory Configuration](#example-factory-configuration).
 
 > [!IMPORTANT]
 > Nodes annotated with `nacm:default-deny-all` or `nacm:default-deny-write`
@@ -194,7 +210,8 @@ rpc system-restart {
 ```
 
 Even with `exec-default: "permit"`, users need an explicit permit rule to
-execute system-restart.
+execute system-restart.  It works the other way too: an explicit permit
+rule, like the admin `permit-all`, opens up an annotated node.
 
 ### nacm:default-deny-write
 
@@ -270,117 +287,134 @@ rule matches.
 
 ## Example: Factory Configuration
 
-The factory configuration permits by default and denies the sensitive
-items, with six rules in total:
+The factory configuration denies write and exec by default, and has
+five rule-lists, evaluated in this order:
 
-```json
-{
-  "ietf-netconf-acm:nacm": {
-    "enable-nacm": true,
-    "read-default": "permit",
-    "write-default": "permit",
-    "exec-default": "permit",
-    "groups": {
-      "group": [
-        {"name": "admin", "user-name": ["admin"]},
-        {"name": "operator", "user-name": []},
-        {"name": "guest", "user-name": []}
-      ]
-    },
-    "rule-list": [
-      {
-        "name": "admin-acl",
-        "group": ["admin"],
-        "rule": [
-          {
-            "name": "permit-all",
-            "module-name": "*",
-            "access-operations": "*",
-            "action": "permit",
-            "comment": "Admin has full unrestricted access"
-          }
-        ]
-      },
-      {
-        "name": "operator-acl",
-        "group": ["operator"],
-        "rule": [
-          {
-            "name": "permit-system-rpcs",
-            "module-name": "ietf-system",
-            "rpc-name": "*",
-            "access-operations": "exec",
-            "action": "permit",
-            "comment": "Operators can reboot, shutdown, and set system time"
-          }
-        ]
-      },
-      {
-        "name": "guest-acl",
-        "group": ["guest"],
-        "rule": [
-          {
-            "name": "deny-all-write+exec",
-            "module-name": "*",
-            "access-operations": "create update delete exec",
-            "action": "deny",
-            "comment": "Guests can only read, not modify or execute"
-          }
-        ]
-      },
-      {
-        "name": "default-deny-all",
-        "group": ["*"],
-        "rule": [
-          {
-            "name": "deny-password-access",
-            "path": "/ietf-system:system/authentication/user/password",
-            "access-operations": "*",
-            "action": "deny",
-            "comment": "No user except admins can access password hashes"
-          },
-          {
-            "name": "deny-keystore-access",
-            "module-name": "ietf-keystore",
-            "access-operations": "*",
-            "action": "deny",
-            "comment": "No user except admins can access cryptographic keys"
-          },
-          {
-            "name": "deny-truststore-access",
-            "module-name": "ietf-truststore",
-            "access-operations": "*",
-            "action": "deny",
-            "comment": "No user except admins can access trust store"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+| Rule-list                       | Group      | Purpose                                        |
+|---------------------------------|------------|------------------------------------------------|
+| `admin-acl`                     | `admin`    | `permit-all`, full access                      |
+| `default-permit-read-only-exec` | `*`        | Permit operations that only read               |
+| `operator-acl`                  | `operator` | Permit configuring the network, and reboot     |
+| `guest-acl`                     | `guest`    | Deny all writes and operations                 |
+| `default-deny-all`              | `*`        | Deny password hashes, keystore, and truststore |
 
 The admin rule-list comes first, so its `permit-all` rule wins before
-the global denials in the `"*"` rule-list are ever reached.  Operators
-need only one rule, the permit for the ietf-system RPCs, since the
-defaults already let them configure any module.  Passwords, keystore,
-and truststore are denied for everyone else through the `"*"` group.
+the global denials in the `"*"` rule-list are ever reached.  The
+read-only operations come next, so the guest deny that follows does
+not block them.
+
+The operator rule-list permits the ietf-system RPCs (reboot, shutdown,
+and setting the time), and writes to a few subtrees, each with a path
+rule:
+
+| Rule                 | Path                             |
+|----------------------|----------------------------------|
+| `permit-interfaces`  | `/ietf-interfaces:interfaces`    |
+| `permit-routing`     | `/ietf-routing:routing`          |
+| `permit-firewall`    | `/infix-firewall:firewall`       |
+| `permit-dhcp-server` | `/infix-dhcp-server:dhcp-server` |
+| `permit-lldp`        | `/ieee802-dot1ab-lldp:lldp`      |
+| `permit-hostname`    | `/ietf-system:system/hostname`   |
+| `permit-contact`     | `/ietf-system:system/contact`    |
+| `permit-location`    | `/ietf-system:system/location`  |
+| `permit-clock`       | `/ietf-system:system/clock`      |
+
+Path rules leave the rest of a module alone, so the operator can set
+the hostname, but not touch `/system/authentication` next to it.  A
+`module-name` rule for ietf-system would have opened up the user
+accounts as well, it overrides their YANG annotation.
+
+A write rule does not cover the actions in a subtree, those are exec
+operations with rules of their own.  Operators may run the actions
+that go with the subtrees they configure:
+
+| Rule                        | Action                                         |
+|-----------------------------|------------------------------------------------|
+| `permit-dhcp-server-clear`  | Clear the DHCP server statistics               |
+| `permit-address-set-add`    | Add a dynamic entry to a firewall address set  |
+| `permit-address-set-remove` | Remove a dynamic entry from an address set     |
+| `permit-address-set-flush`  | Flush the dynamic entries of an address set    |
+
+The firewall's `lockdown-mode` action is left out on purpose.  It cuts
+all remote access, including the operator's own session, and only the
+console can bring it back, so it stays with the admin.
+
+Last, the operator rule-list permits the NETCONF operations that change
+or save configuration: `edit-config`, `edit-data`, `lock`, `unlock`,
+`commit`, `discard-changes`, `validate`, and `copy-config`.  These only
+open up the operation, the write rules still decide which data it may
+change.  The CLI, RESTCONF, and the web interface change and save
+configuration without any operation, and do not need them.
+
+The guest rule-list denies all writes and operations, which the
+defaults already do, so guests stay read-only even if the defaults are
+changed.
+
+Some operations only read: NETCONF clients fetch the YANG modules they
+need with `get-schema`, and a few show commands run an action, like
+`show bridge fdb`, or `show hardware <radio> scan` and `survey`.  These
+are exec operations, so the last rule-list permits them to every user:
+
+| Rule                  | Operation                                    |
+|-----------------------|----------------------------------------------|
+| `permit-get-schema`   | `get-schema`                                 |
+| `permit-bridge-fdb`   | the bridge `get-forwarding-database` action  |
+| `permit-radio-scan`   | the Wi-Fi radio `scan` action                |
+| `permit-radio-survey` | the Wi-Fi radio `channel-survey` action      |
+
+The `get`, `get-config`, and `get-data` operations need no rule, NACM
+never checks them for exec ([RFC 8341][1], section 3.2.4), and what
+their reply holds is decided by the read rules.
+
 Factory reset and software upgrade are not mentioned at all, their YANG
-annotations keep them admin-only.
+annotations, and the deny defaults, keep them admin-only.
 
 The resulting permissions per group:
 
-| Group    | Read | Write | Exec | Exceptions                                    |
-|----------|------|-------|------|-----------------------------------------------|
-| admin    | All  | All   | All  | None                                          |
-| operator | All  | All   | All  | Cannot access passwords, keystore, truststore |
-| guest    | All  | None  | None | Read-only access                              |
+| Group    | Read | Write              | Exec                                                        | Exceptions                                    |
+|----------|------|--------------------|-------------------------------------------------------------|-----------------------------------------------|
+| admin    | All  | All                | All                                                         | None                                          |
+| operator | All  | The subtrees above | Reboot, shutdown, set time, the operations above, read-only | Cannot access passwords, keystore, truststore |
+| guest    | All  | None               | Read-only                                                   | Cannot access passwords, keystore, truststore |
+| no group | All  | None               | Read-only                                                   | Cannot access passwords, keystore, truststore |
 
 ## Common Patterns
 
+### Deny-by-Default
+
+The factory approach, deny writes and operations unless a rule permits
+them:
+
+```json
+{
+  "write-default": "deny",
+  "exec-default": "deny",
+  "rule-list": [
+    {
+      "group": ["limited-user"],
+      "rule": [
+        {
+          "name": "permit-interface-config",
+          "path": "/ietf-interfaces:interfaces/interface",
+          "access-operations": "create update delete",
+          "action": "permit"
+        }
+      ]
+    }
+  ]
+}
+```
+
+A user that is not in any group, or a group that is forgotten, gets
+read-only access.
+
+> [!NOTE]
+> New YANG modules need a permit rule before such a group can change
+> them.
+
 ### Permit-by-Default
 
-The factory approach, allow everything except the sensitive items:
+Allow everything except the sensitive items:
 
 ```json
 {
@@ -415,35 +449,11 @@ The factory approach, allow everything except the sensitive items:
 }
 ```
 
-New YANG modules are accessible without rule updates, and admins bypass
-the global denials because their `permit-all` rule is evaluated first.
-
-### Deny-by-Default
-
-Deny everything except what is explicitly allowed:
-
-```json
-{
-  "write-default": "deny",
-  "exec-default": "deny",
-  "rule-list": [
-    {
-      "group": ["limited-user"],
-      "rule": [
-        {
-          "name": "permit-interface-config",
-          "path": "/ietf-interfaces:interfaces/interface",
-          "access-operations": "create update delete",
-          "action": "permit"
-        }
-      ]
-    }
-  ]
-}
-```
-
-> [!NOTE]
-> The rules need updating whenever a new feature is added.
+> [!WARNING]
+> Every user, including one in no group, can then change everything that
+> is not denied or annotated in YANG, also the features of future
+> releases.  Annotations cannot be added to standard IETF modules, so
+> some of their sensitive nodes may stay open.
 
 ### Global Restrictions
 
@@ -478,8 +488,8 @@ is evaluated first:
 <pre class="cli"><code>admin@example:/> <b>show nacm</b>
 enabled              : yes
 default read access  : permit
-default write access : permit
-default exec access  : permit
+default write access : deny
+default exec access  : deny
 denied operations    : 0
 denied data writes   : 0
 denied notifications : 0
@@ -511,7 +521,7 @@ members          : jacky
 read permission  : restricted
 write permission : restricted
 exec permission  : restricted
-applicable rules : 4
+applicable rules : 29
 ──────────────────────────────────────────────────────────────────────
 <span class="title">permit-system-rpcs</span>
   action     : permit
@@ -519,22 +529,11 @@ applicable rules : 4
   target     : ietf-system (rpc: *)
 
 ──────────────────────────────────────────────────────────────────────
-<span class="title">deny-password-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : /ietf-system:system/authentication/user/password
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-keystore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-keystore
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-truststore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-truststore
+<span class="title">permit-interfaces</span>
+  action     : permit
+  operations : create update delete
+  target     : /ietf-interfaces:interfaces
+...
 </code></pre>
 
 ### Testing Access
@@ -567,25 +566,22 @@ Counters that keep increasing mean some user is being denied.
 ## Best Practices
 
 Start from the factory configuration rather than from scratch.  Keep the
-permit defaults and add denials for what must be protected, rather than
-denying everything and permitting piece by piece.  The former needs no
-attention when new features arrive, the latter does.
+deny defaults and give each group the rights it needs, rather than
+permitting everything and denying piece by piece.  A forgotten rule then
+leaves a user with too little access, not too much.
 
 Put the admin rule-list first.  Rule-lists are evaluated in order, and
 the `permit-all` rule has to win before any global denial is reached.
-Then put the denials that apply to everyone else in a `"*"` rule-list,
-and leave the operations that YANG already annotates alone, they are
-protected without any rule.
+Then put the denials that apply to everyone else in a `"*"` rule-list.
 
-Pick the matcher for the target: a path rule for one piece of data,
-such as the password hashes, and a module-name rule for a whole module,
-such as the keystore.
+Permit by path rather than by module.  A permit rule overrides the YANG
+annotations, so a `module-name` rule for ietf-system would also open up
+the user accounts, while a path rule for the hostname does not.
 
 Test as the affected user after every change.  A denied read does not
 produce an error, the node is simply left out of the reply, so a rule
-mistake is easy to miss.  Fewer rules are easier to check this way; the
-factory configuration gets by with six for three user levels.  Give
-every rule a `comment` saying why it exists.
+mistake is easy to miss.  Give every rule a `comment` saying why it
+exists.
 
 ## References
 

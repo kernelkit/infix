@@ -2,14 +2,15 @@
 """
 Verify basic NACM permission enforcement
 
-Test that NACM groups (admin, operator, guest) correctly enforce
-access control with permissive defaults and targeted denials.
-
-The NACM design is "permit by default, deny sensitive items":
+Test that the factory NACM rules for the groups (admin, operator,
+guest) correctly enforce access control.  Write and exec are denied
+by default, each group is given what it needs:
 
 - admin: Full unrestricted access (permit-all rule)
-- operator: Can configure everything EXCEPT passwords, keystore, truststore
-- guest: Read-only access (explicit deny of create/update/delete/exec)
+- operator: Can configure interfaces, routing, firewall, DHCP server,
+  LLDP, hostname, contact, location, and time zone, but not passwords,
+  keystore, truststore
+- guest: Read-only access
 
 Verifies that:
 
@@ -30,9 +31,14 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Configure NACM groups, rules, and test users"):
+    with test.step("Configure factory NACM rules and test users"):
         operator_hash = "$1$gwU5mRgP$1/ASdRwD5ycqdmWpTKHSa0"
         guest_hash = "$1$4rdUOhNN$vw3i4FyPvIkzRFwrUXQod1"
+
+        nacm = target.get_factory("/ietf-netconf-acm:nacm").print_dict()["nacm"]
+        members = {"operator": [OPERATOR_USER], "guest": [GUEST_USER]}
+        for group in nacm["groups"]["group"]:
+            group["user-name"] = members.get(group["name"], group.get("user-name", []))
 
         target.put_config_dicts({
             "ietf-system": {
@@ -51,77 +57,7 @@ with infamy.Test() as test:
                 }
             },
             "ietf-netconf-acm": {
-                "nacm": {
-                    "enable-nacm": True,
-                    "read-default": "permit",
-                    "write-default": "permit",
-                    "exec-default": "permit",
-                    "groups": {
-                        "group": [{
-                            "name": "admin",
-                            "user-name": ["admin"]
-                        }, {
-                            "name": "operator",
-                            "user-name": [OPERATOR_USER]
-                        }, {
-                            "name": "guest",
-                            "user-name": [GUEST_USER]
-                        }]
-                    },
-                    "rule-list": [{
-                        "name": "admin-acl",
-                        "group": ["admin"],
-                        "rule": [{
-                            "name": "permit-all",
-                            "module-name": "*",
-                            "access-operations": "*",
-                            "action": "permit",
-                            "comment": "Admin has full access"
-                        }]
-                    }, {
-                        "name": "operator-acl",
-                        "group": ["operator"],
-                        "rule": [{
-                            "name": "permit-system-rpcs",
-                            "module-name": "ietf-system",
-                            "access-operations": "exec",
-                            "action": "permit",
-                            "comment": "Operators can reboot, shutdown, and set system time"
-                        }]
-                    }, {
-                        "name": "guest-acl",
-                        "group": ["guest"],
-                        "rule": [{
-                            "name": "deny-all-exec",
-                            "module-name": "*",
-                            "access-operations": "create update delete exec",
-                            "action": "deny",
-                            "comment": "Guests cannot change anything or call rpcs"
-                        }]
-                    }, {
-                        "name": "default-deny-all",
-                        "group": ["*"],
-                        "rule": [{
-                            "name": "deny-password-access",
-                            "path": "/ietf-system:system/authentication/user/password",
-                            "access-operations": "*",
-                            "action": "deny",
-                            "comment": "No user except admins can access password hashes."
-                        }, {
-                            "name": "deny-keystore-access",
-                            "module-name": "ietf-keystore",
-                            "access-operations": "*",
-                            "action": "deny",
-                            "comment": "No user except admins can access cryptographic keys."
-                        }, {
-                            "name": "deny-truststore-access",
-                            "module-name": "ietf-truststore",
-                            "access-operations": "*",
-                            "action": "deny",
-                            "comment": "No user except admins can access trust store."
-                        }]
-                    }]
-                }
+                "nacm": nacm
             }
         })
 
@@ -159,7 +95,6 @@ with infamy.Test() as test:
         print("Operator successfully modified interface configuration")
 
     with test.step("Verify operator can modify hostname"):
-        # Operators can now modify most system config (write-default: permit)
         operator.patch_config("ietf-system", {
             "system": {
                 "hostname": "operator-test"
@@ -216,7 +151,7 @@ with infamy.Test() as test:
         print(f"Guest successfully read {num_ifaces} interfaces")
 
     with test.step("Verify guest cannot modify configuration"):
-        # Try to modify hostname - should fail (write-default: deny)
+        # Try to modify hostname - should fail (deny-all-write+exec)
         # Use patch_config with retries=1 since NACM denials won't succeed on retry
         try:
             guest.patch_config("ietf-system", {

@@ -256,6 +256,18 @@ func analyzeNACMPermissions(n nacmJSON) []nacmGroupPerm {
 						canExec = false
 					}
 				}
+
+				// Scoped permit (like operator), write/exec to some nodes
+				if action == "permit" {
+					if strings.Contains(accessOps, "create") ||
+						strings.Contains(accessOps, "update") ||
+						strings.Contains(accessOps, "delete") {
+						canWrite = true
+					}
+					if strings.Contains(accessOps, "exec") {
+						canExec = true
+					}
+				}
 			}
 
 			if hasPermitAll {
@@ -264,14 +276,12 @@ func analyzeNACMPermissions(n nacmJSON) []nacmGroupPerm {
 		}
 
 		// permit-all overrides everything, including unfavourable global defaults.
+		// Otherwise global denials create restrictions.
 		if hasPermitAll {
 			canRead = true
 			canWrite = true
 			canExec = true
-		}
-
-		// Global denials create restrictions for groups that don't have permit-all.
-		if !hasPermitAll {
+		} else {
 			seen := map[string]bool{}
 			for _, rule := range globalDenials {
 				var restriction string
