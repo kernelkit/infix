@@ -15,12 +15,17 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
+          persist-credentials: false
 
       - name: Fetch kernel.org and check for 6.18 release
         id: check
         run: |
           set -e -o pipefail
+          if ! gh api user --silent; then
+            echo "::error::KERNEL_UPDATE_TOKEN was rejected, it has likely expired and must be regenerated"
+            exit 1
+          fi
+
           # Fetch the kernel.org frontpage and extract 6.18 version
           CURRENT_VERSION=$(curl -s https://www.kernel.org/ | grep -oP '6\.18\.\d+' | head -n1)
 
