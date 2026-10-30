@@ -1,6 +1,6 @@
 ---
 - name: WiFi AP and Station Association across two DUTs
-  case: wifi_ap_station_2dut/test.py
+  suite: wifi_ap_station_2dut/test.yaml
 
 - name: WiFi Access Point serving three Stations
   case: wifi_ap_multi_station/test.py

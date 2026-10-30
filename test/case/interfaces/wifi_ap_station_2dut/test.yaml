@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: WiFi AP and Station Association across two DUTs on 2.4GHz
+  case: 2_4ghz.py
+  opts: ["--band", "2.4GHz"]
+
+- name: WiFi AP and Station Association across two DUTs on 5GHz
+  case: 5ghz.py
+  opts: ["--band", "5GHz"]

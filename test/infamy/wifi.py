@@ -6,7 +6,35 @@ the operational state under /ietf-interfaces.  See doc/wifi.md.
 import base64
 
 import infamy.iface as _iface
+from infamy.env import ArgumentParser as _ArgumentParser
+from infamy.topology import edge_mappings as _edge_mappings
 from infamy.util import until
+
+CHANNEL = {"2.4GHz": 1, "5GHz": 36}
+
+
+class BandArgumentParser(_ArgumentParser):
+    """Test arguments with a required --band, e.g. 2.4GHz or 5GHz.
+
+    Pass edge_mappings to infamy.Env() as well: a radio edge in the
+    logical topology that requires "wifi-band" then maps onto a radio
+    providing wifi<band>.
+    """
+    def __init__(self):
+        super().__init__()
+        self.add_argument("--band", choices=list(CHANNEL))
+        self.band = None
+
+    def parse_args(self, argv):
+        args = super().parse_args(argv)
+        self.band = args.band
+        return args
+
+    def edge_mappings(self, les, pes):
+        les = {k: dict(e, requires={f"wifi{self.band}" if r == "wifi-band" else r
+                                    for r in e["requires"]})
+               for k, e in les.items()}
+        return _edge_mappings(les, pes)
 
 
 def radio(name, band=None, channel=None):
