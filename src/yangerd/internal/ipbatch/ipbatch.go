@@ -45,6 +45,8 @@ var ErrBatchDead = errors.New("batch process is dead")
 // command, typically because the device it names does not exist.
 var ErrCommandFailed = errors.New("batch command failed")
 
+var errTimeout = errors.New("timeout waiting for response")
+
 const (
 	queryTimeout = 5 * time.Second
 
@@ -104,9 +106,14 @@ func NewBridge(ctx context.Context, log *slog.Logger) (*Batch, error) {
 	return Start(ctx, log, []string{"bridge", "-json", "-d", "-force", "-batch", "-"}, "vlan show dev lo")
 }
 
+// NewTC starts `tc -json -force -batch -`.
+func NewTC(ctx context.Context, log *slog.Logger) (*Batch, error) {
+	return Start(ctx, log, []string{"tc", "-json", "-force", "-batch", "-"}, "qdisc show dev lo")
+}
+
 // Start runs argv as a batch subprocess and keeps it running, restarting
 // it with backoff when it dies.  canary is a command that must succeed,
-// used to validate a restarted subprocess.
+// used to validate the first subprocess and every restarted one.
 func Start(ctx context.Context, log *slog.Logger, argv []string, canary string) (*Batch, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	b := &Batch{
@@ -117,8 +124,10 @@ func Start(ctx context.Context, log *slog.Logger, argv []string, canary string) 
 		cancel: cancel,
 		died:   make(chan struct{}, 1),
 	}
-	if err := b.start(); err != nil {
-		cancel()
+	// A subprocess that rejects the canary or exits will not do better
+	// on a restart, one that is only slow to answer may.
+	if err := b.Refresh(); err != nil && !errors.Is(err, errTimeout) {
+		b.Close()
 		return nil, err
 	}
 	go b.restartLoop()
@@ -161,13 +170,25 @@ func (b *Batch) start() error {
 	b.alive.Store(true)
 	b.mu.Unlock()
 
-	go b.readLines(r, lines, quit, gen)
+	go b.readLines(r, lines, quit)
+	go b.wait(cmd, gen)
 	return nil
 }
 
+// wait reaps one subprocess and marks it dead if it is still current.
+// Its output may still sit unread in lines, so exit is not left to the
+// reader to notice.
+func (b *Batch) wait(cmd *exec.Cmd, gen int64) {
+	err := cmd.Wait()
+	if b.gen.Load() == gen {
+		b.log.Debug(b.argv[0]+" batch: subprocess exited", "err", err)
+		b.markDead()
+	}
+}
+
 // readLines feeds the merged stdout and stderr of one subprocess to
-// lines until it exits or is replaced.
-func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan struct{}, gen int64) {
+// lines until it exits, is replaced or the Batch is closed.
+func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan struct{}) {
 	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -179,9 +200,6 @@ func (b *Batch) readLines(r io.ReadCloser, lines chan<- []byte, quit <-chan stru
 		}
 	}
 	close(lines)
-	if b.gen.Load() == gen {
-		b.markDead()
-	}
 }
 
 func (b *Batch) markDead() {
@@ -246,7 +264,7 @@ func (b *Batch) Query(command string) (json.RawMessage, error) {
 			if b.cmd.Process != nil {
 				b.cmd.Process.Kill()
 			}
-			return nil, fmt.Errorf("timeout waiting for response to: %s", command)
+			return nil, fmt.Errorf("%w to: %s", errTimeout, command)
 		}
 	}
 }
@@ -280,7 +298,6 @@ func reap(cmd *exec.Cmd, stdin io.Closer) {
 	}
 	if cmd != nil && cmd.Process != nil {
 		cmd.Process.Kill()
-		go cmd.Wait()
 	}
 }
 
@@ -299,6 +316,10 @@ func (b *Batch) Close() {
 	}
 	if b.cmd != nil && b.cmd.Process != nil {
 		b.cmd.Process.Kill()
+	}
+	if b.quit != nil {
+		close(b.quit)
+		b.quit = nil
 	}
 	b.alive.Store(false)
 }

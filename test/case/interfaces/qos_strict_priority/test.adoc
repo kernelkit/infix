@@ -1,0 +1,48 @@
+=== QoS Strict Priority
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_strict_priority]
+
+==== Description
+
+Two talkers, one marked EF and one CS1, bridged through the DUT and out
+one egress port that cannot carry both.  The port is negotiated down to
+100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where it
+has no PHY, and each talker offers 80 percent of what the port drains,
+so the queues fill and the scheduler decides who gets through.
+
+Classification at the ingress port decides the priority, and with it
+the queue, all the way to the listener: on one chip, across a cascade,
+or through a network of switches.  So the flows are steered with the
+DSCP map on the ingress port and the class table is left at its
+default.  Three measurements, in this order:
+
+ - baseline: both markings classified to the same priority share one
+   queue, and the low flow keeps at least a tenth of it; one FIFO under
+   tail drop is not fair, but it favours nobody by marking
+ - split: EF classified to priority 5, strict above CS1 at priority 2,
+   arrives without loss and CS1 takes what is left
+ - starve: EF raised to 120 percent of the port on its own leaves CS1
+   below 5 percent of the served datagrams
+
+The low flow must lose more than a tenth of its frames in every
+measurement; a port that was never full proves nothing.  The test's own
+iperf3 control traffic, DSCP 0, is classified to priority 7 so the
+contest never cuts it off.  Skipped on a switch fabric whose scheduler
+is not offloaded, where forwarded frames never meet the configured
+algorithm.
+
+==== Topology
+
+image::topology.svg[QoS Strict Priority topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Bridge the two ports, classify by DSCP on ingress, control traffic on top
+. Slow the egress port so its queues can fill
+. Set up the talker and listener namespaces
+. Baseline: both flows at one priority, 80 percent each, expect neither starved
+. Split: EF strict above CS1, 80 percent each, expect EF without loss
+. Starve: EF at 120 percent of the port, expect CS1 below 5 percent
+
+

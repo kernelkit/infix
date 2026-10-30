@@ -192,6 +192,22 @@ All notable changes to the project are documented in this file.
 - LAN969x boards ship `symreg`, which reads and writes switch registers by
   name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
   core, see `board/aarch64/microchip-lan969x/README.md`
+- Add per-interface Quality of Service configuration: which header field
+  a port trusts (PCP, DSCP, or both in order), the default priority, PCP
+  and DSCP to priority maps with standard presets, an egress traffic
+  class table with strict-priority or weighted transmission selection per
+  class, and PCP and DSCP remarking on transmit.  The defaults are on out
+  of the box on every port: trust PCP, one traffic class per
+  transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
+  fixed boot-time queue setup, see [QoS][]
+- Add a per-port egress rate limit to the new [QoS][] subsystem
+- Transmission selection uses the `ets` scheduler on every
+  port, so drivers that offload it take the class algorithms and weights
+  into the switch fabric, not only the priority to class map
+- Marvell LinkStreet 88E6390 and 88E6393X switch ports offload QoS
+  classification, trust order, remarking, transmission selection and the
+  egress rate limit to the switch, so they apply to hardware forwarded
+  traffic as well
 
 ### Fixes
 
@@ -353,6 +369,7 @@ All notable changes to the project are documented in this file.
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
 [boot]: https://www.kernelkit.org/infix/latest/boot/
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
+[QoS]: https://www.kernelkit.org/infix/latest/qos/
 
 [v26.09.0][] - 2026-09-30
 -------------------------

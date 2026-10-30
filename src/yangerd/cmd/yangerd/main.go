@@ -34,6 +34,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/mmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/qosmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -184,6 +185,19 @@ func main() {
 		}
 		return qs
 	})
+
+	if qosMon := startQoS(ctx, nlmon.Links, slogLog); qosMon != nil {
+		qosMon.SetOnUpdate(nlmon.SetQoSData)
+		nlmon.SetLinkRefresh(qosMon.Refresh)
+		spawn("qosmonitor", func(ctx context.Context) error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-nlmon.WaitReady():
+			}
+			return qosMon.Run(ctx)
+		})
+	}
 
 	// inotify says nothing when a /proc/sys/net/*/conf/<if> directory
 	// comes or goes, so follow the interface set from netlink instead.
@@ -503,4 +517,21 @@ func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string)
 
 		return json.Marshal(map[string]interface{}{"infix-system:software": sw})
 	}
+}
+
+// startQoS starts the QoS monitor, its tc batch and DCB reader.  Without
+// them the ports carry no QoS state, which is no reason to stop.
+func startQoS(ctx context.Context, links func() json.RawMessage, log *slog.Logger) *qosmonitor.Monitor {
+	tc, err := ipbatch.NewTC(ctx, log)
+	if err != nil {
+		log.Warn("no QoS state, tc batch did not start", "err", err)
+		return nil
+	}
+	dcb, err := qosmonitor.DialDCB()
+	if err != nil {
+		log.Warn("no QoS state, DCB socket did not open", "err", err)
+		tc.Close()
+		return nil
+	}
+	return qosmonitor.New(tc, dcb, links, log)
 }

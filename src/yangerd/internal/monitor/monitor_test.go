@@ -345,6 +345,25 @@ func TestLateDeleteKeepsReusedName(t *testing.T) {
 	}
 }
 
+func TestLinkGone(t *testing.T) {
+	for _, tc := range []struct {
+		typ    uint16
+		family uint8
+		want   bool
+	}{
+		{syscall.RTM_DELLINK, syscall.AF_UNSPEC, true},
+		{syscall.RTM_DELLINK, syscall.AF_BRIDGE, false},
+		{syscall.RTM_NEWLINK, syscall.AF_UNSPEC, false},
+	} {
+		var u netlink.LinkUpdate
+		u.Header.Type = tc.typ
+		u.Family = tc.family
+		if got := linkGone(u); got != tc.want {
+			t.Errorf("linkGone(type %d, family %d) = %v, want %v", tc.typ, tc.family, got, tc.want)
+		}
+	}
+}
+
 func TestLinkRowFor(t *testing.T) {
 	for _, tc := range []struct {
 		raw  string
