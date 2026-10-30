@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.10.0][UNRELEASED]
+[v26.10.0][] - 2026-10-30
 -------------------------
 
 > [!IMPORTANT]
@@ -23,373 +23,184 @@ All notable changes to the project are documented in this file.
 - Upgrade Linux kernel to 6.18.59 (LTS)
 - Upgrade libyang to 6.4.13, sysrepo to 5.2.27, libnetconf2 to 4.6.4,
   netopeer2 to 2.8.21, and rousette to the latest development version
-- Operational data is returned much faster.  Interface, routing, bridge,
-  Wi-Fi, container and hardware status is kept up to date as the system
-  changes, instead of being gathered on every request.  A `show` command,
-  a NETCONF or RESTCONF GET of operational state, or a WebUI status page
-  answers at once, also on devices with many interfaces
-- Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
-  including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
-  APNs per modem, SIM PIN configuration, and NMEA routing from modem to
-  GPS subsystem.  Not part of the default builds, enable it with the
-  `modem` configuration snippet, see the [Modem User's Guide][modem]
-- Add PPPoE client, issue #1569.  A PPPoE session is an interface of type
-  `pppoe` on top of the interface facing the provider, with the password in
-  the keystore.  Its default route and DNS servers are used like those from
-  a DHCP server, and the TCP MSS of forwarded connections is clamped to the
-  session MTU, see [PPPoE Client][pppoe]
-- x86_64: GRUB is replaced by Barebox, and the system image is now a
-  signed Discoverable Disk Image (DDI).  With UEFI Secure Boot
-  enabled, the bootloader, kernel and root filesystem are all verified
-  before the system starts.  The system disk uses LVM: the two system
-  images and the persistent storage are volumes on one partition,
-  which is grown to fill the disk on first boot, when the second
-  system image is also created, see [Boot Procedure][boot].  The disk
-  layout is new, so existing x86_64 installations must be reinstalled
-  from the new disk image, `infix-x86_64.disk` or `.qcow2`, they
-  cannot be upgraded with a bundle
-- Changing a setting of an interface that does not need it, e.g., an IP
-  address, its description, or a bridge port's STP priority or cost, no
-  longer takes the link down and up.  A copper link no longer drops for a
-  few seconds and STP no longer reconverges after such changes
+- Operational data is returned much faster, from the CLI, NETCONF,
+  RESTCONF and the WebUI, also on devices with many interfaces
+- Add cellular modem (WWAN) support, not part of the default builds, see
+  the [Modem User's Guide][modem]
+- PPPoE client support, issue #1569, for more information, see [PPPoE
+  Client][pppoe] in the User's Guide
+- x86_64: GRUB is replaced by Barebox, and the system image is a signed
+  Discoverable Disk Image (DDI), verified at boot with UEFI Secure Boot,
+  see [Boot Procedure][boot]
+- Changing an interface setting that does not need it, e.g., an IP
+  address or a bridge port's STP cost, no longer takes the link down
 - New boards:
-  - Banana Pi BPI-M1 (Allwinner A20) in the 32-bit Arm build, with
-    `bpi_m1_boot_defconfig` for its U-Boot bootloader
-  - Banana Pi BPI-R2 Pro (Rockchip RK3568) in the Aarch64 build, a five
-    port router with 4x LAN switch ports and 1x WAN.  The new
-    `bpi_r2_pro_boot_defconfig` builds one bootloader for SD card and eMMC
-  - Banana Pi BPI-F3 (SpacemiT K1) in the RISC-V build, running from SD
-    card, with `bpi_f3_boot_defconfig` for its bootloader, see the
-    [board README][bpi-f3]
-  - StarFive VisionFive2: new `visionfive2_boot_defconfig` for its U-Boot
+  - [Banana Pi BPI-M1][bpi-m1] (Allwinner A20), 32-bit Arm
+  - [Banana Pi BPI-R2 Pro][bpi-r2-pro] (Rockchip RK3568), Aarch64
+  - [Banana Pi BPI-F3][bpi-f3] (SpacemiT K1), RISC-V
+- New bootloader defconfig for the StarFive VisionFive2
 - Board and factory configuration changes:
-  - Boards without a VPD EEPROM can be given a fixed identity, base MAC
-    included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see [VPD
-    documentation](vpd.md#vpd-file-on-the-aux-partition)
-  - Banana Pi BPI-R3, Acer Connect Vero W6m, Tactical 1000 and
-    EV23X71A: ports get permanent addresses derived from the chassis MAC
-    instead of random ones at every boot.  The BPI-R4 does too, from the chassis MAC of a
-    `/mnt/aux/vpd.bin`
-  - Banana Pi BPI-R3: Wi-Fi hardware offload (WED) is off by default
-  - Banana Pi BPI-R4: a Wi-Fi card with an unprogrammed EEPROM, e.g., the
-    BPI-MT7615, can be given an EEPROM image on the aux partition, see the
-    board documentation
-  - An MT7615D Wi-Fi card with an unprogrammed EEPROM can run both bands
-    at once with the `force_dbdc` option of the `mt7615_common` module
-  - Intel AX210 Wi-Fi cards are supported in the Aarch64 build
-  - The factory config of the Banana Pi R2 Pro, R3, R3 mini, R4, R64,
-    NanoPi R2S and Vero W6m checks for a new release every Sunday at
-    03:00, and installs and reboots to it unattended.  Pre-releases are
-    not installed.  To stay on a release, remove `unattended-update` from
-    the software settings
-  - The LAN bridge in the factory config of the Banana Pi R3, R3 mini,
-    R4, R64, NanoPi R2S and Vero W6m has IPv6 enabled, so the router has
-    a link-local address on the LAN side like its ports already had
-  - LAN969x boards ship `symreg`, which reads and writes switch registers by
-    name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
-    core, see `board/aarch64/microchip-lan969x/README.md`
+  - Boards without a VPD EEPROM can store their identity, base MAC
+    included, in `/mnt/aux/vpd.bin`, see [VPD][vpd]
+  - Banana Pi BPI-R3, R4, Vero W6m, Tactical 1000 and EV23X71A ports
+    get permanent addresses derived from the chassis MAC
+  - Banana Pi BPI-R4: EEPROM image for Wi-Fi cards without one, e.g.,
+    the BPI-MT7615, similar to `/mnt/aux/vpd.bin` (above)
+  - Support for Intel AX210 Wi-Fi cards
+  - The router factory configs enable IPv6 on the LAN bridge, and
+    install new releases unattended every Sunday at 03:00.  To stay on a
+    release, remove `unattended-update` from the software settings
+  - LAN969x boards: `symreg` switch register tool for debugging, see
+    the [board README][lan969x]
 - Hardware changes:
   - USB ports are named `usb`, `usb1`, `usb2` ..., lowercase like every
-    other hardware component.  Existing configurations are migrated
-  - `show hardware` lists the devices plugged into each USB port, also
-    behind a hub or on a locked port: ID, speed, maker and model, and
-    whether the device may be used, see [USB Ports][usb]
-  - A GPS receiver can be anchored to its USB device with `set uri`, like
-    a modem, so `gps0` stays `gps0` whatever order the receivers come up
-    in, see [GPS receivers][gps]
-  - New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
-    identify the chassis, by default for 60 seconds.  Available from the
-    CLI, `locate`, and the Hardware page in the WebUI.  Not allowed for
-    guest users
-  - New `iitoctl` tool, shows which rule drives each LED and why, and can
-    start locate: `iitoctl locate on`
+    other component.  Existing configurations are migrated
+  - `show hardware` lists the devices plugged into each USB port, see
+    [USB Ports][usb] in the User's Guide for more details
+  - A GPS receiver can be anchored to its USB port, see [GPS receivers][gps]
+  - New `locate` command and RPC, blinks the board's LEDs to identify the
+    chassis, see [Locate][locate]
 - Routing changes:
-  - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
-    ietf-rip and ietf-ospf models, selected per control-plane-protocol by
-    the `ripng`/`ospfv3` type and the IPv6 address-family
-  - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and
-    OSPFv3, issue #1576.  The default, 100000 Mbit/s, is the value used
-    before, so link costs do not change on upgrade.  The CLI shows it in
-    `show ip ospf`
-  - The OSPF and RIP settings specific to this system, e.g.,
-    `redistribute` and `default-route-advertise`, moved to the new YANG
-    modules `infix-ospf` and `infix-rip`
-  - Support building without FRR, which also drops Bash.  The minimal
-    defconfigs and the 32-bit Arm build are now built this way, with
-    static routing only, issue #1670.  These builds no longer list OSPF,
-    RIP and BFD in the CLI or in their YANG library
-- QoS changes, see [QoS][]:
-  - Add per-interface Quality of Service configuration: which header
-    field a port trusts (PCP, DSCP, or both in order), the default
-    priority, PCP and DSCP to priority maps with standard presets, an
-    egress traffic class table with strict-priority or weighted
-    transmission selection per class, and PCP and DSCP remarking on
-    transmit.  The defaults are on out of the box on every port: trust
-    PCP, one traffic class per transmit queue mapped per IEEE
-    802.1Q-2022 Table 8-5, replacing the fixed boot-time queue setup
+  - Add IPv6 dynamic routing: [RIPng][ripng] and [OSPFv3][ospfv3]
+  - Configurable OSPF auto-cost reference bandwidth, issue #1576
+  - The OSPF and RIP augments moved to the new YANG modules `infix-ospf`
+    and `infix-rip`.  NETCONF and RESTCONF clients must use the new names
+  - Support building without FRR, static routing only, issue #1670.  The
+    minimal defconfigs and the 32-bit Arm build are built this way
+- QoS changes, see [QoS][qos]:
+  - Per-port Quality of Service: trusted PCP or DSCP, priority maps,
+    traffic classes with strict-priority or weighted transmission
+    selection, and PCP and DSCP remarking.  Every port gets IEEE 802.1Q
+    defaults, replacing the fixed boot-time queue setup
   - Per-port egress rate limit
-  - Transmission selection uses the `ets` scheduler on every port, so
-    drivers that offload it take the class algorithms and weights into
-    the switch fabric, not only the priority to class map
-  - Marvell LinkStreet 88E6390 and 88E6393X switch ports offload QoS
-    classification, trust order, remarking, transmission selection and
-    the egress rate limit to the switch, so they apply to hardware
-    forwarded traffic as well
+  - Marvell LinkStreet 88E6390 and 88E6393X offload QoS to the switch
 - Bridge changes:
-  - Unicast forwarding database (FDB), with static entries and a
-    configurable aging time.  `show bridge fdb`, or the bridge's
-    `get-forwarding-database` action over NETCONF and RESTCONF, lists the
-    learned and static entries, also those a switch learns on its own,
-    with the age of each entry and whether it is offloaded to the switch.
-    The CLI can list one VLAN, one port, or one address, see [FDB][fdb]
-  - Bridges with multicast snooping also run an MLD querier for IPv6,
-    next to the IGMP querier, using the same `querier` and
-    `query-interval` settings.  Enable IPv6 on the bridge to take part in
-    MLD querier elections, see [Multicast Filtering and Snooping][mcast]
-  - The active IGMP and MLD querier of a bridge, or of a bridge VLAN, is
-    available in the operational datastore: its address, version, query
-    interval and timeout, and whether it is the system itself
+  - Unicast forwarding database (FDB), with static entries, a
+    configurable aging time, and `show bridge fdb`, see [FDB][fdb]
+  - MLD querier for IPv6 next to the IGMP querier, and the active querier
+    in operational status, see [Multicast Filtering and Snooping][mcast]
   - CLI: `check`, `commit`, and `leave` warn about bridge ports with a
-    missing or mismatched PVID, which drops untagged frames or puts them
-    in the wrong VLAN, issue #354
+    missing or mismatched PVID, issue #354
 - Wi-Fi changes:
-  - 4-address (WDS) links for wireless bridges and repeaters: a station
-    with `wds` enabled can be a bridge port, and an access point bridges
-    each remote station through a `wds-link` interface, see [WDS Backhaul
-    and Repeaters][wds]
-  - Station roaming is configurable with `station roaming`: turn it on or
-    off, and set the signal strength below which the station looks for a
-    stronger access point more often, see [Station Roaming][roaming]
-  - Clients are moved to another access point before theirs stops for a
-    reboot, an upgrade or a configuration change, instead of losing the
-    connection.  Access points on different devices know of each other
-    and share a client's keys ahead of a roam
-  - Band steering also moves dual-band clients already connected on
-    2.4 GHz to the 5 or 6 GHz access point of the same SSID
-  - 802.11r access points can be given a `key-holder-secret`, a keystore
-    key of their own to protect the key exchange with instead of the
-    Wi-Fi password, see [Wi-Fi documentation](wifi.md#80211r---fast-bss-transition)
-  - Access points deliver buffered traffic to power-saving clients on
-    every beacon and offer them U-APSD, cutting the round-trip latency of
-    idle phones and laptops from hundreds of milliseconds to a few
-  - The country code is one setting for the whole system, `hardware wifi
-    country-code`, instead of one per radio, and applies as soon as it is
-    set.  Existing configurations are migrated
-  - Wi-Fi interfaces get a unique address derived from the chassis MAC,
-    so several APs on one radio, or two devices of the same model, no
-    longer need `custom-phys-address`
-  - Channel survey is on request: `show hardware <radio> survey`, the
-    Scan channels button on the WebUI Wi-Fi page, or the `channel-survey`
-    action.  The always-on `survey` container under the radio is gone
-  - Network scan is on request too: `show hardware <radio> scan`, the
-    Scan networks button on the WebUI Wi-Fi page, or the `scan` action on
-    the radio, which works before any Wi-Fi interface exists.  A Wi-Fi
-    interface with only a radio no longer scans in the background, and
-    the `scan-results` list under a station is gone, see [Wi-Fi
-    documentation](wifi.md#discovering-available-networks)
+  - 4-address (WDS) links for wireless bridges and repeaters, see [WDS
+    Backhaul and Repeaters][wds]
+  - Configurable station roaming, see [Station Roaming][roaming]
+  - Clients are moved to another access point before theirs stops, and
+    access points on different devices share keys ahead of a roam
+  - Band steering also moves clients already connected on 2.4 GHz
+  - 802.11r `key-holder-secret`, see [Fast Roaming][fastroam]
+  - Lower latency for power-saving clients
+  - The country code is one system-wide setting, `hardware wifi
+    country-code`.  Existing configurations are migrated
+  - Wi-Fi interfaces get unique addresses derived from the chassis MAC
+  - Channel survey and network scan are actions run on request, which
+    replace the `survey` and `scan-results` containers, see [Channel
+    Survey][survey]
   - An open access point on 6 GHz is refused, the band requires WPA3
-- Check for a new software release on demand: `upgrade` without a bundle
-  in the CLI, the Check now button on the WebUI dashboard, or the
-  `check-update` RPC, see [Unattended Software Updates][unattended]
-- RESTCONF accepts at most 10 requests a second, with bursts of 200,
-  from each host other than the device itself, which slows down password
-  guessing.  More gets HTTP 429.  The limit is set in `web restconf
-  rate-limit`
-- Switch boards advertise one of their port addresses as the LLDP chassis
-  ID.  Previously it could be an address no port on the device carried
+- Check for a new software release on demand, see [Unattended Software
+  Updates][unattended]
+- RESTCONF requests are rate limited per client, see [RESTCONF Rate
+  Limit][ratelimit]
+- Switch boards advertise one of their port addresses as LLDP chassis ID
 - WebUI changes:
-  - The Overview page gains a Ports card, link state and LLDP neighbor per
-    port, and a Health card listing services that are not running, a
-    pending reboot, and sensor readings.  Disk Usage no longer lists the
-    read-only root filesystem
-  - The Routing configuration page sets up OSPFv2, OSPFv3, RIPv2 and
-    RIPng.  A protocol is added with its interfaces and, for OSPF, a
-    router ID.  Its row folds out to the router ID, BFD and redistribution
-    of connected networks and static routes, and each OSPF area is a row
-    of its own under it, with its type and interfaces.  An interface that
-    does not forward is pointed out, with a button to turn forwarding on.
-    The rest is in the advanced editor.  The Routes status page is
-    renamed Routing, to match
-  - Cellular modems and SIM cards on the Hardware page, with a page per
-    modem much like `show modem modem0`, and a Restart button.  The page
-    of a modem interface shows its modem, operator, network and signal
-  - Status pages refresh themselves, every 10 seconds by default.  The
-    interval, 2, 10 or 30 seconds, or off, is set in the user menu
+  - New Routing configuration page for OSPF and RIP
+  - Ports and Health cards on the Overview page
+  - Cellular modems and SIM cards on the Hardware page
+  - Status pages refresh themselves, the interval is set in the user menu
   - A login lasts at most 24 hours, also with Auto-logout set to Off
 
 ### Fixes
 
-- Fix #1423: the default route from a DHCPv6 client, learned from router
-  advertisements, is now a static route with the DHCPv6 route preference,
-  like a DHCPv4 route.  Before, the route preference setting was ignored
-- The safe character set introduced in v26.09.0 was too strict for some
-  settings, now any character except control characters is allowed:
-  - DHCP client options, e.g., `vendor-class`, which gets the model name.
-    A `startup-config` failed validation on boards with parentheses in
-    their model name, e.g., Banana Pi BPI-R4.  Quotes, `$`, `` ` ``, and
-    `\` are still not allowed in option values
-  - Syslog `pattern-match` and `property-filter`, e.g., `\` in a regular
-    expression.  `\` and `"` now also reach the log daemon as written
-  - DHCP server static-host `client-id`, e.g., with a space
-- The factory config of the Banana Pi R3, R3 mini, R4, R64, NanoPi R2S
-  and Vero W6m enables IPv4 and IPv6 forwarding on the LAN and WAN
-  interfaces.  Without it, LAN clients could not reach the Internet
-- A bridge port recreated with a new address lost the VLANs it was tagged
-  in, only its PVID VLAN came back
+- Fix #1423: the route preference setting was ignored for the DHCPv6
+  default route
+- The safe character set introduced in v26.09.0 was too strict for DHCP
+  client options, syslog `pattern-match` and `property-filter`, and DHCP
+  server `client-id`
+- LAN clients could not reach the Internet with the factory config of
+  the Banana Pi R3, R3 mini, R4, R64, NanoPi R2S and Vero W6m
+- A bridge port recreated with a new address lost its tagged VLANs
 - Removing the DHCPv6 client from an interface could leave its routes
-  behind when a lease update arrived while the client was being stopped
-- LLDP neighbors were listed without their system name, descriptions,
-  and capabilities, in the CLI, the WebUI, and the operational datastore
-- Operational data journal snapshots held keystore secrets and password
-  hashes and were readable by any local user.  Secrets are now left out
-  and the snapshots are readable by root only
-- Web server errors were partly logged to a file that nothing rotated,
-  which could eventually fill up the disk.  All web server logs now go
-  to syslog and to `/var/log/web`, rotated like the other logs.  The old
-  `/var/log/nginx` directory is removed at boot
-- Firewall: dynamic address-set entries were lost on every configuration
-  change on slow systems, where reloading the firewall takes longer than
-  25 seconds, and on any system the hosts they allow were blocked until
-  the reload was done, half a minute on a single-core system
+- LLDP neighbors were listed without system name, descriptions, and
+  capabilities
+- Operational data journal snapshots held secrets and were readable by
+  any local user
+- Web server logs could fill up the disk, they now go to syslog and the
+  rotated `/var/log/web` log file
+- Firewall: dynamic address-set entries were lost on a reload, and the
+  hosts they allow were blocked until the reload was done
 - PTP fixes:
-  - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
-    kept dropping to the faulty state because the transmit timestamp arrived
-    later than the 10 ms the PTP daemon waited for it
-  - PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
-    PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
-    full LAN8814s and waited for PHY timestamps that never came; it now
-    recognizes the variant and times stamps in the switch core instead
-  - The IEEE 802.1AS link delay threshold, above which a port never
-    leaves the listening state, defaults to 10 us with hardware time stamping
-    instead of 800 ns, and can be set per port with `mean-link-delay-thresh`
-  - Transparent clocks, and boundary clocks with the IEEE 802.1AS
-    profile or a domain other than 0, logged "Waiting for ptp4l..." every
-    second.  The helper that keeps the clocks of a multi-chip switch in step
-    never reached the PTP daemon.  It now uses the domain and profile of its
-    instance, and is no longer started for transparent clocks, which do not
-    answer it
-- LAN969x fixes:
-  - A port outside any bridge stopped receiving multicast, including
-    IPv6 neighbour discovery and mDNS, when another port outside a bridge went
-    down or joined a bridge.  The port looked dead on the LAN until it was
-    taken down and up again, which is how the Tactical 1000 management port
-    kept dropping out of the test rig
-  - Kernel BUG "scheduling while atomic" when a multicast address was
-    added to or removed from a port outside any bridge
-  - The IP address of a bridge was unreachable from its ports, while
-    forwarding between the ports worked.  Broadcast from a bridge port never
-    reached the CPU, so ARP went unanswered, and the bridge's own MAC address
-    was missing from the switch MAC table, so unicast to the bridge was
-    flooded to the ports instead of delivered
-  - Disabling the first port of a bridge, whose MAC address the
-    bridge uses, cut the bridge IP address off until the port was enabled
-    again
-  - A bridge without VLANs forwarded nothing between its ports
-  - A VLAN interface on a port in a VLAN filtering bridge never
-    received anything, unless the bridge had the same VLAN on the port
-  - Traffic from a VLAN interface on a bridge, sent out a port that
-    carries all its VLANs tagged, left with an extra VLAN 0 tag
-  - Bridging a VLAN interface on top of a port applied the bridge
-    port settings, STP state, flooding and VLAN filtering, to the port
-    itself and logged "Controlling non-bridged port"
-  - STP did not converge and LACP failed over aggregates in a
-    bridge.  The switch flooded BPDUs and LACPDUs to the other bridge ports
-    instead of handing them to the CPU
-  - A link aggregate in a bridge did not forward, the switch now
-    offloads link aggregates.  Based on the LAG support by Daniel Machon in
-    Microchip's BSP
-  - Taking down one port of a link aggregate stopped unicast to the
-    aggregate on the remaining ports, and removing the aggregate cut off the
-    port whose address it had used until that port was disabled and enabled
-    again
-  - OSPF neighbors never came up over a bridge.  Hellos and other
-    link-local multicast, e.g. to 224.0.0.5 or ff02::5, passed between the
-    bridge ports but never reached the bridge itself
-  - IGMP did not pass through a bridge.  With IGMP snooping across
-    several switches, a group joined behind one switch never reached the
-    querier behind another, so the multicast never got there either
-  - PTP could stop on every port until reboot.  Each transmit
-    timestamp that arrived late used up one of 512 slots for good
-  - Traffic between 10 Gbps ports was limited to about 940 Mbps
-    on the TSN and RED variants of the switch
-  - The LAN8814 and LAN8804 copper PHYs, on the Tactical 1000 and
-    EV23X71A, ran with power-on defaults where Microchip's silicon errata
-    require other settings on every port: center-tap power management, the
-    EEE wake timer, and the PLL trim
-  - A copper port on the Tactical 1000 could come up with one
-    direction dead, the link up at 1000 Mbps but nothing it sent reaching the
-    other end, most often after the port had been reconfigured.  The PHYs
-    now resynchronize their QSGMII link to the switch after every PHY reset,
-    the way Microchip's PHY API does
-  - The LAN8814 and LAN8804 copper PHYs advertised Energy Efficient
-    Ethernet, which the switch cannot use, and could enter its low power
-    state by mistake after a cable was unplugged.  EEE is now off on these
-    ports
-  - A copper link could stay down for good when autonegotiation on
-    the LAN8814 or LAN8804 PHY got stuck.  It is now restarted after three
-    seconds with a link partner present but no link
-  - A copper port forced to 100 Mbps could fail to link up with the
-    LAN8814 or LAN8804 PHY.  The PHY is now reset every three seconds while
-    a link partner is present but no link comes up
-  - The LAN8814 and LAN8804 PHYs now get Microchip's settings for
-    10BASE-T transmit and for 10/100 Mbps half duplex
+  - Ports with PHY timestamping, e.g., LAN969x copper ports, kept
+    dropping to the faulty state
+  - The IEEE 802.1AS link delay threshold defaults to 10 us with hardware
+    timestamping, and can be set per port with `mean-link-delay-thresh`
+  - Transparent clocks, and boundary clocks with the IEEE 802.1AS profile
+    or a domain other than 0, logged "Waiting for ptp4l..." every second
+  - The operational `delay-mechanism` of a `common-p2p` port, or of one
+    with no mechanism, read `e2e`
+- LAN969x fixes, e.g., Tactical 1000 and EV23X71A:
+  - Ports outside a bridge could stop receiving multicast, e.g., IPv6
+    neighbor discovery and mDNS
+  - The IP address of a bridge was unreachable from its ports, a bridge
+    without VLANs forwarded nothing, and OSPF, IGMP and other link-local
+    multicast did not reach the bridge
+  - VLAN interfaces on bridge ports received nothing, or sent with an
+    extra VLAN 0 tag
+  - STP did not converge, and link aggregates in a bridge did not
+    forward.  Link aggregates are now offloaded to the switch
+  - PTP could stop on every port until reboot
+  - Traffic between 10 Gbps ports was limited to about 940 Mbps on the
+    TSN and RED variants of the switch
+  - Copper ports could stay down, or come up with one direction dead.
+    PTP never worked on the Tactical 1000 copper ports
 - Hardware fixes:
-  - The manufacturer from a VPD was not shown as `mfg-name` of its
-    `vpd-*` component in the operational datastore
+  - The VPD manufacturer was missing from operational status
   - Hardware status was missing when a sensor label had characters not
-    allowed in a sensor name, e.g., "SoC temperature" on the Allwinner A20
-  - Banana Pi BPI-R4: no PCIe card was detected, e.g., an NVMe disk or a
-    Wi-Fi card
-  - Boards with an MT7531 switch, e.g., Banana Pi BPI-R3 and R64: ports
-    could get stuck without link after a link bounce, and STP did not see
-    BPDUs on a VLAN-aware bridge
+    allowed in a sensor name, e.g., on the Allwinner A20
+  - Banana Pi BPI-R4: no PCIe card was detected
+  - Banana Pi BPI-R3 and R64: switch ports could get stuck without link,
+    and STP did not work on a VLAN-aware bridge
 - USB fixes:
-  - On boards with a USB 3 port, e.g., Banana Pi R3, R4 and R64, every
-    port was listed twice, `USB` and `USB2`, or `USB1` and `USB12` with
-    two ports.  Locking `USB` left the port usable by USB 3 devices
-  - Locking a USB port left a device that was already plugged in and
-    authorized usable.  Locking now cuts it off, as the manual says
-  - Removing a USB port component from the configuration left the port
-    unlocked, now the port is locked
-- 32-bit Arm fixes:
-  - In builds with FRR, routing crashed in a loop, on unaligned access
-    to messages passed between the FRR daemons
-  - mDNS host aliases failed to publish, every retry ended in "Memory
-    exhausted".  The 32-bit Arm builds now use 64-bit `time_t`
-  - The LED daemon crashed, leaving all LEDs off after boot
+  - On boards with a USB 3 port every port was listed twice, and locking
+    one left it usable by USB 3 devices
+  - Locking a USB port, or removing it from the configuration, left an
+    already plugged-in device usable
 - Wi-Fi fixes:
-  - Fix #1679: a station added to a scan-only interface, as in the
-    Raspberry Pi 4 factory configuration, did not connect until a reboot
-  - A station never connected to a WPA3-only access point, which
-    includes every access point on 6 GHz
-  - Scan results listed WPA3-only networks as WPA2-Personal
-  - Fast roaming (802.11r) to an access point on another device failed
-    for WPA3 clients
+  - Fix #1679: a station added to a scan-only interface did not connect
+    until a reboot
+  - Stations could not connect to WPA3-only access points, e.g., all on
+    6 GHz, and scan results listed them as WPA2-Personal
+  - Fast roaming (802.11r) between devices failed for WPA3 clients
   - Changing the MAC address of an access point could leave the access
-    points on that radio down until the Wi-Fi service was restarted
-  - Moving an access point to another radio left it on the old radio,
-    and the access point did not start.  The radio of an access point can
-    now be changed
+    points on that radio down
+  - Moving an access point to another radio did not work
 - WebUI fixes:
-  - RIP and OSPF could not be set up in the advanced configuration
-    editor.  Adding an area or setting a router ID was refused
+  - RIP and OSPF could not be set up in the advanced editor
   - Uploading a software bundle failed on slow storage
-  - The Overview page showed the hostname template, e.g. `rpi-%m`, and
-    never showed the boot partition
-  - A damaged schema cache, e.g. after a restart during download,
-    crashed the WebUI at every start
+  - The Overview page showed the hostname template and never the boot
+    partition
+  - A damaged schema cache crashed the WebUI at every start
 
+[bpi-m1]: https://github.com/kernelkit/infix/blob/main/board/arm/bananapi-bpi-m1/README.md
+[bpi-r2-pro]: https://github.com/kernelkit/infix/blob/main/board/aarch64/bananapi-bpi-r2-pro/README.md
 [bpi-f3]: https://github.com/kernelkit/infix/blob/main/board/riscv64/bananapi-bpi-f3/README.md
+[lan969x]: https://github.com/kernelkit/infix/blob/main/board/aarch64/microchip-lan969x/README.md
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
-[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
-[roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming
 [modem]: https://www.kernelkit.org/infix/latest/modem/
+[vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
+[locate]: https://www.kernelkit.org/infix/latest/hardware/#locate
+[ripng]: https://www.kernelkit.org/infix/latest/routing/#ripng-routing
+[ospfv3]: https://www.kernelkit.org/infix/latest/routing/#ospfv3-routing
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
-[boot]: https://www.kernelkit.org/infix/latest/boot/
-[QoS]: https://www.kernelkit.org/infix/latest/qos/
+[qos]: https://www.kernelkit.org/infix/latest/qos/
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
+[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
+[roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming
+[fastroam]: https://www.kernelkit.org/infix/latest/wifi/#fast-roaming-between-access-points
+[survey]: https://www.kernelkit.org/infix/latest/wifi/#channel-survey
+[boot]: https://www.kernelkit.org/infix/latest/boot/
+[ratelimit]: https://www.kernelkit.org/infix/latest/management/#restconf-rate-limit
 
 [v26.09.0][] - 2026-09-30
 -------------------------
