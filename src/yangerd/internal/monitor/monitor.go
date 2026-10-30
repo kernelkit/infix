@@ -508,7 +508,7 @@ func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
 	wasBridge := bridgeRelated(m.links, index)
 	m.mu.Unlock()
 
-	if update.Header.Type == syscall.RTM_DELLINK {
+	if linkGone(update) {
 		defer m.linkSetChanged()
 		defer m.linkRefreshed(old)
 		changed := m.removeInterface(index)
@@ -1371,6 +1371,12 @@ func ifNameByIndex(index int) (string, error) {
 		return "", err
 	}
 	return iface.Name, nil
+}
+
+// linkGone tells whether a link update removes the interface.  The
+// bridge sends a delete of family AF_BRIDGE when a port leaves it.
+func linkGone(update netlink.LinkUpdate) bool {
+	return update.Header.Type == syscall.RTM_DELLINK && update.Family != syscall.AF_BRIDGE
 }
 
 func linkNameFromUpdate(update netlink.LinkUpdate) (string, bool) {
