@@ -1,0 +1,33 @@
+From 13b421dbb4922b5f2ffc07cf2c8a7c47ab4b73fe Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 13 Oct 2026 16:27:48 +0200
+Subject: [PATCH 118/133] net: phy: micrel: lan8814: disable EEE
+
+The LAN8814 can enter 100BASE-TX EEE low power idle spuriously after the
+cable is unplugged (errata module 24).  The PHY advertises EEE out of
+reset, so two LAN8814s negotiate it even when neither MAC supports LPI,
+since phylink only disables PHY EEE for MACs that implement the LPI ops.
+
+Disable EEE at probe, the default in Microchip's PHY API.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/micrel.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index 09d5c5daa2ff..aa99191d2f6b 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -4751,6 +4751,11 @@ static int lan8814_probe(struct phy_device *phydev)
+ 	lan8814_clear_2psp_bit(phydev);
+ 	lan8814_update_meas_time(phydev);
+ 
++	/* Errata module 24: spurious LPI entry on cable unplug.  Keep EEE
++	 * off, as Microchip's PHY API does by default.
++	 */
++	phy_disable_eee(phydev);
++
+ 	return 0;
+ }
+ 

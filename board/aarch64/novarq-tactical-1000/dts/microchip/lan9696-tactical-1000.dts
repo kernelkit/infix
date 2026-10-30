@@ -5,3 +5,4 @@
 
 #include <arm64/microchip/lan9696-tactical-1000.dts>
 #include "infix.dtsi"
+#include "lan9696-tactical-1000-vpd.dtsi"

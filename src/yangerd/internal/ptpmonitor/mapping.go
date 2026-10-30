@@ -87,15 +87,13 @@ func timeSourceName(ts uint8) string {
 	return "ieee1588-ptp-tt:internal-oscillator"
 }
 
-func delayMechanismName(dm uint8) string {
-	switch dm {
-	case 2:
-		return "p2p"
-	case 0: /* linuxptp DM_AUTO */
-		return "no-mechanism"
-	default:
-		return "e2e"
-	}
+// delayMechanismName maps IEEE 1588 delayMechanism values to YANG enum names.
+var delayMechanismName = map[uint8]string{
+	1:    "e2e",
+	2:    "p2p",
+	3:    "common-p2p",
+	4:    "special",
+	0xfe: "no-mechanism",
 }
 
 // fmtClockIdentity renders a clock identity in the YANG clock-identity
@@ -197,7 +195,7 @@ func portDSMap(d *portDataSetTLV) map[string]interface{} {
 	if !ok {
 		state = "disabled"
 	}
-	return map[string]interface{}{
+	ds := map[string]interface{}{
 		"port-identity":               fmtPortIdentity(d.PortIdentity),
 		"port-state":                  state,
 		"log-min-delay-req-interval":  int(d.LogMinDelayReqInterval),
@@ -205,10 +203,13 @@ func portDSMap(d *portDataSetTLV) map[string]interface{} {
 		"log-announce-interval":       int(d.LogAnnounceInterval),
 		"announce-receipt-timeout":    int(d.AnnounceReceiptTimeout),
 		"log-sync-interval":           int(d.LogSyncInterval),
-		"delay-mechanism":             delayMechanismName(d.DelayMechanism),
 		"log-min-pdelay-req-interval": int(d.LogMinPdelayReqInterval),
 		"version-number":              int(d.VersionNumber),
 	}
+	if dm, ok := delayMechanismName[d.DelayMechanism]; ok {
+		ds["delay-mechanism"] = dm
+	}
+	return ds
 }
 
 // IEEE 1588 message type indices in the PORT_STATS_NP counter arrays.

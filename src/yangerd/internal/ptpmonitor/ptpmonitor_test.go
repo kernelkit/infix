@@ -199,7 +199,8 @@ func TestPortDSMapStates(t *testing.T) {
 	}{
 		{6, 1, "time-transmitter", "e2e"},
 		{9, 2, "time-receiver", "p2p"},
-		{4, 0, "listening", "no-mechanism"},
+		{9, 3, "time-receiver", "common-p2p"},
+		{4, 0xfe, "listening", "no-mechanism"},
 		{99, 1, "disabled", "e2e"}, /* unknown state */
 	}
 
@@ -211,6 +212,10 @@ func TestPortDSMapStates(t *testing.T) {
 		if ds["delay-mechanism"] != tc.mechS {
 			t.Fatalf("mech %d: got %v, want %v", tc.mech, ds["delay-mechanism"], tc.mechS)
 		}
+	}
+
+	if ds := portDSMap(&portDataSetTLV{DelayMechanism: 0}); ds["delay-mechanism"] != nil {
+		t.Fatalf("mech 0: got %v, want no leaf", ds["delay-mechanism"])
 	}
 }
 

@@ -17,10 +17,14 @@ from . import env, coverage
 # We know we have a self-signed certificate, silence warning about it
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
-# (connect, read) in seconds.  nginx gives up on rousette after 60 s
-# and replies 504, so only a lost request or reply reaches the read
-# timeout.  Without one, requests waits forever.
-TIMEOUT = (10, 90)
+# (connect, read) in seconds.  A firewall reload drops new connections
+# until it is done, which takes over half a minute on a single-core
+# system.  nginx gives up on rousette after 60 s and replies 504, so
+# only a lost request or reply reaches the read timeout.  Without one,
+# requests waits forever.  Reachability probes are retried by their
+# caller, so they give up sooner.
+TIMEOUT = (60, 90)
+PROBE_TIMEOUT = (10, 90)
 
 @dataclass
 class Location:
@@ -53,7 +57,8 @@ def xpath_to_uri(xpath, extra=None):
 
 
 # Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
-def requests_workaround(method, url, json, headers, auth, verify=False, retry=0):
+def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
+                        timeout=TIMEOUT):
     # Create a session
     session = requests.Session()
 
@@ -64,7 +69,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
     # A zone id like %sw2p2 is not a valid escape, which makes requests
     # re-quote every '%' in the URL, mangling percent-encoded list keys
     prepared_request.url = url
-    response = session.send(prepared_request, verify=verify, timeout=TIMEOUT)
+    response = session.send(prepared_request, verify=verify, timeout=timeout)
     try:
         # Raise exceptions for HTTP errors
         response.raise_for_status()
@@ -75,7 +80,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
             print(f"{method} {url}: HTTP error 502, retrying({retry})")
             time.sleep(1)
             response = requests_workaround(method, url, json, headers, auth,
-                                           verify, retry)
+                                           verify, retry, timeout)
         else:
             raise e
 
@@ -111,8 +116,8 @@ def restconf_reachable(neigh, password):
         url = f"https://[{neigh}]/restconf/data/ietf-system:system/hostname"
         auth = HTTPBasicAuth("admin", password)
 
-        response = requests_workaround_get(url, headers=headers, auth=auth,
-                                           verify=False)
+        response = requests_workaround('GET', url, None, headers, auth,
+                                       timeout=PROBE_TIMEOUT)
         if response.status_code == 200:
             return True
     except:

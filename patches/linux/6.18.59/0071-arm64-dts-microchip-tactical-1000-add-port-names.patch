@@ -1,7 +1,7 @@
 From 316b22b3455d501e142d3b0aaadf2960ef5293e0 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Tue, 30 Jun 2026 11:23:47 +0200
-Subject: [PATCH 071/108] arm64: dts: microchip: tactical-1000: add port names
+Subject: [PATCH 071/133] arm64: dts: microchip: tactical-1000: add port names
 
 Now that driver supports parsing the "label" property, populate port names
 as they are physically wired up.

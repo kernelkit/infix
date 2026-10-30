@@ -27,6 +27,7 @@
 #define FIREWALLD_POLICIES_DIR FIREWALLD_DIR_NEXT "/policies"
 #define FIREWALLD_IPSETS_DIR   FIREWALLD_DIR_NEXT "/ipsets"
 #define IPSETS_ACTIVE_DIR      FIREWALLD_DIR "/ipsets"
+#define FIREWALLD_DYNAMIC_DIR  FIREWALLD_DIR_NEXT "/dynamic"
 #define ADDRSET_RUNDIR         "/run/confd/address-sets"
 
 #define ENTRY_STRLEN           64	/* worst-case ip-prefix + margin */
@@ -104,6 +105,29 @@ static int prefix_parse(const char *str, struct prefix *p)
 	}
 
 	return -1;
+}
+
+static bool prefix_overlap(const char *a, const char *b)
+{
+	struct prefix pa, pb;
+	int len, i;
+
+	if (prefix_parse(a, &pa) || prefix_parse(b, &pb) || pa.af != pb.af)
+		return false;
+
+	len = pa.len < pb.len ? pa.len : pb.len;
+	for (i = 0; i < len / 8; i++) {
+		if (pa.addr[i] != pb.addr[i])
+			return false;
+	}
+	if (len % 8) {
+		uint8_t mask = 0xff << (8 - len % 8);
+
+		if ((pa.addr[i] & mask) != (pb.addr[i] & mask))
+			return false;
+	}
+
+	return true;
 }
 
 static bool shadow_has(const char *name, const char *entry)
@@ -348,12 +372,58 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 }
 
 /*
- * Only static entries go into the generated ipset.  Dynamic entries,
- * added at runtime with the add action, are re-applied from the shadow
- * files by 'firewall reload' after firewalld has reloaded.  Baking them
- * into the XML would resurrect entries removed while a reload was in
- * flight -- the reload is asynchronous to the action handlers.
+ * Dynamic entries, added at runtime with the add action, go into the
+ * generated ipset so a reload, which can take half a minute on a slow
+ * system, does not drop them meanwhile.  They are also listed in
+ * FIREWALLD_DYNAMIC_DIR, for 'firewall reload' to remove the ones that
+ * were removed while the reload was in flight.  Entries that overlap
+ * static ones are left out, nftables refuses overlapping elements in
+ * interval sets.
  */
+static void merge_dynamic(FILE *fp, struct lyd_node *cfg, const char *name)
+{
+	char line[ENTRY_STRLEN];
+	FILE *sf, *df;
+
+	sf = fopenf("r", ADDRSET_RUNDIR "/%s", name);
+	if (!sf)
+		return;
+
+	if (fmkpath(0755, FIREWALLD_DYNAMIC_DIR) && errno != EEXIST)
+		ERRNO("Failed creating " FIREWALLD_DYNAMIC_DIR);
+	df = fopenf("w", FIREWALLD_DYNAMIC_DIR "/%s", name);
+
+	while (fgets(line, sizeof(line), sf)) {
+		struct lyd_node *node;
+		bool skip = false;
+
+		chomp(line);
+		if (!line[0])
+			continue;
+
+		LYX_LIST_FOR_EACH(lyd_child(cfg), node, "entry") {
+			if (prefix_overlap(line, lyd_get_value(node))) {
+				skip = true;
+				break;
+			}
+		}
+
+		if (skip) {
+			NOTE("address-set %s: dropping dynamic entry %s, overlaps static entry",
+			     name, line);
+			continue;
+		}
+
+		fprintf(fp, "  <entry>%s</entry>\n", line);
+		if (df)
+			fprintf(df, "%s\n", line);
+	}
+
+	if (df)
+		fclose(df);
+	fclose(sf);
+}
+
 static int generate_ipset(struct lyd_node *cfg, const char *name)
 {
 	const char *family, *timeout, *desc;
@@ -382,6 +452,9 @@ static int generate_ipset(struct lyd_node *cfg, const char *name)
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "entry")
 		fprintf(fp, "  <entry>%s</entry>\n", lyd_get_value(node));
+
+	if (!timeout)
+		merge_dynamic(fp, cfg, name);
 
 	fprintf(fp, "</ipset>\n");
 
@@ -807,7 +880,7 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		LYX_LIST_FOR_EACH(clist, cnode, "service")
 			generate_service(cnode, lydx_get_cattr(cnode, "name"));
 
-		/* Regenerate all address-sets (static entries only) */
+		/* Regenerate all address-sets */
 		clist = lydx_get_descendant(tree, "firewall", "address-set", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "address-set")
 			generate_ipset(cnode, lydx_get_cattr(cnode, "name"));
