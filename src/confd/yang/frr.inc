@@ -7,6 +7,6 @@ MODULES=(
     "ietf-bfd-types@2022-09-22.yang"
     "ietf-bfd@2022-09-22.yang"
     "ietf-bfd-ip-sh@2022-09-22.yang"
-    "infix-ospf@2026-10-26.yang"
-    "infix-rip@2026-10-26.yang"
+    "infix-ospf@2026-10-30.yang"
+    "infix-rip@2026-10-30.yang"
 )

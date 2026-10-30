@@ -266,10 +266,15 @@ ospf` does the same for OSPFv3.
 ### Debug OSPFv2
 
 Using NETCONF and the YANG model *ietf-routing* it is possible to read
-the OSPF routing table, neighbors and more, that may be useful for
+the OSPF neighbors, interfaces and more, that may be useful for
 debugging the OSPFv2 setup. The CLI has various OSPF status commands
-such as `show ospf neighbor`, `show ospf interface` and `show ospf
-routes`.
+such as `show ip ospf neighbor`, `show ip ospf interface` and `show ip
+ospf route`.
+
+The OSPF routing table is not operational data: it is read from the
+routing daemon when asked, with the `get-routes` action on the OSPF
+instance.  `show ip ospf route` runs the action for you.  The routes
+OSPF has installed are also in the [routing table](#view-routing-table).
 
 <pre class="cli"><code>admin@example:/> <b>show ospf neighbor</b>
 <span class="header">Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL</span>
@@ -377,6 +382,10 @@ admin@example:/> <b>show ipv6 ospf interface</b>
 admin@example:/> <b>show ipv6 ospf route</b>
 </code></pre>
 
+As for OSPFv2, the routing table is read from the routing daemon when
+asked, with the `get-routes` action on the OSPFv3 instance, which `show
+ipv6 ospf route` runs for you.
+
 Debug logging is configured under the `ospfv3` protocol `debug` container,
 analogous to OSPFv2.  Available categories are `packet`, `ism`, `nsm` and
 `nssa`.
@@ -397,6 +406,11 @@ admin@example:/>
 > [!TIP]
 > Remember to enable [IPv4 forwarding](ip.md#ipv4-forwarding) for all the
 > interfaces you want to route between.
+
+The RIP routing table is read from the routing daemon when asked, with
+the `get-routes` action on the RIP instance, which `show ip rip route`
+runs for you.  The routes RIP has installed are also in the
+[routing table](#view-routing-table).
 
 
 ### RIP interface settings
@@ -541,7 +555,14 @@ RIPng runs on FRR's `ripngd`:
 
 ### RIPng status
 
-RIPng-learned routes appear in the [IPv6 routing table](#ipv6-routing-table):
+The RIPng routing table is read from the routing daemon when asked,
+with the `get-routes` action on the RIPng instance, which `show ipv6
+rip route` runs for you:
+
+<pre class="cli"><code>admin@example:/> <b>show ipv6 rip route</b>
+</code></pre>
+
+RIPng-learned routes also appear in the [IPv6 routing table](#ipv6-routing-table):
 
 <pre class="cli"><code>admin@example:/> <b>show ipv6 route</b>
 </code></pre>

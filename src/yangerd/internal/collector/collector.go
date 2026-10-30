@@ -18,11 +18,19 @@ type Collector interface {
 	Collect(ctx context.Context, t *tree.Tree) error
 }
 
+// Reconfigured is implemented by a collector that caches something
+// only a configuration change moves.  PokeAll, sent on SIGHUP after a
+// commit, calls it before the collection.
+type Reconfigured interface {
+	Reconfigured()
+}
+
 // Pokes asks running collectors for an immediate collection.  Each
 // collector has its own channel, so a poke reaches the one it is meant
 // for, and pokes that arrive while it is busy collapse into one.
 type Pokes struct {
-	chans map[string]chan struct{}
+	chans      map[string]chan struct{}
+	collectors []Collector
 }
 
 // Poke asks the named collector to collect now.
@@ -32,8 +40,14 @@ func (p *Pokes) Poke(name string) {
 	}
 }
 
-// PokeAll asks every collector to collect now.
+// PokeAll asks every collector to collect now, after a configuration
+// change.
 func (p *Pokes) PokeAll() {
+	for _, c := range p.collectors {
+		if r, ok := c.(Reconfigured); ok {
+			r.Reconfigured()
+		}
+	}
 	for _, ch := range p.chans {
 		poke(ch)
 	}
@@ -50,7 +64,7 @@ func poke(ch chan struct{}) {
 // collector's configured interval.  A failed Collect is logged and
 // retried on the next tick.  All goroutines exit when ctx is cancelled.
 func RunAll(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, collectors []Collector) *Pokes {
-	p := &Pokes{chans: make(map[string]chan struct{}, len(collectors))}
+	p := &Pokes{chans: make(map[string]chan struct{}, len(collectors)), collectors: collectors}
 	for _, c := range collectors {
 		ch := make(chan struct{}, 1)
 		p.chans[c.Name()] = ch

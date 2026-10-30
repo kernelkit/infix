@@ -6044,33 +6044,20 @@ def show_ospf_neighbor(json_data):
 
 
 def show_ospf_routes(json_data):
-    """Show OSPF routing table (local-rib)"""
-    routing = json_data.get('ietf-routing:routing', {})
-    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
-
-    ospf_instance = _find_ospf_instance(json_data)
-
-    if not ospf_instance:
-        print("OSPF is not configured or running")
-        return
-
-    ospf = ospf_instance.get('ietf-ospf:ospf', {})
-    local_rib = ospf.get('local-rib', {})
-    routes = local_rib.get('route', [])
+    """Show OSPF routing table, as the get-routes action lists it"""
+    routes = json_data.get('route', [])
 
     if not routes:
         print("No OSPF routes in local RIB")
         return
 
-    # Display table header (AREA column from infix-routing augmentation)
     hdr = f"{'DESTINATION':<20} {'TYPE':<10} {'AREA':<12} {'METRIC':<8} {'NEXT HOP':<16} {'INTERFACE':<12}"
     print(Decore.invert(hdr))
 
-    for route in routes:
+    for route in sorted(routes, key=lambda r: r.get('prefix', '')):
         prefix = route.get('prefix', '0.0.0.0/0')
         route_type = route.get('route-type', 'unknown')
-        # Check for area-id with infix-routing prefix (augmented field)
-        area_id = route.get('infix-ospf:area-id', route.get('area-id', '-'))
+        area_id = route.get('area-id', '-')
         metric = route.get('metric', 0)
 
         # Simplify route type display
@@ -6158,38 +6145,25 @@ def show_rip(json_data):
 
 
 def show_rip_routes(json_data):
-    """Show RIP routing table"""
-    routing = json_data.get('ietf-routing:routing', {})
-    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
-
-    rip_instance = None
-    for protocol in protocols:
-        if 'ietf-rip:rip' in protocol:
-            rip_instance = protocol
-            break
-
-    if not rip_instance:
-        print("RIP is not configured or running")
-        return
-
-    rip = rip_instance.get('ietf-rip:rip', {})
-    routes = rip.get('ipv4', {}).get('routes', {}).get('route', [])
+    """Show RIP routing table, as the get-routes action lists it"""
+    routes = json_data.get('route', [])
 
     if not routes:
         print("No RIP routes")
         return
 
-    # Header
-    hdr = f"{'PREFIX':<20} {'METRIC':<8} {'NEXT-HOP':<16} {'INTERFACE':<12}"
+    pw = max(20, max(len(str(r.get('prefix', ''))) for r in routes) + 1)
+    nw = max(16, max(len(str(r.get('next-hop', ''))) for r in routes) + 1)
+    hdr = f"{'PREFIX':<{pw}} {'METRIC':<8} {'NEXT-HOP':<{nw}} {'INTERFACE':<12}"
     print(Decore.invert(hdr))
 
-    for route in routes:
-        prefix = route.get('ipv4-prefix', 'unknown')
+    for route in sorted(routes, key=lambda r: r.get('prefix', '')):
+        prefix = route.get('prefix', 'unknown')
         metric = route.get('metric', 0)
         next_hop = route.get('next-hop', '-')
         interface = route.get('interface', '-')
 
-        print(f"{prefix:<20} {metric:<8} {next_hop:<16} {interface:<12}")
+        print(f"{prefix:<{pw}} {metric:<8} {next_hop:<{nw}} {interface:<12}")
 
 
 def show_rip_interfaces(json_data):

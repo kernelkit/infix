@@ -9,6 +9,12 @@ module infix-rip {
   import ietf-rip {
     prefix rip;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
   import infix-routing {
     prefix infix-rt;
   }
@@ -16,6 +22,12 @@ module infix-rip {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-rip.";
+
+  revision 2026-10-30 {
+    description "The route tables are no longer operational data, the new
+                 get-routes action reads them from the daemon on request.";
+    reference "internal";
+  }
 
   revision 2026-10-26 {
     description "Initial revision, the ietf-rip deviations and augments from
@@ -105,6 +117,53 @@ module infix-rip {
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:statistics" {
     deviate not-supported;
     description "Global statistics are not collected.";
+  }
+
+  /* The route tables are read when asked, see the get-routes action. */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:ipv4/rip:routes" {
+    deviate not-supported;
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:ipv6/rip:routes" {
+    deviate not-supported;
+  }
+
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip" {
+    description
+      "Read the RIP routing table on request.";
+
+    action get-routes {
+      description
+        "List the routes the RIP instance has learned.
+
+         The route table is not operational data, this action reads it
+         from the daemon when asked.  The routes RIP has installed are
+         also in the RIB under ietf-routing.";
+
+      output {
+        list route {
+          key "prefix";
+          description "A route RIP has learned.";
+
+          leaf prefix {
+            type inet:ip-prefix;
+            description "Destination prefix.";
+          }
+
+          leaf next-hop {
+            type inet:ip-address;
+            description "Next hop address.";
+          }
+
+          leaf interface {
+            type if:interface-ref;
+            description "The interface that the route uses.";
+          }
+
+          uses rip:route-attributes;
+        }
+      }
+    }
   }
 
   /* RIP RPC */

@@ -199,9 +199,10 @@ with infamy.Test() as test:
         version = env.args.version
         param = PARAM[version] | {"version": version}
 
-        R1, R2, HOST = parallel(lambda: env.attach("R1", "mgmt"),
-                                lambda: env.attach("R2", "mgmt"),
-                                lambda: env.attach("HOST", "mgmt"))
+        R1, R2, HOST, R1ssh = parallel(lambda: env.attach("R1", "mgmt"),
+                                       lambda: env.attach("R2", "mgmt"),
+                                       lambda: env.attach("HOST", "mgmt"),
+                                       lambda: env.attach("R1", "mgmt", "ssh"))
         route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Configure targets"):
@@ -222,6 +223,19 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R1, f"{param['R2lo']}/{plen}", af=af, proto=proto), attempts=200)
         until(lambda: route.route_exist(R2, f"{param['R1lo']}/{plen}", af=af, proto=proto), attempts=200)
         until(lambda: route.route_exist(R2, f"{param['blackhole']}/{plen}", af=af, proto=proto), attempts=200)
+
+    with test.step("Read the routes R1 computed with the get-routes action"):
+        lo = f"{param['R2lo']}/{plen}"
+        found = until(lambda: route.protocol_routes(R1, f"infix-routing:{version}").get(lo), attempts=20)
+        hops = found.get("next-hops", {}).get("next-hop", [])
+        if found.get("route-type") != "external-2" or not hops or "next-hop" not in hops[0]:
+            test.fail(f"Unexpected route to R2 loopback: {found}")
+
+    with test.step("Show the routes R1 computed in the CLI"):
+        cmd = "show ip ospf route" if version == "ospfv2" else "show ipv6 ospf route"
+        out = R1ssh.runsh(f'klish -c "{cmd}"').stdout
+        if lo not in out:
+            test.fail(f"CLI shows no route to R2 loopback:\n{out}")
 
     with test.step(f"Verify R2 {version} neighbors with non-{version} interface"):
         # Regression test for #1169

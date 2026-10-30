@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
@@ -42,6 +43,12 @@ func FRRVty(ctx context.Context, daemon, command string) ([]byte, error) {
 type RoutingCollector struct {
 	vty      VtyQuery
 	interval time.Duration
+
+	// autoCost caches the reference bandwidth per daemon, read from its
+	// running-config.  Only a commit changes it, so Reconfigured drops
+	// the cache and the next collection reads it again.
+	mu       sync.Mutex
+	autoCost map[string]int
 }
 
 // NewRoutingCollector creates a RoutingCollector querying FRR over vty.
@@ -55,6 +62,13 @@ func (c *RoutingCollector) Name() string { return "routing" }
 
 // Interval implements Collector.
 func (c *RoutingCollector) Interval() time.Duration { return c.interval }
+
+// Reconfigured implements collector.Reconfigured.
+func (c *RoutingCollector) Reconfigured() {
+	c.mu.Lock()
+	c.autoCost = nil
+	c.mu.Unlock()
+}
 
 // vtyJSON runs a show command and decodes its JSON output into dst.
 func (c *RoutingCollector) vtyJSON(ctx context.Context, daemon, command string, dst interface{}) error {
@@ -294,11 +308,6 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 	}
 
 	ospf["ietf-ospf:auto-cost"] = c.ospfAutoCost(ctx, "ospfd")
-	if routes := c.ospfRoutes(ctx); len(routes) > 0 {
-		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
-			"ietf-ospf:route": routes,
-		}
-	}
 
 	ospf["ietf-ospf:areas"] = map[string]interface{}{
 		"ietf-ospf:area": areas,
@@ -423,97 +432,34 @@ const ospfAutoCostDefault = 100000
 // the value when it differs from the default.  Auto-cost is always
 // enabled in FRR.
 func (c *RoutingCollector) ospfAutoCost(ctx context.Context, daemon string) map[string]interface{} {
-	refbw := ospfAutoCostDefault
+	c.mu.Lock()
+	refbw, ok := c.autoCost[daemon]
+	c.mu.Unlock()
 
-	out, _ := c.vty(ctx, daemon, "show running-config")
-	for _, line := range strings.Split(string(out), "\n") {
-		words := strings.Fields(line)
-		if len(words) == 3 && words[0] == "auto-cost" && words[1] == "reference-bandwidth" {
-			if v, err := strconv.Atoi(words[2]); err == nil {
-				refbw = v
+	if !ok {
+		refbw = ospfAutoCostDefault
+		out, _ := c.vty(ctx, daemon, "show running-config")
+		for _, line := range strings.Split(string(out), "\n") {
+			words := strings.Fields(line)
+			if len(words) == 3 && words[0] == "auto-cost" && words[1] == "reference-bandwidth" {
+				if v, err := strconv.Atoi(words[2]); err == nil {
+					refbw = v
+				}
+				break
 			}
-			break
 		}
+		c.mu.Lock()
+		if c.autoCost == nil {
+			c.autoCost = make(map[string]int)
+		}
+		c.autoCost[daemon] = refbw
+		c.mu.Unlock()
 	}
 
 	return map[string]interface{}{
 		"enabled":             true,
 		"reference-bandwidth": refbw,
 	}
-}
-
-func (c *RoutingCollector) ospfRoutes(ctx context.Context) []interface{} {
-	var data map[string]interface{}
-	if c.vtyJSON(ctx, "ospfd", "show ip ospf route json", &data) != nil {
-		return nil
-	}
-
-	var routes []interface{}
-	for prefix, infoRaw := range data {
-		if !strings.Contains(prefix, "/") {
-			continue
-		}
-		if info, ok := infoRaw.(map[string]interface{}); ok {
-			routes = append(routes, ospfRoute(prefix, info))
-		}
-	}
-	return routes
-}
-
-func ospfRoute(prefix string, info map[string]interface{}) map[string]interface{} {
-	route := map[string]interface{}{
-		"prefix": prefix,
-	}
-
-	if rt, ok := info["routeType"].(string); ok {
-		parts := strings.Fields(rt)
-		if len(parts) > 1 {
-			switch parts[1] {
-			case "E1":
-				route["route-type"] = "external-1"
-			case "E2":
-				route["route-type"] = "external-2"
-			case "IA":
-				route["route-type"] = "inter-area"
-			}
-		} else if len(parts) > 0 && parts[0] == "N" {
-			route["route-type"] = "intra-area"
-		}
-	}
-
-	if v := info["area"]; v != nil {
-		route["infix-ospf:area-id"] = v
-	}
-	if v := info["cost"]; v != nil {
-		route["metric"] = v
-	} else if v := info["metric"]; v != nil {
-		route["metric"] = v
-	}
-	if v := info["tag"]; v != nil {
-		route["route-tag"] = v
-	}
-
-	nexthops := make([]interface{}, 0)
-	hopsRaw, _ := info["nexthops"].([]interface{})
-	for _, hopRaw := range hopsRaw {
-		hop, ok := hopRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		nh := make(map[string]interface{})
-		ip, _ := hop["ip"].(string)
-		if ip != "" && ip != " " {
-			nh["next-hop"] = ip
-		} else if da, ok := hop["directlyAttachedTo"].(string); ok {
-			nh["outgoing-interface"] = da
-		}
-		nexthops = append(nexthops, nh)
-	}
-	route["next-hops"] = map[string]interface{}{
-		"next-hop": nexthops,
-	}
-
-	return route
 }
 
 // --- OSPFv3 ---
@@ -603,11 +549,6 @@ func (c *RoutingCollector) collectOSPF6(ctx context.Context) interface{} {
 		ospf["ietf-ospf:router-id"] = rid
 	}
 	ospf["ietf-ospf:auto-cost"] = c.ospfAutoCost(ctx, "ospf6d")
-	if routes := c.ospf6Routes(ctx); len(routes) > 0 {
-		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
-			"ietf-ospf:route": routes,
-		}
-	}
 	ospf["ietf-ospf:areas"] = map[string]interface{}{
 		"ietf-ospf:area": areas,
 	}
@@ -687,96 +628,6 @@ func ospf6Neighbor(nbr map[string]interface{}) map[string]interface{} {
 	return neighbor
 }
 
-// ospf6PathType maps ospf6d's abbreviated path types.
-var ospf6PathType = map[string]string{
-	"IA": "intra-area",
-	"IE": "inter-area",
-	"E1": "external-1",
-	"E2": "external-2",
-}
-
-func (c *RoutingCollector) ospf6Routes(ctx context.Context) []interface{} {
-	var data map[string]interface{}
-	if c.vtyJSON(ctx, "ospf6d", "show ipv6 ospf6 route json", &data) != nil {
-		return nil
-	}
-
-	var routes []interface{}
-	table, _ := data["routes"].(map[string]interface{})
-	for prefix, pathsRaw := range table {
-		if !strings.Contains(prefix, "/") {
-			continue
-		}
-		// ospf6d lists one entry per path; keep the best one so the
-		// local-rib stays keyed uniquely by prefix.
-		var best map[string]interface{}
-		paths, _ := pathsRaw.([]interface{})
-		for _, raw := range paths {
-			path, ok := raw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			if best == nil {
-				best = path
-			}
-			if b, _ := path["isBestRoute"].(bool); b {
-				best = path
-				break
-			}
-		}
-		if best != nil {
-			routes = append(routes, ospf6Route(prefix, best))
-		}
-	}
-	return routes
-}
-
-func ospf6Route(prefix string, info map[string]interface{}) map[string]interface{} {
-	route := map[string]interface{}{
-		"prefix": prefix,
-	}
-
-	if pt, _ := info["pathType"].(string); pt != "" {
-		if rt, ok := ospf6PathType[pt]; ok {
-			route["route-type"] = rt
-		}
-	}
-	if v := info["area"]; v != nil {
-		route["infix-ospf:area-id"] = v
-	}
-	if v := info["cost"]; v != nil {
-		route["metric"] = v
-	} else if v := info["metric"]; v != nil {
-		route["metric"] = v
-	}
-
-	nexthops := make([]interface{}, 0)
-	hopsRaw, _ := info["nextHops"].([]interface{})
-	for _, hopRaw := range hopsRaw {
-		hop, ok := hopRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		nh := make(map[string]interface{})
-		// "::" marks a directly connected prefix.
-		if ip, _ := hop["nextHop"].(string); ip != "" && ip != "::" {
-			nh["next-hop"] = ip
-		} else if ifname, _ := hop["interfaceName"].(string); ifname != "" {
-			nh["outgoing-interface"] = ifname
-		}
-		if len(nh) > 0 {
-			nexthops = append(nexthops, nh)
-		}
-	}
-	if len(nexthops) > 0 {
-		route["next-hops"] = map[string]interface{}{
-			"next-hop": nexthops,
-		}
-	}
-
-	return route
-}
-
 // --- RIP ---
 
 // ripStatusScalars are the single-value lines of 'show ip rip status'.
@@ -815,7 +666,7 @@ func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
 			"interface": ifaces,
 		}
 	}
-	ripAddressFamily(rip, "ipv4", c.ripRoutes(ctx, "ipv4"), ripNeighbors(status, "ipv4-address"))
+	ripAddressFamily(rip, "ipv4", ripNeighbors(status, "ipv4-address"))
 
 	return map[string]interface{}{
 		"type":         "infix-routing:ripv2",
@@ -845,7 +696,7 @@ func (c *RoutingCollector) collectRIPNG(ctx context.Context) interface{} {
 			"interface": ifaces,
 		}
 	}
-	ripAddressFamily(rip, "ipv6", c.ripRoutes(ctx, "ipv6"), ripNeighbors(status, "ipv6-address"))
+	ripAddressFamily(rip, "ipv6", ripNeighbors(status, "ipv6-address"))
 
 	return map[string]interface{}{
 		"type":         "infix-routing:ripng",
@@ -869,16 +720,11 @@ func ripGlobals(status map[string]interface{}) map[string]interface{} {
 	return rip
 }
 
-// ripAddressFamily fills the ipv4 or ipv6 container with the learned
-// routes and the peers.
-func ripAddressFamily(rip map[string]interface{}, family string, routes, neighbors []interface{}) {
+// ripAddressFamily fills the ipv4 or ipv6 container with the peers.
+// The routes are not operational data, the get-routes action in confd
+// reads them when asked.
+func ripAddressFamily(rip map[string]interface{}, family string, neighbors []interface{}) {
 	af := make(map[string]interface{})
-	if len(routes) > 0 {
-		af["routes"] = map[string]interface{}{
-			"route": routes,
-		}
-		rip["num-of-routes"] = len(routes)
-	}
 	if len(neighbors) > 0 {
 		af["neighbors"] = map[string]interface{}{
 			"neighbor": neighbors,
@@ -926,54 +772,6 @@ func ripNeighbors(status map[string]interface{}, addressKey string) []interface{
 		out = append(out, entry)
 	}
 	return out
-}
-
-func (c *RoutingCollector) ripRoutes(ctx context.Context, family string) []interface{} {
-	command, prefixKey := "show ip route rip json", "ipv4-prefix"
-	if family == "ipv6" {
-		command, prefixKey = "show ipv6 route ripng json", "ipv6-prefix"
-	}
-
-	var routeData map[string]interface{}
-	if c.vtyJSON(ctx, "zebra", command, &routeData) != nil {
-		return nil
-	}
-
-	var routes []interface{}
-	for prefix, entriesRaw := range routeData {
-		if !strings.Contains(prefix, "/") {
-			continue
-		}
-		entries, _ := entriesRaw.([]interface{})
-		if len(entries) == 0 {
-			continue
-		}
-		entry, ok := entries[0].(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		route := map[string]interface{}{
-			prefixKey:    prefix,
-			"route-type": "rip",
-		}
-		if m, ok := entry["metric"]; ok {
-			route["metric"] = toInt(m)
-		}
-
-		nexthops, _ := entry["nexthops"].([]interface{})
-		if len(nexthops) > 0 {
-			firstHop, _ := nexthops[0].(map[string]interface{})
-			if ip, ok := firstHop["ip"].(string); ok && ip != "" {
-				route["next-hop"] = ip
-			}
-			if ifName, ok := firstHop["interfaceName"].(string); ok && ifName != "" {
-				route["interface"] = ifName
-			}
-		}
-		routes = append(routes, route)
-	}
-	return routes
 }
 
 // parseRIPStatus parses the text output of 'show ip rip status'.

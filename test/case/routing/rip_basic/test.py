@@ -162,8 +162,9 @@ with infamy.Test() as test:
         param = PARAM[version] | {"version": version}
         af, plen = param["af"], param["hostlen"]
 
-        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
-                          lambda: env.attach("R2", "mgmt"))
+        R1, R2, R1ssh = parallel(lambda: env.attach("R1", "mgmt"),
+                                 lambda: env.attach("R2", "mgmt"),
+                                 lambda: env.attach("R1", "mgmt", "ssh"))
         route.skip_unless_supported(test, "rip", R1, R2)
 
     with test.step("Configure targets"):
@@ -185,6 +186,18 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R2, f"{param['blackhole']}/{plen}", af=af, proto="ietf-rip:rip"), attempts=40)
         until(lambda: route.route_exist(R2, param["R1net"], af=af, proto="ietf-rip:rip"), attempts=40)
         until(lambda: route.route_exist(R1, param["R2net"], af=af, proto="ietf-rip:rip"), attempts=40)
+
+    with test.step("Read the routes R1 learned with the get-routes action"):
+        lo = f"{param['R2lo']}/{plen}"
+        found = until(lambda: route.protocol_routes(R1, f"infix-routing:{version}").get(lo), attempts=20)
+        if found.get("route-type") != "rip" or found.get("interface") != R1link:
+            test.fail(f"Unexpected route to R2 loopback: {found}")
+
+    with test.step("Show the routes R1 learned in the CLI"):
+        cmd = "show ipv6 rip route" if version == "ripng" else "show ip rip route"
+        out = R1ssh.runsh(f'klish -c "{cmd}"').stdout
+        if lo not in out:
+            test.fail(f"CLI shows no route to R2 loopback:\n{out}")
 
     with test.step(f"Test connectivity from PC:data1 to R2 loopback via {version}"):
         hport0 = env["PC"]["data1"]

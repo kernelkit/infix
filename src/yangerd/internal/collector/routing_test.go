@@ -78,26 +78,6 @@ const testOSPFNeighbors = `{
   }
 }`
 
-const testOSPFRoutes = `{
-  "10.0.0.0/24": {
-    "routeType": "N IA",
-    "area": "0.0.0.0",
-    "cost": 20,
-    "nexthops": [
-      {"ip": "192.168.1.2", "via": "e0"}
-    ]
-  },
-  "10.0.1.0/24": {
-    "routeType": "N E2",
-    "area": "0.0.0.0",
-    "cost": 100,
-    "tag": 42,
-    "nexthops": [
-      {"ip": " ", "directlyAttachedTo": "e0"}
-    ]
-  }
-}`
-
 const testRIPStatus = `Routing Protocol is "rip"
   Sending updates every 30 seconds with +/-50%, next due in 12 seconds
   Timeout after 180 seconds, garbage collect after 120 seconds
@@ -118,29 +98,6 @@ const testRIPStatus = `Routing Protocol is "rip"
     10.0.0.3                 1         2       120   00:00:25
   Distance: (default is 120)
 `
-
-const testRIPRoutes = `{
-  "10.0.0.0/24": [
-    {
-      "prefix": "10.0.0.0/24",
-      "protocol": "rip",
-      "metric": 1,
-      "nexthops": [
-        {"ip": "10.0.0.2", "interfaceName": "e0"}
-      ]
-    }
-  ],
-  "10.0.1.0/24": [
-    {
-      "prefix": "10.0.1.0/24",
-      "protocol": "rip",
-      "metric": 2,
-      "nexthops": [
-        {"ip": "10.0.0.3", "interfaceName": "e1"}
-      ]
-    }
-  ]
-}`
 
 const testBFDPeers = `[
   {
@@ -204,14 +161,12 @@ func ospfOnly() fakeVty {
 		"ospfd show ip ospf json":                 testOSPFGlobal,
 		"ospfd show ip ospf interface json":       testOSPFInterfaces,
 		"ospfd show ip ospf neighbor detail json": testOSPFNeighbors,
-		"ospfd show ip ospf route json":           testOSPFRoutes,
 	}
 }
 
 func fullRunner() fakeVty {
 	v := ospfOnly()
 	v["ripd show ip rip status"] = testRIPStatus
-	v["zebra show ip route rip json"] = testRIPRoutes
 	v["bfdd show bfd peers json"] = testBFDPeers
 	return v
 }
@@ -402,6 +357,48 @@ func TestOSPFAutoCostDefault(t *testing.T) {
 	}
 }
 
+// The running-config is read once and kept until a commit, which
+// SIGHUP announces through Reconfigured.
+func TestOSPFAutoCostReadOnceUntilReconfigured(t *testing.T) {
+	runner := ospfOnly()
+	runner["ospfd show running-config"] = "!\nrouter ospf\n auto-cost reference-bandwidth 10000\nexit\n!\n"
+	c := newRoutingCollector(runner)
+	tr := tree.New()
+
+	count := 0
+	inner := c.vty
+	c.vty = func(ctx context.Context, daemon, command string) ([]byte, error) {
+		if daemon == "ospfd" && command == "show running-config" {
+			count++
+		}
+		return inner(ctx, daemon, command)
+	}
+	reads := func() int { return count }
+
+	c.Collect(context.Background(), tr)
+	c.Collect(context.Background(), tr)
+	if reads() != 1 {
+		t.Fatalf("running-config read %d times over two collections", reads())
+	}
+
+	runner["ospfd show running-config"] = "!\nrouter ospf\nexit\n!\n"
+	c.Collect(context.Background(), tr)
+	var out map[string]interface{}
+	json.Unmarshal(tr.Get("ietf-routing:routing"), &out)
+	ac := getProtocol(t, out, "infix-routing:ospfv2")["ietf-ospf:ospf"].(map[string]interface{})["ietf-ospf:auto-cost"].(map[string]interface{})
+	if ac["reference-bandwidth"] != float64(10000) {
+		t.Fatalf("cached value lost without a reconfigure: %v", ac)
+	}
+
+	c.Reconfigured()
+	c.Collect(context.Background(), tr)
+	json.Unmarshal(tr.Get("ietf-routing:routing"), &out)
+	ac = getProtocol(t, out, "infix-routing:ospfv2")["ietf-ospf:ospf"].(map[string]interface{})["ietf-ospf:auto-cost"].(map[string]interface{})
+	if reads() != 2 || ac["reference-bandwidth"] != float64(100000) {
+		t.Fatalf("reconfigure did not re-read: %d reads, %v", reads(), ac)
+	}
+}
+
 func TestOSPFAutoCostConfigured(t *testing.T) {
 	runner := ipv6Runner()
 	runner["ospf6d show running-config"] = "!\nrouter ospf6\n ospf6 router-id 10.1.1.1\n auto-cost reference-bandwidth 10000\nexit\n!\n"
@@ -410,55 +407,6 @@ func TestOSPFAutoCostConfigured(t *testing.T) {
 	ac := ospf["ietf-ospf:auto-cost"].(map[string]interface{})
 	if ac["enabled"] != true || ac["reference-bandwidth"] != float64(10000) {
 		t.Fatalf("expected reference bandwidth 10000, got %v", ac)
-	}
-}
-
-func TestOSPFRoutes(t *testing.T) {
-	out := routingCollect(t, fullRunner())
-	ospfProto := getOSPFProtocol(t, out)
-	ospf := ospfProto["ietf-ospf:ospf"].(map[string]interface{})
-	rib := ospf["ietf-ospf:local-rib"].(map[string]interface{})
-	routes := rib["ietf-ospf:route"].([]interface{})
-	if len(routes) != 2 {
-		t.Fatalf("expected 2 OSPF routes, got %d", len(routes))
-	}
-
-	routeByPrefix := make(map[string]map[string]interface{})
-	for _, r := range routes {
-		rm := r.(map[string]interface{})
-		routeByPrefix[rm["prefix"].(string)] = rm
-	}
-
-	// Inter-area route
-	r1 := routeByPrefix["10.0.0.0/24"]
-	if r1 == nil {
-		t.Fatal("missing route 10.0.0.0/24")
-	}
-	if r1["route-type"] != "inter-area" {
-		t.Fatalf("route 10.0.0.0/24 type: expected inter-area, got %v", r1["route-type"])
-	}
-
-	// External-2 route with tag
-	r2 := routeByPrefix["10.0.1.0/24"]
-	if r2 == nil {
-		t.Fatal("missing route 10.0.1.0/24")
-	}
-	if r2["route-type"] != "external-2" {
-		t.Fatalf("route 10.0.1.0/24 type: expected external-2, got %v", r2["route-type"])
-	}
-	// tag should be present
-	if r2["route-tag"] == nil {
-		t.Fatal("route 10.0.1.0/24 should have route-tag")
-	}
-	// Directly attached nexthop
-	nhs := r2["next-hops"].(map[string]interface{})
-	nhList := nhs["next-hop"].([]interface{})
-	if len(nhList) != 1 {
-		t.Fatalf("expected 1 nexthop, got %d", len(nhList))
-	}
-	nh := nhList[0].(map[string]interface{})
-	if nh["outgoing-interface"] != "e0" {
-		t.Fatalf("nexthop outgoing-interface: expected e0, got %v", nh["outgoing-interface"])
 	}
 }
 
@@ -521,23 +469,6 @@ func TestRIPInterfaces(t *testing.T) {
 	}
 	if iface0["send-version"] != "2" {
 		t.Fatalf("RIP iface[0] send-version: expected '2', got %v", iface0["send-version"])
-	}
-}
-
-func TestRIPRoutes(t *testing.T) {
-	out := routingCollect(t, fullRunner())
-	ripProto := getRIPProtocol(t, out)
-	rip := ripProto["ietf-rip:rip"].(map[string]interface{})
-
-	ipv4 := rip["ipv4"].(map[string]interface{})
-	routesContainer := ipv4["routes"].(map[string]interface{})
-	routes := routesContainer["route"].([]interface{})
-	if len(routes) != 2 {
-		t.Fatalf("expected 2 RIP routes, got %d", len(routes))
-	}
-
-	if toInt(rip["num-of-routes"]) != 2 {
-		t.Fatalf("RIP num-of-routes: expected 2, got %v", rip["num-of-routes"])
 	}
 }
 
@@ -915,39 +846,6 @@ const testOSPF6Neighbors = `{
   ]
 }`
 
-const testOSPF6Routes = `{
-  "routes": {
-    "2001:db8:1::1/128": [
-      {
-        "isBestRoute": true,
-        "destinationType": "N",
-        "pathType": "IA",
-        "nextHops": [
-          {"nextHop": "fe80::2a0:85ff:fe00:301", "interfaceName": "e6"}
-        ]
-      }
-    ],
-    "2001:db8:33::/64": [
-      {
-        "isBestRoute": false,
-        "destinationType": "N",
-        "pathType": "E2",
-        "nextHops": [
-          {"nextHop": "fe80::2a0:85ff:fe00:401", "interfaceName": "e7"}
-        ]
-      },
-      {
-        "isBestRoute": true,
-        "destinationType": "N",
-        "pathType": "E1",
-        "nextHops": [
-          {"nextHop": "::", "interfaceName": "e7"}
-        ]
-      }
-    ]
-  }
-}`
-
 // ripngd prints the peer table as two lines per peer and has no
 // Distance line.
 const testRIPNGStatus = `Routing Protocol is "RIPng"
@@ -970,27 +868,12 @@ const testRIPNGStatus = `Routing Protocol is "RIPng"
                         0          0        120      00:00:12
 `
 
-const testRIPNGRoutes = `{
-  "2001:db8:60::/64": [
-    {
-      "prefix": "2001:db8:60::/64",
-      "protocol": "ripng",
-      "metric": 2,
-      "nexthops": [
-        {"ip": "fe80::2a0:85ff:fe00:306", "interfaceName": "e7"}
-      ]
-    }
-  ]
-}`
-
 func ipv6Runner() fakeVty {
 	return fakeVty{
 		"ospf6d show ipv6 ospf6 json":           testOSPF6Global,
 		"ospf6d show ipv6 ospf6 interface json": testOSPF6Interfaces,
 		"ospf6d show ipv6 ospf6 neighbor json":  testOSPF6Neighbors,
-		"ospf6d show ipv6 ospf6 route json":     testOSPF6Routes,
 		"ripngd show ipv6 ripng status":         testRIPNGStatus,
-		"zebra show ipv6 route ripng json":      testRIPNGRoutes,
 	}
 }
 
@@ -1073,39 +956,6 @@ func TestOSPF6AreasInterfacesNeighbors(t *testing.T) {
 	}
 }
 
-func TestOSPF6Routes(t *testing.T) {
-	out := routingCollect(t, ipv6Runner())
-	ospf := getProtocol(t, out, "infix-routing:ospfv3")["ietf-ospf:ospf"].(map[string]interface{})
-	routes := ospf["ietf-ospf:local-rib"].(map[string]interface{})["ietf-ospf:route"].([]interface{})
-	if len(routes) != 2 {
-		t.Fatalf("expected one route per prefix, got %d", len(routes))
-	}
-
-	byPrefix := map[string]map[string]interface{}{}
-	for _, r := range routes {
-		rm := r.(map[string]interface{})
-		byPrefix[rm["prefix"].(string)] = rm
-	}
-
-	host := byPrefix["2001:db8:1::1/128"]
-	if host["route-type"] != "intra-area" {
-		t.Fatalf("host route = %v", host)
-	}
-	hop := host["next-hops"].(map[string]interface{})["next-hop"].([]interface{})[0].(map[string]interface{})
-	if hop["next-hop"] != "fe80::2a0:85ff:fe00:301" {
-		t.Fatalf("host next-hop = %v", hop)
-	}
-
-	ext := byPrefix["2001:db8:33::/64"]
-	if ext["route-type"] != "external-1" {
-		t.Fatalf("best path not chosen: %v", ext)
-	}
-	hop = ext["next-hops"].(map[string]interface{})["next-hop"].([]interface{})[0].(map[string]interface{})
-	if hop["outgoing-interface"] != "e7" || hop["next-hop"] != nil {
-		t.Fatalf("connected next-hop = %v", hop)
-	}
-}
-
 func TestRIPNG(t *testing.T) {
 	out := routingCollect(t, ipv6Runner())
 	rip := getProtocol(t, out, "infix-routing:ripng")["ietf-rip:rip"].(map[string]interface{})
@@ -1131,13 +981,8 @@ func TestRIPNG(t *testing.T) {
 	}
 
 	ipv6 := rip["ipv6"].(map[string]interface{})
-	routes := ipv6["routes"].(map[string]interface{})["route"].([]interface{})
-	if len(routes) != 1 || toInt(rip["num-of-routes"]) != 1 {
-		t.Fatalf("routes = %v", routes)
-	}
-	route := routes[0].(map[string]interface{})
-	if route["ipv6-prefix"] != "2001:db8:60::/64" || route["next-hop"] != "fe80::2a0:85ff:fe00:306" || route["interface"] != "e7" {
-		t.Fatalf("route = %v", route)
+	if _, ok := ipv6["routes"]; ok {
+		t.Fatal("routes are read by the get-routes action, not collected")
 	}
 
 	nbrs := ipv6["neighbors"].(map[string]interface{})["neighbor"].([]interface{})
