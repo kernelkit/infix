@@ -1,0 +1,3936 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/26.10/qos/">
+      
+      
+        <link rel="prev" href="../firewall/">
+      
+      
+        <link rel="next" href="../eth-counters/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Quality of Service - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#quality-of-service" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden="">
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Quality of Service
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard="" data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keybindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Calculator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/edit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Networking
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pppoe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PPPoE Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quality of Service
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quality of Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingress-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress Classification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ingress Classification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#traffic-classes-and-transmission-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traffic Classes and Transmission Selection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Traffic Classes and Transmission Selection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rate-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#egress-remarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Egress Remarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stream-reservation-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream Reservation Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-offload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware Offload
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hardware Offload">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marvell-linkstreet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marvell LinkStreet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vlan-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VLAN Interfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-forwarded-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Forwarded Traffic
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RMON Counters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tunneling (L2/L3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        
+          
+          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPN Tunnels
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wireless LAN (Wi-Fi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DHCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ntp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ptp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTP (IEEE 1588/802.1AS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snmp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNMP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tftp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TFTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    System
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Info &amp; Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schedule/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scheduling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syslog Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-netconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NETCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-restconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Corner
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer's Corner
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Branding &amp; Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing with Buildroot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Netboot HowTo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test System Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vital Product Data (VPD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases &amp; Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Origin &amp; Licensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingress-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress Classification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ingress Classification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#traffic-classes-and-transmission-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traffic Classes and Transmission Selection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Traffic Classes and Transmission Selection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rate-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#egress-remarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Egress Remarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stream-reservation-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream Reservation Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-offload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware Offload
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hardware Offload">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marvell-linkstreet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marvell LinkStreet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vlan-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VLAN Interfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-forwarded-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Forwarded Traffic
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation">
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../networking/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Networking
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="quality-of-service">Quality of Service<a class="headerlink" href="#quality-of-service" title="Permanent link">¶</a></h1>
+<p>On occasion, most networks will experience congestion due to some
+extraordinary load being placed upon it.  If the load is transient,
+switches and routers may be able to absorb such bursts of traffic by
+queuing packets in internal memories.  However, if the load is sustained
+over long periods of time, queues will fill up and packets will start to
+be dropped.  When such situations arise, it is the job of the network's
+Quality of Service (QoS) policy to define <em>which</em> packets to drop and
+which ones to prioritize, such that critical services remain operational.</p>
+<p>QoS is configured per interface, under <code>/interfaces/interface[name='eth0']/qos/</code>.
+Every interface type is accepted; what the hardware can offload varies
+and is reported back in the operational datastore, see <a href="#hardware-offload">Hardware
+Offload</a>.</p>
+<h2 id="terminology">Terminology<a class="headerlink" href="#terminology" title="Permanent link">¶</a></h2>
+<p>QoS vocabulary comes from two families of standards.  IEEE 802.1Q<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>
+defines priorities and traffic classes for bridged Ethernet, the IETF
+Differentiated Services (DiffServ) RFCs define how IP packets are marked.</p>
+<p><strong>Priority</strong> is the internal value, 0 to 7, that every frame carries
+through the system from classification to transmission.  IEEE 802.1Q
+Annex I names a traffic type for each priority.  Higher is better,
+except that priority 1 is meant for traffic that may yield to best
+effort:</p>
+<figure id="__table-caption_1">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Priority</th>
+<th>Traffic type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">7</td>
+<td>Network Control</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Internetwork Control</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td>Voice</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Video</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Critical Applications</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Excellent Effort</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td>Background</td>
+</tr>
+<tr>
+<td style="text-align: right;">0</td>
+<td>Best Effort (default)</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 1:</span> IEEE 802.1Q-2022 Table I-2, traffic types.</p>
+</figcaption>
+</figure>
+<p><strong>PCP and DEI</strong> are the Priority Code Point and Drop Eligible Indicator,
+the three-bit priority and one-bit drop flag in a VLAN tag<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>.  A frame
+without a VLAN tag has neither.</p>
+<p><strong>DSCP</strong> is the six-bit Differentiated Services Code Point in the IP
+header<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>.  Named codepoints group into <em>per-hop behaviours</em> (PHB), the
+forwarding treatment a router or switch gives them<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>:</p>
+<figure id="__table-caption_2">
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Codepoints</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expedited Forwarding, EF</td>
+<td>46</td>
+<td>RFC 4594 1.5.3</td>
+</tr>
+<tr>
+<td>Assured Forwarding, AFxy</td>
+<td>10..14, 18..22, 26..30, 34..38</td>
+<td>RFC 4594 1.5.2</td>
+</tr>
+<tr>
+<td>Class Selector, CS1..7</td>
+<td>8, 16, 24, 32, 40, 48, 56</td>
+<td>RFC 4594 1.5.4</td>
+</tr>
+<tr>
+<td>Default Forwarding, DF</td>
+<td>0, also written CS0</td>
+<td>RFC 4594 1.5.1</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 2:</span> DiffServ per-hop behaviours and their codepoints.</p>
+</figcaption>
+</figure>
+<p>The class selectors carry the old IP precedence in the top three bits,
+so CS_n_ maps naturally to priority <em>n</em>.  Assured forwarding has four
+classes, AF1 to AF4, each with three drop precedences, e.g. AF11, AF12,
+AF13.  RFC 4594 groups the codepoints into service classes, telephony,
+signaling, multimedia and so on, with a recommended treatment for
+each<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup>.</p>
+<p><strong>Traffic class</strong> is a transmit queue on the egress port.  A port has 1
+to 8 of them, numbered so that the highest class is served first, and a
+table binds each of the eight priorities to one class<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup>.</p>
+<p><strong>Transmission selection</strong> is how the port picks the next class to send
+from<sup id="fnref:7"><a class="footnote-ref" href="#fn:7">7</a></sup>.  <em>Strict priority</em> always serves the highest non-empty class.
+<em>Enhanced Transmission Selection</em> (ETS)<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">8</a></sup> shares bandwidth between
+classes in proportion to a bandwidth share.</p>
+<p><strong>Stream Reservation (SR) classes</strong> are the two priorities reserved for
+time-sensitive audio and video streams in AVB and TSN networks<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup>:
+SR class A on priority 3 and SR class B on priority 2.</p>
+<p><strong>DCB</strong>, Data Center Bridging<sup id="fnref:10"><a class="footnote-ref" href="#fn:10">10</a></sup>, is the Linux kernel interface through
+which per-port priority tables are programmed into switch hardware.</p>
+<h2 id="the-pipeline">The Pipeline<a class="headerlink" href="#the-pipeline" title="Permanent link">¶</a></h2>
+<figure id="__figure-caption_1">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-pipeline.svg" data-desc-position="bottom"><img alt="QoS pipeline" src="../img/qos-pipeline.svg" width="460"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 1:</span> The QoS pipeline: ingress climbs to forwarding, egress descends to the wire.</p>
+</figcaption>
+</figure>
+<p>A frame passes six stages, three on the port it arrives on and three on
+the port it leaves by:</p>
+<ol>
+<li><strong>Classify</strong> assigns the priority from the PCP of the VLAN tag or the
+   DSCP of the IP header, depending on what the port trusts.  Frames
+   matching neither get the port's default priority.</li>
+<li><strong>Match flows</strong> may override the classification for traffic picked out
+   by, e.g., source address and port.</li>
+<li><strong>Police and gate</strong> limits the rate of a port, of broadcast and
+   multicast, or of an individual stream.</li>
+<li><strong>Map to traffic class</strong> on the egress port binds the eight priorities
+   to the port's traffic classes.</li>
+<li><strong>Transmission selection</strong> decides which class transmits next.</li>
+<li><strong>Egress processing</strong> rewrites PCP and DSCP from the priority and caps
+   the port rate.</li>
+</ol>
+<p>Stages 1, 4, 5 and 6 are configurable and described below.  Stages 2
+and 3 have no settings under <code>qos</code>.</p>
+<h2 id="ingress-classification">Ingress Classification<a class="headerlink" href="#ingress-classification" title="Permanent link">¶</a></h2>
+<p>Configured under <code>qos ingress</code>:</p>
+<figure id="__table-caption_3">
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trust</code></td>
+<td>Trusted fields in order, default <code>pcp</code></td>
+</tr>
+<tr>
+<td><code>default-priority</code></td>
+<td>Priority when no trusted field matches</td>
+</tr>
+<tr>
+<td><code>pcp-map</code></td>
+<td>PCP to priority, preset or custom table</td>
+</tr>
+<tr>
+<td><code>dscp-map</code></td>
+<td>DSCP to priority, preset or custom table</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 3:</span> Ingress classification settings.</p>
+</figcaption>
+</figure>
+<p>The first trusted field that yields a result wins, and a field only
+yields a result for frames that carry it.  So the five <code>trust</code> values
+differ on frames that have one field but not the other:</p>
+<figure id="__table-caption_4">
+<table>
+<thead>
+<tr>
+<th>Frame  trust</th>
+<th><code>pcp</code></th>
+<th><code>pcp-dscp</code></th>
+<th><code>dscp</code></th>
+<th><code>dscp-pcp</code></th>
+<th><code>none</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tagged IP</td>
+<td>PCP</td>
+<td>PCP</td>
+<td>DSCP</td>
+<td>DSCP</td>
+<td>default</td>
+</tr>
+<tr>
+<td>Tagged, not IP</td>
+<td>PCP</td>
+<td>PCP</td>
+<td>default</td>
+<td>PCP</td>
+<td>default</td>
+</tr>
+<tr>
+<td>Untagged IP</td>
+<td>default</td>
+<td>DSCP</td>
+<td>DSCP</td>
+<td>DSCP</td>
+<td>default</td>
+</tr>
+<tr>
+<td>Untagged, other</td>
+<td>default</td>
+<td>default</td>
+<td>default</td>
+<td>default</td>
+<td>default</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 4:</span> Which field sets the priority, per frame type and trust setting.</p>
+</figcaption>
+</figure>
+<p>"default" is <code>default-priority</code>, 0 unless set.  The default <code>trust</code> is
+<code>pcp</code>: a bridge trusts the tag, as IEEE 802.1Q has it, and classification
+is on out of the box for tagged traffic.</p>
+<p>The usual arrangement classifies once, where traffic enters the network:
+edge ports are set to <code>dscp-pcp</code> or <code>dscp</code> and remark both fields from
+the result, see <a href="#egress-remarking">Egress Remarking</a>.  Every switch
+behind them keeps the default and carries the edge's decision through.</p>
+<p>A custom <code>pcp-map</code> is keyed by PCP and DEI.  A custom <code>dscp-map</code> is keyed
+by DSCP with a <code>trusted</code> flag per entry, so individual codepoints can be
+believed while the rest fall through to the default priority.</p>
+<h3 id="presets">Presets<a class="headerlink" href="#presets" title="Permanent link">¶</a></h3>
+<figure id="__table-caption_5">
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Map</th>
+<th>Mapping</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ieee</code></td>
+<td>PCP</td>
+<td>802.1Q default decoding, PCP <em>n</em> to priority <em>n</em></td>
+</tr>
+<tr>
+<td><code>ietf</code></td>
+<td>DSCP</td>
+<td>RFC 4594 service classes</td>
+</tr>
+<tr>
+<td><code>msb</code></td>
+<td>DSCP</td>
+<td>Top three bits of the DSCP, CS_n_ to <em>n</em></td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 5:</span> Classification presets.</p>
+</figcaption>
+</figure>
+<p>Both maps default to their first preset.  The <code>ietf</code> preset follows the
+RFC 4594 service classes<sup id="fnref2:5"><a class="footnote-ref" href="#fn:5">5</a></sup>; codepoints not listed fall through to the
+default priority:</p>
+<figure id="__table-caption_6">
+<table>
+<thead>
+<tr>
+<th>Service class</th>
+<th>DSCP</th>
+<th>⇒</th>
+<th style="text-align: right;">Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network control</td>
+<td>CS6, CS7</td>
+<td>⇒</td>
+<td style="text-align: right;">6, 7</td>
+</tr>
+<tr>
+<td>Telephony, signaling</td>
+<td>EF, CS5</td>
+<td>⇒</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>Real-time and conferencing</td>
+<td>CS4, AF4x</td>
+<td>⇒</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>Streaming and broadcast video</td>
+<td>CS3, AF3x</td>
+<td>⇒</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>Low-latency data, OAM</td>
+<td>CS2, AF2x</td>
+<td>⇒</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>High-throughput, low-priority</td>
+<td>CS1, AF1x</td>
+<td>⇒</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>Standard</td>
+<td>CS0</td>
+<td>⇒</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 6:</span> The <code>ietf</code> DSCP preset.</p>
+</figcaption>
+</figure>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h3>
+<p>A trunk port trusting DSCP first, then PCP, with the standard maps:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos ingress</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set trust dscp-pcp</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set default-priority 0</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set dscp-map preset ietf</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set pcp-map preset ieee</b>
+admin@example:/config/interface/…/ingress/&gt; <b>leave</b>
+</code></pre>
+
+<p>An access port that believes only EF (46) and AF31 (26) and gives
+everything else the port default:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e2 qos ingress</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set trust dscp</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set default-priority 0</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set dscp-map entry 46 priority 5</b>
+admin@example:/config/interface/…/ingress/&gt; <b>set dscp-map entry 26 priority 3</b>
+admin@example:/config/interface/…/ingress/&gt; <b>leave</b>
+</code></pre>
+
+<p>Which trust orders a port accepts is hardware dependent and listed in
+<code>qos capabilities supported-trust-order</code>.  An order the port cannot
+honour is rejected.  On ports whose driver has no ingress classification
+support the same rules are applied by the kernel to the traffic it
+forwards, see <a href="#hardware-offload">Hardware Offload</a>.</p>
+<h2 id="traffic-classes-and-transmission-selection">Traffic Classes and Transmission Selection<a class="headerlink" href="#traffic-classes-and-transmission-selection" title="Permanent link">¶</a></h2>
+<p>Configured under <code>qos egress</code>:</p>
+<figure id="__table-caption_7">
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>preset</code></td>
+<td><code>ieee</code> (default) or <code>ieee-sr</code></td>
+</tr>
+<tr>
+<td><code>priority0</code> .. <code>priority7</code></td>
+<td>Custom traffic class per priority</td>
+</tr>
+<tr>
+<td><code>traffic-class ID algorithm</code></td>
+<td>Transmission selection algorithm</td>
+</tr>
+<tr>
+<td><code>traffic-class ID bandwidth</code></td>
+<td>Share of a weighted class, percent</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 7:</span> Traffic class settings.</p>
+</figcaption>
+</figure>
+<p>The first two live under <code>traffic-class-table</code>.  The number of classes
+is not configuration: a port has one class per transmit queue, at most
+eight, and a single-queue port has no queue structure to respect and gets
+all eight.  The count is reported as <code>max-traffic-classes</code> and picks the
+column of the preset.  The mapping is a preset, <code>ieee</code> for an ordinary
+bridge or <code>ieee-sr</code> for ports carrying reserved streams, both described
+below, or a custom table where an unset priority falls back to the <code>ieee</code>
+value.  The algorithm is <code>strict-priority</code> (default) or
+<code>enhanced-transmission-selection</code>, the latter sharing what the strict
+classes leave in proportion to <code>bandwidth</code>, a percentage the weighted
+classes of a port sum to 100 with.  The scheduler is work-conserving, so
+the shares are relative and a class that has nothing to send lends its
+share to the others.</p>
+<p>Strict-priority classes must be the highest-numbered ones, with the
+weighted classes below them; other layouts are rejected.</p>
+<p>A port with four queues, the top two classes strict, the bottom two
+sharing what is left in a 2:1 ratio.  No map is set, so the <code>ieee</code>
+preset supplies Table 8-5's four-class column, <code>0 0 1 1 2 2 3 3</code>:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 3 algorithm strict-priority</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 2 algorithm strict-priority</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 1 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 1 bandwidth 67</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 0 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 0 bandwidth 33</b>
+admin@example:/config/interface/…/egress/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="rate-limit">Rate Limit<a class="headerlink" href="#rate-limit" title="Permanent link">¶</a></h3>
+<p>A port can be held below its link speed with one token bucket on the
+whole port, configured under <code>qos egress rate-limit</code>.  <code>rate</code> is the
+sustained rate in bits per second and <code>burst</code> how many bytes may leave
+at once from a full bucket; left unset, the burst covers ten
+milliseconds at the configured rate, never less than one maximum-size
+frame.  The bucket sits above the traffic classes: it bounds what the
+port sends in total, and transmission selection decides which class
+gets the bounded rate.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress</b>
+admin@example:/config/interface/…/egress/&gt; <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/…/egress/&gt; <b>leave</b>
+</code></pre>
+
+<p>On a port without offload the limit applies to the frames the CPU
+sends.  Where the driver takes the bucket it applies to the frames the
+fabric forwards as well, and <code>offload</code> under <code>capabilities</code> then lists
+<code>rate-limit</code>.</p>
+<h3 id="egress-remarking">Egress Remarking<a class="headerlink" href="#egress-remarking" title="Permanent link">¶</a></h3>
+<p>Configured under <code>qos egress remark</code>, both leaves default to <code>none</code>:</p>
+<figure id="__table-caption_8">
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pcp</code></td>
+<td><code>from-priority</code> writes PCP on transmit</td>
+</tr>
+<tr>
+<td><code>dscp</code></td>
+<td><code>from-priority</code> writes DSCP on transmit</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 8:</span> Remarking settings.</p>
+</figcaption>
+</figure>
+<p>PCP is set to the priority with DEI cleared, DSCP to the class selector
+with the same number, CS0 to CS7.  Together with a trust order on the
+receiving port, a downstream device then sees this device's
+classification rather than the sender's marking.  With <code>none</code> nothing is
+rewritten by configuration, and what a tagged frame leaves with depends
+on the path it took: frames the kernel forwards keep the PCP they
+arrived with, while a switch fabric encodes the PCP from the frame's
+priority, as an IEEE 802.1Q bridge does<sup id="fnref:12"><a class="footnote-ref" href="#fn:12">12</a></sup>.  With the default
+<code>pcp-map</code> the two are the same.  To remark both fields from the
+priority:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress remark</b>
+admin@example:/config/interface/…/remark/&gt; <b>set pcp from-priority</b>
+admin@example:/config/interface/…/remark/&gt; <b>set dscp from-priority</b>
+admin@example:/config/interface/…/remark/&gt; <b>leave</b>
+</code></pre>
+
+<p>Remarking uses the same driver support as ingress classification, see
+<a href="#hardware-offload">Hardware Offload</a>.  Without it, DSCP is rewritten by
+the kernel for the traffic it forwards.  PCP is not: the kernel cannot
+change a tag's priority without also setting its VLAN ID, so on a port
+without driver support, PCP follows priority only where the tag is
+created, on VLAN interfaces with <code>egress-qos pcp from-priority</code>, see
+<a href="#vlan-interfaces">VLAN Interfaces</a>.</p>
+<h3 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">¶</a></h3>
+<p>An interface without <code>qos</code> configuration is fully specified by the
+defaults, and every physical port runs them from boot: trust PCP with
+the <code>ieee</code> preset, default priority 0 for untagged frames, one traffic
+class per queue with the <code>ieee</code> preset, IEEE 802.1Q-2022 Table 8-5, the
+standard's recommendation for ordinary bridges, and strict priority
+throughout.  Columns are the number of traffic classes on the port:</p>
+<figure id="__table-caption_9">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Priority  #TC</th>
+<th style="text-align: right;">2</th>
+<th style="text-align: right;">3</th>
+<th style="text-align: right;">4</th>
+<th style="text-align: right;">5</th>
+<th style="text-align: right;">6</th>
+<th style="text-align: right;">7</th>
+<th style="text-align: right;">8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td style="text-align: left;">7</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">7</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 9:</span> IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class mappings.</p>
+</figcaption>
+</figure>
+<p>The factory configuration carries no <code>qos</code> settings; removing a port's
+<code>qos</code> container returns it to these defaults.  Virtual interfaces,
+bridges, VLANs and the like, get a pipeline only when configured.</p>
+<h3 id="stream-reservation-layout">Stream Reservation Layout<a class="headerlink" href="#stream-reservation-layout" title="Permanent link">¶</a></h3>
+<p>The <code>ieee-sr</code> preset is IEEE 802.1Q-2022 Table 34-1, the recommended
+mapping for ports carrying reserved streams.  The SR classes, priority 3
+(class A) and priority 2 (class B), map to the <em>highest</em> traffic classes
+so they outrank everything else at transmission selection, with best
+effort below:</p>
+<figure id="__table-caption_10">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Priority  #TC</th>
+<th style="text-align: right;">2</th>
+<th style="text-align: right;">3</th>
+<th style="text-align: right;">4</th>
+<th style="text-align: right;">5</th>
+<th style="text-align: right;">6</th>
+<th style="text-align: right;">7</th>
+<th style="text-align: right;">8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">2 (SR B)</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td style="text-align: left;">3 (SR A)</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">7</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td style="text-align: left;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 10:</span> IEEE 802.1Q-2022 Table 34-1, priority to traffic class mappings with SR classes.</p>
+</figcaption>
+</figure>
+<p>Apply it on ports where reserved streams are expected:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress traffic-class-table</b>
+admin@example:/config/interface/…/traffic-class-table/&gt; <b>set preset ieee-sr</b>
+admin@example:/config/interface/…/traffic-class-table/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="hardware-offload">Hardware Offload<a class="headerlink" href="#hardware-offload" title="Permanent link">¶</a></h2>
+<p>The system runs on a wide range of hardware, and offload is best effort.
+The same configuration is accepted everywhere; where it ends up differs,
+and each port reports it under <code>qos capabilities</code>:</p>
+<figure id="__table-caption_11">
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max-traffic-classes</code></td>
+<td>Traffic classes on the port, eight unless shown</td>
+</tr>
+<tr>
+<td><code>supported-trust-order</code></td>
+<td><code>trust</code> values the driver accepts</td>
+</tr>
+<tr>
+<td><code>offload</code></td>
+<td>Stages the driver runs in hardware</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 11:</span> QoS capabilities a port reports.</p>
+</figcaption>
+</figure>
+<p><code>supported-trust-order</code> is absent when the driver has no ingress
+classification support.  <code>offload</code> lists <code>classification</code>, <code>remarking</code>, <code>transmission-selection</code>
+and <code>rate-limit</code> as the driver takes them; a stage not listed runs in
+the kernel.</p>
+<p>Each feature maps to one Linux mechanism, and whether it reaches the
+hardware depends on the driver implementing the matching hook:</p>
+<figure id="__table-caption_12">
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Linux tool</th>
+<th>Driver hook</th>
+<th>Fallback</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ingress classification</td>
+<td><code>dcb app</code></td>
+<td><code>dcbnl</code> app ops</td>
+<td><code>tc flower</code>, software</td>
+</tr>
+<tr>
+<td>Trust order</td>
+<td><code>dcb apptrust</code></td>
+<td><code>dcbnl_setapptrust</code></td>
+<td>Rule order, software</td>
+</tr>
+<tr>
+<td>Egress remarking</td>
+<td><code>dcb rewr</code></td>
+<td><code>dcbnl_setrewr</code></td>
+<td>DSCP only, software</td>
+</tr>
+<tr>
+<td>Transmission selection</td>
+<td><code>tc ets</code></td>
+<td><code>TC_SETUP_QDISC_ETS</code></td>
+<td>software</td>
+</tr>
+<tr>
+<td>Port rate limit</td>
+<td><code>tc tbf</code></td>
+<td><code>TC_SETUP_QDISC_TBF</code></td>
+<td>software</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 12:</span> QoS features and their Linux backends.</p>
+</figcaption>
+</figure>
+<p>"Software" means the kernel does the work for every frame the CPU
+handles on the port: <code>tc flower</code> rules classify what arrives, the <code>ets</code>
+qdisc schedules what leaves and <code>pedit</code> rewrites its DSCP, for locally
+originated, routed, and software-bridged traffic alike.  On a NIC-based
+device that is all traffic.  On a switch it excludes frames the fabric
+forwards port to port without the CPU, so there it covers routed
+traffic, traffic to and from the device itself, and bridging between
+ports in different switch domains.</p>
+<p>On a switch whose driver lacks DCB the fabric keeps classifying
+port-to-port traffic by its own defaults while the kernel classifies the
+CPU path per configuration.  PCP remarking has no software counterpart;
+where the driver lacks it the setting is accepted and noted in the system
+log.</p>
+<h3 id="marvell-linkstreet">Marvell LinkStreet<a class="headerlink" href="#marvell-linkstreet" title="Permanent link">¶</a></h3>
+<p>This family of switch chips is managed by the <code>mv88e6xxx</code> driver in the
+Linux kernel.  The system carries patches that expose the per-port
+classification and remarking tables of the 88E6390 and 88E6393X
+generations through DCB, so ingress classification, remarking and the
+traffic class table are all offloaded on these chips.  This section is
+<em>only</em> valid for generations with 8 output queues per port.</p>
+<figure id="__figure-caption_2">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-hw-mvls.svg" data-desc-position="bottom"><img alt="Marvell LinkStreet offloading" src="../img/qos-hw-mvls.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 2:</span> Hardware offloading for Marvell LinkStreet.</p>
+</figcaption>
+</figure>
+<p>The picture illustrates packets having their priority determined at
+ingress, here interface <em>e1</em> and <em>e3</em>.  In this example, both packets
+are forwarded to the same outgoing interface (<em>e2</em>), subject to output
+queueing.</p>
+<p>Each port has its own PCP and DSCP tables, so the <code>pcp-map</code>, <code>dscp-map</code>
+and <code>default-priority</code> settings apply as configured, and all four trust
+orders are accepted.  Three hardware details show through:</p>
+<ul>
+<li>A frame that is both VLAN-tagged and IP always takes its <em>frame</em>
+  priority, the value written back as PCP on egress, from the tag.  The
+  trust order <code>dscp-pcp</code> decides only which field selects the output
+  queue.</li>
+<li>The PCP of every tagged frame encodes the frame's priority, on one
+  chip as across a cascade of chips, which only carry the priority
+  between them.  The <code>remark pcp</code> setting therefore changes nothing on
+  these switches; the DEI comes from the frame's color, never from a
+  table.</li>
+<li>Frames the CPU itself sends, routed or locally originated, are injected
+  past the tables, so their DSCP is remarked by the kernel instead and
+  their PCP comes from the VLAN interface settings described below.</li>
+</ul>
+<p>The <code>traffic-class-table</code> and the <code>traffic-class</code> list apply to hardware
+forwarded frames as well: each priority is queued in its traffic class,
+the strict classes are served first, and the weighted classes share the
+rest by Weighted Round Robin (WRR)<sup id="fnref:11"><a class="footnote-ref" href="#fn:11">11</a></sup> with the <code>bandwidth</code> shares as
+weights.  The <code>rate-limit</code> is the port's own egress shaper.  Four
+hardware details show through:</p>
+<ul>
+<li>A frame's output queue is chosen where it enters the switch, by the
+  ingress port's tables, so the <code>traffic-class-table</code> is one per switch
+  chip, not per port.  The port configured most recently defines it,
+  and every port whose own table differs is no longer offloaded: its
+  <code>offload</code> list under <code>capabilities</code> leaves out
+  <code>transmission-selection</code>.  Give every port the same table.</li>
+<li>The WRR weights are one set per switch chip as well, defined the
+  same way by the port configured most recently for each weighted
+  class.  Give every port with weighted classes the same shares.</li>
+<li>A frame crossing from one chip to another inside a device carries its
+  priority between them, as it would between two switches in a network,
+  and the far chip queues it in the class of that priority.  This is the
+  general rule of QoS in a network: classification at the first ingress
+  decides the priority, and every hop after it trusts and queues by that
+  priority.  Steer traffic with the ingress <code>dscp-map</code> and <code>pcp-map</code>;
+  a <code>traffic-class-table</code> other than the identity holds for frames that
+  enter and leave on the same chip.</li>
+<li>The WRR counts frames where <code>bandwidth</code> speaks of bytes, so the shares
+  hold for traffic of similar frame sizes.</li>
+</ul>
+<p>Without any <code>qos</code> configuration the class table is IEEE 802.1Q-2022
+Table 8-5 with every class strict, as on any other port.</p>
+<h2 id="vlan-interfaces">VLAN Interfaces<a class="headerlink" href="#vlan-interfaces" title="Permanent link">¶</a></h2>
+<p>For VLAN interfaces, the system supports mapping the PCP to internal
+priority on ingress, and the reverse on egress.  This is separate from
+the <code>qos</code> settings above, which on a VLAN interface govern only its
+traffic classes.</p>
+<figure id="__figure-caption_3">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-vlan-iface.svg" data-desc-position="bottom"><img alt="VLAN priority mapping" src="../img/qos-vlan-iface.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 3:</span> Ingress and egress priority mapping for VLAN interfaces.</p>
+</figcaption>
+</figure>
+<p>These <code>ingress-qos</code> and <code>egress-qos</code> settings are done per VLAN, both
+defaulting to '0'.  The example below shows how to keep the PCP priority
+for packets being routed between two VLAN interfaces.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1.10</b>
+admin@example:/config/interface/e1.10/&gt; <b>set vlan ingress-qos priority from-pcp</b>
+admin@example:/config/interface/e1.10/&gt; <b>up</b>
+admin@example:/config/&gt; <b>edit interface e1.20</b>
+admin@example:/config/interface/e1.20/&gt; <b>set vlan egress-qos pcp from-priority</b>
+admin@example:/config/interface/e1.20/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="software-forwarded-traffic">Software Forwarded Traffic<a class="headerlink" href="#software-forwarded-traffic" title="Permanent link">¶</a></h2>
+<p>For packets which are processed by a CPU, i.e. typically routed traffic,
+and bridged traffic between interfaces that do not belong to the same
+hardware switching domain, the traffic class table and transmission
+selection above apply in software.  For classification and marking
+beyond what the <code>qos</code> settings offer, an <a href="../container/#application-container-nftables">nftables container</a> can
+be used to define a QoS policy.</p>
+<p>The picture below shows a packet flow subject to both: classified and
+queued by the switch fabric on the way in and out, and carrying its
+priority through the VLAN interfaces and a container with a traffic
+control policy in between.</p>
+<figure id="__figure-caption_4">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-complex.svg" data-desc-position="bottom"><img alt="Hardware and software QoS" src="../img/qos-complex.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 4:</span> Hardware and software QoS handling.</p>
+</figcaption>
+</figure>
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p>IEEE Std 802.1Q-2022, Bridges and Bridged Networks,
+  <a href="https://ieeexplore.ieee.org/document/10004498">https://ieeexplore.ieee.org/document/10004498</a>, also
+  <a href="https://en.wikipedia.org/wiki/IEEE_802.1Q">https://en.wikipedia.org/wiki/IEEE_802.1Q</a>&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+<li id="fn:2">
+<p><a href="https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format">https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format</a>&nbsp;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">↩</a></p>
+</li>
+<li id="fn:3">
+<p>RFC 2474, Definition of the Differentiated Services Field,
+  <a href="https://www.rfc-editor.org/rfc/rfc2474">https://www.rfc-editor.org/rfc/rfc2474</a>&nbsp;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">↩</a></p>
+</li>
+<li id="fn:4">
+<p>RFC 4594, Configuration Guidelines for DiffServ Service Classes,
+  sections 1.4.5 and 1.5, <a href="https://www.rfc-editor.org/rfc/rfc4594#section-1.5">https://www.rfc-editor.org/rfc/rfc4594#section-1.5</a>&nbsp;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">↩</a></p>
+</li>
+<li id="fn:5">
+<p>RFC 4594, section 2.3, Service Class Characteristics,
+  <a href="https://www.rfc-editor.org/rfc/rfc4594#section-2.3">https://www.rfc-editor.org/rfc/rfc4594#section-2.3</a>&nbsp;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">↩</a><a class="footnote-backref" href="#fnref2:5" title="Jump back to footnote 5 in the text">↩</a></p>
+</li>
+<li id="fn:6">
+<p>IEEE Std 802.1Q-2022, clause 8.6.6, Queuing frames&nbsp;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">↩</a></p>
+</li>
+<li id="fn:7">
+<p>IEEE Std 802.1Q-2022, clause 8.6.8, Transmission selection&nbsp;<a class="footnote-backref" href="#fnref:7" title="Jump back to footnote 7 in the text">↩</a></p>
+</li>
+<li id="fn:8">
+<p><a href="https://en.wikipedia.org/wiki/Data_center_bridging#Enhanced_Transmission_Selection">https://en.wikipedia.org/wiki/Data_center_bridging#Enhanced_Transmission_Selection</a>&nbsp;<a class="footnote-backref" href="#fnref:8" title="Jump back to footnote 8 in the text">↩</a></p>
+</li>
+<li id="fn:9">
+<p><a href="https://en.wikipedia.org/wiki/Audio_Video_Bridging">https://en.wikipedia.org/wiki/Audio_Video_Bridging</a>&nbsp;<a class="footnote-backref" href="#fnref:9" title="Jump back to footnote 9 in the text">↩</a></p>
+</li>
+<li id="fn:10">
+<p><a href="https://en.wikipedia.org/wiki/Data_center_bridging">https://en.wikipedia.org/wiki/Data_center_bridging</a>, and
+   the <code>dcb(8)</code> manual page&nbsp;<a class="footnote-backref" href="#fnref:10" title="Jump back to footnote 10 in the text">↩</a></p>
+</li>
+<li id="fn:11">
+<p><a href="https://en.wikipedia.org/wiki/Weighted_round_robin">https://en.wikipedia.org/wiki/Weighted_round_robin</a>&nbsp;<a class="footnote-backref" href="#fnref:11" title="Jump back to footnote 11 in the text">↩</a></p>
+</li>
+<li id="fn:12">
+<p>Clause 6.9.3 of IEEE Std 802.1Q-2022, the PCP encoding table.
+   The received PCP is only kept because the default tables decode
+   and encode it to itself; once classification changes the
+   priority, the transmitted PCP follows.&nbsp;<a class="footnote-backref" href="#fnref:12" title="Jump back to footnote 12 in the text">↩</a></p>
+</li>
+</ol>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2022-2026 The KernelKit Team
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+        <script src="../print-keep.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

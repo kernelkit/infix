@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
+   sodipodi:docname="infix.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="2.3786088"
+     inkscape:cx="439.12223"
+     inkscape:cy="426.29961"
+     inkscape:window-width="2556"
+     inkscape:window-height="1417"
+     inkscape:window-x="1280"
+     inkscape:window-y="19"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer5" />
+  <defs
+     id="defs2">
+    <rect
+       x="505.95288"
+       y="579.6032"
+       width="127.6438"
+       height="127.94966"
+       id="rect1266" />
+    <rect
+       x="309.92126"
+       y="404.51989"
+       width="483.77954"
+       height="358.02926"
+       id="rect600" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect5591"
+       is_visible="true"
+       lpeversion="1"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+  </defs>
+  <g
+     inkscape:groupmode="layer"
+     id="layer6"
+     inkscape:label="bg"
+     style="display:none;fill:#ff0000;fill-opacity:1"
+     transform="matrix(1.2831201,0,0,3.2117929,-26.690111,-224.39813)">
+    <rect
+       style="fill:#22272e;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
+       id="rect10264"
+       width="163.66356"
+       height="92.471725"
+       x="20.800945"
+       y="69.866936"
+       inkscape:label="bg" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer5"
+     inkscape:label="tagline"
+     style="display:inline">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.77333px;font-family:Laksaman;-inkscape-font-specification:'Laksaman, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
+       x="85.018883"
+       y="131.54915"
+       id="text9503"
+       inkscape:label="linux-netconf"
+       inkscape:export-filename="../b725e1c8/infix.png"
+       inkscape:export-xdpi="191.95932"
+       inkscape:export-ydpi="191.95932"><tspan
+         sodipodi:role="line"
+         id="tspan9519"
+         x="85.018883"
+         y="131.54915"><tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.77333px;font-family:Laksaman;-inkscape-font-specification:'Laksaman, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#808080"
+   id="tspan11822">Linux</tspan> <tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.77333px;font-family:Laksaman;-inkscape-font-specification:'Laksaman, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ff7f2a;fill-opacity:1"
+   id="tspan9929">♥</tspan> <tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.77333px;font-family:Laksaman;-inkscape-font-specification:'Laksaman, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#808080"
+   id="tspan11824">NETCONF</tspan></tspan></text>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="heading">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:25.4px;font-family:'URW Bookman';-inkscape-font-specification:'URW Bookman, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#808080;stroke-width:1.029;fill-opacity:1"
+       x="84.745331"
+       y="124.1693"
+       id="text1160"
+       inkscape:label="infix"><tspan
+         sodipodi:role="line"
+         id="tspan1272"
+         x="84.745331"
+         y="124.1693">Infix</tspan></text>
+  </g>
+  <g
+     inkscape:label="tux"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline">
+    <rect
+       style="fill:#f9f9f9;stroke:#808080;stroke-width:1.029;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1"
+       id="rect1698"
+       width="22.470779"
+       height="16.970779"
+       x="59.529221"
+       y="107.02922"
+       inkscape:label="body" />
+    <rect
+       style="fill:#ff7f2a;stroke:#808080;stroke-width:1;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect184-3"
+       width="6"
+       height="4"
+       x="76"
+       y="120"
+       inkscape:label="foot-r" />
+    <rect
+       style="fill:#ff7f2a;stroke:#808080;stroke-width:1;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect184"
+       width="6"
+       height="4"
+       x="59.529221"
+       y="120"
+       inkscape:label="foot-l" />
+    <path
+       sodipodi:type="star"
+       style="fill:#ff7f2a;stroke:none;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+       id="path11801"
+       inkscape:flatsided="true"
+       sodipodi:sides="3"
+       sodipodi:cx="42.414055"
+       sodipodi:cy="98.701302"
+       sodipodi:r1="1.9660654"
+       sodipodi:r2="0.9830327"
+       sodipodi:arg1="1.5707963"
+       sodipodi:arg2="2.6179939"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 42.414055,100.66737 -1.702663,-2.949101 3.405325,0 z"
+       inkscape:transform-center-y="0.49151511"
+       transform="translate(28.350554,16.321792)"
+       inkscape:label="nose" />
+    <circle
+       style="display:inline;fill:#808080;stroke:none;stroke-width:4.99999;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1"
+       id="path6519-5"
+       cx="73.211082"
+       cy="111.02191"
+       r="0.5"
+       inkscape:label="eye-r" />
+    <circle
+       style="fill:#808080;stroke:none;stroke-width:4.99999;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1"
+       id="path6519"
+       cx="68.31813"
+       cy="111.02191"
+       r="0.5"
+       inkscape:label="eye-l" />
+  </g>
+</svg>

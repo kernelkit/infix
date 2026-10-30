@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 900 400"
+   version="1.1"
+   id="svg180"
+   sodipodi:docname="wireguard-allowed-ips.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview182"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.3653333"
+     inkscape:cx="297.36329"
+     inkscape:cy="375.00001"
+     inkscape:window-width="2560"
+     inkscape:window-height="1374"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg180" />
+  <defs
+     id="defs57">
+    <!-- Premium Gradients -->
+    <linearGradient
+       id="bgGradient"
+       x1="0"
+       y1="0"
+       x2="821.58384"
+       y2="821.58384"
+       gradientTransform="matrix(1.0954451,0,0,0.46357119,-0.66009153,-0.49920384)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0%"
+         style="stop-color:#f8f9fa;stop-opacity:1"
+         id="stop2" />
+      <stop
+         offset="100%"
+         style="stop-color:#e9ecef;stop-opacity:1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="peerGradient"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#748ffc;stop-opacity:1"
+         id="stop7" />
+      <stop
+         offset="100%"
+         style="stop-color:#5c7cfa;stop-opacity:1"
+         id="stop9" />
+    </linearGradient>
+    <linearGradient
+       id="networkGradient"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#51cf66;stop-opacity:1"
+         id="stop12" />
+      <stop
+         offset="100%"
+         style="stop-color:#40c057;stop-opacity:1"
+         id="stop14" />
+    </linearGradient>
+    <linearGradient
+       id="tunnelGradient"
+       gradientTransform="scale(9.797959,0.10206207)"
+       x1="21.433035"
+       y1="2767.9234"
+       x2="70.42283"
+       y2="2767.9234"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0%"
+         style="stop-color:#5c7cfa;stop-opacity:0.8"
+         id="stop17" />
+      <stop
+         offset="50%"
+         style="stop-color:#4c6ef5;stop-opacity:1"
+         id="stop19" />
+      <stop
+         offset="100%"
+         style="stop-color:#5c7cfa;stop-opacity:0.8"
+         id="stop21" />
+    </linearGradient>
+    <!-- Premium Filters -->
+    <filter
+       id="cardShadow"
+       x="-0.075714286"
+       y="-0.35333333"
+       width="1.1514286"
+       height="1.84">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="4"
+         id="feGaussianBlur24" />
+      <feOffset
+         dx="0"
+         dy="4"
+         result="offsetblur"
+         id="feOffset26" />
+      <feComponentTransfer
+         id="feComponentTransfer30">
+        <feFuncA
+           type="linear"
+           slope="0.15"
+           id="feFuncA28" />
+      </feComponentTransfer>
+      <feMerge
+         id="feMerge36">
+        <feMergeNode
+           id="feMergeNode32" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode34" />
+      </feMerge>
+    </filter>
+    <filter
+       id="glow"
+       x="-0.015"
+       y="-inf"
+       width="1.03"
+       height="inf">
+      <feGaussianBlur
+         stdDeviation="3"
+         result="coloredBlur"
+         id="feGaussianBlur39" />
+      <feMerge
+         id="feMerge45">
+        <feMergeNode
+           in="coloredBlur"
+           id="feMergeNode41" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode43" />
+      </feMerge>
+    </filter>
+    <marker
+       id="arrowRight"
+       markerWidth="12"
+       markerHeight="12"
+       refX="9"
+       refY="6"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M 2,2 L 10,6 L 2,10 Z"
+         fill="#4c6ef5"
+         id="path48" />
+    </marker>
+    <marker
+       id="arrowLeft"
+       markerWidth="12"
+       markerHeight="12"
+       refX="3"
+       refY="6"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M 10,2 L 2,6 L 10,10 Z"
+         fill="#4c6ef5"
+         id="path51" />
+    </marker>
+    <marker
+       id="keyArrow"
+       markerWidth="10"
+       markerHeight="10"
+       refX="8"
+       refY="5"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M 1,1 L 9,5 L 1,9 Z"
+         fill="#ff6b6b"
+         id="path54" />
+    </marker>
+    <marker
+       id="arrowRight-3"
+       markerWidth="12"
+       markerHeight="12"
+       refX="9"
+       refY="6"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="m 2,2 8,4 -8,4 z"
+         fill="#4c6ef5"
+         id="path48-6" />
+    </marker>
+  </defs>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      /* Gradients */
+      #bgGradient stop:first-child { stop-color: #1f2937; }
+      #bgGradient stop:last-child { stop-color: #111827; }
+      #peerGradient stop:first-child { stop-color: #3b82f6; }
+      #peerGradient stop:last-child { stop-color: #2563eb; }
+      #networkGradient stop:first-child { stop-color: #10b981; }
+      #networkGradient stop:last-child { stop-color: #059669; }
+      #tunnelGradient stop:first-child { stop-color: #3b82f6; stop-opacity: 0.8; }
+      #tunnelGradient stop:nth-child(2) { stop-color: #2563eb; stop-opacity: 1; }
+      #tunnelGradient stop:last-child { stop-color: #3b82f6; stop-opacity: 0.8; }
+
+      /* White backgrounds to dark */
+      rect[fill="white"] { fill: #374151; }
+
+      /* Borders */
+      rect[stroke="#dee2e6"] { stroke: #4b5563; }
+      rect[stroke="#4263eb"] { stroke: #3b82f6; }
+      rect[stroke="#4dabf7"] { stroke: #60a5fa; }
+      rect[stroke="#fa5252"] { stroke: #ef4444; }
+      rect[stroke="#fab005"] { stroke: #f59e0b; }
+
+      /* Background colors */
+      rect[fill="#e7f5ff"] { fill: #1e3a8a; }
+      rect[fill="#fff5f5"] { fill: #7f1d1d; }
+      rect[fill="#fff3bf"] { fill: #78350f; }
+      rect[fill="#ffffff"] { fill: #374151; }
+
+      /* Text colors */
+      text[fill="#364fc7"] { fill: #60a5fa; }
+      text[fill="#2b8a3e"] { fill: #10b981; }
+      text[fill="#868e96"] { fill: #9ca3af; }
+      text[fill="#1971c2"] { fill: #60a5fa; }
+      text[fill="#c92a2a"] { fill: #f87171; }
+      text[fill="#2f9e44"] { fill: #34d399; }
+      text[fill="#495057"] { fill: #d1d5db; }
+      text[fill="#e67700"] { fill: #fbbf24; }
+      text[fill="#fa5252"] { fill: #f87171; }
+      text[fill="#4263eb"] { fill: #60a5fa; }
+
+      /* Arrows and strokes */
+      line[stroke="#4c6ef5"] { stroke: #60a5fa; }
+      path[stroke="#ff6b6b"] { stroke: #f87171; }
+      #arrowRight path { fill: #60a5fa; }
+      #arrowLeft path { fill: #60a5fa; }
+      #arrowRight-3 path { fill: #60a5fa; }
+      #keyArrow path { fill: #f87171; }
+    }
+  </style>
+  <line
+     id="traffic-arrow-right-5"
+     x1="690.22913"
+     y1="168.51242"
+     x2="584.96887"
+     y2="264.0126"
+     stroke="#4c6ef5"
+     stroke-width="2.5"
+     stroke-dasharray="6, 4"
+     marker-end="url(#arrowRight-3)"
+     style="display:inline;marker-end:url(#arrowRight-3);fill:none"
+     inkscape:label="traffic-arrow-right-5" />
+  <!-- Title -->
+  <text
+     id="title"
+     x="450"
+     y="30"
+     text-anchor="middle"
+     font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+     font-size="22"
+     font-weight="800"
+     fill="#364fc7">Understanding WireGuard: Keys &amp; allowed-ips</text>
+  <!-- Peer A (Left Side) -->
+  <g
+     id="peer-a">
+    <!-- Network behind Peer A -->
+    <g
+       id="network-a"
+       filter="url(#cardShadow)">
+      <rect
+         id="network-a-bg"
+         x="30"
+         y="80"
+         width="180"
+         height="90"
+         rx="12"
+         fill="white"
+         stroke="#dee2e6"
+         stroke-width="2" />
+      <rect
+         id="network-a-header-bg"
+         x="30"
+         y="80"
+         width="180"
+         height="30"
+         rx="12"
+         fill="url(#networkGradient)" />
+      <rect
+         id="network-a-header-extension"
+         x="30"
+         y="98"
+         width="180"
+         height="12"
+         fill="url(#networkGradient)" />
+      <text
+         id="network-a-title"
+         x="120"
+         y="98"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="13"
+         font-weight="700"
+         fill="white">Network A</text>
+      <text
+         id="network-a-cidr"
+         x="120"
+         y="130"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="16"
+         font-weight="600"
+         fill="#2b8a3e">192.168.1.0/24</text>
+      <text
+         id="network-a-devices"
+         x="120"
+         y="155"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="10"
+         fill="#868e96">Devices: .1, .2, .3...</text>
+    </g>
+    <!-- WireGuard Peer A -->
+    <g
+       id="wg-peer-a"
+       filter="url(#cardShadow)">
+      <rect
+         id="wg-peer-a-bg"
+         x="30"
+         y="200"
+         width="180"
+         height="170"
+         rx="12"
+         fill="white"
+         stroke="#4263eb"
+         stroke-width="3" />
+      <rect
+         id="wg-peer-a-header-bg"
+         x="30"
+         y="200"
+         width="180"
+         height="35"
+         rx="12"
+         fill="url(#peerGradient)" />
+      <rect
+         id="wg-peer-a-header-extension"
+         x="30"
+         y="221"
+         width="180"
+         height="14"
+         fill="url(#peerGradient)" />
+      <text
+         id="wg-peer-a-title"
+         x="120"
+         y="221"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="15"
+         font-weight="700"
+         fill="white">WireGuard Peer A</text>
+      <!-- Interface IP -->
+      <rect
+         id="wg-peer-a-interface-bg"
+         x="50"
+         y="245"
+         width="140"
+         height="22"
+         rx="6"
+         fill="#e7f5ff"
+         stroke="#4dabf7"
+         stroke-width="1" />
+      <text
+         id="wg-peer-a-interface-text"
+         x="120"
+         y="260"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="11"
+         font-weight="600"
+         fill="#1971c2">wg0: 10.0.0.1/24</text>
+      <!-- Own Keys -->
+      <rect
+         id="wg-peer-a-keys-bg"
+         x="40"
+         y="275"
+         width="160"
+         height="30"
+         rx="6"
+         fill="#fff5f5"
+         stroke="#fa5252"
+         stroke-width="1.5" />
+      <text
+         id="wg-peer-a-private-key"
+         x="120"
+         y="288"
+         text-anchor="middle"
+         font-family="Consolas, Monaco, 'Courier New', monospace"
+         font-size="9px"
+         font-weight="600"
+         fill="#c92a2a">PrivateKey: aaa...=</text>
+      <text
+         id="wg-peer-a-public-key"
+         x="120"
+         y="300"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="600"
+         fill="#2f9e44">PublicKey: AAA...=</text>
+      <!-- Peer B Config -->
+      <text
+         id="wg-peer-a-peer-config-label"
+         x="120"
+         y="320"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="10"
+         font-weight="700"
+         fill="#495057">[Peer] # Peer B</text>
+      <rect
+         id="wg-peer-a-peer-config-bg"
+         x="40"
+         y="325"
+         width="160"
+         height="38"
+         rx="6"
+         fill="#fff3bf"
+         stroke="#fab005"
+         stroke-width="1.5" />
+      <text
+         id="wg-peer-a-peer-pubkey"
+         x="120"
+         y="338"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">PublicKey = BBB...=</text>
+      <text
+         id="wg-peer-a-peer-allowed-ips-1"
+         x="120"
+         y="350"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">allowed-ips = 10.0.0.2/32,</text>
+      <text
+         id="wg-peer-a-peer-allowed-ips-2"
+         x="120"
+         y="360"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">              192.168.2.0/24</text>
+    </g>
+  </g>
+  <!-- Peer B (Right Side) -->
+  <g
+     id="peer-b">
+    <!-- Network behind Peer B -->
+    <g
+       id="network-b"
+       filter="url(#cardShadow)">
+      <rect
+         id="network-b-bg"
+         x="690"
+         y="80"
+         width="180"
+         height="90"
+         rx="12"
+         fill="white"
+         stroke="#dee2e6"
+         stroke-width="2" />
+      <rect
+         id="network-b-header-bg"
+         x="690"
+         y="80"
+         width="180"
+         height="30"
+         rx="12"
+         fill="url(#networkGradient)" />
+      <rect
+         id="network-b-header-extension"
+         x="690"
+         y="98"
+         width="180"
+         height="12"
+         fill="url(#networkGradient)" />
+      <text
+         id="network-b-title"
+         x="780"
+         y="98"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="13"
+         font-weight="700"
+         fill="white">Network B</text>
+      <text
+         id="network-b-cidr"
+         x="780"
+         y="130"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="16"
+         font-weight="600"
+         fill="#2b8a3e">192.168.2.0/24</text>
+      <text
+         id="network-b-devices"
+         x="780"
+         y="155"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="10"
+         fill="#868e96">Devices: .1, .2, .3...</text>
+    </g>
+    <!-- WireGuard Peer B -->
+    <g
+       id="wg-peer-b"
+       filter="url(#cardShadow)">
+      <rect
+         id="wg-peer-b-bg"
+         x="690"
+         y="200"
+         width="180"
+         height="170"
+         rx="12"
+         fill="white"
+         stroke="#4263eb"
+         stroke-width="3" />
+      <rect
+         id="wg-peer-b-header-bg"
+         x="690"
+         y="200"
+         width="180"
+         height="35"
+         rx="12"
+         fill="url(#peerGradient)" />
+      <rect
+         id="wg-peer-b-header-extension"
+         x="690"
+         y="221"
+         width="180"
+         height="14"
+         fill="url(#peerGradient)" />
+      <text
+         id="wg-peer-b-title"
+         x="780"
+         y="221"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="15"
+         font-weight="700"
+         fill="white">WireGuard Peer B</text>
+      <!-- Interface IP -->
+      <rect
+         id="wg-peer-b-interface-bg"
+         x="710"
+         y="245"
+         width="140"
+         height="22"
+         rx="6"
+         fill="#e7f5ff"
+         stroke="#4dabf7"
+         stroke-width="1" />
+      <text
+         id="wg-peer-b-interface-text"
+         x="780"
+         y="260"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="11"
+         font-weight="600"
+         fill="#1971c2">wg0: 10.0.0.2/24</text>
+      <!-- Own Keys -->
+      <rect
+         id="wg-peer-b-keys-bg"
+         x="700"
+         y="275"
+         width="160"
+         height="30"
+         rx="6"
+         fill="#fff5f5"
+         stroke="#fa5252"
+         stroke-width="1.5" />
+      <text
+         id="wg-peer-b-private-key"
+         x="780"
+         y="288"
+         text-anchor="middle"
+         font-family="Consolas, Monaco, 'Courier New', monospace"
+         font-size="9px"
+         font-weight="600"
+         fill="#c92a2a">PrivateKey: bbb...=</text>
+      <text
+         id="wg-peer-b-public-key"
+         x="780"
+         y="300"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="600"
+         fill="#2f9e44">PublicKey: BBB...=</text>
+      <!-- Peer A Config -->
+      <text
+         id="wg-peer-b-peer-config-label"
+         x="780"
+         y="320"
+         text-anchor="middle"
+         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+         font-size="10"
+         font-weight="700"
+         fill="#495057">[Peer] # Peer A</text>
+      <rect
+         id="wg-peer-b-peer-config-bg"
+         x="700"
+         y="325"
+         width="160"
+         height="38"
+         rx="6"
+         fill="#fff3bf"
+         stroke="#fab005"
+         stroke-width="1.5" />
+      <text
+         id="wg-peer-b-peer-pubkey"
+         x="780"
+         y="338"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">PublicKey = AAA...=</text>
+      <text
+         id="wg-peer-b-peer-allowed-ips-1"
+         x="780"
+         y="350"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">allowed-ips = 10.0.0.1/32,</text>
+      <text
+         id="wg-peer-b-peer-allowed-ips-2"
+         x="780"
+         y="360"
+         text-anchor="middle"
+         font-family="'Consolas', 'Monaco', 'Courier New', monospace"
+         font-size="9"
+         font-weight="700"
+         fill="#e67700">              192.168.1.0/24</text>
+    </g>
+  </g>
+  <!-- Key Exchange Arrows -->
+  <path
+     id="key-arrow-a-to-b"
+     d="m 178.05495,298.67711 q 309.54082,10.30088 544.04144,39.14333"
+     stroke="#ff6b6b"
+     stroke-width="2.45742"
+     stroke-dasharray="6, 4"
+     fill="none"
+     marker-end="url(#keyArrow)" />
+  <text
+     id="key-label-a"
+     x="362.67459"
+     y="320.16849"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+     font-size="10px"
+     font-weight="600"
+     fill="#fa5252">A's public key (AAA...=)</text>
+  <path
+     id="key-arrow-b-to-a"
+     d="M 729.1812,299.9818 Q 415.736,360.0266 178.27753,338.01017"
+     stroke="#ff6b6b"
+     stroke-width="2.4374"
+     stroke-dasharray="6, 4"
+     fill="none"
+     marker-end="url(#keyArrow)" />
+  <text
+     id="key-label-b"
+     x="375.15118"
+     y="360.33688"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+     font-size="10px"
+     font-weight="600"
+     fill="#fa5252">B's public key (BBB...=)</text>
+  <!-- WireGuard Tunnel -->
+  <g
+     id="tunnel"
+     transform="translate(0.0587404,0.39164733)">
+    <line
+       id="tunnel-glow"
+       x1="210"
+       y1="285"
+       x2="690"
+       y2="285"
+       stroke="#4c6ef5"
+       stroke-width="10"
+       opacity="0.2"
+       filter="url(#glow)" />
+    <line
+       id="tunnel-line"
+       x1="210"
+       y1="285"
+       x2="690"
+       y2="285"
+       stroke="url(#tunnelGradient)"
+       stroke-width="5"
+       style="stroke:url(#tunnelGradient)" />
+    <!-- Tunnel label -->
+    <rect
+       id="tunnel-label-bg"
+       x="380"
+       y="270"
+       width="140"
+       height="30"
+       rx="8"
+       fill="#ffffff"
+       stroke="#4263eb"
+       stroke-width="2"
+       filter="url(#cardShadow)" />
+    <text
+       id="tunnel-label-text"
+       x="450"
+       y="290"
+       text-anchor="middle"
+       font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+       font-size="12px"
+       font-weight="700"
+       fill="#4263eb">WireGuard Tunnel</text>
+  </g>
+  <!-- Explanation Box -->
+  <!-- Traffic Flow Example -->
+  <g
+     id="traffic-left"
+     transform="matrix(1.0191745,0,0,1.0648706,-3.9974789,-10.979528)">
+    <line
+       id="traffic-arrow-left"
+       x1="210"
+       y1="170"
+       x2="320"
+       y2="260"
+       stroke="#4c6ef5"
+       stroke-width="2.5"
+       stroke-dasharray="6, 4"
+       marker-end="url(#arrowRight)" />
+    <text
+       id="traffic-label-left"
+       x="290"
+       y="215"
+       font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+       font-size="9px"
+       font-weight="600"
+       fill="#4263eb">to 192.168.2.x</text>
+  </g>
+  <text
+     id="traffic-label-right"
+     x="583.14978"
+     y="201.57195"
+     font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+     font-size="9px"
+     font-weight="600"
+     fill="#4263eb">to 192.168.1.x</text>
+  <path
+     style="fill:none"
+     d="m 585.61735,261.45164 c -1.59298,2.54412 -1.30788,10.31284 2.71904,6.28562"
+     id="path1111" />
+</svg>
