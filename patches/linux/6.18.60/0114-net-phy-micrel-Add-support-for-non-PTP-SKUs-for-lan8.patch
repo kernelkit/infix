@@ -1,0 +1,122 @@
+From 19311445445bf4788b14779b0fde8c664f2c4641 Mon Sep 17 00:00:00 2001
+From: Horatiu Vultur <horatiu.vultur@microchip.com>
+Date: Tue, 21 Oct 2025 09:07:26 +0200
+Subject: [PATCH 114/139] net: phy: micrel: Add support for non PTP SKUs for
+ lan8814
+Organization: Wires
+
+The lan8814 has 4 different SKUs and for 2 of these SKUs the PTP is
+disabled. All these SKUs have the same value in the register 2 and 3.
+Meaning that we can't differentiate them based on device id, therefore
+check the SKU register and based on this allow or not to create a PTP
+device.
+
+Signed-off-by: Horatiu Vultur <horatiu.vultur@microchip.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://patch.msgid.link/20251021070726.3690685-1-horatiu.vultur@microchip.com
+Signed-off-by: Paolo Abeni <pabeni@redhat.com>
+
+(cherry picked from commit 61b7ade9ba8c3b16867e25411b5f7cf1abe35879)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/micrel.c | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index d79004dcb768..2007c9d03fb8 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -101,6 +101,8 @@
+ #define LAN8814_CABLE_DIAG_VCT_DATA_MASK	GENMASK(7, 0)
+ #define LAN8814_PAIR_BIT_SHIFT			12
+ 
++#define LAN8814_SKUS				0xB
++
+ #define LAN8814_WIRE_PAIR_MASK			0xF
+ 
+ /* Lan8814 general Interrupt control/status reg in GPHY specific block. */
+@@ -367,6 +369,9 @@
+ 
+ #define LAN8842_REV_8832			0x8832
+ 
++#define LAN8814_REV_LAN8814			0x8814
++#define LAN8814_REV_LAN8818			0x8818
++
+ struct kszphy_hw_stat {
+ 	const char *string;
+ 	u8 reg;
+@@ -449,6 +454,7 @@ struct kszphy_priv {
+ 	bool rmii_ref_clk_sel;
+ 	bool rmii_ref_clk_sel_val;
+ 	bool clk_enable;
++	bool is_ptp_available;
+ 	u64 stats[ARRAY_SIZE(kszphy_hw_stats)];
+ 	struct kszphy_phy_stats phy_stats;
+ };
+@@ -4159,6 +4165,17 @@ static int lan8804_config_intr(struct phy_device *phydev)
+ 	return 0;
+ }
+ 
++/* Check if the PHY has 1588 support. There are multiple skus of the PHY and
++ * some of them support PTP while others don't support it. This function will
++ * return true is the sku supports it, otherwise will return false.
++ */
++static bool lan8814_has_ptp(struct phy_device *phydev)
++{
++	struct kszphy_priv *priv = phydev->priv;
++
++	return priv->is_ptp_available;
++}
++
+ static irqreturn_t lan8814_handle_interrupt(struct phy_device *phydev)
+ {
+ 	int ret = IRQ_NONE;
+@@ -4175,6 +4192,9 @@ static irqreturn_t lan8814_handle_interrupt(struct phy_device *phydev)
+ 		ret = IRQ_HANDLED;
+ 	}
+ 
++	if (!lan8814_has_ptp(phydev))
++		return ret;
++
+ 	while (true) {
+ 		irq_status = lanphy_read_page_reg(phydev, LAN8814_PAGE_PORT_REGS,
+ 						  PTP_TSU_INT_STS);
+@@ -4236,6 +4256,9 @@ static void lan8814_ptp_init(struct phy_device *phydev)
+ 	    !IS_ENABLED(CONFIG_NETWORK_PHY_TIMESTAMPING))
+ 		return;
+ 
++	if (!lan8814_has_ptp(phydev))
++		return;
++
+ 	lanphy_write_page_reg(phydev, LAN8814_PAGE_PORT_REGS,
+ 			      TSU_HARD_RESET, TSU_HARD_RESET_);
+ 
+@@ -4365,6 +4388,9 @@ static int __lan8814_ptp_probe_once(struct phy_device *phydev, char *pin_name,
+ 
+ static int lan8814_ptp_probe_once(struct phy_device *phydev)
+ {
++	if (!lan8814_has_ptp(phydev))
++		return 0;
++
+ 	return __lan8814_ptp_probe_once(phydev, "lan8814_ptp_pin",
+ 					LAN8814_PTP_GPIO_NUM);
+ }
+@@ -4480,6 +4506,18 @@ static int lan8814_probe(struct phy_device *phydev)
+ 	devm_phy_package_join(&phydev->mdio.dev, phydev,
+ 			      addr, sizeof(struct lan8814_shared_priv));
+ 
++	/* There are lan8814 SKUs that don't support PTP. Make sure that for
++	 * those skus no PTP device is created. Here we check if the SKU
++	 * supports PTP.
++	 */
++	err = lanphy_read_page_reg(phydev, LAN8814_PAGE_COMMON_REGS,
++				   LAN8814_SKUS);
++	if (err < 0)
++		return err;
++
++	priv->is_ptp_available = err == LAN8814_REV_LAN8814 ||
++				 err == LAN8814_REV_LAN8818;
++
+ 	if (phy_package_probe_once(phydev)) {
+ 		err = lan8814_release_coma_mode(phydev);
+ 		if (err)
