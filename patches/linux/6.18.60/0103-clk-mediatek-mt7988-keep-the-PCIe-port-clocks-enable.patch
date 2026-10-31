@@ -1,0 +1,59 @@
+From e252f62db8c267882b7af732717808f588e86610 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 18 Oct 2026 11:31:40 +0200
+Subject: [PATCH 103/139] clk: mediatek: mt7988: keep the PCIe port clocks
+ enabled
+Organization: Wires
+
+The PCIe links on the Banana Pi BPI-R4 never come up when the PCIe
+driver is built as a module:
+
+  mtk-pcie-gen3 11300000.pcie: PCIe link down, current LTSSM state: detect.quiet (0x0)
+
+The 26 MHz pextp_p0_sel to pextp_p3_sel clocks feeding the PCIe ports
+are enabled by the bootloader but have no consumer in the device tree,
+so clk_disable_unused() gates them before the PCIe driver probes.  A
+modular driver loses them on every boot, a built-in one when its probe
+is deferred past clk_disable_unused().
+
+Mark them CLK_IS_CRITICAL, as the MediaTek SDK does.
+
+The proper fix is to list these clocks in the PCIe nodes of
+mt7988a.dtsi, so the PCIe driver enables them itself.  That also needs a
+change to the mediatek-pcie-gen3 binding, which allows only four clocks
+for mediatek,mt7986-pcie.
+
+Link: https://github.com/openwrt/openwrt/issues/25706
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/clk/mediatek/clk-mt7988-topckgen.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/clk/mediatek/clk-mt7988-topckgen.c b/drivers/clk/mediatek/clk-mt7988-topckgen.c
+index 50e02cc7a214..f9ec3e5be945 100644
+--- a/drivers/clk/mediatek/clk-mt7988-topckgen.c
++++ b/drivers/clk/mediatek/clk-mt7988-topckgen.c
+@@ -225,15 +225,15 @@ static const struct mtk_mux top_muxes[] = {
+ 				   0x0d0, 0x0d4, 0x0d8, 0, 2, 7, 0x1C4, 21, CLK_IS_CRITICAL),
+ 	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_INFRA_F26M_SEL, "csw_infra_f26m_sel", sspxtp_parents,
+ 				   0x0d0, 0x0d4, 0x0d8, 8, 1, 15, 0x1C4, 22, CLK_IS_CRITICAL),
+-	MUX_GATE_CLR_SET_UPD(CLK_TOP_PEXTP_P0_SEL, "pextp_p0_sel", sspxtp_parents, 0x0d0, 0x0d4,
+-			     0x0d8, 16, 1, 23, 0x1C4, 23),
+-	MUX_GATE_CLR_SET_UPD(CLK_TOP_PEXTP_P1_SEL, "pextp_p1_sel", sspxtp_parents, 0x0d0, 0x0d4,
+-			     0x0d8, 24, 1, 31, 0x1C4, 24),
++	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_PEXTP_P0_SEL, "pextp_p0_sel", sspxtp_parents,
++				   0x0d0, 0x0d4, 0x0d8, 16, 1, 23, 0x1C4, 23, CLK_IS_CRITICAL),
++	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_PEXTP_P1_SEL, "pextp_p1_sel", sspxtp_parents,
++				   0x0d0, 0x0d4, 0x0d8, 24, 1, 31, 0x1C4, 24, CLK_IS_CRITICAL),
+ 	/* CLK_CFG_14 */
+-	MUX_GATE_CLR_SET_UPD(CLK_TOP_PEXTP_P2_SEL, "pextp_p2_sel", sspxtp_parents, 0x0e0, 0x0e4,
+-			     0x0e8, 0, 1, 7, 0x1C4, 25),
+-	MUX_GATE_CLR_SET_UPD(CLK_TOP_PEXTP_P3_SEL, "pextp_p3_sel", sspxtp_parents, 0x0e0, 0x0e4,
+-			     0x0e8, 8, 1, 15, 0x1C4, 26),
++	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_PEXTP_P2_SEL, "pextp_p2_sel", sspxtp_parents,
++				   0x0e0, 0x0e4, 0x0e8, 0, 1, 7, 0x1C4, 25, CLK_IS_CRITICAL),
++	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_PEXTP_P3_SEL, "pextp_p3_sel", sspxtp_parents,
++				   0x0e0, 0x0e4, 0x0e8, 8, 1, 15, 0x1C4, 26, CLK_IS_CRITICAL),
+ 	MUX_GATE_CLR_SET_UPD(CLK_TOP_DA_XTP_GLB_P0_SEL, "da_xtp_glb_p0_sel", da_xtp_glb_p0_parents,
+ 			     0x0e0, 0x0e4, 0x0e8, 16, 1, 23, 0x1C4, 27),
+ 	MUX_GATE_CLR_SET_UPD(CLK_TOP_DA_XTP_GLB_P1_SEL, "da_xtp_glb_p1_sel", da_xtp_glb_p0_parents,

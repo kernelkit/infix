@@ -20,7 +20,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.59 (LTS)
+- Upgrade Linux kernel to 6.18.60 (LTS)
 - Upgrade libyang to 6.4.13, sysrepo to 5.2.27, libnetconf2 to 4.6.4,
   netopeer2 to 2.8.21, and rousette to the latest development version
 - Operational data is returned much faster, from the CLI, NETCONF,

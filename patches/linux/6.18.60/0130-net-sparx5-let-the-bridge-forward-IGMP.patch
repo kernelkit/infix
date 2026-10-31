@@ -1,0 +1,170 @@
+From 88db51d8bf8273aff8ce272d589ccf93a074a808 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 18 Oct 2026 14:14:05 +0200
+Subject: [PATCH 130/139] net: sparx5: let the bridge forward IGMP
+Organization: Wires
+
+IGMP never crosses a sparx5 bridge.  With three bridges in a chain, the
+middle one never learns a group joined behind the last one, and none of
+them hears the querier's queries from the others:
+
+    host -- br0 -- br1 -- br2 -- receiver
+
+The ports redirect IGMP to the CPU, CPU_IGMP_REDIR_ENA is set in
+ANA_CL:PORT:CAPTURE_CFG, so the switch does not forward it.  The driver
+still marks every frame from a bridged port with offload_fwd_mark, so the
+bridge does not forward it either.
+
+Leave IGMP unmarked when the port redirects it, like lan966x does.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/lan969x/lan969x_fdma.c   |  4 +-
+ .../ethernet/microchip/sparx5/sparx5_fdma.c   |  6 +--
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  1 +
+ .../microchip/sparx5/sparx5_main_regs.h       | 11 +++++
+ .../ethernet/microchip/sparx5/sparx5_packet.c | 46 ++++++++++++++++---
+ 5 files changed, 54 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
+index 1282f5c3ee6d..995bb5603239 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
+@@ -132,9 +132,7 @@ static struct sk_buff *lan969x_fdma_rx_get_frame(struct sparx5 *sparx5,
+ 
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, skb->dev);
+-
+-	if (test_bit(port->portno, sparx5->bridge_mask))
+-		skb->offload_fwd_mark = 1;
++	sparx5_rx_fwd_mark(port, skb);
+ 
+ 	skb->dev->stats.rx_bytes += skb->len;
+ 	skb->dev->stats.rx_packets++;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c b/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
+index dbe86f937b21..f360ba2293be 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
+@@ -168,11 +168,7 @@ static bool sparx5_fdma_rx_get_frame(struct sparx5 *sparx5, struct sparx5_rx *rx
+ 
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, skb->dev);
+-	/* Everything we see on an interface that is in the HW bridge
+-	 * has already been forwarded
+-	 */
+-	if (test_bit(port->portno, sparx5->bridge_mask))
+-		skb->offload_fwd_mark = 1;
++	sparx5_rx_fwd_mark(port, skb);
+ 	skb->dev->stats.rx_bytes += skb->len;
+ 	skb->dev->stats.rx_packets++;
+ 	rx->packets++;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 9d2a96eccfb2..18fa9075d8f6 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -458,6 +458,7 @@ struct frame_info {
+ 
+ void sparx5_xtr_flush(struct sparx5 *sparx5, u8 grp);
+ void sparx5_ifh_parse(struct sparx5 *sparx5, u32 *ifh, struct frame_info *info);
++void sparx5_rx_fwd_mark(struct sparx5_port *port, struct sk_buff *skb);
+ irqreturn_t sparx5_xtr_handler(int irq, void *_priv);
+ netdev_tx_t sparx5_port_xmit_impl(struct sk_buff *skb, struct net_device *dev);
+ int sparx5_manual_injection_mode(struct sparx5 *sparx5);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index d9ef4ef137b8..3b732a0d6c59 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -1539,6 +1539,17 @@ extern const struct sparx5_regs *regs;
+ #define ANA_CL_QOS_CFG_DEFAULT_QOS_VAL_GET(x)\
+ 	FIELD_GET(ANA_CL_QOS_CFG_DEFAULT_QOS_VAL, x)
+ 
++/* ANA_CL:PORT:CAPTURE_CFG */
++#define ANA_CL_CAPTURE_CFG(g)                                                  \
++	__REG(TARGET_ANA_CL, 0, 1, regs->gaddr[GA_ANA_CL_PORT], g,             \
++	      regs->gcnt[GC_ANA_CL_PORT], 512, 184, 0, 1, 4)
++
++#define ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA    BIT(0)
++#define ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA_SET(x)\
++	FIELD_PREP(ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA, x)
++#define ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA_GET(x)\
++	FIELD_GET(ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA, x)
++
+ /* ANA_CL:PORT:CAPTURE_BPDU_CFG */
+ #define ANA_CL_CAPTURE_BPDU_CFG(g)                                             \
+ 	__REG(TARGET_ANA_CL, 0, 1, regs->gaddr[GA_ANA_CL_PORT], g,             \
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+index f713656f1fae..748f347f4a7b 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+@@ -4,6 +4,9 @@
+  * Copyright (c) 2021 Microchip Technology Inc. and its subsidiaries.
+  */
+ 
++#include <linux/if_vlan.h>
++#include <linux/ip.h>
++
+ #include "sparx5_main_regs.h"
+ #include "sparx5_main.h"
+ 
+@@ -57,6 +60,42 @@ void sparx5_ifh_parse(struct sparx5 *sparx5, u32 *ifh, struct frame_info *info)
+ 		((u64)xtr_hdr[5] <<  0);
+ }
+ 
++/* Everything we see on an interface that is in the HW bridge has already
++ * been forwarded, except IGMP that the port redirects to the CPU.
++ */
++void sparx5_rx_fwd_mark(struct sparx5_port *port, struct sk_buff *skb)
++{
++	struct sparx5 *sparx5 = port->sparx5;
++	__be16 proto = skb->protocol;
++	const struct iphdr *iph;
++	unsigned int off = 0;
++	struct iphdr _iph;
++
++	if (!test_bit(port->portno, sparx5->bridge_mask))
++		return;
++
++	skb->offload_fwd_mark = 1;
++
++	if (eth_type_vlan(proto)) {
++		const struct vlan_hdr *vh;
++		struct vlan_hdr _vh;
++
++		vh = skb_header_pointer(skb, 0, sizeof(_vh), &_vh);
++		if (!vh)
++			return;
++		proto = vh->h_vlan_encapsulated_proto;
++		off = VLAN_HLEN;
++	}
++	if (proto != htons(ETH_P_IP))
++		return;
++
++	iph = skb_header_pointer(skb, off, sizeof(_iph), &_iph);
++	if (iph && iph->protocol == IPPROTO_IGMP &&
++	    spx5_rd(sparx5, ANA_CL_CAPTURE_CFG(port->portno)) &
++	    ANA_CL_CAPTURE_CFG_CPU_IGMP_REDIR_ENA)
++		skb->offload_fwd_mark = 0;
++}
++
+ static void sparx5_xtr_grp(struct sparx5 *sparx5, u8 grp, bool byte_swap)
+ {
+ 	bool eof_flag = false, pruned_flag = false, abort_flag = false;
+@@ -148,17 +187,12 @@ static void sparx5_xtr_grp(struct sparx5 *sparx5, u8 grp, bool byte_swap)
+ 		return;
+ 	}
+ 
+-	/* Everything we see on an interface that is in the HW bridge
+-	 * has already been forwarded
+-	 */
+-	if (test_bit(port->portno, sparx5->bridge_mask))
+-		skb->offload_fwd_mark = 1;
+-
+ 	/* Finish up skb */
+ 	skb_put(skb, byte_cnt - ETH_FCS_LEN);
+ 	eth_skb_pad(skb);
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, netdev);
++	sparx5_rx_fwd_mark(port, skb);
+ 	netdev->stats.rx_bytes += skb->len;
+ 	netdev->stats.rx_packets++;
+ 	netif_rx(skb);
