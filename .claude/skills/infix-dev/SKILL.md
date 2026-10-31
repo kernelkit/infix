@@ -64,6 +64,9 @@ Each is explained in the doc named above; these are the ones that come back in r
   series.
 - Manual and ChangeLog are for operators: what to configure and expect, no daemon or
   kernel internals. A ChangeLog entry describes the change for the user, not the code.
+- The WebUI reads the YANG schema for everything about the model: option values, labels,
+  help text, defaults and ranges. Never copy any of those into Go or a template; if the
+  schema lacks it, fix the model. See `src/webui/README.md`, *Development*.
 
 ## Notes for agents
 

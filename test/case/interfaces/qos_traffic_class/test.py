@@ -136,7 +136,7 @@ with infamy.Test() as test:
                 "interface": [{
                     "name": port,
                     "infix-interfaces:qos": {
-                        "egress": {"rate-limit": {"rate": 10000000}}
+                        "rate-limit": {"rate": 10000000}
                     }
                 }]
             }
@@ -153,7 +153,7 @@ with infamy.Test() as test:
         print(tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout)
 
     with test.step("Remove the rate limit and verify the scheduler is the root again"):
-        target.delete_xpath(qos_xpath(port, "/egress/rate-limit"))
+        target.delete_xpath(qos_xpath(port, "/rate-limit"))
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
     with test.step("Remove qos configuration and verify the default table is back"):

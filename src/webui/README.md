@@ -16,6 +16,9 @@ a browser-friendly format.
   station and mesh peer tables, WireGuard peers, and
   ethernet frame statistics
 - **Firewall** -- zone-to-zone policy matrix
+- **QoS** -- per-port classification, traffic classes and offload;
+  profiles shared by ports, and on TSN products the credit-based
+  shaper and gate control list per port
 - **Keystore** -- symmetric and asymmetric key display
 - **Firmware** -- slot overview, install from URL with live progress
 - **Reboot** -- two-phase status polling (wait down, wait up)
@@ -69,6 +72,14 @@ This runs `go run .` on port 10000 with `--insecure-tls` already set.
 
 A few things to keep in mind:
 
+- The YANG schema is the source for everything a page knows about the
+  model: the values of a select (`schema.OptionsFor`), their labels
+  and help (`IdentityOption.Description`, `schema.DescriptionOf`), the
+  default a form shows for a leaf the config leaves out
+  (`IsDefault`, `Manager.Default`), and the bounds of a number input
+  (`TypeInfo.Range`).  Never copy a value, a default, a name or a
+  description from a YANG file into Go or a template.  If the schema
+  lacks a description or a default, fix the model
 - Status pages show operational data only.  When a value is missing
   there, collect it from the live system, or leave it on the configure
   page.  Never fill the gap from the running configuration
@@ -113,6 +124,9 @@ internal/
     dashboard.go                   Dashboard, hardware, sensors
     interfaces.go                  Interface list, detail, counters
     firewall.go                    Zone matrix
+    qos.go                         QoS status table
+    configure_qos.go               QoS profile editor
+    configure_interfaces_qos.go    Per-port profile, rate limit, shaper, gates
     keystore.go                    Key display
     system.go                      Firmware, reboot, config download
   server/

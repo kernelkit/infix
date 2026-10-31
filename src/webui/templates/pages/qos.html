@@ -1,0 +1,48 @@
+{{define "qos.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">QoS
+    <a href="/configure/qos"
+       hx-get="/configure/qos"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  {{if .Rows}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          {{$d := .Desc}}
+          <th>Port</th>
+          <th>QoS profile{{template "field-info" (index $d "profile")}}</th>
+          <th>Traffic classes{{template "field-info" (index $d "classes")}}</th>
+          <th>Rate limit{{template "field-info" (index $d "rate-limit")}}</th>
+          <th>Offload{{template "field-info" (index $d "offload")}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+          <td>{{if .Profile}}{{.Profile}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.TrafficClasses}}</td>
+          <td>{{if .RateLimit}}{{.RateLimit}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.Offload}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else if not .Error}}
+  <p class="empty-message">No ports report QoS state.</p>
+  {{end}}
+</section>
+{{end}}

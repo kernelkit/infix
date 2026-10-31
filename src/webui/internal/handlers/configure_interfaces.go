@@ -43,8 +43,8 @@ type bridgeMulticastJSON struct {
 }
 
 type vlanFilterCfgJSON struct {
-	Proto string        `json:"proto"`
-	VLANs []bridgeVLAN  `json:"vlan"`
+	Proto string       `json:"proto"`
+	VLANs []bridgeVLAN `json:"vlan"`
 }
 
 type bridgeVLAN struct {
@@ -63,9 +63,9 @@ type bridgeSTPCfgJSON struct {
 }
 
 type lagCfgJSON struct {
-	Mode string       `json:"mode"`
-	Hash string       `json:"hash"`
-	LACP lagLACPJSON  `json:"lacp"`
+	Mode string      `json:"mode"`
+	Hash string      `json:"hash"`
+	LACP lagLACPJSON `json:"lacp"`
 }
 
 type lagLACPJSON struct {
@@ -92,7 +92,7 @@ type cfgIfaceRow struct {
 	ifaceJSON
 	TypeSlug        string
 	TypeDisplay     string
-	AdminEnabled    bool // true when enabled leaf absent (YANG default) or explicitly true
+	AdminEnabled    bool   // true when enabled leaf absent (YANG default) or explicitly true
 	MemberOf        string // bridge or lag name this interface belongs to
 	AddrSummary     string
 	ConfigTags      []string        // type-aware overview pills (DHCP, SLAAC, vid N, …)
@@ -108,7 +108,7 @@ type cfgIfaceRow struct {
 	IsVlan          bool
 	IsWifi          bool
 	WifiMode        string // "station", "access-point" or "mesh-point" once known
-	HasIP           bool // can carry IP addresses
+	HasIP           bool   // can carry IP addresses
 	// ParentBridgeIs8021Q says whether the bridge this port is attached
 	// to has VLAN filtering on. PVID only makes sense in that mode, so
 	// the bridge-port editor hides the field when this is false.
@@ -130,6 +130,14 @@ type cfgIfaceRow struct {
 	// "auto-injected placeholder" apart.
 	DHCPv4Enabled bool
 	DHCPv6Enabled bool
+
+	// QoS: the profile the port references, whether it carries its own
+	// settings instead, and the rate limit in Mbit/s as the form shows it.
+	QoSProfile  string
+	QoSCustom   bool
+	QoSRateMbit string
+	QoSShapers  []qosShaperRow
+	QoSGates    qosGatesRow
 
 	// Page-level bits copied onto each row so the per-interface IPv4/IPv6
 	// blocks can render as standalone fragments — both inline on the full
@@ -161,17 +169,18 @@ type ifaceRadioMirror struct {
 
 type cfgIfacePageData struct {
 	PageData
-	Loading         bool
-	Interfaces      []cfgIfaceRow
-	AllNames        []string // every interface name (running config)
-	BridgeNames     []string // type=bridge only
-	LagNames        []string // type=lag only
+	Loading     bool
+	Interfaces  []cfgIfaceRow
+	AllNames    []string // every interface name (running config)
+	BridgeNames []string // type=bridge only
+	LagNames    []string // type=lag only
 	// UnconfiguredPhysical lists physical Ethernet interfaces present in
 	// operational state but NOT in running config — i.e. ports that have
 	// been deleted and can be re-bound. Shown as datalist suggestions on
 	// the Add Interface row so users don't have to remember the name.
 	UnconfiguredPhysical []string
-	Desc            map[string]string
+	Desc                 map[string]string
+	QoSProfiles          []string // names, for the per-port profile select
 
 	// Add Interface modal — pre-computed once per page render so the
 	// dialog has no per-tile-click latency. WizardTypes feeds the type
@@ -182,12 +191,12 @@ type cfgIfacePageData struct {
 	// (<first-parent>.1) which JS keeps in sync when parent/vid change.
 	// WizardAsymKeys is the keystore /asymmetric-keys name list for the
 	// WireGuard private-key picker.
-	WizardTypes        []ifaceTypeOption
-	WizardNames        map[string]string
-	FreePortCandidates []string
-	VlanDefaultName    string
-	WizardAsymKeys        []string      // for WireGuard private-key picker
-	WizardSymKeys         []symKeyEntry // for WiFi PSK picker (Name + decoded cleartext)
+	WizardTypes           []ifaceTypeOption
+	WizardNames           map[string]string
+	FreePortCandidates    []string
+	VlanDefaultName       string
+	WizardAsymKeys        []string          // for WireGuard private-key picker
+	WizardSymKeys         []symKeyEntry     // for WiFi PSK picker (Name + decoded cleartext)
 	WizardWifiRadios      []wifiRadioOption // configured (in candidate)
 	WizardAvailableRadios []string          // detected (operational) but not yet in candidate
 	WizardCountryOptions  []schema.IdentityOption
@@ -201,9 +210,9 @@ type cfgIfacePageData struct {
 	// MCRouterOptions populates the per-bridge-port multicast-router
 	// select. Schema-driven; falls back to a tiny hardcoded list when
 	// the schema lookup misses (e.g. older YANG).
-	MCRouterOptions   []schema.IdentityOption
-	WiFiSecOptionsAP  []schema.IdentityOption
-	WiFiSecOptionsSta []schema.IdentityOption
+	MCRouterOptions    []schema.IdentityOption
+	WiFiSecOptionsAP   []schema.IdentityOption
+	WiFiSecOptionsSta  []schema.IdentityOption
 	WiFiQuerierOptions []schema.IdentityOption
 	// CountryOptions / BandOptions reused by the mirrored radio editor
 	// on WiFi interface rows (same enums as the wizard).
@@ -244,34 +253,34 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		ip4 := "/ietf-ip:ipv4"
 		ip6 := "/ietf-ip:ipv6"
 		data.Desc = map[string]string{
-			"name":           descOr(mgr, ifPath+"/name", "The unique name for this interface. Pick one not already in use."),
-			"description":    schema.DescriptionOf(mgr, ifPath+"/description"),
-			"type":           schema.DescriptionOf(mgr, ifPath+"/type"),
-			"enabled":        schema.DescriptionOf(mgr, ifPath+"/enabled"),
-			"mac":            descOr(mgr, ifPath+"/infix-interfaces:custom-phys-address/static", "Override the interface's default physical (MAC) address with a static unicast value."),
-			"bridge-type":    descOr(mgr, ifPath+bPath+"/vlans", "Presence of bridge/vlans switches the bridge into IEEE 802.1Q VLAN-filtering mode. Pick this if downstream ports need PVID and tagged/untagged membership."),
-			"stp-force":      schema.DescriptionOf(mgr, ifPath+bPath+"/stp/force-protocol"),
-			"stp-hello":      schema.DescriptionOf(mgr, ifPath+bPath+"/stp/hello-time"),
-			"stp-fwd-delay":  schema.DescriptionOf(mgr, ifPath+bPath+"/stp/forward-delay"),
-			"stp-max-age":    schema.DescriptionOf(mgr, ifPath+bPath+"/stp/max-age"),
-			"stp-hold-count": schema.DescriptionOf(mgr, ifPath+bPath+"/stp/transmit-hold-count"),
-			"stp-max-hops":   schema.DescriptionOf(mgr, ifPath+bPath+"/stp/max-hops"),
-			"lag-mode":       descOr(mgr, ifPath+lPath+"/mode", "Aggregation mode: static (balanced XOR) or lacp (IEEE 802.3ad)."),
-			"lag-hash":       schema.DescriptionOf(mgr, ifPath+lPath+"/hash"),
-			"lacp-mode":      schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/mode"),
-			"lacp-rate":      schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/rate"),
-			"lacp-sysprio":   schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/system-priority"),
-			"vlan-id":        descOr(mgr, ifPath+"/infix-interfaces:vlan/id", "VLAN tag (1–4094) carried on the parent interface."),
-			"vlan-lower":     descOr(mgr, ifPath+"/infix-interfaces:vlan/lower-layer-if", "Parent (lower-layer) interface on which the VLAN sub-interface sits."),
-			"ipv4-address":   schema.DescriptionOf(mgr, ifPath+ip4+"/address/ip"),
-			"ipv4-prefix":    schema.DescriptionOf(mgr, ifPath+ip4+"/address/prefix-length"),
-			"ipv4-dhcp":      schema.DescriptionOf(mgr, ifPath+ip4+"/infix-dhcp-client:dhcp"),
-			"ipv4-autoconf":  schema.DescriptionOf(mgr, ifPath+ip4+"/infix-ip:autoconf"),
+			"name":            descOr(mgr, ifPath+"/name", "The unique name for this interface. Pick one not already in use."),
+			"description":     schema.DescriptionOf(mgr, ifPath+"/description"),
+			"type":            schema.DescriptionOf(mgr, ifPath+"/type"),
+			"enabled":         schema.DescriptionOf(mgr, ifPath+"/enabled"),
+			"mac":             descOr(mgr, ifPath+"/infix-interfaces:custom-phys-address/static", "Override the interface's default physical (MAC) address with a static unicast value."),
+			"bridge-type":     descOr(mgr, ifPath+bPath+"/vlans", "Presence of bridge/vlans switches the bridge into IEEE 802.1Q VLAN-filtering mode. Pick this if downstream ports need PVID and tagged/untagged membership."),
+			"stp-force":       schema.DescriptionOf(mgr, ifPath+bPath+"/stp/force-protocol"),
+			"stp-hello":       schema.DescriptionOf(mgr, ifPath+bPath+"/stp/hello-time"),
+			"stp-fwd-delay":   schema.DescriptionOf(mgr, ifPath+bPath+"/stp/forward-delay"),
+			"stp-max-age":     schema.DescriptionOf(mgr, ifPath+bPath+"/stp/max-age"),
+			"stp-hold-count":  schema.DescriptionOf(mgr, ifPath+bPath+"/stp/transmit-hold-count"),
+			"stp-max-hops":    schema.DescriptionOf(mgr, ifPath+bPath+"/stp/max-hops"),
+			"lag-mode":        descOr(mgr, ifPath+lPath+"/mode", "Aggregation mode: static (balanced XOR) or lacp (IEEE 802.3ad)."),
+			"lag-hash":        schema.DescriptionOf(mgr, ifPath+lPath+"/hash"),
+			"lacp-mode":       schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/mode"),
+			"lacp-rate":       schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/rate"),
+			"lacp-sysprio":    schema.DescriptionOf(mgr, ifPath+lPath+"/lacp/system-priority"),
+			"vlan-id":         descOr(mgr, ifPath+"/infix-interfaces:vlan/id", "VLAN tag (1–4094) carried on the parent interface."),
+			"vlan-lower":      descOr(mgr, ifPath+"/infix-interfaces:vlan/lower-layer-if", "Parent (lower-layer) interface on which the VLAN sub-interface sits."),
+			"ipv4-address":    schema.DescriptionOf(mgr, ifPath+ip4+"/address/ip"),
+			"ipv4-prefix":     schema.DescriptionOf(mgr, ifPath+ip4+"/address/prefix-length"),
+			"ipv4-dhcp":       schema.DescriptionOf(mgr, ifPath+ip4+"/infix-dhcp-client:dhcp"),
+			"ipv4-autoconf":   schema.DescriptionOf(mgr, ifPath+ip4+"/infix-ip:autoconf"),
 			"ipv4-forwarding": schema.DescriptionOf(mgr, ifPath+ip4+"/forwarding"),
-			"ipv6-address":   schema.DescriptionOf(mgr, ifPath+ip6+"/address/ip"),
-			"ipv6-prefix":    schema.DescriptionOf(mgr, ifPath+ip6+"/address/prefix-length"),
-			"ipv6-slaac":     schema.DescriptionOf(mgr, ifPath+ip6+"/autoconf"),
-			"ipv6-dhcp":      schema.DescriptionOf(mgr, ifPath+ip6+"/infix-dhcpv6-client:dhcp"),
+			"ipv6-address":    schema.DescriptionOf(mgr, ifPath+ip6+"/address/ip"),
+			"ipv6-prefix":     schema.DescriptionOf(mgr, ifPath+ip6+"/address/prefix-length"),
+			"ipv6-slaac":      schema.DescriptionOf(mgr, ifPath+ip6+"/autoconf"),
+			"ipv6-dhcp":       schema.DescriptionOf(mgr, ifPath+ip6+"/infix-dhcpv6-client:dhcp"),
 			"ipv6-forwarding": schema.DescriptionOf(mgr, ifPath+ip6+"/forwarding"),
 
 			// Add Interface wizard — augment paths still don't resolve
@@ -279,6 +288,16 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			// wrapped in descOr() with a fallback string taken straight
 			// from the YANG description text. Drop the fallback once
 			// the schema layer learns to traverse augments.
+			"qos-profile":        schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/profile"),
+			"qos-rate-limit":     schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/rate-limit"),
+			"tsn-cbs":            schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa"),
+			"tsn-idle":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table/admin-idle-slope"),
+			"tsn-in-effect":      schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table/oper-idle-slope"),
+			"tsn-gates":          schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table"),
+			"tsn-cycle":          schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time"),
+			"tsn-base":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time"),
+			"tsn-extension":      schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time-extension"),
+			"tsn-max-sdu":        schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/queue-max-sdu-table/queue-max-sdu"),
 			"bridge-port-bridge": descOr(mgr, ifPath+"/infix-interfaces:bridge-port/bridge", "Interfaces enslaved to this bridge. Each becomes a member port carrying L2 traffic for the bridge."),
 			"veth-peer":          descOr(mgr, ifPath+"/infix-interfaces:veth/peer", "Peer veth interface to which this interface is connected (the other end of the pair)."),
 			"gre-local":          descOr(mgr, ifPath+"/infix-interfaces:gre/local", "Local address used as the tunnel source. Must be the same family (IPv4 or IPv6) as the remote."),
@@ -307,19 +326,19 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wifi-sec-mode":      descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/mode", "Security mode. Open is unencrypted (insecure). For AP: wpa2-wpa3-personal is recommended for compatibility + security."),
 			"wifi-secret":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/secret", "Pre-shared key reference — a symmetric key in the keystore. 8–63 characters per the WPA spec."),
 			"wifi-hidden":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/hidden", "Hide the SSID from broadcast beacons. Minimal security benefit and may cause compatibility issues with some clients."),
-			"eth-autoneg":     descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/enable", "Enable IEEE 802.3 auto-negotiation.  When off, the link must come up via parallel detection or the forced PMD picked below."),
-			"eth-advertised":  descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/infix-ethernet-interface:advertised-pmd-types", "Restrict auto-negotiation to advertise only these PMD types.  Leave empty to advertise every mode the PHY supports."),
-			"eth-duplex":      descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/duplex", "Force half- or full-duplex.  Leave on Auto to let auto-negotiation pick.  Modern PMDs are full-duplex only."),
-			"eth-mdix":        descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:mdi-x", "Force the copper MDI/MDI-X crossover pinout.  Leave on Auto-MDIX (default) for any link that negotiates.  Force MDI/MDI-X only when negotiation is disabled and the two ends must use opposite values."),
-			"bp-bridge":       descOr(mgr, ifPath+"/infix-interfaces:bridge-port/bridge", "Bridge that this port joins as a member, carrying L2 traffic on its behalf."),
-			"bp-pvid":         descOr(mgr, ifPath+"/infix-interfaces:bridge-port/pvid", "Port VLAN ID — VLAN assigned to untagged frames arriving on this port. Only meaningful when the parent bridge is in IEEE 802.1Q VLAN-filtering mode."),
-			"bp-flood":        descOr(mgr, ifPath+"/infix-interfaces:bridge-port/flood", "Per-traffic-class control of how unknown destinations are flooded out this port. Unticking suppresses flooding of that traffic class."),
-			"bp-mc-router":    descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/router", "Multicast router behaviour on this port. Auto (default) lets IGMP/MLD snooping decide; permanent forces the port to always receive multicast; off blocks it."),
-			"bp-mc-fast-leave": descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/fast-leave", "Drop the port from a multicast group immediately on IGMP/MLD leave instead of waiting for the next query. Suitable when each port has at most one receiver."),
-			"lp-lag":          descOr(mgr, ifPath+"/infix-interfaces:lag-port/lag", "LAG that this port joins as a slave. The LAG itself is configured on its own row."),
-			"mc-snoop":        descOr(mgr, ifPath+bPath+"/multicast/snooping", "Enable IGMP/MLD snooping on the bridge so multicast is forwarded only to ports with active receivers."),
-			"mc-querier":      descOr(mgr, ifPath+bPath+"/multicast/querier", "Querier role: auto (only when no other querier is heard), on (always send queries), or off."),
-			"mc-query-int":    descOr(mgr, ifPath+bPath+"/multicast/query-interval", "Interval (seconds) between IGMP/MLD general queries when this bridge is acting as querier."),
+			"eth-autoneg":        descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/enable", "Enable IEEE 802.3 auto-negotiation.  When off, the link must come up via parallel detection or the forced PMD picked below."),
+			"eth-advertised":     descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/infix-ethernet-interface:advertised-pmd-types", "Restrict auto-negotiation to advertise only these PMD types.  Leave empty to advertise every mode the PHY supports."),
+			"eth-duplex":         descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/duplex", "Force half- or full-duplex.  Leave on Auto to let auto-negotiation pick.  Modern PMDs are full-duplex only."),
+			"eth-mdix":           descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:mdi-x", "Force the copper MDI/MDI-X crossover pinout.  Leave on Auto-MDIX (default) for any link that negotiates.  Force MDI/MDI-X only when negotiation is disabled and the two ends must use opposite values."),
+			"bp-bridge":          descOr(mgr, ifPath+"/infix-interfaces:bridge-port/bridge", "Bridge that this port joins as a member, carrying L2 traffic on its behalf."),
+			"bp-pvid":            descOr(mgr, ifPath+"/infix-interfaces:bridge-port/pvid", "Port VLAN ID — VLAN assigned to untagged frames arriving on this port. Only meaningful when the parent bridge is in IEEE 802.1Q VLAN-filtering mode."),
+			"bp-flood":           descOr(mgr, ifPath+"/infix-interfaces:bridge-port/flood", "Per-traffic-class control of how unknown destinations are flooded out this port. Unticking suppresses flooding of that traffic class."),
+			"bp-mc-router":       descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/router", "Multicast router behaviour on this port. Auto (default) lets IGMP/MLD snooping decide; permanent forces the port to always receive multicast; off blocks it."),
+			"bp-mc-fast-leave":   descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/fast-leave", "Drop the port from a multicast group immediately on IGMP/MLD leave instead of waiting for the next query. Suitable when each port has at most one receiver."),
+			"lp-lag":             descOr(mgr, ifPath+"/infix-interfaces:lag-port/lag", "LAG that this port joins as a slave. The LAG itself is configured on its own row."),
+			"mc-snoop":           descOr(mgr, ifPath+bPath+"/multicast/snooping", "Enable IGMP/MLD snooping on the bridge so multicast is forwarded only to ports with active receivers."),
+			"mc-querier":         descOr(mgr, ifPath+bPath+"/multicast/querier", "Querier role: auto (only when no other querier is heard), on (always send queries), or off."),
+			"mc-query-int":       descOr(mgr, ifPath+bPath+"/multicast/query-interval", "Interval (seconds) between IGMP/MLD general queries when this bridge is acting as querier."),
 		}
 		if data.Desc["ipv6-slaac"] == "" {
 			data.Desc["ipv6-slaac"] = "SLAAC (Stateless Address Autoconfiguration, RFC 4862) " +
@@ -418,16 +437,27 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	// "available radios" list shown in the inline "+ New radio" form.
 	ctx := context.WithoutCancel(r.Context())
 	var (
-		ifaces  []ifaceJSON
-		operWrap interfacesWrapper
-		ks      keystoreWrapper
-		hw      hardwareWrapper // operational
-		hwCand  hardwareWrapper // candidate
+		ifaces                                     []ifaceJSON
+		operWrap                                   interfacesWrapper
+		ks                                         keystoreWrapper
+		hw                                         hardwareWrapper // operational
+		hwCand                                     hardwareWrapper // candidate
 		ifaceErr, operErr, ksErr, hwErr, hwCandErr error
-		wg      sync.WaitGroup
+		wg                                         sync.WaitGroup
 	)
 	wg.Add(5)
 	go func() { defer wg.Done(); ifaces, ifaceErr = h.fetchAllInterfaces(ctx) }()
+	var profiles []qosProfileJSON
+	if data.Capabilities.Has("qos") {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			if profiles, err = fetchQoSProfiles(ctx, h.RC); err != nil {
+				log.Printf("configure interfaces qos profiles: %v", err)
+			}
+		}()
+	}
 	go func() { defer wg.Done(); operErr = h.RC.Get(ctx, "/data/ietf-interfaces:interfaces", &operWrap) }()
 	go func() {
 		defer wg.Done()
@@ -498,7 +528,10 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	}
 	sort.Strings(data.WizardAvailableRadios)
 
-	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface)
+	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface, profiles)
+	for _, p := range profiles {
+		data.QoSProfiles = append(data.QoSProfiles, p.Name)
+	}
 	// Copy page-level descriptions + DHCP option enums onto each row so the
 	// IPv4/IPv6 blocks render standalone (see cfgIfaceRow.Desc).
 	for i := range data.Interfaces {
@@ -684,9 +717,9 @@ func (h *ConfigureInterfacesHandler) CreateInterface(w http.ResponseWriter, r *h
 		}
 		iface["infix-interfaces:veth"] = map[string]any{"peer": peer}
 		peerIface := map[string]any{
-			"name":    peer,
-			"type":    ifType,
-			"enabled": true,
+			"name":                  peer,
+			"type":                  ifType,
+			"enabled":               true,
 			"infix-interfaces:veth": map[string]any{"peer": name},
 		}
 		// One PATCH on the parent collection inserts both ends atomically.
@@ -2106,7 +2139,11 @@ func (h *ConfigureInterfacesHandler) fetchAllInterfaces(ctx context.Context) ([]
 
 type membership struct{ kind, master string }
 
-func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJSON) []cfgIfaceRow {
+func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJSON, profiles []qosProfileJSON) []cfgIfaceRow {
+	profByName := make(map[string]qosProfileJSON, len(profiles))
+	for _, p := range profiles {
+		profByName[p.Name] = p
+	}
 	// Index operational so each row can pull supported-pmd-types — that
 	// leaf is config false, so the candidate read doesn't carry it.
 	operByName := make(map[string]*ifaceJSON, len(oper))
@@ -2265,6 +2302,18 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 			row.PortCandidates = portCandidatesFor(iface.Name, ifaces, memberOf)
 		}
 
+		if iface.QoS != nil {
+			row.QoSProfile = iface.QoS.Profile
+			row.QoSCustom = iface.QoS.Custom()
+			if iface.QoS.RateLimit != nil && iface.QoS.RateLimit.Rate > 0 {
+				row.QoSRateMbit = mbitText(int64(iface.QoS.RateLimit.Rate))
+			}
+		}
+		if row.TypeSlug != "loopback" {
+			op := operByName[iface.Name]
+			row.QoSShapers = qosShaperRows(&iface, op, qosEgressOf(&iface, profByName))
+			row.QoSGates = qosGatesRowOf(&iface, op)
+		}
 		rows = append(rows, row)
 	}
 
@@ -2424,7 +2473,7 @@ func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *htt
 		renderSaved(w, savedMsg)
 		return
 	}
-	rows := h.buildRows(ifaces, nil)
+	rows := h.buildRows(ifaces, nil, nil)
 	var row *cfgIfaceRow
 	for i := range rows {
 		if rows[i].Name == name {

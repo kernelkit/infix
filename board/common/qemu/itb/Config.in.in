@@ -90,11 +90,11 @@ config IX_QEMU_MACHINE
 
 config IX_QEMU_MACHINE_RAM
 	string "RAM size (k/M/G)"
-	default "448M"
+	default "512M"
 	help
-	  The default, 384 MiB, works for most configurations.  However,
-	  if you get kernel panic with: "System is deadlocked on memory",
-	  try increasing this one.
+	  The default works for most configurations.  However, if you get
+	  a kernel panic with: "System is deadlocked on memory", try
+	  increasing this one.
 
 config IX_QEMU_KERNEL
 	string

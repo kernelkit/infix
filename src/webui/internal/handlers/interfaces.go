@@ -3,7 +3,6 @@
 package handlers
 
 import (
-	"time"
 	"fmt"
 	"html/template"
 	"log"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/schema"
@@ -41,19 +41,100 @@ type ifaceJSON struct {
 	IfIndex           int                `json:"if-index"`
 	// Operational link rate from ietf-interfaces (yang:gauge64 bits/s).
 	// The same-named leaf inside the ethernet container is obsolete.
-	Speed       yangInt64       `json:"speed"`
-	IPv4        *ipCfg          `json:"ietf-ip:ipv4"`
-	IPv6        *ipCfg          `json:"ietf-ip:ipv6"`
-	Statistics  *ifaceStats     `json:"statistics"`
-	Ethernet    *ethernetJSON   `json:"ieee802-ethernet-interface:ethernet"`
-	Bridge      *bridgeCfgJSON  `json:"infix-interfaces:bridge"`
-	BridgePort  *bridgePortJSON `json:"infix-interfaces:bridge-port"`
-	Lag         *lagCfgJSON     `json:"infix-interfaces:lag"`
-	LagPort     *lagPortCfgJSON `json:"infix-interfaces:lag-port"`
-	Vlan        *vlanCfgJSON    `json:"infix-interfaces:vlan"`
-	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
-	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
-	Wwan        *wwanJSON       `json:"infix-interfaces:wwan"`
+	Speed      yangInt64       `json:"speed"`
+	IPv4       *ipCfg          `json:"ietf-ip:ipv4"`
+	IPv6       *ipCfg          `json:"ietf-ip:ipv6"`
+	Statistics *ifaceStats     `json:"statistics"`
+	Ethernet   *ethernetJSON   `json:"ieee802-ethernet-interface:ethernet"`
+	Bridge     *bridgeCfgJSON  `json:"infix-interfaces:bridge"`
+	BridgePort *bridgePortJSON `json:"infix-interfaces:bridge-port"`
+	Lag        *lagCfgJSON     `json:"infix-interfaces:lag"`
+	LagPort    *lagPortCfgJSON `json:"infix-interfaces:lag-port"`
+	Vlan       *vlanCfgJSON    `json:"infix-interfaces:vlan"`
+	WiFi       *wifiJSON       `json:"infix-interfaces:wifi"`
+	WireGuard  *wireGuardJSON  `json:"infix-interfaces:wireguard"`
+	Wwan       *wwanJSON       `json:"infix-interfaces:wwan"`
+	QoS        *qosIfaceJSON   `json:"infix-interfaces:qos"`
+	CBSA       *cbsaJSON       `json:"ieee802-dot1dc-cbsa-if:cbsa"`
+	Gates      *gatesJSON      `json:"ieee802-dot1dc-sched-if:gate-parameter-table"`
+}
+
+// qosIfaceJSON mirrors infix-interfaces:qos.  In configuration the port
+// holds either a profile reference or the inline ingress and egress
+// containers, a YANG choice; operational data carries the profile the
+// daemon applied, the rate limit in effect and the capabilities.
+type qosIfaceJSON struct {
+	Profile      string            `json:"profile"`
+	Ingress      *qosIngressJSON   `json:"ingress"`
+	Egress       *qosEgressJSON    `json:"egress"`
+	RateLimit    *qosRateLimitJSON `json:"rate-limit"`
+	Capabilities *qosCapsJSON      `json:"capabilities"`
+}
+
+type qosRateLimitJSON struct {
+	Rate  yangInt64 `json:"rate"`
+	Burst int       `json:"burst"`
+}
+
+type qosCapsJSON struct {
+	MaxTrafficClasses   int      `json:"max-traffic-classes"`
+	Offload             []string `json:"offload"`
+	SupportedTrustOrder []string `json:"supported-trust-order"`
+}
+
+// Custom reports a port configured inline, without a profile.
+func (q *qosIfaceJSON) Custom() bool {
+	return q != nil && q.Profile == "" && (q.Ingress != nil || q.Egress != nil)
+}
+
+// IEEE 802.1DC per-port shaper and gate tables.  The admin leaves are
+// what the candidate holds, the oper ones what the port runs.
+type cbsaJSON struct {
+	Table []cbsaEntryJSON `json:"cbsa-parameter-table"`
+}
+
+type cbsaEntryJSON struct {
+	TrafficClass   int       `json:"traffic-class"`
+	AdminIdleSlope yangInt64 `json:"admin-idle-slope,omitempty"`
+	OperIdleSlope  yangInt64 `json:"oper-idle-slope,omitempty"`
+}
+
+type gatesJSON struct {
+	GateEnabled    *bool         `json:"gate-enabled,omitempty"`
+	AdminCycleTime *rationalJSON `json:"admin-cycle-time,omitempty"`
+	AdminBaseTime  *ptpTimeJSON  `json:"admin-base-time,omitempty"`
+	AdminList      *gateListJSON `json:"admin-control-list,omitempty"`
+	AdminExtension int           `json:"admin-cycle-time-extension,omitempty"`
+	QueueMaxSDU    []maxSDUJSON  `json:"queue-max-sdu-table,omitempty"`
+	OperCycleTime  *rationalJSON `json:"oper-cycle-time,omitempty"`
+	OperList       *gateListJSON `json:"oper-control-list,omitempty"`
+	ConfigPending  bool          `json:"config-pending,omitempty"`
+}
+
+type rationalJSON struct {
+	Numerator   int `json:"numerator"`
+	Denominator int `json:"denominator"`
+}
+
+type ptpTimeJSON struct {
+	Seconds     yangInt64 `json:"seconds"`
+	Nanoseconds int       `json:"nanoseconds"`
+}
+
+type gateListJSON struct {
+	Entries []gateEntryJSON `json:"gate-control-entry"`
+}
+
+type gateEntryJSON struct {
+	Index         int    `json:"index"`
+	OperationName string `json:"operation-name"`
+	GateStates    int    `json:"gate-states-value"`
+	TimeInterval  int    `json:"time-interval-value"`
+}
+
+type maxSDUJSON struct {
+	TrafficClass int `json:"traffic-class"`
+	QueueMaxSDU  int `json:"queue-max-sdu"`
 }
 
 // customPhysAddress mirrors infix-interfaces:custom-phys-address. Only the
@@ -70,10 +151,10 @@ type vlanCfgJSON struct {
 }
 
 type bridgePortJSON struct {
-	Bridge    string             `json:"bridge"`
-	PVID      *int               `json:"pvid"`
-	Flood     *bridgePortFlood   `json:"flood"`
-	Multicast *bridgePortMcast   `json:"multicast"`
+	Bridge    string           `json:"bridge"`
+	PVID      *int             `json:"pvid"`
+	Flood     *bridgePortFlood `json:"flood"`
+	Multicast *bridgePortMcast `json:"multicast"`
 	STP       *struct {
 		CIST *struct {
 			State string `json:"state"`
@@ -174,12 +255,12 @@ type wifiStaJSON struct {
 }
 
 type wifiStationJSON struct {
-	SSID           string               `json:"ssid"`
-	BSSID          string               `json:"bssid"`
-	Security       *wifiSecJSON         `json:"security"`
-	SignalStrength *int                 `json:"signal-strength"`
-	RxSpeed        yangInt64            `json:"rx-speed"`
-	TxSpeed        yangInt64            `json:"tx-speed"`
+	SSID           string       `json:"ssid"`
+	BSSID          string       `json:"bssid"`
+	Security       *wifiSecJSON `json:"security"`
+	SignalStrength *int         `json:"signal-strength"`
+	RxSpeed        yangInt64    `json:"rx-speed"`
+	TxSpeed        yangInt64    `json:"tx-speed"`
 }
 
 // WiFi network scan, the output of the infix-hardware scan action on a
@@ -277,9 +358,9 @@ type ifaceStats struct {
 }
 
 type ethernetJSON struct {
-	Duplex          string `json:"duplex"`
-	PhyType         string `json:"phy-type"`
-	PMDType         string `json:"pmd-type"`
+	Duplex        string   `json:"duplex"`
+	PhyType       string   `json:"phy-type"`
+	PMDType       string   `json:"pmd-type"`
 	SupportedPMDs []string `json:"infix-ethernet-interface:supported-pmd-types"`
 	// *bool because the YANG model uses absent as the Auto-MDIX signal —
 	// collapsing nil and false here would lose the tri-state.
@@ -321,10 +402,10 @@ type interfacesData struct {
 }
 
 type ifaceEntry struct {
-	HasMembers   bool // is a bridge/LAG master with child ports
-	IsMember     bool // is a bridge port or LAG member
-	IsLastMember bool // is the last child in its group
-	Forwarding   bool // IP forwarding enabled (⇅ flag)
+	HasMembers   bool   // is a bridge/LAG master with child ports
+	IsMember     bool   // is a bridge port or LAG member
+	IsLastMember bool   // is the last child in its group
+	Forwarding   bool   // IP forwarding enabled (⇅ flag)
 	GroupID      string // bridge/LAG name — set on parent and all its members
 	Name         string
 	Type         string
@@ -601,7 +682,7 @@ func makeIfaceEntry(iface ifaceJSON, fwdSet map[string]bool) ifaceEntry {
 // Template data for the interface detail page.
 type ifaceDetailData struct {
 	PageData
-	Name string
+	Name             string
 	Type             string
 	Status           string
 	StatusUp         bool
@@ -614,8 +695,8 @@ type ifaceDetailData struct {
 	Speed            string
 	Duplex           string
 	AutoNeg          string
-	PhyType          string // e.g. "1000BASE-T"
-	PMDType          string // e.g. "1000BASE-T"
+	PhyType          string   // e.g. "1000BASE-T"
+	PMDType          string   // e.g. "1000BASE-T"
 	SupportedPMDs    []string // short names (what the PHY can do)
 	AdvertisedPMDs   []string // short names (what autoneg announces)
 	Addresses        []addrEntry
@@ -706,12 +787,12 @@ func (h *InterfacesHandler) fetchInterface(r *http.Request, name string) (*iface
 // state, so they live on the configure page alone.
 func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 	d := ifaceDetailData{
-		Name: iface.Name,
-		Type:      prettyIfType(iface.Type),
-		Status:    iface.OperStatus,
-		StatusUp:  iface.OperStatus == "up",
-		PhysAddr:  iface.PhysAddress,
-		IfIndex:   iface.IfIndex,
+		Name:        iface.Name,
+		Type:        prettyIfType(iface.Type),
+		Status:      iface.OperStatus,
+		StatusUp:    iface.OperStatus == "up",
+		PhysAddr:    iface.PhysAddress,
+		IfIndex:     iface.IfIndex,
 		LastChange:  formatLastChange(iface.LastChange),
 		HigherLayer: iface.HigherLayerIf,
 		LowerLayer:  iface.LowerLayerIf,
@@ -926,22 +1007,26 @@ func pmdSpeedMbps(name string) int {
 	return int(n)
 }
 
+// formatBitRate renders bits per second as "1 Gbit/s", "100 Mbit/s",
+// "64 kbit/s".
+func formatBitRate(bps uint64) string {
+	switch {
+	case bps >= 1_000_000_000:
+		return strconv.FormatFloat(float64(bps)/1_000_000_000, 'f', -1, 64) + " Gbit/s"
+	case bps >= 1_000_000:
+		return strconv.FormatFloat(float64(bps)/1_000_000, 'f', -1, 64) + " Mbit/s"
+	default:
+		return strconv.FormatUint(bps/1_000, 10) + " kbit/s"
+	}
+}
+
 // formatEthernetLink renders the ietf-interfaces:speed (yang:gauge64 bits/s)
-// plus duplex as "1 Gbps full" / "100 Mbps half"; empty when speed is 0.
+// plus duplex as "1 Gbit/s full"; empty when speed is 0.
 func formatEthernetLink(bps uint64, duplex string) string {
 	if bps == 0 {
 		return ""
 	}
-	var s string
-	switch {
-	case bps >= 1_000_000_000:
-		gbps := float64(bps) / 1_000_000_000
-		s = strconv.FormatFloat(gbps, 'f', -1, 64) + " Gbps"
-	case bps >= 1_000_000:
-		s = strconv.FormatUint(bps/1_000_000, 10) + " Mbps"
-	default:
-		s = strconv.FormatUint(bps/1_000, 10) + " kbps"
-	}
+	s := formatBitRate(bps)
 	if duplex != "" {
 		s += " " + duplex
 	}
@@ -1120,17 +1205,17 @@ func (h *InterfacesHandler) fieldDescriptions() map[string]string {
 	ifPath := "/ietf-interfaces:interfaces/interface"
 	ethPath := ifPath + "/ieee802-ethernet-interface:ethernet"
 	return map[string]string{
-		"mtu":        schema.DescriptionOf(mgr, ifPath+"/ietf-ip:ipv4/mtu"),
+		"mtu":             schema.DescriptionOf(mgr, ifPath+"/ietf-ip:ipv4/mtu"),
 		"last-change":     schema.DescriptionOf(mgr, ifPath+"/last-change"),
 		"higher-layer-if": schema.DescriptionOf(mgr, ifPath+"/higher-layer-if"),
 		"lower-layer-if":  schema.DescriptionOf(mgr, ifPath+"/lower-layer-if"),
-		"speed":      schema.DescriptionOf(mgr, ifPath+"/speed"),
-		"duplex":     schema.DescriptionOf(mgr, ethPath+"/duplex"),
-		"autoneg":    schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/enable"),
-		"phy-type":   schema.DescriptionOf(mgr, ethPath+"/phy-type"),
-		"pmd-type":   schema.DescriptionOf(mgr, ethPath+"/pmd-type"),
-		"supported":  schema.DescriptionOf(mgr, ethPath+"/infix-ethernet-interface:supported-pmd-types"),
-		"advertised": schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/infix-ethernet-interface:advertised-pmd-types"),
+		"speed":           schema.DescriptionOf(mgr, ifPath+"/speed"),
+		"duplex":          schema.DescriptionOf(mgr, ethPath+"/duplex"),
+		"autoneg":         schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/enable"),
+		"phy-type":        schema.DescriptionOf(mgr, ethPath+"/phy-type"),
+		"pmd-type":        schema.DescriptionOf(mgr, ethPath+"/pmd-type"),
+		"supported":       schema.DescriptionOf(mgr, ethPath+"/infix-ethernet-interface:supported-pmd-types"),
+		"advertised":      schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/infix-ethernet-interface:advertised-pmd-types"),
 	}
 }
 

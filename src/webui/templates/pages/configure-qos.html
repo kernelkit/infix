@@ -1,0 +1,173 @@
+{{define "configure-qos.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/qos"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">QoS Profiles{{template "field-info" (index $d "profile")}}</div>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Trust{{template "field-info" (index $d "trust")}}</th>
+          <th>Traffic class table{{template "field-info" (index $d "table")}}</th>
+          <th>Ports</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $p := .Profiles}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="qos-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$p.Name}}
+            </button>
+          </td>
+          <td>{{with index $.TrustText $p.Trust}}{{.}}{{else}}{{$p.Trust}}{{end}}</td>
+          <td>{{$p.TableText}}</td>
+          <td>{{if $p.Ports}}{{join $p.Ports ", "}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/qos/profiles/{{$p.Name}}"
+                    hx-confirm="Delete profile {{$p.Name}}?{{if $p.Ports}} It is used by {{join $p.Ports ", "}}.{{end}}"
+                    hx-swap="none" title="Delete profile">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-qos-{{$i}}">
+          <td colspan="5" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/qos/profiles/{{$p.Name}}" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Description</th>
+                    <td><input class="cfg-input" type="text" name="description"
+                               value="{{$p.Description}}" placeholder="Optional description"></td>
+                  </tr>
+                  <tr>
+                    <th>Trust{{template "field-info" (index $d "trust")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "trust" "Options" (index $.Options "trust") "Selected" $p.Trust)}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Default priority{{template "field-info" (index $d "default")}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-sm" type="number" name="default-priority"
+                             min="{{$.PriorityLo}}" max="{{$.PriorityHi}}" step="1" value="{{$p.DefaultPri}}" style="width:5rem">
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>PCP map{{template "field-info" (index $d "pcp-map")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "pcp-preset" "Options" (index $.Options "pcp-preset") "Selected" $p.PCPPreset)}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>DSCP map{{template "field-info" (index $d "dscp-map")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "dscp-preset" "Options" (index $.Options "dscp-preset") "Selected" $p.DSCPPreset)}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Traffic class table{{template "field-info" (index $d "table")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "table-preset" "Options" (index $.Options "table-preset") "Selected" $p.TablePreset)}}
+                    </td>
+                  </tr>
+                </table>
+
+                <h4 class="cfg-section-head" style="margin-top:1rem">Transmission Selection</h4>
+                <table class="info-table">
+                  <tr>
+                    <th>Class</th>
+                    <th>Algorithm{{template "field-info" (index $d "algorithm")}}</th>
+                    <th>Share (%){{template "field-info" (index $d "bandwidth")}}</th>
+                  </tr>
+                  {{range $p.Classes}}
+                  <tr>
+                    <td><strong>{{.ID}}</strong></td>
+                    <td>
+                      {{template "schema-select" (dict "Name" (printf "algorithm-%d" .ID) "Options" (index $.Options "algorithm") "Selected" .Algorithm)}}
+                    </td>
+                    <td><input class="cfg-input cfg-input-sm" type="number" min="{{$.ShareLo}}" max="{{$.ShareHi}}"
+                               name="bandwidth-{{.ID}}" value="{{if .Bandwidth}}{{.Bandwidth}}{{end}}"
+                               placeholder="—" style="width:5rem"></td>
+                  </tr>
+                  {{end}}
+                </table>
+
+                <h4 class="cfg-section-head" style="margin-top:1rem">Egress Remarking{{template "field-info" (index $d "remark")}}</h4>
+                <table class="info-table">
+                  <tr>
+                    <th>PCP</th>
+                    <td>{{template "schema-select" (dict "Name" "remark-pcp" "Options" (index $.Options "remark-pcp") "Selected" $p.RemarkPCP)}}</td>
+                  </tr>
+                  <tr>
+                    <th>DSCP</th>
+                    <td>{{template "schema-select" (dict "Name" "remark-dscp" "Options" (index $.Options "remark-dscp") "Selected" $p.RemarkDSCP)}}</td>
+                  </tr>
+                </table>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5"><span class="text-muted">No profiles.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div id="qos-profile-add" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/qos/profiles" hx-swap="none" class="user-add-inline">
+      <input class="cfg-input" type="text" name="name" required placeholder="name (e.g. edge)"
+             pattern="[A-Za-z0-9_][A-Za-z0-9_.-]*" maxlength="64">
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="qos-profile-add">+ Add profile</button>
+  </div>
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}
+{{end}}
+
+{{/* A select filled from the schema; while the schema loads the current
+     value is the only option, so a save keeps it. */}}
+{{define "schema-select"}}
+<select class="cfg-input" name="{{.Name}}" style="width:auto;max-width:100%">
+  {{$sel := .Selected}}
+  {{range .Options}}
+  <option value="{{.Value}}" title="{{.Description}}" {{if eq $sel .Value}}selected{{end}}>{{.Label}}</option>
+  {{else}}
+  <option value="{{$sel}}" selected>{{stripPrefix $sel}}</option>
+  {{end}}
+</select>
+{{end}}

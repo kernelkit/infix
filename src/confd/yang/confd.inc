@@ -42,6 +42,7 @@ MODULES=(
 	"ieee802-ethernet-phy-type@2025-09-10.yang"
 	"infix-ethernet-interface@2026-05-21.yang"
 	"infix-factory-default@2023-06-28.yang"
+	"infix-qos@2026-10-28.yang"
 	"infix-interfaces@2026-10-22.yang -e vlan-filtering -e rate-limit"
 	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2026-10-27.yang"

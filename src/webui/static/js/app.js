@@ -1976,7 +1976,8 @@ function openModal(message, onConfirm, opts) {
 
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
-// Templates are keyed by data-template attribute value.
+// data-template names a row template below, or the id of a <template>
+// element the page rendered.
 (function () {
   var rowTemplates = {
     'ntp': function(i) {
@@ -2020,7 +2021,16 @@ function openModal(message, onConfirm, opts) {
       row.querySelectorAll('input').forEach(function(inp) {
         inp.name = inp.name.replace(/_\d+$/, '_' + i);
       });
+      row.querySelectorAll('[data-row-index]').forEach(function(c) { c.textContent = i; });
     });
+  }
+
+  // A row template rendered by the server: a <template> element whose
+  // __N__ placeholders take the row number.
+  function rowFromTemplate(key, i) {
+    var tpl = document.getElementById(key);
+    if (tpl && tpl.content) { return tpl.innerHTML.replace(/__N__/g, i); }
+    return rowTemplates[key] ? rowTemplates[key](i) : null;
   }
 
   document.addEventListener('click', function(e) {
@@ -2029,9 +2039,11 @@ function openModal(message, onConfirm, opts) {
       var tbodyId  = addBtn.getAttribute('data-table');
       var tmplKey  = addBtn.getAttribute('data-template');
       var tbody    = document.getElementById(tbodyId);
-      if (!tbody || !rowTemplates[tmplKey]) { return; }
+      if (!tbody) { return; }
       var idx = tbody.querySelectorAll('tr').length;
-      tbody.insertAdjacentHTML('beforeend', rowTemplates[tmplKey](idx));
+      var html = rowFromTemplate(tmplKey, idx);
+      if (!html) { return; }
+      tbody.insertAdjacentHTML('beforeend', html);
       var newInput = tbody.querySelector('tr:last-child input');
       if (newInput) { newInput.focus(); }
       return;
