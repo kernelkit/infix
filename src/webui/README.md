@@ -102,7 +102,9 @@ Browser ──htmx──▶ Go server ──RESTCONF──▶ Infix device (rous
   credentials (needed for every RESTCONF call); no server-side session
   store
 - **Live polling** -- counters update every 5s, firmware progress every
-  3s, all via htmx triggers
+  3s, all via htmx triggers; status pages auto-refresh at the interval
+  in the user menu, morphed in place with [idiomorph][4] so only changed
+  values are touched
 
 ```
 main.go                          Entry point, flags, embedded FS
@@ -135,3 +137,4 @@ See [LICENSE](LICENSE).
 [1]: https://github.com/kernelkit/infix
 [2]: https://htmx.org
 [3]: https://datatracker.ietf.org/doc/html/rfc8040
+[4]: https://github.com/bigskysoftware/idiomorph

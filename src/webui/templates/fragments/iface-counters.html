@@ -1,5 +1,5 @@
 {{define "iface-counters"}}
-<div id="iface-counters" hx-get="/interfaces/{{.Name}}/counters" hx-trigger="every 5s" hx-swap="outerHTML">
+<div id="iface-counters" hx-get="/interfaces/{{.Name}}/counters" hx-trigger="every 5s" hx-swap="morph:outerHTML">
   <table class="counters-table">
     <thead>
       <tr>
