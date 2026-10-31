@@ -3,7 +3,7 @@
 {{end}}
 
 {{define "content"}}
-<div class="iface-detail-header">
+<div class="iface-detail-header" data-auto-refresh>
   <a href="/interfaces" hx-get="/interfaces" hx-target="#content" hx-push-url="true" class="back-link">&larr; Interfaces</a>
   <h2>{{.Name}}</h2>
 </div>
