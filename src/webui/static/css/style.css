@@ -540,6 +540,10 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 /* Cards inside a grid don't need their own bottom margin — the grid gap handles spacing */
 .info-grid > .info-card { margin-bottom: 0; }
 
+/* A polled fragment holding several cards, laid out as grid items */
+.poll-group { display: contents; }
+.poll-group > .info-card { margin-bottom: 0; }
+
 /* Full-width card spanning all grid columns */
 .info-grid-full { grid-column: 1 / -1; }
 
