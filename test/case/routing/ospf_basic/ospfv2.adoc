@@ -25,6 +25,8 @@ image::topology.svg[OSPFv2 Basic topology, align=center, scaledwidth=75%]
 . Set up topology and attach to target DUTs
 . Configure targets
 . Wait for OSPFv2 routes
+. Read the routes R1 computed with the get-routes action
+. Show the routes R1 computed in the CLI
 . Verify R2 OSPFv2 neighbors with non-OSPFv2 interface
 . Test connectivity from PC:data to R2 loopback
 

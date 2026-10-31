@@ -287,6 +287,7 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 
 /* ietf-routing */
 int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int routing_rpc_init(struct confd *confd);
 
 /* factory.c */
 int factory_rpc_init(struct confd *confd);

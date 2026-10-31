@@ -3,6 +3,18 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.11.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- The OSPF and RIP routing tables are no longer operational data.  They
+  are read from the routing daemon on request with the new `get-routes`
+  action on the OSPF and RIP instances, which the `show ip ospf route`
+  and `show ip rip route` commands run.  The routes the protocols have
+  installed remain in the routing table
+
+
 [v26.10.0][] - 2026-10-30
 -------------------------
 
@@ -2632,7 +2644,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.09.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.10.0...HEAD
 [v26.10.0]:   https://github.com/kernelkit/infix/compare/v26.09.0...v26.10.0
 [v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0

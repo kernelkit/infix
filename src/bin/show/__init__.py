@@ -590,6 +590,29 @@ def bfd(args: List[str]) -> None:
         print(f"Unknown BFD subcommand: {subcommand}")
 
 
+def protocol_routes(ptype: str, container: str, module: str):
+    """Run the get-routes action on the control-plane protocol of ptype, None when there is none"""
+    data = get_json("/ietf-routing:routing/control-plane-protocols", "running", quiet=True)
+    name = None
+    for proto in find_lists(data, "control-plane-protocol", "type"):
+        if proto.get("type") == ptype:
+            name = proto.get("name")
+            break
+    if name is None:
+        return None
+
+    xpath = (f"/ietf-routing:routing/control-plane-protocols"
+             f"/control-plane-protocol[type='{ptype}'][name='{name}']/{container}/{module}:get-routes")
+    result = subprocess.run(["rpc", "-j", xpath], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(result.stderr.strip() or "reading the routes failed")
+        return None
+    try:
+        return find_lists(json.loads(result.stdout), "route", "prefix")
+    except json.JSONDecodeError:
+        return []
+
+
 def _ospf(args: List[str], afi: str) -> None:
     """Handle show [ip|ipv6] ospf [subcommand] [ifname] [detail]
 
@@ -605,6 +628,21 @@ def _ospf(args: List[str], afi: str) -> None:
         ifname      - Interface name (for interfaces subcommand)
         detail      - Show detailed information (Cisco-style)
     """
+    # Parse arguments: subcommand, optional interface name, optional detail flag
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+
+    if subcommand in ("route", "routes"):
+        routes = protocol_routes("infix-routing:ospfv3" if afi == "ipv6" else "infix-routing:ospfv2",
+                                 "ietf-ospf:ospf", "infix-ospf")
+        if routes is None:
+            print("OSPF is not configured or running")
+            return
+        if RAW_OUTPUT:
+            print(json.dumps(routes, indent=2))
+            return
+        cli_pretty({"route": routes}, "show-ospf-routes")
+        return
+
     data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
     if not data:
         print("No OSPF data retrieved.")
@@ -616,9 +654,6 @@ def _ospf(args: List[str], afi: str) -> None:
 
     # Tell the formatters which address family (OSPFv2 vs OSPFv3) to select.
     data['_afi'] = afi
-
-    # Parse arguments: subcommand, optional interface name, optional detail flag
-    subcommand = args[0] if len(args) > 0 and args[0] else ""
 
     # Determine if second arg is interface name or detail flag
     ifname = None
@@ -656,8 +691,6 @@ def _ospf(args: List[str], afi: str) -> None:
         cli_pretty(data, "show-ospf-neighbor")
     elif subcommand == "interface" or subcommand == "interfaces":
         cli_pretty(data, "show-ospf-interfaces")
-    elif subcommand == "route" or subcommand == "routes":
-        cli_pretty(data, "show-ospf-routes")
     else:
         print(f"Unknown OSPF subcommand: {subcommand}")
 
@@ -672,6 +705,18 @@ def ospf6(args: List[str]) -> None:
     _ospf(args, "ipv6")
 
 
+def ripng(args: List[str]) -> None:
+    """Show the RIPng routing table, the get-routes action on the RIPng instance"""
+    routes = protocol_routes("infix-routing:ripng", "ietf-rip:rip", "infix-rip")
+    if routes is None:
+        print("RIPng is not configured or running")
+        return
+    if RAW_OUTPUT:
+        print(json.dumps(routes, indent=2))
+        return
+    cli_pretty({"route": routes}, "show-rip-routes")
+
+
 def rip(args: List[str]) -> None:
     """Handle show rip [subcommand] [ifname]
 
@@ -684,6 +729,21 @@ def rip(args: List[str]) -> None:
     Optional:
         ifname      - Interface name (for interface subcommand)
     """
+    # Parse arguments: subcommand, optional interface name
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+    ifname = args[1] if len(args) > 1 else None
+
+    if subcommand in ("route", "routes"):
+        routes = protocol_routes("infix-routing:ripv2", "ietf-rip:rip", "infix-rip")
+        if routes is None:
+            print("RIP is not configured or running")
+            return
+        if RAW_OUTPUT:
+            print(json.dumps(routes, indent=2))
+            return
+        cli_pretty({"route": routes}, "show-rip-routes")
+        return
+
     data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
     if not data:
         data = {}
@@ -692,10 +752,6 @@ def rip(args: List[str]) -> None:
         print(json.dumps(data, indent=2))
         return
 
-    # Parse arguments: subcommand, optional interface name
-    subcommand = args[0] if len(args) > 0 and args[0] else ""
-    ifname = args[1] if len(args) > 1 else None
-
     # Add metadata to data for formatters
     if ifname:
         data['_ifname'] = ifname
@@ -703,8 +759,6 @@ def rip(args: List[str]) -> None:
     # Route to appropriate formatter
     if subcommand == "":
         cli_pretty(data, "show-rip")
-    elif subcommand == "route" or subcommand == "routes":
-        cli_pretty(data, "show-rip-routes")
     elif subcommand == "interface" or subcommand == "interfaces":
         cli_pretty(data, "show-rip-interfaces")
     elif subcommand == "neighbor" or subcommand == "neighbors":
@@ -989,6 +1043,7 @@ def execute_command(command: str, args: List[str]):
         'ospf6': ospf6,
         'ptp': ptp,
         'rip': rip,
+        'ripng': ripng,
         'routes': routes,
         'services': services,
         'snmp': snmp,

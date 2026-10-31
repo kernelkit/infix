@@ -160,6 +160,23 @@ def ospf_has_neighbors(target, proto="infix-routing:ospfv2"):
     return False
 
 
+def protocol_routes(target, proto, name="default"):
+    """Routes the get-routes action lists for the control-plane protocol proto, by prefix"""
+    if proto in ("infix-routing:ospfv2", "infix-routing:ospfv3"):
+        action = "ietf-ospf:ospf/infix-ospf:get-routes"
+    else:
+        action = "ietf-rip:rip/infix-rip:get-routes"
+    xpath = (f"/ietf-routing:routing/control-plane-protocols"
+             f"/control-plane-protocol[type='{proto}'][name='{name}']/{action}")
+    routes = target.call_action_output(xpath).get("route", [])
+    for r in routes:
+        # NETCONF lifts only top-level lists, a single next hop is a dict
+        hops = r.get("next-hops", {}).get("next-hop")
+        if isinstance(hops, dict):
+            r["next-hops"]["next-hop"] = [hops]
+    return {r["prefix"]: r for r in routes}
+
+
 def _get_rip_status(target, proto="infix-routing:ripv2"):
     xpath = "/ietf-routing:routing/control-plane-protocols"
     protos = target.get_data(xpath)["routing"]["control-plane-protocols"]

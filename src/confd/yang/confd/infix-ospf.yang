@@ -9,6 +9,12 @@ module infix-ospf {
   import ietf-ospf {
     prefix ospf;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
   import infix-routing {
     prefix infix-rt;
   }
@@ -16,6 +22,12 @@ module infix-ospf {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-ospf.";
+
+  revision 2026-10-30 {
+    description "The local RIB is no longer operational data, the new
+                 get-routes action reads it from the daemon on request.";
+    reference "internal";
+  }
 
   revision 2026-10-26 {
     description "Initial revision, the ietf-ospf deviations and augments from
@@ -407,28 +419,79 @@ module infix-ospf {
    * Augmentations
    */
 
-  /* Add area-id to OSPF local-rib routes
-   * The standard ietf-ospf model doesn't include area information in routes,
-   * but FRR provides this and it's useful for operators to see which area
-   * a route was learned from.
-   */
-  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
-        + "ospf:ospf/ospf:local-rib/ospf:route" {
-    when "derived-from-or-self(../../../rt:type, 'infix-rt:ospfv2') or "
-       + "derived-from-or-self(../../../rt:type, 'infix-rt:ospfv3')" {
-      description
-        "This augmentation is valid for OSPFv2 and OSPFv3.";
-    }
-    description
-      "Infix extension to add area information to OSPF routes.";
+  /* The route table can be large and moves with every SPF run, so it
+   * is read when asked rather than kept as operational data. */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
+          + "ospf:ospf/ospf:local-rib" {
+    deviate not-supported;
+  }
 
-    leaf area-id {
-      type ospf:area-id-type;
-      config false;
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
+        + "ospf:ospf" {
+    description
+      "Read the OSPF routing table on request.";
+
+    action get-routes {
       description
-        "Area ID from which this route was learned. Not applicable
-         for inter-area routes learned from area border routers or
-         external routes.";
+        "List the routes the OSPF instance has computed.
+
+         The local RIB is not operational data, this action reads it
+         from the daemon when asked.  The routes OSPF has installed
+         are also in the RIB under ietf-routing.";
+
+      output {
+        list route {
+          key "prefix";
+          description "A route in the OSPF local RIB.";
+
+          leaf prefix {
+            type inet:ip-prefix;
+            description "Destination prefix.";
+          }
+
+          container next-hops {
+            description "Next hops for the route.";
+
+            list next-hop {
+              description "One next hop.";
+
+              leaf outgoing-interface {
+                type if:interface-ref;
+                description "Name of the outgoing interface.";
+              }
+
+              leaf next-hop {
+                type inet:ip-address;
+                description "Address of the next hop.";
+              }
+            }
+          }
+
+          leaf metric {
+            type uint32;
+            description "Metric for this route.";
+          }
+
+          leaf route-type {
+            type ospf:route-type;
+            description "Route type for this route.";
+          }
+
+          leaf route-tag {
+            type uint32;
+            description "Route tag for this route.";
+          }
+
+          leaf area-id {
+            type ospf:area-id-type;
+            description
+              "Area the route was learned in.
+
+               Not applicable for inter-area routes learned from area
+               border routers or external routes.";
+          }
+        }
+      }
     }
   }
 

@@ -100,7 +100,7 @@ build vendors them from `go.sum`.
 | | bridge IGMP/MLD querier | on demand | mcd IPC socket, `show interfaces json` |
 | | interfaces in container network namespaces | event | podman events and netlink in each container netns, re-read with `podman ps` and `ip -n` |
 | `ietf-routing:routing` | `ribs` | event | zebra ZAPI redistribution, or rtnetlink route events without FRR |
-| | `control-plane-protocols` | poll 10 s | ospfd, ripd, bfdd vty sockets |
+| | `control-plane-protocols` | poll 10 s | ospfd, ripd, bfdd vty sockets; the route tables are the `get-routes` actions in confd |
 | | forwarding per interface | event | inotify on `/proc/sys/net/*/conf/*/forwarding` |
 | `ietf-system:system` | hostname, timezone, users, SSH keys | event | inotify |
 | `ietf-system:system-state` | services | on demand | `initctl -j`, last answer while finit is busy |
@@ -127,7 +127,9 @@ build vendors them from `go.sum`.
 
 A SIGHUP pokes the routing, NTP and hardware collectors once.  confd
 sends it after a commit, best effort, so polled data catches up with
-new config.  The STP and WireGuard polls run on their timer only.
+new config, and the routing collector reads the OSPF auto-cost from the
+daemon's running-config again, which only a commit changes.  The STP
+and WireGuard polls run on their timer only.
 
 The bridge FDB is not collected.  A switch learns addresses without
 telling anyone, so it could only be polled; the `get-forwarding-database`

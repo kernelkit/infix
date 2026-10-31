@@ -22,6 +22,8 @@ image::topology.svg[RIPng Basic topology, align=center, scaledwidth=75%]
 . Set up topology and attach to target DUTs
 . Configure targets
 . Wait for RIPng routes to be exchanged
+. Read the routes R1 learned with the get-routes action
+. Show the routes R1 learned in the CLI
 . Test connectivity from PC:data1 to R2 loopback via RIPng
 . Test connectivity from PC:data2 to R1 loopback via RIPng
 

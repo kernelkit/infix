@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <jansson.h>
 #include <srx/common.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
@@ -834,5 +835,214 @@ activate:
 	if (finit_reload("netd"))
 		ERROR("Failed to signal netd for reload");
 
+	return rc;
+}
+
+#ifdef HAVE_FRR
+/* JSON from one vtysh show command, NULL when the daemon has none */
+static json_t *vtysh_json(const char *cmd)
+{
+	json_error_t jerr;
+	json_t *root;
+	FILE *pp;
+
+	pp = popenf("re", "vtysh -c '%s'", cmd);
+	if (!pp)
+		return NULL;
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+
+	return root;
+}
+
+static void route_add_int(struct lyd_node *route, const char *leaf, json_t *val)
+{
+	char buf[32];
+
+	if (!json_is_integer(val))
+		return;
+	snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
+	lyd_new_term(route, NULL, leaf, buf, LYD_NEW_VAL_OUTPUT, NULL);
+}
+
+/* One next-hop entry: an address, or the interface of a connected prefix */
+static void route_add_nexthop(struct lyd_node *hops, const char *ip, const char *ifname)
+{
+	struct lyd_node *hop;
+
+	if (lyd_new_list(hops, NULL, "next-hop", LYD_NEW_VAL_OUTPUT, &hop))
+		return;
+	if (ip)
+		lyd_new_term(hop, NULL, "next-hop", ip, LYD_NEW_VAL_OUTPUT, NULL);
+	else if (ifname)
+		lyd_new_term(hop, NULL, "outgoing-interface", ifname, LYD_NEW_VAL_OUTPUT, NULL);
+}
+
+/* ospfd lists "N", "N IA", "N E1" ..., ospf6d a two letter path type */
+static const char *ospf_route_type(const char *type, int v3)
+{
+	if (!type)
+		return NULL;
+	if (!v3) {
+		if (!strncmp(type, "N ", 2))
+			type += 2;
+		else if (!strcmp(type, "N"))
+			return "intra-area";
+	}
+	if (!strcmp(type, "IA"))
+		return v3 ? "intra-area" : "inter-area";
+	if (!strcmp(type, "IE"))
+		return "inter-area";
+	if (!strcmp(type, "E1"))
+		return "external-1";
+	if (!strcmp(type, "E2"))
+		return "external-2";
+
+	return NULL;
+}
+
+static void ospf_route_add(struct lyd_node *output, const char *prefix, json_t *info, int v3)
+{
+	struct lyd_node *route, *hops;
+	const char *type, *ip, *ifname;
+	json_t *val, *hop;
+	size_t i;
+
+	if (lyd_new_list(output, NULL, "route", LYD_NEW_VAL_OUTPUT, &route, prefix))
+		return;
+
+	type = ospf_route_type(json_string_value(json_object_get(info, v3 ? "pathType" : "routeType")), v3);
+	if (type)
+		lyd_new_term(route, NULL, "route-type", type, LYD_NEW_VAL_OUTPUT, NULL);
+	if ((val = json_object_get(info, "area")) && json_is_string(val))
+		lyd_new_term(route, NULL, "area-id", json_string_value(val), LYD_NEW_VAL_OUTPUT, NULL);
+	if (!(val = json_object_get(info, "cost")))
+		val = json_object_get(info, "metric");
+	route_add_int(route, "metric", val);
+	route_add_int(route, "route-tag", json_object_get(info, "tag"));
+
+	if (lyd_new_inner(route, NULL, "next-hops", 1, &hops))
+		return;
+	json_array_foreach(json_object_get(info, v3 ? "nextHops" : "nexthops"), i, hop) {
+		ip = json_string_value(json_object_get(hop, v3 ? "nextHop" : "ip"));
+		/* ospfd prints " " and ospf6d "::" for a connected prefix */
+		if (ip && (!*ip || !strcmp(ip, " ") || !strcmp(ip, "::")))
+			ip = NULL;
+		ifname = json_string_value(json_object_get(hop, v3 ? "interfaceName" : "directlyAttachedTo"));
+		route_add_nexthop(hops, ip, ifname);
+	}
+}
+
+/*
+ * The get-routes action on an OSPF instance.  ospfd keys its table by
+ * prefix, ospf6d lists every path per prefix and marks the best one.
+ */
+static int ospf_get_routes(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+			   const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+			   struct lyd_node *output, void *priv)
+{
+	struct lyd_node *cplane;
+	const char *type, *prefix;
+	json_t *root, *info;
+	int v3;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	cplane = lyd_parent(lyd_parent(input));
+	type = cplane ? lydx_get_cattr(cplane, "type") : NULL;
+	v3 = type && !strcmp(type, "infix-routing:ospfv3");
+
+	root = vtysh_json(v3 ? "show ipv6 ospf6 route json" : "show ip ospf route json");
+	if (!root)
+		return rpc_failed(session, "Failed reading OSPF routes");
+
+	if (v3) {
+		json_t *paths, *path;
+		size_t i;
+
+		json_object_foreach(json_object_get(root, "routes"), prefix, paths) {
+			json_t *best = NULL;
+
+			json_array_foreach(paths, i, path) {
+				if (!best)
+					best = path;
+				if (json_is_true(json_object_get(path, "isBestRoute"))) {
+					best = path;
+					break;
+				}
+			}
+			if (best)
+				ospf_route_add(output, prefix, best, 1);
+		}
+	} else {
+		json_object_foreach(root, prefix, info) {
+			if (strchr(prefix, '/'))
+				ospf_route_add(output, prefix, info, 0);
+		}
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+/*
+ * The get-routes action on a RIP instance.  zebra lists the routes it
+ * holds from ripd or ripngd, one entry per prefix.
+ */
+static int rip_get_routes(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+			  const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+			  struct lyd_node *output, void *priv)
+{
+	struct lyd_node *cplane, *route;
+	const char *type, *prefix;
+	json_t *root, *entries;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	cplane = lyd_parent(lyd_parent(input));
+	type = cplane ? lydx_get_cattr(cplane, "type") : NULL;
+
+	root = vtysh_json(type && !strcmp(type, "infix-routing:ripng")
+			  ? "show ipv6 route ripng json" : "show ip route rip json");
+	if (!root)
+		return rpc_failed(session, "Failed reading RIP routes");
+
+	json_object_foreach(root, prefix, entries) {
+		json_t *entry = json_array_get(entries, 0);
+		json_t *hop = json_array_get(json_object_get(entry, "nexthops"), 0);
+		const char *str;
+
+		if (!strchr(prefix, '/') || !entry)
+			continue;
+		if (lyd_new_list(output, NULL, "route", LYD_NEW_VAL_OUTPUT, &route, prefix))
+			continue;
+		if ((str = json_string_value(json_object_get(hop, "ip"))) && *str)
+			lyd_new_term(route, NULL, "next-hop", str, LYD_NEW_VAL_OUTPUT, NULL);
+		if ((str = json_string_value(json_object_get(hop, "interfaceName"))) && *str)
+			lyd_new_term(route, NULL, "interface", str, LYD_NEW_VAL_OUTPUT, NULL);
+		lyd_new_term(route, NULL, "route-type", "rip", LYD_NEW_VAL_OUTPUT, NULL);
+		route_add_int(route, "metric", json_object_get(entry, "metric"));
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+#endif /* HAVE_FRR */
+
+int routing_rpc_init(struct confd *confd)
+{
+	int rc = 0;
+
+#ifdef HAVE_FRR
+	REGISTER_RPC_TREE(confd->session, XPATH_OSPF_ "/infix-ospf:get-routes",
+			  ospf_get_routes, NULL, &confd->sub);
+	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/ietf-rip:rip/infix-rip:get-routes",
+			  rip_get_routes, NULL, &confd->sub);
+	return SR_ERR_OK;
+fail:
+	ERROR("Init routing rpc failed: %s", sr_strerror(rc));
+#endif
 	return rc;
 }

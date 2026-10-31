@@ -936,6 +936,20 @@ echo "Public:  $pub"
           </COMMAND>
         </SWITCH>
       </COMMAND>
+
+      <COMMAND name="rip" help="Show RIPng routing table">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show ripng route |pager
+        </ACTION>
+
+        <SWITCH name="optional" min="0">
+          <COMMAND name="route" help="Show RIPng routing table">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show ripng route |pager
+            </ACTION>
+          </COMMAND>
+        </SWITCH>
+      </COMMAND>
     </SWITCH>
   </COMMAND>
 
