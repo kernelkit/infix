@@ -101,6 +101,7 @@ bool iface_has_quirk(const char *ifname, const char *quirkname);
 
 /* ieee802-ethernet-interface.c */
 int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif);
+int ethernet_rpc_init(struct confd *confd);
 
 /* interfaces.c */
 const char *get_chassis_addr(void);

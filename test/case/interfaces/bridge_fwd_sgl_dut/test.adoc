@@ -4,7 +4,8 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_fwd_sgl_dut]
 
 ==== Description
 
-Tests forwarding through a DUT with two bridged interfaces on one DUT.
+Tests forwarding through a DUT with two bridged interfaces on one DUT,
+and that the frame counters of the ports can be read afterwards.
 
 ....
 
@@ -35,5 +36,7 @@ image::topology.svg[Bridge Forwarding Single DUTs topology, align=center, scaled
 . Set up topology and attach to target DUT
 . Configure a bridge with dual physical port
 . Verify ping from host:data1 to 10.0.0.2
+. Read the frame counters of the bridge ports
+. Show a bridge port in the CLI
 
 

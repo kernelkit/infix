@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"slices"
 	"sort"
 	"strconv"
@@ -288,28 +289,24 @@ type ethernetJSON struct {
 		Enable         bool     `json:"enable"`
 		AdvertisedPMDs []string `json:"infix-ethernet-interface:advertised-pmd-types"`
 	} `json:"auto-negotiation"`
-	Statistics *struct {
-		Frame *ethFrameStats `json:"frame"`
-	} `json:"statistics"`
 }
 
+// ethFrameStats is the output of the get-statistics action on an
+// Ethernet port, the IEEE 802.3 frame counters.
 type ethFrameStats struct {
-	InTotalPkts        yangInt64 `json:"in-total-pkts"`
-	InTotalOctets      yangInt64 `json:"in-total-octets"`
-	InGoodPkts         yangInt64 `json:"in-good-pkts"`
+	InTotalFrames      yangInt64 `json:"in-total-frames"`
+	InFrames           yangInt64 `json:"in-frames"`
+	InMulticastFrames  yangInt64 `json:"in-multicast-frames"`
+	InBroadcastFrames  yangInt64 `json:"in-broadcast-frames"`
+	InErrorFCS         yangInt64 `json:"in-error-fcs-frames"`
+	InErrorUndersize   yangInt64 `json:"in-error-undersize-frames"`
+	InErrorOversize    yangInt64 `json:"in-error-oversize-frames"`
+	InErrorMACInternal yangInt64 `json:"in-error-mac-internal-frames"`
 	InGoodOctets       yangInt64 `json:"in-good-octets"`
-	InBroadcast        yangInt64 `json:"in-broadcast"`
-	InMulticast        yangInt64 `json:"in-multicast"`
-	InErrorFCS         yangInt64 `json:"in-error-fcs"`
-	InErrorUndersize   yangInt64 `json:"in-error-undersize"`
-	InErrorOversize    yangInt64 `json:"in-error-oversize"`
-	InErrorMACInternal yangInt64 `json:"in-error-mac-internal"`
-	OutTotalPkts       yangInt64 `json:"out-total-pkts"`
-	OutTotalOctets     yangInt64 `json:"out-total-octets"`
-	OutGoodPkts        yangInt64 `json:"out-good-pkts"`
+	OutFrames          yangInt64 `json:"out-frames"`
+	OutMulticastFrames yangInt64 `json:"out-multicast-frames"`
+	OutBroadcastFrames yangInt64 `json:"out-broadcast-frames"`
 	OutGoodOctets      yangInt64 `json:"out-good-octets"`
-	OutBroadcast       yangInt64 `json:"out-broadcast"`
-	OutMulticast       yangInt64 `json:"out-multicast"`
 }
 
 // Template data structures.
@@ -753,9 +750,6 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 			}
 			d.AdvertisedPMDs = shortenPMDs(iface.Ethernet.AutoNegotiation.AdvertisedPMDs)
 		}
-		if iface.Ethernet.Statistics != nil && iface.Ethernet.Statistics.Frame != nil {
-			d.EthFrameStats = buildEthFrameStats(iface.Ethernet.Statistics.Frame)
-		}
 	}
 
 	if iface.Statistics != nil {
@@ -854,24 +848,43 @@ func buildCounters(s *ifaceStats) ifaceCounters {
 	}
 }
 
+// ethFrameStats runs the get-statistics action on an Ethernet port.
+// A port without IEEE 802.3 counters, or an action that fails, gives
+// no card rather than a page error.
+func (h *InterfacesHandler) ethFrameStats(r *http.Request, name string) []kvEntry {
+	var reply struct {
+		Output struct {
+			Frame *ethFrameStats `json:"frame"`
+		} `json:"infix-ethernet-interface:output"`
+	}
+
+	path := "/data/ietf-interfaces:interfaces/interface=" + url.PathEscape(name) +
+		"/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:get-statistics"
+	if err := h.RC.CallRPC(r.Context(), path, nil, &reply); err != nil {
+		log.Printf("interface %s: get-statistics: %v", name, err)
+		return nil
+	}
+	if reply.Output.Frame == nil {
+		return nil
+	}
+	return buildEthFrameStats(reply.Output.Frame)
+}
+
 func buildEthFrameStats(f *ethFrameStats) []kvEntry {
 	return []kvEntry{
-		{"eth-in-frames", formatCount(int64(f.InTotalPkts))},
-		{"eth-in-octets", humanBytes(int64(f.InTotalOctets))},
-		{"eth-in-good-frames", formatCount(int64(f.InGoodPkts))},
-		{"eth-in-good-octets", humanBytes(int64(f.InGoodOctets))},
-		{"eth-in-broadcast", formatCount(int64(f.InBroadcast))},
-		{"eth-in-multicast", formatCount(int64(f.InMulticast))},
-		{"eth-in-fcs-error", formatCount(int64(f.InErrorFCS))},
-		{"eth-in-undersize", formatCount(int64(f.InErrorUndersize))},
-		{"eth-in-oversize", formatCount(int64(f.InErrorOversize))},
-		{"eth-in-mac-error", formatCount(int64(f.InErrorMACInternal))},
-		{"eth-out-frames", formatCount(int64(f.OutTotalPkts))},
-		{"eth-out-octets", humanBytes(int64(f.OutTotalOctets))},
-		{"eth-out-good-frames", formatCount(int64(f.OutGoodPkts))},
-		{"eth-out-good-octets", humanBytes(int64(f.OutGoodOctets))},
-		{"eth-out-broadcast", formatCount(int64(f.OutBroadcast))},
-		{"eth-out-multicast", formatCount(int64(f.OutMulticast))},
+		{"in-total-frames", formatCount(int64(f.InTotalFrames))},
+		{"in-frames", formatCount(int64(f.InFrames))},
+		{"in-multicast-frames", formatCount(int64(f.InMulticastFrames))},
+		{"in-broadcast-frames", formatCount(int64(f.InBroadcastFrames))},
+		{"in-error-fcs-frames", formatCount(int64(f.InErrorFCS))},
+		{"in-error-undersize-frames", formatCount(int64(f.InErrorUndersize))},
+		{"in-error-oversize-frames", formatCount(int64(f.InErrorOversize))},
+		{"in-error-mac-internal-frames", formatCount(int64(f.InErrorMACInternal))},
+		{"in-good-octets", humanBytes(int64(f.InGoodOctets))},
+		{"out-frames", formatCount(int64(f.OutFrames))},
+		{"out-multicast-frames", formatCount(int64(f.OutMulticastFrames))},
+		{"out-broadcast-frames", formatCount(int64(f.OutBroadcastFrames))},
+		{"out-good-octets", humanBytes(int64(f.OutGoodOctets))},
 	}
 }
 
@@ -1068,6 +1081,9 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	data := buildDetailData(r, iface)
 	data.PageData = newPageData(w, r, "interfaces", name)
 	data.Desc = h.fieldDescriptions()
+	if iface.Type == "infix-if-type:ethernet" {
+		data.EthFrameStats = h.ethFrameStats(r, name)
+	}
 	if iface.Wwan != nil {
 		h.cellularDetail(r, iface.Wwan, &data)
 	}

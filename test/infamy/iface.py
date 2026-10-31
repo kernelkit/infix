@@ -138,6 +138,18 @@ def neighbor_exist(target, iface, address, lladdr=None, origin=None):
     return False
 
 
+def eth_statistics(target, port):
+    """Frame counters the get-statistics action lists for an Ethernet port.
+
+    Counters are integers on both transports, an empty dict when the
+    port keeps no IEEE 802.3 counters.
+    """
+    xpath = f"/ietf-interfaces:interfaces/interface[name='{port}']" \
+            "/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:get-statistics"
+    frame = target.call_action_output(xpath).get("frame", {})
+    return {key: int(val) for key, val in frame.items()}
+
+
 def get_bridge(target, bridge):
     """Operational bridge container of bridge, empty if not (yet) there"""
     interface = target.get_iface(bridge) or {}

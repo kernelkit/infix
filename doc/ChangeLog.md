@@ -13,6 +13,11 @@ All notable changes to the project are documented in this file.
   action on the OSPF and RIP instances, which the `show ip ospf route`
   and `show ip rip route` commands run.  The routes the protocols have
   installed remain in the routing table
+- The Ethernet frame counters of a port are no longer operational data.
+  They are read from the port on request with the new `get-statistics`
+  action on the Ethernet container of the interface, which the `show
+  interface <port>` command and the WebUI interface page run.  The octet
+  counters of an interface remain in the operational datastore
 
 
 [v26.10.0][] - 2026-10-30

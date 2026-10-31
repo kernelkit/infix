@@ -26,6 +26,12 @@ module infix-ethernet-interface {
   contact      "kernelkit@googlegroups.com";
   description  "Extensions and deviations to ieee802-ethernet-interface.yang";
 
+  revision 2026-10-31 {
+    description "The frame counters are no longer operational data, the new
+                 get-statistics action reads them from the port on request.";
+    reference "internal";
+  }
+
   revision 2026-05-21 {
     description "Augment auto-negotiation with an 'advertise' leaf-list
                  of PMD-type identities, modelling the standards-correct
@@ -128,16 +134,89 @@ module infix-ethernet-interface {
     }
   }
 
-  augment "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame" {
-    leaf out-good-octets {
-      type yang:counter64;
-      units octets;
-      description "A count of data and padding octets of frames that are successfully transmitted.";
-    }
-    leaf in-good-octets {
-      type yang:counter64;
-      units octets;
-      description "A count of data and padding octets in frames that are successfully received.";
+  augment "/if:interfaces/if:interface/eth:ethernet" {
+    description "Read the frame counters of an Ethernet port on request.";
+
+    action get-statistics {
+      description
+        "Read the frame counters of the port.
+
+         The counters are not operational data, this action reads them
+         from the port when asked.  A port whose driver keeps no IEEE
+         802.3 counters answers without any.  All octet counts include
+         the 4-byte FCS.";
+
+      output {
+        container frame {
+          description "Frame counters, as in ieee802-ethernet-interface.";
+
+          leaf in-total-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames received, including bad frames.";
+          }
+          leaf in-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames received without error.";
+          }
+          leaf in-multicast-frames {
+            type yang:counter64;
+            units frames;
+            description "Multicast frames received without error.";
+          }
+          leaf in-broadcast-frames {
+            type yang:counter64;
+            units frames;
+            description "Broadcast frames received without error.";
+          }
+          leaf in-error-fcs-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames received with a frame check sequence error.";
+          }
+          leaf in-error-undersize-frames {
+            type yang:counter64;
+            units frames;
+            description "Well-formed frames received shorter than the minimum length.";
+          }
+          leaf in-error-oversize-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames received longer than the maximum length.";
+          }
+          leaf in-error-mac-internal-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames lost to an error inside the receiving MAC.";
+          }
+          leaf in-good-octets {
+            type yang:counter64;
+            units octets;
+            description "Data and padding octets in frames received without error.";
+          }
+          leaf out-frames {
+            type yang:counter64;
+            units frames;
+            description "Frames transmitted without error.";
+          }
+          leaf out-multicast-frames {
+            type yang:counter64;
+            units frames;
+            description "Multicast frames transmitted without error.";
+          }
+          leaf out-broadcast-frames {
+            type yang:counter64;
+            units frames;
+            description "Broadcast frames transmitted without error.";
+          }
+          leaf out-good-octets {
+            type yang:counter64;
+            units octets;
+            description "Data and padding octets of frames transmitted without error.";
+          }
+        }
+      }
     }
   }
 
@@ -162,14 +241,8 @@ module infix-ethernet-interface {
     deviate not-supported;
   }
 
-  /* Deviations for statistics */
-  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:out-error-mac-internal-frames" {
-    deviate not-supported;
-  }
-  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:phy" {
-    deviate not-supported;
-  }
-  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:mac-control" {
+  /* The frame counters are read when asked, see the get-statistics action. */
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics" {
     deviate not-supported;
   }
 }
