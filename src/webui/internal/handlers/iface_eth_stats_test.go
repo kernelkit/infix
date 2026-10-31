@@ -39,7 +39,7 @@ func TestInterfaceDetailEthStatistics(t *testing.T) {
 
 	tmpl := realTemplates(t, nil, "layouts/*.html", "pages/iface-detail.html",
 		"fragments/iface-counters.html", "fragments/hw-detail.html")
-	h := &InterfacesHandler{DetailTemplate: tmpl, Schema: &schema.Cache{},
+	h := &InterfacesHandler{DetailTemplate: tmpl, CountersTemplate: tmpl, Schema: &schema.Cache{},
 		RC: restconf.NewClient(srv.URL+"/restconf", false)}
 	ctx := restconf.ContextWithCredentials(context.Background(),
 		restconf.Credentials{Username: "admin", Password: "admin"})
@@ -71,5 +71,20 @@ func TestInterfaceDetailEthStatistics(t *testing.T) {
 	}
 	if strings.Contains(body, "Ethernet Frame Statistics") {
 		t.Error("br0 detail shows Ethernet frame statistics")
+	}
+
+	// The counters fragment, polled every few seconds, carries them too
+	req := httptest.NewRequest(http.MethodGet, "/interfaces/eth0/counters", nil).WithContext(ctx)
+	req.SetPathValue("name", "eth0")
+	w := httptest.NewRecorder()
+	h.Counters(w, req)
+	body = w.Body.String()
+	if len(actions) != 2 || actions[1] != want {
+		t.Errorf("eth0 counters called %v", actions[1:])
+	}
+	for _, s := range []string{`id="iface-counters"`, "Ethernet Frame Statistics", "1,234"} {
+		if !strings.Contains(body, s) {
+			t.Errorf("eth0 counters lacks %q", s)
+		}
 	}
 }

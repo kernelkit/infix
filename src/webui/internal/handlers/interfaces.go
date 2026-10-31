@@ -1150,7 +1150,9 @@ func (h *InterfacesHandler) fieldDescriptions() map[string]string {
 	}
 }
 
-// Counters renders the counters fragment for htmx polling (GET /interfaces/{name}/counters).
+// Counters renders the counters fragment for htmx polling (GET
+// /interfaces/{name}/counters), the interface counters and, on an
+// Ethernet port, the frame counters its get-statistics action reads.
 func (h *InterfacesHandler) Counters(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -1162,6 +1164,9 @@ func (h *InterfacesHandler) Counters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := buildDetailData(r, iface)
+	if iface.Type == "infix-if-type:ethernet" {
+		data.EthFrameStats = h.ethFrameStats(r, name)
+	}
 
 	if err := h.CountersTemplate.ExecuteTemplate(w, "iface-counters", data); err != nil {
 		log.Printf("template error: %v", err)
