@@ -111,6 +111,46 @@ mmc partconf 0 1 1 0
 2. Remove SD card and USB drive
 3. Power on
 
+## Giving the Board a Permanent MAC Address
+
+The BPI-R64 has no EEPROM with a factory-programmed MAC address.  Out
+of the box every Ethernet port therefore gets a random address on each
+boot, and the hostname, which is derived from the base address, changes
+with it.  The Wi-Fi radio carries the same MediaTek default address on
+every board, so two boards cannot even connect to each other over
+Wi-Fi: a client refuses to authenticate to an access point that has its
+own address.
+
+Store a product record as `/mnt/aux/vpd.bin`, from the Infix shell,
+and the board keeps that identity across reboots and upgrades.  This
+requires a boot loader from v26.11.0 or later:
+
+```
+echo '{"mac-address":"02:00:00:ba:64:00","serial-number":"banana64","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R64"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
+```
+
+Give each board its own base address and serial number, then reboot.
+The base address becomes the hostname suffix, each wired port gets a
+fixed offset from the base, and the Wi-Fi interfaces get addresses
+derived from it.  With the record above the board is named
+`bpi-ba-64-00`, `wan` is `02:00:00:ba:64:02`, `lan0` is
+`02:00:00:ba:64:03` and `wifi0` is `06:00:00:ba:64:00`.  A port goes
+back to its VPD address when a custom MAC address is removed from it.
+
+| Offset | Port             |
+|--------|------------------|
+| +1     | CPU switch port  |
+| +2     | `wan`            |
+| +3..+6 | `lan0`..`lan3`   |
+| +7     | Second CPU port  |
+
+A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
+lab.  For boards that will share a network with other equipment, use a
+range you own.  Remove the file to return to random addresses.  See
+[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
+for the record format and what else it can carry.
+
 ## Platform Notes
 
 ### Wi-Fi
@@ -123,6 +163,10 @@ slots.  The [Banana Pi BPI-MT7615][bpi-mt7615] is a purpose-built dual-band
 (2.4 + 5 GHz, 802.11ac 4×4) module designed for BPI router boards and is a
 natural fit.  With it installed, Infix will use it in preference to the onboard
 WMAC for the `wifi0-ap` interface.
+
+For Wi-Fi 6E, a Qualcomm WCN6855 card such as the QCNFA765 works as well.
+It shows up as its own radio on 2.4, 5 and 6 GHz with 802.11ax, next to
+the onboard WMAC.
 
 [bpi-mt7615]: https://docs.banana-pi.org/en/BPI-MT7615/BananaPi_MT7615
 
