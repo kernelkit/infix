@@ -1,7 +1,7 @@
-From c72296343a915f1a15e41e9442227f4e3e2af65a Mon Sep 17 00:00:00 2001
+From c7476a26e6062d9b6767793bc54b48dc1f2b2008 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 17 Sep 2026 17:09:02 +0200
-Subject: [PATCH 138/139] net: dsa: mv88e6xxx: Offload the tbf qdisc
+Subject: [PATCH 138/140] net: dsa: mv88e6xxx: Offload the tbf qdisc
 Organization: Wires
 
 A tbf qdisc on a switch port shapes only what the CPU sends; frames

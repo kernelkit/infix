@@ -1,7 +1,7 @@
-From 0dee7e22e6b77020d7b6e74b42fa500a185a9a99 Mon Sep 17 00:00:00 2001
+From df46425ad4d0c21d59e5897dfd0dc2564fc8ee49 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 9 Oct 2026 10:12:29 +0200
-Subject: [PATCH 113/139] net: sparx5: share the CPU MAC entry of standalone
+Subject: [PATCH 113/140] net: sparx5: share the CPU MAC entry of standalone
  ports with one address
 Organization: Wires
 

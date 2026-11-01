@@ -1,7 +1,7 @@
-From 657213d095a123cca4234b7864c68a89005336c8 Mon Sep 17 00:00:00 2001
+From 5708d34b363d834559c6a41c9a0cece49ca09d73 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sat, 17 Oct 2026 09:14:50 +0200
-Subject: [PATCH 132/139] net: sparx5: fix leak of in-flight PTP timestamp
+Subject: [PATCH 132/140] net: sparx5: fix leak of in-flight PTP timestamp
  requests
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From a639522087660a3fa7f6bdfcc01bdb7a787cee4d Mon Sep 17 00:00:00 2001
+From 1946cf709f88350f062b367104167fe981681d83 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 14 Oct 2026 15:21:35 +0200
-Subject: [PATCH 126/139] net: sparx5: do not double tag frames from the CPU on
+Subject: [PATCH 126/140] net: sparx5: do not double tag frames from the CPU on
  trunk ports
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From 48cd13ca13758c35c12a4c7d9a11515c5951f565 Mon Sep 17 00:00:00 2001
+From 2940f41f3d0f207382aa263617ca655982294405 Mon Sep 17 00:00:00 2001
 From: Hendrik Hamerlinck <hendrik.hamerlinck@hammernet.be>
 Date: Wed, 17 Sep 2025 08:59:07 +0200
-Subject: [PATCH 087/139] riscv: dts: spacemit: add UART pinctrl combinations
+Subject: [PATCH 087/140] riscv: dts: spacemit: add UART pinctrl combinations
 Organization: Wires
 
 Add UART pinctrl configurations based on the SoC datasheet and the

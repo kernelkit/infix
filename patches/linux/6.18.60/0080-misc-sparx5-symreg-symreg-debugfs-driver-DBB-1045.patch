@@ -1,7 +1,7 @@
-From 2f39fc502cd0a55ff4fa7677d482d7ef2a6f2799 Mon Sep 17 00:00:00 2001
+From 144be9133926a9d4c647acbed8b52f312c8cb70f Mon Sep 17 00:00:00 2001
 From: Steen Hegelund <steen.hegelund@microchip.com>
 Date: Wed, 21 Jan 2026 10:09:45 +0100
-Subject: [PATCH 080/139] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
+Subject: [PATCH 080/140] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
 Organization: Wires
 
 Expose the switch register space of Microchip Sparx5 family SoCs
