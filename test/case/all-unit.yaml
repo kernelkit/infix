@@ -7,3 +7,5 @@
     - cli
     - check
 
+- name:  confd
+  suite: confd/all.yaml

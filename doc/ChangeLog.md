@@ -19,6 +19,11 @@ All notable changes to the project are documented in this file.
   interface <port>` command and the WebUI interface page run.  The octet
   counters of an interface remain in the operational datastore
 
+### Fixes
+
+- Fix Wi-Fi and PPP connection failures caused by extra characters in
+  decoded passwords
+
 
 [v26.10.0][] - 2026-10-30
 -------------------------
