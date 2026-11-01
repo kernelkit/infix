@@ -1,5 +1,7 @@
 {{define "iface-counters"}}
-<div id="iface-counters" hx-get="/interfaces/{{.Name}}/counters" hx-trigger="every 5s" hx-swap="outerHTML">
+<div id="iface-counters" class="poll-group" hx-get="/interfaces/{{.Name}}/counters" hx-trigger="every 5s" hx-swap="morph:outerHTML">
+  <section class="info-card">
+  <div class="card-header">Counters</div>
   <table class="counters-table">
     <thead>
       <tr>
@@ -41,5 +43,19 @@
       </tr>
     </tbody>
   </table>
+  </section>
+  {{if .EthFrameStats}}
+  <section class="info-card">
+    <div class="card-header">Ethernet Frame Statistics</div>
+    <dl class="eth-stats">
+      {{range .EthFrameStats}}
+      <div class="eth-stats-row">
+        <dt>{{.Key}}</dt>
+        <dd class="num">{{.Value}}</dd>
+      </div>
+      {{end}}
+    </dl>
+  </section>
+  {{end}}
 </div>
 {{end}}

@@ -12,9 +12,10 @@
   <link rel="icon" type="image/png" href="/assets/img/jack.png">
   <link rel="stylesheet" href="/assets/css/style.css">
   <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/idiomorph-ext.min.js"></script>
   <script src="/assets/js/app.js"></script>
 </head>
-<body hx-boost="true">
+<body hx-boost="true" hx-ext="morph">
   <div id="page-progress" class="page-progress" aria-hidden="true"></div>
   <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
   <div hidden hx-get="/device-status" hx-trigger="every 5s" hx-swap="none"></div>
