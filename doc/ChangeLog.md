@@ -25,6 +25,11 @@ All notable changes to the project are documented in this file.
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
 
+### Fixes
+
+- Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
+  their configuration was not applied
+
 
 [v26.10.0][] - 2026-10-30
 -------------------------
