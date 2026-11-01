@@ -145,6 +145,14 @@ power supply works.
 The USB port at the front, next to the LEDs, is `usb1`, and the one at
 the side, next to the antenna, is `usb2`.
 
+The optional RTL8822CS Wi-Fi module is supported.
+
+> [!NOTE]
+> Mainline's R2S Plus device tree has the VCCIO4 and VCCIO6 I/O domains
+> swapped and no Wi-Fi nodes.  Infix fixes both in its own wrapper,
+> `dts/rockchip/rk3328-nanopi-r2s-plus.dts`.  These fixes have not been
+> sent upstream yet.
+
 
 Console Port
 ------------
