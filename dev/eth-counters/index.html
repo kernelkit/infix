@@ -2513,7 +2513,12 @@
 
 
 <h1 id="rmon-counters">RMON Counters<a class="headerlink" href="#rmon-counters" title="Permanent link">¶</a></h1>
-<p>This document show the mapping between YANG and Linux / Ethtool counters.</p>
+<p>The Ethernet frame counters of a port are read on request with the
+<code>get-statistics</code> action on the Ethernet container of the interface,
+which <code>show interface &lt;port&gt;</code> runs for you.  A port whose driver keeps
+no IEEE 802.3 counters answers without any.</p>
+<p>This document shows the mapping between the YANG leaves of the action
+output and the Linux / Ethtool counters.</p>
 <table>
 <thead>
 <tr>
@@ -2523,7 +2528,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>in-total-octets</code></td>
+<td><code>in-total-frames</code></td>
 <td><code>FramesReceivedOK</code>, <code>FrameCheckSequenceErrors</code>, <code>FramesLostDueToIntMACRcvError</code>, <code>AlignmentErrors</code>, <code>etherStatsOversizePkts</code>, <code>etherStatsJabbers</code></td>
 </tr>
 <tr>
@@ -2544,7 +2549,7 @@
 </tr>
 <tr>
 <td><code>in-error-undersize-frames</code></td>
-<td><code>undersize_pkts</code></td>
+<td><code>etherStatsUndersizePkts</code></td>
 </tr>
 <tr>
 <td><code>in-error-oversize-frames</code></td>
@@ -2553,6 +2558,10 @@
 <tr>
 <td><code>in-error-mac-internal-frames</code></td>
 <td><code>FramesLostDueToIntMACRcvError</code></td>
+</tr>
+<tr>
+<td><code>in-good-octets</code></td>
+<td><code>OctetsReceivedOK</code></td>
 </tr>
 <tr>
 <td><code>out-frames</code></td>
@@ -2567,12 +2576,8 @@
 <td><code>BroadcastFramesXmittedOK</code></td>
 </tr>
 <tr>
-<td><code>infix-eth:out-good-octets</code></td>
+<td><code>out-good-octets</code></td>
 <td><code>OctetsTransmittedOK</code></td>
-</tr>
-<tr>
-<td><code>infix-eth:in-good-octets</code></td>
-<td><code>OctetsReceivedOK</code></td>
 </tr>
 </tbody>
 </table>

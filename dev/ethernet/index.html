@@ -2944,7 +2944,12 @@ speed              : 10000
 </code></pre>
 
 <h3 id="ethernet-statistics">Ethernet statistics<a class="headerlink" href="#ethernet-statistics" title="Permanent link">¶</a></h3>
-<p>Ethernet packet statistics<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> can be listed as shown below.</p>
+<p>Ethernet frame counters<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> are read from the port when asked, with the
+<code>get-statistics</code> action on the Ethernet container of the interface.  The
+counters are not part of the operational datastore, which only carries
+the octet counters of the interface.  The <code>show interface</code> command runs
+the action for an Ethernet port and lists the result below the interface
+details, as shown below.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface eth1</b>
 name               : eth1
 index              : 2
@@ -3013,10 +3018,10 @@ the interface type to <code>veth</code> manually.</p>
 <hr>
 <ol>
 <li id="fn:1">
-<p>Ethernet counters are described in <em>ieee802-ethernet-interface.yang</em>
-and <em>infix-ethernet-interface.yang</em>.  There is a dedicated document on
-<a href="../eth-counters/">Ethernet Counters</a> that provide additional details
-on the statistics support.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+<p>The counters follow <em>ieee802-ethernet-interface.yang</em> and are defined
+by the action in <em>infix-ethernet-interface.yang</em>.  There is a dedicated
+document on <a href="../eth-counters/">Ethernet Counters</a> that provides additional
+details on the statistics support.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
 </li>
 </ol>
 </div>
