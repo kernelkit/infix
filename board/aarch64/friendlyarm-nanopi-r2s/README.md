@@ -1,12 +1,17 @@
 FriendlyELC NanoPi R2S
 ======================
 
-The [NanoPi R2S][1] is a very low-cost 64-bit ARM min router, powered by
-the Rockchip RK3328, quad-core Cortex-A53.
+<img align="right" src="overview.png" alt="Board Overview" width=420>
 
-The R2S does not have any onboard eMMC, so the only way to boot Infix on
-it is using and SD card.
+The [NanoPi R2S][1] is a very low-cost 64-bit ARM min router, powered by the
+Rockchip RK3328, quad-core Cortex-A53.
 
+The R2S does not have any onboard eMMC, so the only way to boot Infix on it is
+using and SD card.  The R2S Plus adds a 32 GiB eMMC and a MASK button, see
+[NanoPi R2S Plus][2] product page or the details worth knowing about it in
+Infix, [below](#nanopi-r2s-plus).
+
+See the [blog post][3] for more details.
 
 LEDs
 ----
@@ -101,6 +106,43 @@ Worth noting, unlike many other boards, the Rockchip family of chipsets
 runs the UART at 1500000 bps (1.5 Mbps) 8N1.
 
 
+NanoPi R2S Plus
+---------------
+
+The same SD card image boots both the R2S and the R2S Plus.  U-Boot
+detects the eMMC and loads the matching device tree.
+
+The boot ROM tries the eMMC before the SD card.  Hold the MASK button at
+power-on to skip the eMMC, e.g., when it holds FriendlyWrt or a broken
+install.  To boot from the SD card without the MASK button, erase the
+eMMC from the U-Boot prompt:
+
+```
+(r2s) mmc dev 0
+(r2s) gpt write mmc 0 "name=blank,size=-"
+(r2s) mmc erase 40 7fc0
+```
+
+To install Infix on the eMMC, boot from the SD card, copy the SD card
+image to the device, and write it to `/dev/mmcblk1`:
+
+```
+admin@infix-00-00-00:~$ sudo dd if=/var/tmp/infix-nanopi-r2s-sdcard.img of=/dev/mmcblk1 bs=1M conv=fsync
+```
+
+Power off and remove the SD card.  U-Boot boots from the SD card when it
+holds Infix, and from the eMMC otherwise.
+
+> [!NOTE]
+> Do not boot with Infix on both the SD card and the eMMC.  Partitions
+> are mounted by label, so the system may mix the two installations.
+> Erase the eMMC from U-Boot first, as above.
+
+The R2S Plus needs a strong power supply.  With a weak one it locks up
+shortly after boot, without any error message.  The Raspberry Pi 5 USB-C
+power supply works.
+
+
 Console Port
 ------------
 
@@ -170,3 +212,5 @@ eth1    UP     02:00:c0:ff:ee:01 <BROADCAST,MULTICAST,UP,LOWER_UP>
 ```
 
 [1]: https://wiki.friendlyelec.com/wiki/index.php/NanoPi_R2S
+[2]: https://wiki.friendlyelec.com/wiki/index.php/NanoPi_R2S_Plus
+[3]: https://www.kernelkit.org/posts/router-boards/#friendlyelec-nanopi-r2s
