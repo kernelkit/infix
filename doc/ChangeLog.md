@@ -24,6 +24,7 @@ All notable changes to the project are documented in this file.
   ones on every boot.  Requires a bootloader from v26.11.0 or later
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
+- NanoPi R2S Plus: Infix can now be installed on the eMMC
 
 ### Fixes
 
