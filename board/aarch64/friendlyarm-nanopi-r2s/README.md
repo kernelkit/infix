@@ -142,6 +142,9 @@ The R2S Plus needs a strong power supply.  With a weak one it locks up
 shortly after boot, without any error message.  The Raspberry Pi 5 USB-C
 power supply works.
 
+The USB port at the front, next to the LEDs, is `usb1`, and the one at
+the side, next to the antenna, is `usb2`.
+
 
 Console Port
 ------------
