@@ -3,11 +3,12 @@
 #include "infix.dtsi"
 
 / {
-	compatible = "friendlyarm,nanopi-r2s", "rockchip,rk3328";
+	compatible = "friendlyarm,nanopi-r2s-plus", "friendlyarm,nanopi-r2s",
+		     "rockchip,rk3328";
 };
 
 &{/chosen/infix} {
-	/* Expose only the external USB 2.0 port for user management */
-	usb-ports = <&usb_host0_ehci>;
-	usb-port-names = "usb";
+	/* Front port by the LEDs, side port by the antenna */
+	usb-ports = <&usb_host0_ehci>, <&usbdrd3>;
+	usb-port-names = "usb1", "usb2";
 };

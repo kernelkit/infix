@@ -25,6 +25,7 @@ All notable changes to the project are documented in this file.
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
+- NanoPi R2S Plus: both USB ports can now be locked and unlocked
 
 ### Fixes
 
