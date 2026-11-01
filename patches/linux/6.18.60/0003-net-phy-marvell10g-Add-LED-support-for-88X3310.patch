@@ -1,7 +1,7 @@
-From 45f6495270b4268d0d42cf21a72b64b90111bb47 Mon Sep 17 00:00:00 2001
+From 743bb6420fa7f0061d6980f4c944a1e377ab384c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 003/139] net: phy: marvell10g: Add LED support for 88X3310
+Subject: [PATCH 003/140] net: phy: marvell10g: Add LED support for 88X3310
 Organization: Wires
 
 Pickup the LEDs from the state in which the hardware reset or

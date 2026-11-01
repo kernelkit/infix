@@ -24,6 +24,15 @@ All notable changes to the project are documented in this file.
   ones on every boot.  Requires a bootloader from v26.11.0 or later
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
+- NanoPi R2S Plus: Infix can now be installed on the eMMC
+- NanoPi R2S Plus: both USB ports can now be locked and unlocked
+- NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
+
+### Fixes
+
+- Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
+  their configuration was not applied
+- NanoPi R2S: the LAN port got a random MAC address on every boot
 
 
 [v26.10.0][] - 2026-10-30

@@ -1,7 +1,7 @@
-From ac0d24ed970c9c78b33d1d8d216afea0c705bf29 Mon Sep 17 00:00:00 2001
+From 9556d118e86e317d8d582929f3322fa00f25b368 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:14:23 +0200
-Subject: [PATCH 042/139] net/pcs: add MediaTek MT7988 USXGMII PCS driver
+Subject: [PATCH 042/140] net/pcs: add MediaTek MT7988 USXGMII PCS driver
 Organization: Wires
 
 Add a PCS driver for the USXGMII subsystem found in the MediaTek MT7988

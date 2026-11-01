@@ -1,7 +1,7 @@
-From 88db51d8bf8273aff8ce272d589ccf93a074a808 Mon Sep 17 00:00:00 2001
+From f587a37b363dccb88a058fe69584c8854ad1927f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 18 Oct 2026 14:14:05 +0200
-Subject: [PATCH 130/139] net: sparx5: let the bridge forward IGMP
+Subject: [PATCH 130/140] net: sparx5: let the bridge forward IGMP
 Organization: Wires
 
 IGMP never crosses a sparx5 bridge.  With three bridges in a chain, the

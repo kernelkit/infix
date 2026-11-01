@@ -1,7 +1,7 @@
-From 640624394db73b4d8fff8399c1018c56b70d6230 Mon Sep 17 00:00:00 2001
+From 6b9e3f76e1e95efb326db13e0e7e7b38d246d037 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:27:50 +0200
-Subject: [PATCH 119/139] net: phy: micrel: lan8814: restart stuck
+Subject: [PATCH 119/140] net: phy: micrel: lan8814: restart stuck
  autonegotiation
 Organization: Wires
 

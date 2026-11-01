@@ -1,7 +1,7 @@
 / {
 	config {
 		environment {
-			boot_targets = "mmc1";
+			boot_targets = "mmc1 mmc0";
 			ethprime = "eth0";
 
 			/* The R2S Plus has an on-board eMMC (mmc0); the plain R2S does
@@ -49,4 +49,14 @@ fi
 			label = "factory-reset";
 		};
 	};
+};
+
+/* Enabled on both boards so that ixvariant can probe for the R2S Plus eMMC */
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&emmc_clk &emmc_cmd &emmc_bus8>;
+	status = "okay";
 };

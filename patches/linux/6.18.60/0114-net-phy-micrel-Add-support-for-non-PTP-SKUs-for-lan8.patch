@@ -1,7 +1,7 @@
-From 19311445445bf4788b14779b0fde8c664f2c4641 Mon Sep 17 00:00:00 2001
+From ff1faf2c8428666e455149dd18e1888c40197a32 Mon Sep 17 00:00:00 2001
 From: Horatiu Vultur <horatiu.vultur@microchip.com>
 Date: Tue, 21 Oct 2025 09:07:26 +0200
-Subject: [PATCH 114/139] net: phy: micrel: Add support for non PTP SKUs for
+Subject: [PATCH 114/140] net: phy: micrel: Add support for non PTP SKUs for
  lan8814
 Organization: Wires
 

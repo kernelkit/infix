@@ -1,7 +1,7 @@
-From 37b337c4cc573f23cef295e72d77b4fad0cd9b66 Mon Sep 17 00:00:00 2001
+From e8246ddbc316480892389ae2c16fc904fe93eda4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:42:34 +0200
-Subject: [PATCH 117/139] net: phy: micrel: lan8814: resync QSGMII after every
+Subject: [PATCH 117/140] net: phy: micrel: lan8814: resync QSGMII after every
  PHY reset
 Organization: Wires
 

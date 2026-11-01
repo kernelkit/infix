@@ -1,12 +1,17 @@
 FriendlyELC NanoPi R2S
 ======================
 
-The [NanoPi R2S][1] is a very low-cost 64-bit ARM min router, powered by
-the Rockchip RK3328, quad-core Cortex-A53.
+<img align="right" src="overview.png" alt="Board Overview" width=420>
 
-The R2S does not have any onboard eMMC, so the only way to boot Infix on
-it is using and SD card.
+The [NanoPi R2S][1] is a very low-cost 64-bit ARM min router, powered by the
+Rockchip RK3328, quad-core Cortex-A53.
 
+The R2S does not have any onboard eMMC, so the only way to boot Infix on it is
+using and SD card.  The R2S Plus adds a 32 GiB eMMC and a MASK button, see
+[NanoPi R2S Plus][2] product page or the details worth knowing about it in
+Infix, [below](#nanopi-r2s-plus).
+
+See the [blog post][3] for more details.
 
 LEDs
 ----
@@ -101,6 +106,54 @@ Worth noting, unlike many other boards, the Rockchip family of chipsets
 runs the UART at 1500000 bps (1.5 Mbps) 8N1.
 
 
+NanoPi R2S Plus
+---------------
+
+The same SD card image boots both the R2S and the R2S Plus.  U-Boot
+detects the eMMC and loads the matching device tree.
+
+The boot ROM tries the eMMC before the SD card.  Hold the MASK button at
+power-on to skip the eMMC, e.g., when it holds FriendlyWrt or a broken
+install.  To boot from the SD card without the MASK button, erase the
+eMMC from the U-Boot prompt:
+
+```
+(r2s) mmc dev 0
+(r2s) gpt write mmc 0 "name=blank,size=-"
+(r2s) mmc erase 40 7fc0
+```
+
+To install Infix on the eMMC, boot from the SD card, copy the SD card
+image to the device, and write it to `/dev/mmcblk1`:
+
+```
+admin@infix-00-00-00:~$ sudo dd if=/var/tmp/infix-nanopi-r2s-sdcard.img of=/dev/mmcblk1 bs=1M conv=fsync
+```
+
+Power off and remove the SD card.  U-Boot boots from the SD card when it
+holds Infix, and from the eMMC otherwise.
+
+> [!NOTE]
+> Do not boot with Infix on both the SD card and the eMMC.  Partitions
+> are mounted by label, so the system may mix the two installations.
+> Erase the eMMC from U-Boot first, as above.
+
+The R2S Plus needs a strong power supply.  With a weak one it locks up
+shortly after boot, without any error message.  The Raspberry Pi 5 USB-C
+power supply works.
+
+The USB port at the front, next to the LEDs, is `usb1`, and the one at
+the side, next to the antenna, is `usb2`.
+
+The optional RTL8822CS Wi-Fi module is supported.
+
+> [!NOTE]
+> Mainline's R2S Plus device tree has the VCCIO4 and VCCIO6 I/O domains
+> swapped and no Wi-Fi nodes.  Infix fixes both in its own wrapper,
+> `dts/rockchip/rk3328-nanopi-r2s-plus.dts`.  These fixes have not been
+> sent upstream yet.
+
+
 Console Port
 ------------
 
@@ -120,39 +173,31 @@ device also runs in *developer mode*, allowing full U-Boot shell access,
 which you may also want to disable in a full production setting.
 
 
-Caveat
-------
+MAC Addresses
+-------------
 
-Most (all?) of these boards do not have any Vital Product Data (VPD)
-EEPROM mounted.  This means they do not come with unique MAC addresses
-allocated to the two Ethernet ports.
+The boards have no Vital Product Data (VPD) EEPROM.  U-Boot derives the
+MAC addresses of the WAN and LAN ports from the unique ID of the SoC,
+so each board has its own addresses, the same on every boot.  The
+serial number is also taken from the SoC.
 
-The bootloader (U-Boot) default environment for the board is usually
-what provides a default, the same default MAC addresses to Linux:
-
- - 4a:dc:d8:20:0d:84
- - 4a:dc:d8:20:0d:85
-
-This is important in case you want to run multiple R2S devices on the
-same LAN.  Meaning you either have to change the MAC address in the
-U-Boot environment (below), or use the `custom-phys-address` setting in
-Infix for the interface(s).
-
-Break into U-Boot using Ctrl-C at power-on, preferably when the text
-`Press Ctrl-C NOW to enter boot menu` is displayed.  Exit the menu to
-get to the prompt:
+To use other addresses, set `custom-phys-address` on the interface in
+Infix, or change them in the U-Boot environment.  Break into U-Boot
+using Ctrl-C at power-on, preferably when the text `Press Ctrl-C NOW to
+enter boot menu` is displayed.  Exit the menu to get to the prompt:
 
 ```
 (r2s) printenv
 ...
-eth1addr=4a:dc:d8:20:0d:84
+eth1addr=9e:86:9c:5f:bc:23
 ethact=ethernet@ff540000
-ethaddr=4a:dc:d8:20:0d:85
+ethaddr=9e:86:9c:5f:bc:22
 ethprime=eth0
 ...
 ```
 
-Here we change both addresses, using the *Locally Administered* bit:
+The `ethaddr` is the WAN port and `eth1addr` the LAN port.  Here we
+change both addresses, using the *Locally Administered* bit:
 
 ```
 (r2s) setenv eth1addr 02:00:c0:ff:ee:01
@@ -165,8 +210,10 @@ Boot the system, log into Linux, and inspect the MAC addresses:
 ```
 admin@infix-00-00-00:~$ ip -br l
 lo      UP     00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
-eth0    UP     02:00:c0:ff:ee:00 <BROADCAST,MULTICAST,UP,LOWER_UP>
-eth1    UP     02:00:c0:ff:ee:01 <BROADCAST,MULTICAST,UP,LOWER_UP>
+wan     UP     02:00:c0:ff:ee:00 <BROADCAST,MULTICAST,UP,LOWER_UP>
+lan     UP     02:00:c0:ff:ee:01 <BROADCAST,MULTICAST,UP,LOWER_UP>
 ```
 
 [1]: https://wiki.friendlyelec.com/wiki/index.php/NanoPi_R2S
+[2]: https://wiki.friendlyelec.com/wiki/index.php/NanoPi_R2S_Plus
+[3]: https://www.kernelkit.org/posts/router-boards/#friendlyelec-nanopi-r2s

@@ -1,7 +1,7 @@
-From 496482adbc564614e52b9f8839ae9d644b7702da Mon Sep 17 00:00:00 2001
+From 7cac10fadad59a514a749109e06361831c56f943 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 13 Oct 2026 15:48:00 +0200
-Subject: [PATCH 102/139] net: dsa: mt7530: lock the MDIO bus around regmap-irq
+Subject: [PATCH 102/140] net: dsa: mt7530: lock the MDIO bus around regmap-irq
  accesses
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

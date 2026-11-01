@@ -1,7 +1,7 @@
-From e9fb3648f016b520af16455102a70548e2558403 Mon Sep 17 00:00:00 2001
+From aa0880d6b756477b527efa792265102da05bc0a8 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 22 Sep 2026 13:53:23 +0200
-Subject: [PATCH 078/139] net: dsa: Support the IEEE ETS managed object
+Subject: [PATCH 078/140] net: dsa: Support the IEEE ETS managed object
 Organization: Wires
 
 A switch port's transmission selection is configured today through the

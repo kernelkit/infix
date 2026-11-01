@@ -1,7 +1,7 @@
-From e252f62db8c267882b7af732717808f588e86610 Mon Sep 17 00:00:00 2001
+From dec106afe81cfac5b35b34f7063bb32027bef93d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 18 Oct 2026 11:31:40 +0200
-Subject: [PATCH 103/139] clk: mediatek: mt7988: keep the PCIe port clocks
+Subject: [PATCH 103/140] clk: mediatek: mt7988: keep the PCIe port clocks
  enabled
 Organization: Wires
 
