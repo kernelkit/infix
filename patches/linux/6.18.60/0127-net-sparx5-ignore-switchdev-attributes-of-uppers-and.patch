@@ -1,7 +1,7 @@
-From 1ec9ccc8cd718cf00e4a0f8e14c9c1af745b0342 Mon Sep 17 00:00:00 2001
+From 928b819b4ce50e6ae92210f1179c2aaa9df16f5f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 15 Oct 2026 11:15:52 +0200
-Subject: [PATCH 127/139] net: sparx5: ignore switchdev attributes of uppers
+Subject: [PATCH 127/140] net: sparx5: ignore switchdev attributes of uppers
  and other bridges
 Organization: Wires
 

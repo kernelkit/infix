@@ -1,7 +1,7 @@
-From aa56fcd8a648c2d3906145eb6e12cc7cdd76fa51 Mon Sep 17 00:00:00 2001
+From e3c435d2bee04679d666778bd9f0ea7924f07a43 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 5 Apr 2026 11:33:00 +0200
-Subject: [PATCH 041/139] net/pcs: add standalone PCS registration
+Subject: [PATCH 041/140] net/pcs: add standalone PCS registration
  infrastructure
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From df6dc326968a5160dcd9ac42948e691f9c87c433 Mon Sep 17 00:00:00 2001
+From 2176d48fe145d139bd25397c233c96d1aa68d049 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:34:01 +0200
-Subject: [PATCH 115/139] net: phy: micrel: move lan8842 errata tables before
+Subject: [PATCH 115/140] net: phy: micrel: move lan8842 errata tables before
  lan8814
 Organization: Wires
 

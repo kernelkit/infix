@@ -1,0 +1,48 @@
+From 6f2ba014c6d71132fdd5246e399c561bc3cd81d3 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 1 Nov 2026 17:33:47 +0100
+Subject: [PATCH 140/140] usb: core: match root hub port DT nodes by raw port
+ number
+Organization: Wires
+
+A device on a root hub port gets its device tree node from the child
+of the controller node whose reg is the raw port number, the one the
+host controller uses.  The port's connect type is looked up by the
+logical port number instead, so the two disagree on an xHCI with both
+USB 2 and USB 3 ports.
+
+The RTL8153 on the NanoPi R2S is SuperSpeed root hub port 1, raw port
+2.  With reg = <2> the device gets its node, and with it the MAC
+address the boot loader stores there, but the port is not marked as
+hard-wired, so usbcore.authorized_default=2 leaves it unauthorized.
+With reg = <1> it is the other way around.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/usb/core/port.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/core/port.c b/drivers/usb/core/port.c
+index 7cae19484355..92e8616e5fb2 100644
+--- a/drivers/usb/core/port.c
++++ b/drivers/usb/core/port.c
+@@ -740,6 +740,7 @@ int usb_hub_create_port_device(struct usb_hub *hub, int port1)
+ {
+ 	struct usb_port *port_dev;
+ 	struct usb_device *hdev = hub->hdev;
++	int raw_port = port1;
+ 	int retval;
+ 
+ 	port_dev = kzalloc(sizeof(*port_dev), GFP_KERNEL);
+@@ -752,7 +753,10 @@ int usb_hub_create_port_device(struct usb_hub *hub, int port1)
+ 		return -ENOMEM;
+ 	}
+ 
+-	port_dev->connect_type = usb_of_get_connect_type(hdev, port1);
++	if (!hdev->parent)
++		raw_port = usb_hcd_find_raw_port_number(bus_to_hcd(hdev->bus),
++							port1);
++	port_dev->connect_type = usb_of_get_connect_type(hdev, raw_port);
+ 	hub->ports[port1 - 1] = port_dev;
+ 	port_dev->portnum = port1;
+ 	set_bit(port1, hub->power_bits);

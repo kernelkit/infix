@@ -1,7 +1,7 @@
-From 78135db37b1a682e1de0f5531205ce17c4b74ef8 Mon Sep 17 00:00:00 2001
+From 11e6966c1694232015e0441818add5ea96c8547c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:35:29 +0200
-Subject: [PATCH 054/139] dt-bindings: mmc: atmel,sama5d2-sdhci: add
+Subject: [PATCH 054/140] dt-bindings: mmc: atmel,sama5d2-sdhci: add
  microchip,lan969x-sdhci
 Organization: Wires
 

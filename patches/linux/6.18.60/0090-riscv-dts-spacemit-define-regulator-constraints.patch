@@ -1,7 +1,7 @@
-From 3179622e09954627740cb099abf136354da9fa4f Mon Sep 17 00:00:00 2001
+From 63c79cd2394014b45f4ff25b306353d64f81685a Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:56 -0500
-Subject: [PATCH 090/139] riscv: dts: spacemit: define regulator constraints
+Subject: [PATCH 090/140] riscv: dts: spacemit: define regulator constraints
 Organization: Wires
 
 Define basic constraints for the regulators in the SpacemiT P1 PMIC,

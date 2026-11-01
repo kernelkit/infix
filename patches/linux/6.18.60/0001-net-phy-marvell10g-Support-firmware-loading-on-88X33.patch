@@ -1,7 +1,7 @@
-From 94ac144a9d46ca99606a6b39533e3fb9686fe70f Mon Sep 17 00:00:00 2001
+From be9e488785558be53772aebbed94ec31a7e4e016 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 001/139] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 001/140] net: phy: marvell10g: Support firmware loading on
  88X3310
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From 5e77c12805cf4438c902f9217ef2deb9f5f9ed93 Mon Sep 17 00:00:00 2001
+From 4dce4de3daeec5b49d7b733991297657ae420f22 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 17 Sep 2026 17:09:45 +0200
-Subject: [PATCH 139/139] net: dsa: mv88e6xxx: Offload the ets qdisc
+Subject: [PATCH 139/140] net: dsa: mv88e6xxx: Offload the ets qdisc
 Organization: Wires
 
 An ets qdisc on a switch port schedules only what the CPU sends.  The

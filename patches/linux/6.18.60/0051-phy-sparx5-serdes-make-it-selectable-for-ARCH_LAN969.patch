@@ -1,7 +1,7 @@
-From 9493bebad57a6d9edb22b4001d114b7a172dc0f1 Mon Sep 17 00:00:00 2001
+From 3b8c1832fb91d76e6efa8a41ce67525ddc33486d Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 31 Oct 2025 13:18:12 +0100
-Subject: [PATCH 051/139] phy: sparx5-serdes: make it selectable for
+Subject: [PATCH 051/140] phy: sparx5-serdes: make it selectable for
  ARCH_LAN969X
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From 1a0d88dd5604e90a8920ed0829a3d8d58b81eb4c Mon Sep 17 00:00:00 2001
+From 18a7c9960e2ab8c03c8f8298b360b20b0fe11ec1 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 15 Oct 2026 11:19:46 +0200
-Subject: [PATCH 128/139] net: sparx5: send reserved link-local multicast to
+Subject: [PATCH 128/140] net: sparx5: send reserved link-local multicast to
  the CPU
 Organization: Wires
 

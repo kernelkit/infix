@@ -1,7 +1,7 @@
-From c0e314b49d3f32a6d6b65b3a98632c8d5238d87d Mon Sep 17 00:00:00 2001
+From 7305c3d65b801f42f8528eec7bd0b6b6e1a8d794 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 20 Sep 2026 12:22:43 +0200
-Subject: [PATCH 072/139] arm64: dts: microchip: tactical-1000: adapt to 6.18
+Subject: [PATCH 072/140] arm64: dts: microchip: tactical-1000: adapt to 6.18
 Organization: Wires
 
 Novarq develop against 7.3, which has three things 6.18 does not: a QSPI
