@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <ctype.h>
 #include <fnmatch.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -319,4 +320,132 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 	}
 
 	return 0;
+}
+
+/* The standard ethtool counters behind one frame counter, summed */
+struct eth_source {
+	const char *group;
+	const char *name;
+};
+
+struct eth_counter {
+	const char *leaf;
+	struct eth_source src[6];
+};
+
+static const struct eth_counter eth_counters[] = {
+	{ "in-total-frames", {
+		{ "eth-mac", "FramesReceivedOK" },
+		{ "eth-mac", "FrameCheckSequenceErrors" },
+		{ "eth-mac", "FramesLostDueToIntMACRcvError" },
+		{ "eth-mac", "AlignmentErrors" },
+		{ "rmon", "etherStatsOversizePkts" },
+		{ "rmon", "etherStatsJabbers" } } },
+	{ "in-frames",                    { { "eth-mac", "FramesReceivedOK" } } },
+	{ "in-multicast-frames",          { { "eth-mac", "MulticastFramesReceivedOK" } } },
+	{ "in-broadcast-frames",          { { "eth-mac", "BroadcastFramesReceivedOK" } } },
+	{ "in-error-fcs-frames",          { { "eth-mac", "FrameCheckSequenceErrors" } } },
+	{ "in-error-undersize-frames",    { { "rmon",    "etherStatsUndersizePkts" } } },
+	{ "in-error-oversize-frames",     { { "rmon",    "etherStatsOversizePkts" },
+					    { "rmon",    "etherStatsJabbers" } } },
+	{ "in-error-mac-internal-frames", { { "eth-mac", "FramesLostDueToIntMACRcvError" } } },
+	{ "in-good-octets",               { { "eth-mac", "OctetsReceivedOK" } } },
+	{ "out-frames",                   { { "eth-mac", "FramesTransmittedOK" } } },
+	{ "out-multicast-frames",         { { "eth-mac", "MulticastFramesXmittedOK" } } },
+	{ "out-broadcast-frames",         { { "eth-mac", "BroadcastFramesXmittedOK" } } },
+	{ "out-good-octets",              { { "eth-mac", "OctetsTransmittedOK" } } },
+};
+
+static bool valid_ifname(const char *name)
+{
+	size_t len = strnlen(name, IFNAMSIZ);
+
+	if (!len || len >= IFNAMSIZ)
+		return false;
+	for (; *name; name++) {
+		if (!isalnum(*name) && !strchr("._-", *name))
+			return false;
+	}
+
+	return true;
+}
+
+/* The get-statistics action, the IEEE 802.3 counters ethtool reads from the port */
+static int ethernet_get_statistics(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+				   const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+				   struct lyd_node *output, void *priv)
+{
+	struct lyd_node *iface, *frame;
+	json_t *root, *stats;
+	const char *ifname;
+	json_error_t jerr;
+	FILE *pp;
+	size_t i;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	iface = lyd_parent(lyd_parent(input));
+	ifname = iface ? lydx_get_cattr(iface, "name") : NULL;
+	if (!ifname || !valid_ifname(ifname) || !if_nametoindex(ifname))
+		return rpc_failed(session, "No such interface");
+
+	pp = popenf("re", "ethtool --json -S %s --all-groups", ifname);
+	if (!pp)
+		return rpc_failed(session, "Failed reading Ethernet statistics");
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+
+	stats = json_array_get(root, 0);
+	if (!json_is_object(stats)) {
+		json_decref(root);
+		return rpc_failed(session, "Failed reading Ethernet statistics");
+	}
+
+	if (lyd_new_inner(output, NULL, "frame", 1, &frame)) {
+		json_decref(root);
+		return rpc_failed(session, "Failed building output");
+	}
+
+	for (i = 0; i < NELEMS(eth_counters); i++) {
+		const struct eth_counter *c = &eth_counters[i];
+		json_int_t sum = 0;
+		bool found = false;
+		char buf[32];
+		size_t j;
+
+		for (j = 0; j < NELEMS(c->src) && c->src[j].group; j++) {
+			json_t *val = json_object_get(json_object_get(stats, c->src[j].group),
+						      c->src[j].name);
+
+			if (!json_is_integer(val))
+				continue;
+			sum += json_integer_value(val);
+			found = true;
+		}
+		if (!found)
+			continue;
+
+		snprintf(buf, sizeof(buf), "%" JSON_INTEGER_FORMAT, sum);
+		lyd_new_term(frame, NULL, c->leaf, buf, LYD_NEW_VAL_OUTPUT, NULL);
+	}
+	json_decref(root);
+
+	if (!lyd_child(frame))
+		lyd_free_tree(frame);
+
+	return SR_ERR_OK;
+}
+
+int ethernet_rpc_init(struct confd *confd)
+{
+	int rc;
+
+	REGISTER_RPC_TREE(confd->session, IF_XPATH "/ieee802-ethernet-interface:ethernet"
+			  "/infix-ethernet-interface:get-statistics",
+			  ethernet_get_statistics, NULL, &confd->sub);
+	return SR_ERR_OK;
+fail:
+	ERROR("Init ethernet rpc failed: %s", sr_strerror(rc));
+	return rc;
 }

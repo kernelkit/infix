@@ -89,7 +89,7 @@ build vendors them from `go.sum`.
 | Tree key | Content | How | Source |
 |---|---|---|---|
 | `ietf-interfaces:interfaces` | links, addresses, neighbours, bridge MDB, VLANs, LAG | event | rtnetlink, re-read with `ip`/`bridge` batch |
-| | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start |
+| | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start; the frame counters are the `get-statistics` action in confd |
 | | QoS capabilities | event | rtnetlink TC and DCB, re-read with `tc` batch and DCB over rtnetlink |
 | | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
 | | STP port and bridge state | poll 5 s | mstpd |

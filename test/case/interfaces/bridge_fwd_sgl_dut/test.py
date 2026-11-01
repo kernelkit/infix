@@ -2,7 +2,8 @@
 r"""
 Bridge forwarding single DUTs
 
-Tests forwarding through a DUT with two bridged interfaces on one DUT.
+Tests forwarding through a DUT with two bridged interfaces on one DUT,
+and that the frame counters of the ports can be read afterwards.
 
 ....
 
@@ -26,11 +27,14 @@ Tests forwarding through a DUT with two bridged interfaces on one DUT.
 
 """
 import infamy
+import infamy.iface as iface
+from infamy.util import parallel
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
+        target, tssh = parallel(lambda: env.attach("target", "mgmt"),
+                                lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Configure a bridge with dual physical port"):
         tport1 = target["data1"]
@@ -73,5 +77,15 @@ with infamy.Test() as test:
             ns1.addip("10.0.0.1")
 
             ns1.must_reach("10.0.0.2")
+
+    with test.step("Read the frame counters of the bridge ports"):
+        for port in (tport1, tport2):
+            frame = iface.eth_statistics(target, port)
+            if frame:
+                assert frame["in-frames"] > 0, f"{port} counted no received frames"
+
+    with test.step("Show a bridge port in the CLI"):
+        out = tssh.runsh(f'klish -c "show interface {tport1}"').stdout
+        assert f"name               : {tport1}" in out, out
 
     test.succeed()

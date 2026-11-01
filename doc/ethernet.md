@@ -197,7 +197,12 @@ speed              : 10000
 
 ### Ethernet statistics
 
-Ethernet packet statistics[^1] can be listed as shown below.
+Ethernet frame counters[^1] are read from the port when asked, with the
+`get-statistics` action on the Ethernet container of the interface.  The
+counters are not part of the operational datastore, which only carries
+the octet counters of the interface.  The `show interface` command runs
+the action for an Ethernet port and lists the result below the interface
+details, as shown below.
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
 name               : eth1
@@ -266,7 +271,7 @@ admin@example:/config/>
 > type from the name.  Any name can be used, but then you have to set
 > the interface type to `veth` manually.
 
-[^1]: Ethernet counters are described in *ieee802-ethernet-interface.yang*
-    and *infix-ethernet-interface.yang*.  There is a dedicated document on
-    [Ethernet Counters](eth-counters.md) that provide additional details
-    on the statistics support.
+[^1]: The counters follow *ieee802-ethernet-interface.yang* and are defined
+    by the action in *infix-ethernet-interface.yang*.  There is a dedicated
+    document on [Ethernet Counters](eth-counters.md) that provides additional
+    details on the statistics support.

@@ -148,6 +148,35 @@ def radio_action(radio: str, action: str, what: str, *args: str):
     return result.stdout
 
 
+def find_container(data, name: str):
+    """The first container called name, however the output is wrapped, None when absent"""
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k == name and isinstance(v, dict):
+                return v
+            if found := find_container(v, name):
+                return found
+    elif isinstance(data, list):
+        for item in data:
+            if found := find_container(item, name):
+                return found
+    return None
+
+
+def ethernet_statistics(ifname: str):
+    """Run the get-statistics action on an Ethernet port, None when it fails"""
+    xpath = (f"/ietf-interfaces:interfaces/interface[name='{ifname}']"
+             "/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:get-statistics")
+    result = subprocess.run(["rpc", "-j", xpath], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(result.stderr.strip() or "reading the Ethernet statistics failed")
+        return None
+    try:
+        return find_container(json.loads(result.stdout), "frame")
+    except json.JSONDecodeError:
+        return None
+
+
 def find_lists(data, name: str, key: str) -> list:
     """Collect every list called name whose entries carry key, however the output is wrapped"""
     found = []
@@ -402,6 +431,13 @@ def interface(args: List[str]) -> None:
     elif len(args) == 1:
         iface = args[0]
         if is_valid_interface_name(iface):
+            # The frame counters of an Ethernet port are read on request
+            for entry in ifaces:
+                if entry.get("name") != iface or entry.get("type") != "infix-if-type:ethernet":
+                    continue
+                if frame := ethernet_statistics(iface):
+                    eth = entry.setdefault("ieee802-ethernet-interface:ethernet", {})
+                    eth["statistics"] = {"frame": frame}
             cli_pretty(data, "show-interfaces", "-n", iface)
         else:
             print(f"Invalid interface name: {iface}")
