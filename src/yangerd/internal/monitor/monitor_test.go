@@ -520,6 +520,40 @@ func TestOnDemandRefreshesDescriptionFromSysfs(t *testing.T) {
 	}
 }
 
+// Counters change without link events, the provider must take them
+// from sysfs on every read.
+func TestOnDemandRefreshesStatisticsFromSysfs(t *testing.T) {
+	fc := sysfsFiles{
+		"/sys/class/net/lan1/statistics/rx_bytes": "123456\n",
+		"/sys/class/net/lan1/statistics/tx_bytes": "7890\n",
+		"/sys/class/net/lan2/statistics/rx_bytes": "0\n",
+		"/sys/class/net/lan2/statistics/tx_bytes": "0\n",
+	}
+	m := New(nil, nil, nil, nil, tree.New(), fc, slog.Default())
+	m.tree.Set(treeKey, json.RawMessage(`{"interface":[`+
+		`{"name":"lan1","statistics":{"in-octets":"64"}},`+
+		`{"name":"lan2","statistics":{"in-octets":"64"}},`+
+		`{"name":"veth0","statistics":{"in-octets":"64"}}]}`))
+
+	var out struct {
+		Interface []struct {
+			Statistics map[string]string `json:"statistics"`
+		} `json:"interface"`
+	}
+	if err := json.Unmarshal(m.OnDemand(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.Interface[0].Statistics; got["in-octets"] != "123456" || got["out-octets"] != "7890" {
+		t.Errorf("lan1: want counters from sysfs, got %v", got)
+	}
+	if got := out.Interface[1].Statistics; got != nil {
+		t.Errorf("lan2: counters reset in sysfs, want no statistics, got %v", got)
+	}
+	if got := out.Interface[2].Statistics["in-octets"]; got != "64" {
+		t.Errorf("veth0: unreadable in sysfs, want link row value kept, got %v", got)
+	}
+}
+
 const vlanBridgeLinks = `[
  {"ifindex":5,"ifname":"br0","operstate":"UP","linkinfo":{"info_kind":"bridge","info_data":{"vlan_filtering":1,"vlan_protocol":"802.1Q","mcast_snooping":1}}},
  {"ifindex":6,"ifname":"br1","operstate":"UP","linkinfo":{"info_kind":"bridge","info_data":{"vlan_filtering":0,"vlan_protocol":"802.1Q","mcast_snooping":0}}},

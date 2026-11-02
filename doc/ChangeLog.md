@@ -34,6 +34,8 @@ All notable changes to the project are documented in this file.
   their configuration was not applied
 - NanoPi R2S: the LAN port got a random MAC address on every boot
 - `show interface` was slow, in particular on devices with a modem
+- The octet counters of an interface stopped counting after a while,
+  e.g., they stayed at zero on a switch port
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
 - x86_64: the `.qcow2` disk image had no free space, so a virtual

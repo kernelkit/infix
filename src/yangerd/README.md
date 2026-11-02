@@ -96,6 +96,7 @@ build vendors them from `go.sum`.
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
 | | `description` | on demand | sysfs `ifalias`, the link row is only current for interfaces that are up |
+| | byte counters | on demand | sysfs `statistics/`, the link row only has those of the last link event |
 | | modem bearer | event | ModemManager D-Bus signals |
 | | bridge IGMP/MLD querier | on demand | mcd IPC socket, `show interfaces json` |
 | | interfaces in container network namespaces | event | podman events and netlink in each container netns, re-read with `podman ps` and `ip -n` |
