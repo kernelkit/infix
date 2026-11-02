@@ -49,6 +49,13 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-11-02 {
+    description
+      "A radio may hold several station or mesh point interfaces as long
+       as only one of them is enabled.";
+    reference "internal";
+  }
+
   revision 2026-10-06 {
     description
       "Access point and mesh point require the box-wide Wi-Fi country code,
@@ -163,8 +170,8 @@ submodule infix-if-wifi {
         must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:wifi')" {
           error-message "Referenced hardware component must be a Wi-Fi radio (class 'ih:wifi')";
         }
-        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)]) <= 1" {
-          error-message "Only one station interface is allowed per radio";
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)][if:enabled = 'true']) <= 1" {
+          error-message "Only one enabled station interface is allowed per radio";
         }
 
         description
