@@ -38,6 +38,11 @@ All notable changes to the project are documented in this file.
 
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
+- x86_64: the `.qcow2` disk image had no free space, so a virtual
+  machine booted from it, e.g., in GNS3, fell back to temporary storage
+  and lost its configuration on reboot.  The image now has a virtual
+  size of 8 GiB, grown into on first boot, without any change to the
+  download size
 
 
 [v26.10.0][] - 2026-10-30

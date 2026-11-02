@@ -6,3 +6,14 @@ menuconfig IX_IMAGE_DDI_DISK
 	  Compose a full disk image consisting of an EFI System
 	  Partition (ESP) containing Barebox, and an LVM PV in which
 	  Infix is installed as an LV.
+
+config IX_IMAGE_DDI_DISK_QCOW_SIZE
+	string "QEMU disk image size"
+	depends on IX_IMAGE_DDI_DISK
+	default "8G"
+	help
+	  Virtual size of the generated .qcow2.  The image is sparse,
+	  so this does not affect the file size.  On first boot the
+	  internal volume group is grown to fill the disk, and the
+	  rw and secondary volumes are provisioned from that space.
+	  The .disk image is not affected.

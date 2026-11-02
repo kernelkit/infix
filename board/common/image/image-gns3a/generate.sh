@@ -2,9 +2,12 @@
 
 set -e
 
-bios="${BINARIES_DIR}"/OVMF.fd
 qcow="${BINARIES_DIR}"/"${ARTIFACT}".qcow2
 gns3a="${BINARIES_DIR}"/"${ARTIFACT}".gns3a
+
+# Same UEFI firmware as the Infix appliance in the GNS3 registry
+bios=OVMF-edk2-stable202305.fd
+bios_url="https://sourceforge.net/projects/gns-3/files/Qemu%20Appliances/"
 
 cat <<EOF >"${gns3a}"
 {
@@ -29,15 +32,17 @@ cat <<EOF >"${gns3a}"
         "hda_disk_interface": "virtio",
         "arch": "x86_64",
         "console_type": "telnet",
-        "bios_image": "$(basename ${bios})",
         "kvm": "allow"
     },
     "images": [
         {
-            "filename": "$(basename "${bios}")",
-            "filesize": $(stat --printf='%s' "${bios}"),
-            "md5sum": "$(md5sum "${bios}" | awk '{print $1}')",
-            "version": "0.0"
+            "filename": "${bios}",
+            "version": "stable202305",
+            "md5sum": "6c4cf1519fec4a4b95525d9ae562963a",
+            "filesize": 4194304,
+            "download_url": "${bios_url}",
+            "direct_download_url": "${bios_url}${bios}.zip/download",
+            "compression": "zip"
         },
         {
             "filename": "$(basename "${qcow}")",
@@ -50,8 +55,8 @@ cat <<EOF >"${gns3a}"
         {
             "name": "${VERSION}",
             "images": {
-                "bios_image": "$(basename ${bios})",
-                "hda_disk_image": "$(basename ${qcow})"
+                "bios_image": "${bios}",
+                "hda_disk_image": "$(basename "${qcow}")"
             }
         }
     ]
