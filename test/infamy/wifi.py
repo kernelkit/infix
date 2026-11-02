@@ -118,7 +118,7 @@ def channel_survey(target, radio="radio0", passive=False):
     """Run the channel-survey action on radio, return its channel list.
 
     Each entry has at least a frequency, the operating channel has
-    in-use set.  Values are strings on NETCONF, compare with str().
+    in-use set.
     """
     xpath = f"/ietf-hardware:hardware/component[name='{radio}']" \
             "/infix-hardware:wifi-radio/channel-survey"
@@ -130,7 +130,6 @@ def scan(target, radio="radio0"):
     """Run the scan action on radio, return the networks heard.
 
     Each entry has a bssid, a frequency and, unless hidden, an ssid.
-    Values are strings on NETCONF, compare with str().
     """
     xpath = f"/ietf-hardware:hardware/component[name='{radio}']" \
             "/infix-hardware:wifi-radio/scan"
@@ -141,8 +140,8 @@ def scan(target, radio="radio0"):
 def in_use_frequency(channels):
     """Frequency in MHz of the channel marked in-use, or None."""
     for ch in channels:
-        if str(ch.get("in-use")).lower() == "true":
-            return int(ch["frequency"])
+        if ch.get("in-use"):
+            return ch["frequency"]
     return None
 
 

@@ -467,16 +467,16 @@ class Device(Transport):
         coverage.track_xpath(xpath)
         if not input_data and (xml := self._plain_action_xml(xpath)):
             return self.ncc.dispatch(xml)
-        action={}
-        pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
-        match = re.search(pattern, xpath)
-        module = match.group('module')
-        modpath = f"/{match.group('module')}:{match.group('path')}"
-        libyang.xpath_set(action, xpath, input_data or {})
-        mod = self.ly.get_module(module)
-        lyd = mod.parse_data_dict(action, rpc=True)
+        lyd = self._action_request(xpath, input_data)
         xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + lyd.print_mem("xml", with_siblings=True, pretty=False) + "</action>"
         return self.ncc.dispatch(xml)
+
+    def _action_request(self, xpath, input_data=None):
+        """Data tree of the action request at xpath"""
+        action = {}
+        module = xpath.split(":", 1)[0].lstrip("/")
+        libyang.xpath_set(action, xpath, input_data or {})
+        return self.ly.get_module(module).parse_data_dict(action, rpc=True)
 
     def call_action_output(self, xpath, input_data=None):
         """Call NETCONF action, returning the output as a nested dict"""
@@ -485,27 +485,14 @@ class Device(Transport):
         if isinstance(xml, str):
             xml = xml.encode()
 
-        def to_dict(elem):
-            if not len(elem):
-                return (elem.text or "").strip()
-            out = {}
-            for child in elem:
-                name = lxml.etree.QName(child).localname
-                value = to_dict(child)
-                if name in out:
-                    if not isinstance(out[name], list):
-                        out[name] = [out[name]]
-                    out[name].append(value)
-                else:
-                    out[name] = value
-            return out
-
-        output = to_dict(fromstring(xml))
-        # Lists with one entry come back as a dict, lift them to a list
-        for key, value in output.items():
-            if isinstance(value, dict) and key not in ("ok",):
-                output[key] = [value]
-        return output
+        node = self._action_request(xpath, input_data).find_path(xpath)
+        schema = node.schema()
+        ns = libyang.util.c2str(schema.module().cdata.ns)
+        output = lxml.etree.Element(f"{{{ns}}}{schema.name()}", nsmap={None: ns})
+        output.extend(c for c in fromstring(xml) if lxml.etree.QName(c).localname != "ok")
+        op = self.ly.parse_op("xml", libyang.IOType.MEMORY, lxml.etree.tostring(output),
+                              libyang.DataType.REPLY_YANG, parent=node.parent())
+        return op.print_dict(absolute=False).get(schema.name(), {})
 
     def _plain_action_xml(self, xpath):
         """Action without input within one module, e.g. /infix-test:test/reset,
