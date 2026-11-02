@@ -37,7 +37,7 @@
     <span class="stat-chip"><span class="stat-chip-label">Naks</span><span class="stat-chip-value">{{.DHCP.Stats.OutNaks}}</span></span>
   </div>
 
-  {{if .DHCP.Leases}}
+  {{if .DHCP.Subnets}}
   <h3 class="section-subtitle">Active Leases</h3>
   <div class="data-table-wrap">
     <table class="data-table">
@@ -51,7 +51,9 @@
         </tr>
       </thead>
       <tbody>
-        {{range .DHCP.Leases}}
+        {{range $sn := .DHCP.Subnets}}
+        {{if gt (len $.DHCP.Subnets) 1}}<tr class="group-hdr"><th colspan="5">{{if $sn.Subnet}}{{$sn.Subnet}}{{if $sn.Description}} &middot; {{$sn.Description}}{{end}}{{else}}Other{{end}}</th></tr>{{end}}
+        {{range $sn.Leases}}
         <tr>
           <td>{{.Address}}</td>
           <td>{{.MAC}}</td>
@@ -59,6 +61,7 @@
           <td>{{.Expires}}</td>
           <td>{{if .ClientID}}{{.ClientID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
         </tr>
+        {{end}}
         {{end}}
       </tbody>
     </table>

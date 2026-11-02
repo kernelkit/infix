@@ -8,6 +8,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/netip"
+	"slices"
 	"time"
 
 	"infix/webui/internal/restconf"
@@ -34,10 +36,17 @@ type DHCPStats struct {
 	OutNaks       int64
 }
 
+// DHCPSubnet is a served subnet and its leases, in address order.
+type DHCPSubnet struct {
+	Subnet      string // empty for leases outside every configured subnet
+	Description string
+	Leases      []DHCPLease
+}
+
 // DHCPData is the parsed DHCP server state.
 type DHCPData struct {
 	Enabled bool
-	Leases  []DHCPLease
+	Subnets []DHCPSubnet // only those with leases, in subnet order
 	Stats   DHCPStats
 }
 
@@ -103,8 +112,24 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				OutNaks:       int64(d.Statistics.OutNaks),
 			},
 		}
+		var conf struct {
+			DHCP struct {
+				Subnet []struct {
+					Subnet      string `json:"subnet"`
+					Description string `json:"description"`
+				} `json:"subnet"`
+			} `json:"infix-dhcp-server:dhcp-server"`
+		}
+		if err := h.RC.Get(ctx, "/ds/ietf-datastores:running/infix-dhcp-server:dhcp-server", &conf); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("restconf dhcp-server config: %v", err)
+		}
+		var subnets []DHCPSubnet
+		for _, sn := range conf.DHCP.Subnet {
+			subnets = append(subnets, DHCPSubnet{Subnet: sn.Subnet, Description: sn.Description})
+		}
+		var leases []DHCPLease
 		for _, l := range d.Leases.Lease {
-			dhcp.Leases = append(dhcp.Leases, DHCPLease{
+			leases = append(leases, DHCPLease{
 				Address:  l.Address,
 				MAC:      l.PhysAddr,
 				Hostname: l.Hostname,
@@ -112,6 +137,7 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				ClientID: l.ClientID,
 			})
 		}
+		dhcp.Subnets = groupDHCPLeases(subnets, leases)
 		data.DHCP = dhcp
 	}
 
@@ -126,6 +152,44 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// groupDHCPLeases puts each lease in the subnet that holds its address,
+// or in a trailing group without a subnet, and sorts both by address.
+func groupDHCPLeases(subnets []DHCPSubnet, leases []DHCPLease) []DHCPSubnet {
+	prefix := func(s DHCPSubnet) netip.Prefix {
+		p, _ := netip.ParsePrefix(s.Subnet)
+		return p
+	}
+	addr := func(l DHCPLease) netip.Addr {
+		a, _ := netip.ParseAddr(l.Address)
+		return a
+	}
+
+	slices.SortFunc(subnets, func(a, b DHCPSubnet) int {
+		return prefix(a).Addr().Compare(prefix(b).Addr())
+	})
+	slices.SortFunc(leases, func(a, b DHCPLease) int {
+		return addr(a).Compare(addr(b))
+	})
+
+	other := DHCPSubnet{}
+	for _, l := range leases {
+		i := slices.IndexFunc(subnets, func(s DHCPSubnet) bool {
+			return prefix(s).Contains(addr(l))
+		})
+		if i < 0 {
+			other.Leases = append(other.Leases, l)
+		} else {
+			subnets[i].Leases = append(subnets[i].Leases, l)
+		}
+	}
+
+	groups := slices.DeleteFunc(subnets, func(s DHCPSubnet) bool { return len(s.Leases) == 0 })
+	if len(other.Leases) > 0 {
+		groups = append(groups, other)
+	}
+	return groups
+}
 
 // formatDHCPExpiry converts a YANG date-and-time or "never" string to a
 // human-readable relative expiry string.

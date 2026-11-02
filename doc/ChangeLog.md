@@ -27,6 +27,7 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
+- WebUI: the DHCP leases are grouped by subnet, in address order
 
 ### Fixes
 
