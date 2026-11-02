@@ -18,7 +18,7 @@ def get_json(xpath: str, datastore: str = "operational", quiet: bool = False) ->
             print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
 
-    result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
+    result = subprocess.run(["copy", datastore, "-x", xpath],
                             capture_output=True, text=True)
     if result.returncode != 0:
         # copy already wrote a 'failed retrieving …' message (and a
@@ -404,28 +404,19 @@ def is_valid_interface_name(interface_name: str) -> bool:
 
 
 def interface(args: List[str]) -> None:
-    data = get_json("/ietf-interfaces:interfaces")
-    if not data:
+    # Forwarding interfaces, and modems for a modem interface's network and signal
+    data = get_json("/ietf-interfaces:interfaces"
+                    " | /ietf-routing:routing/interfaces"
+                    " | /ietf-hardware:hardware/component[class='infix-hardware:modem']")
+    if not data.get("ietf-interfaces:interfaces"):
         print("No interface data retrieved.")
         return
-
-    # Also fetch routing interface list for forwarding indication
-    routing_data = get_json("/ietf-routing:routing")
-    if routing_data:
-        # Merge routing data into the main data structure
-        data.update(routing_data)
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
 
-    # A modem interface also shows its modem's network and signal
-    ifaces = data.get("ietf-interfaces:interfaces", {}).get("interface", [])
-    if any(i.get("type") == "infix-if-type:modem" for i in ifaces):
-        hw = get_json("/ietf-hardware:hardware", quiet=True)
-        if hw:
-            data.update(hw)
-
+    ifaces = data["ietf-interfaces:interfaces"].get("interface", [])
     if len(args) == 0 or not args[0]:  # Treat "" as no arg.
         cli_pretty(data, "show-interfaces")
     elif len(args) == 1:

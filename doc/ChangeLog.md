@@ -33,6 +33,7 @@ All notable changes to the project are documented in this file.
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - NanoPi R2S: the LAN port got a random MAC address on every boot
+- `show interface` was slow, in particular on devices with a modem
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
 - x86_64: the `.qcow2` disk image had no free space, so a virtual
