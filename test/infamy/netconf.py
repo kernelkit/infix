@@ -350,6 +350,8 @@ class Device(Transport):
         yang2nc = {
             "none": None,
             "delete": "delete",
+            "create": "merge",
+            "replace": "replace",
         }
 
         xml = f"<config xmlns=\"{NS['nc']}\" xmlns:nc=\"{NS['nc']}\">" \
@@ -377,12 +379,19 @@ class Device(Transport):
         if last_error is not None:
             raise last_error
 
-    def put_config_dicts(self, models, retries=3):
-        """PUT full configuration of all models to running-config"""
+    def put_config_dicts(self, models, retries=3, delete=()):
+        """PUT full configuration of all models to running-config
+
+        delete lists xpaths removed in the same edit, before the models
+        are merged in, for changes that are only valid as one commit.
+        """
         config = ""
         infer_put_dict(self.name, models)
         for mod, data in models.items():
             coverage.track_dict(mod, data)
+        for xpath in delete:
+            coverage.track_xpath(xpath)
+        deletes = self._group_xpaths(delete)
 
         for model in models.keys():
             try:
@@ -392,7 +401,12 @@ class Device(Transport):
                                f"Model may not be installed or enabled. "
                                f"Available models can be checked with get_schema_list()") from None
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
+            if model in deletes:
+                config += self._diff_edit(mod, deletes.pop(model), lyd)
+                continue
             config += lyd.print_mem("xml", with_siblings=True, pretty=False) + "\n"
+        for model, groups in deletes.items():
+            config += self._diff_edit(self.ly.get_module(model), groups)
         # print(f"Send new XML config: {config}")
         return self.put_config(config, retries=retries)
 
@@ -536,6 +550,40 @@ class Device(Transport):
 
         with open(outdir+"/"+schema["filename"], "w") as f:
             f.write(data.schema)
+
+    def _diff_edit(self, mod, groups, lyd=None):
+        """Edit removing the xpaths in groups, {modpath: [xpath, ...]},
+        from the current config of mod and merging in lyd, as one diff"""
+        config = ""
+        for modpath, xpaths in groups.items():
+            old = self.get_config_dict(modpath)
+            new = copy.deepcopy(old)
+            for xpath in xpaths:
+                if not libyang.xpath_del(new, xpath):
+                    raise ValueError(f"Failed to delete specified xpath: {xpath}")
+            oldd = mod.parse_data_dict(old, no_state=True, validate=False)
+            newd = mod.parse_data_dict(new, no_state=True, validate=False)
+            if lyd is not None:
+                newd.merge(lyd)
+            diff = oldd.diff(newd)
+            if diff is None:
+                raise ValueError(f"Failed generating diff for {modpath}")
+            config += diff.print_mem("xml", with_siblings=True, pretty=False) + "\n"
+        return config
+
+    @staticmethod
+    def _group_xpaths(xpaths):
+        """Group xpaths as {module: {modpath: [xpath, ...]}}"""
+        pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
+        groups = {}
+        for xpath in xpaths:
+            match = re.search(pattern, xpath)
+            if not match:
+                raise ValueError(f"Failed parsing xpath:{xpath}")
+            module = match.group('module')
+            modpath = f"/{module}:{match.group('path')}"
+            groups.setdefault(module, {}).setdefault(modpath, []).append(xpath)
+        return groups
 
     def delete_xpath(self, xpath):
         coverage.track_xpath(xpath)
