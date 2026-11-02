@@ -1106,8 +1106,8 @@ class DhcpServer:
         print(f"{'DHCP decline messages received':<{32}}: {self.in_declines}")
         print(f"{'DHCP discover messages received':<{32}}: {self.in_discovers}")
         print(f"{'DHCP request messages received':<{32}}: {self.in_requests}")
-        print(f"{'DHCP release messages received':<{32}}: {self.in_discovers}")
-        print(f"{'DHCP inform messages received':<{32}}: {self.in_discovers}")
+        print(f"{'DHCP release messages received':<{32}}: {self.in_releases}")
+        print(f"{'DHCP inform messages received':<{32}}: {self.in_informs}")
 
 
 class Iface:
