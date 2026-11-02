@@ -5,10 +5,14 @@ plugindir               = $(srpdplugindir)
 plugin_LTLIBRARIES      = confd-plugin.la
 
 sbin_PROGRAMS           = confd
+check_PROGRAMS          = base64-test
+TESTS                   = $(check_PROGRAMS)
 
 confd_CFLAGS            = $(sysrepo_CFLAGS) $(libyang_CFLAGS) $(jansson_CFLAGS) $(libite_CFLAGS) $(libsrx_CFLAGS) $(libwdog_CFLAGS)
 confd_LDADD             = $(sysrepo_LIBS)   $(libyang_LIBS)   $(jansson_LIBS)   $(libite_LIBS)   $(libsrx_LIBS) $(libwdog_LIBS) $(EV_LIBS) -ldl
 confd_SOURCES           = main.c
+
+base64_test_SOURCES     = base64-test.c
 
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 

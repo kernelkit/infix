@@ -86,11 +86,14 @@ unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_l
  * base64_decode - Base64 decode
  * @src: Data to be decoded
  * @len: Length of the data to be decoded
- * @out_len: Pointer to output length variable
+ * @out_len: Pointer to output length variable, or %NULL if not used
  *
  * Returns:
  * Allocated buffer of out_len bytes of decoded data, or %NULL on failure
- * Caller is responsible for freeing the returned buffer.
+ *
+ * Caller is responsible for freeing the returned buffer. Returned
+ * buffer is nul terminated to make it easier to use as a C string.
+ * The nul terminator is not included in out_len.
  */
 unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len)
 {
@@ -115,7 +118,7 @@ unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_l
 	}
 
 	olen = count / 4 * 3;
-	pos = out = malloc(olen);
+	pos = out = malloc(olen + 1);
 	if (out == NULL)
 		return NULL;
 
@@ -149,6 +152,7 @@ unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_l
 		}
 	}
 
+	*pos = '\0';
 	if (out_len)
 		*out_len = pos - out;
 	return out;
