@@ -598,9 +598,10 @@ func renderSaved(w http.ResponseWriter, msg string) {
 // renderSavedRedirect logs a cfgSaved activity entry and then navigates HTMX to
 // the given page path (targeting #content). Use this instead of a bare HX-Location
 // for Add/Delete operations that redirect back to the listing page after success.
+// The page is morphed in, so the scroll position and open rows stay.
 func renderSavedRedirect(w http.ResponseWriter, msg, path string) {
 	hxTrigger(w, "cfgSaved", msg)
-	w.Header().Set("HX-Location", `{"path":"`+path+`","target":"#content"}`)
+	w.Header().Set("HX-Location", `{"path":"`+path+`","target":"#content","swap":"morph:innerHTML"}`)
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -3,7 +3,7 @@
 {{end}}
 
 {{define "content"}}
-<div class="iface-detail-header">
+<div class="iface-detail-header" data-auto-refresh>
   <a href="/interfaces" hx-get="/interfaces" hx-target="#content" hx-push-url="true" class="back-link">&larr; Interfaces</a>
   <h2>{{.Name}}</h2>
 </div>
@@ -82,10 +82,7 @@
     {{end}}
   </section>
 
-  <section class="info-card">
-    <div class="card-header">Counters</div>
-    {{template "iface-counters" .}}
-  </section>
+  {{template "iface-counters" .}}
 </div>
 
 {{if .WiFiStations}}
@@ -147,19 +144,6 @@
 </section>
 {{end}}
 
-{{if .EthFrameStats}}
-<section class="info-card">
-  <div class="card-header">Ethernet Frame Statistics</div>
-  <dl class="eth-stats">
-    {{range .EthFrameStats}}
-    <div class="eth-stats-row">
-      <dt>{{.Key}}</dt>
-      <dd class="num">{{.Value}}</dd>
-    </div>
-    {{end}}
-  </dl>
-</section>
-{{end}}
 {{end}}
 
 {{define "iface-links"}}{{range $i, $name := .}}{{if $i}}, {{end}}<a href="/interfaces/{{$name}}" hx-get="/interfaces/{{$name}}" hx-target="#content" hx-push-url="true">{{$name}}</a>{{end}}{{end}}

@@ -1177,51 +1177,44 @@ func (h *ConfigureInterfacesHandler) DeleteInterface(w http.ResponseWriter, r *h
 	renderSavedRedirect(w, name+" deleted", "/configure/interfaces")
 }
 
-// resolveDependents prepares the named interface for deletion by clearing every
-// other interface's reference to it, so the delete doesn't leave a dangling
-// leafref that fails the next Apply with an opaque "Invalid input data" and no
-// hint which node broke.
-//
-//   - Enslaved bridge/LAG members are detached; they survive as standalone
-//     interfaces, only the membership is dropped.
-//   - VLANs stacked on the master via lower-layer-if can't survive without it,
-//     so rather than silently deleting an interface the user didn't name, the
-//     delete is refused and the VLANs named — removing them first is the user's
-//     call.
-//
-// The VLAN check runs before any detach, so a refused delete leaves the
-// candidate untouched.
+// resolveDependents drops every reference to the interface before it is
+// deleted, so the candidate never holds a dangling leafref, which only
+// shows up on apply as "Invalid input data" with no hint which node broke.
+// Members of a bridge or LAG lose their membership, a veth takes its peer
+// along, and a list entry built on the interface, such as a static FDB
+// entry or an LLDP port, goes too.  An interface that cannot exist without
+// it, such as a VLAN stacked on it, refuses the delete and is named, so the
+// user removes it first.  Nothing is written on a refusal.
 func (h *ConfigureInterfacesHandler) resolveDependents(ctx context.Context, master string) error {
-	ifaces, err := h.fetchAllInterfaces(ctx)
+	var mgr *schema.Manager
+	if h.Schema != nil {
+		mgr = h.Schema.Manager()
+	}
+	if mgr == nil {
+		return fmt.Errorf("the YANG schema is not loaded yet, try again in a moment")
+	}
+	raw, err := h.RC.GetDatastore(ctx, "candidate")
 	if err != nil {
 		return err
 	}
-
-	var vlans []string
-	for _, iface := range ifaces {
-		if iface.Vlan != nil && iface.Vlan.LowerLayerIf == master {
-			vlans = append(vlans, iface.Name)
-		}
-	}
-	if len(vlans) > 0 {
-		noun, verb, pron := "VLAN", "is", "it"
-		if len(vlans) > 1 {
-			noun, verb, pron = "VLANs", "are", "them"
-		}
-		return fmt.Errorf("cannot delete %s: %s %s %s built on it — delete %s first",
-			master, noun, strings.Join(vlans, ", "), verb, pron)
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return fmt.Errorf("decode candidate: %w", err)
 	}
 
-	for _, iface := range ifaces {
-		switch {
-		case iface.BridgePort != nil && iface.BridgePort.Bridge == master:
-			if err := h.removeInterfaceAugment(ctx, iface.Name, "infix-interfaces:bridge-port"); err != nil {
-				return fmt.Errorf("detach %s from bridge %s: %w", iface.Name, master, err)
-			}
-		case iface.LagPort != nil && iface.LagPort.LAG == master:
-			if err := h.removeInterfaceAugment(ctx, iface.Name, "infix-interfaces:lag-port"); err != nil {
-				return fmt.Errorf("detach %s from lag %s: %w", iface.Name, master, err)
-			}
+	w := &ifaceRefs{mgr: mgr, name: master}
+	w.walk("", "", "", data)
+	if deps := uniqueSorted(w.dependants); len(deps) > 0 {
+		them := "it"
+		if len(deps) > 1 {
+			them = "them"
+		}
+		return fmt.Errorf("cannot delete %s: %s cannot exist without it, delete %s first",
+			master, strings.Join(deps, ", "), them)
+	}
+	if p := w.patch(); p != nil {
+		if err := h.RC.YangPatch(ctx, p); err != nil {
+			return fmt.Errorf("remove references to %s: %w", master, err)
 		}
 	}
 	return nil
@@ -1424,7 +1417,7 @@ func (h *ConfigureInterfacesHandler) SaveBridgePort(w http.ResponseWriter, r *ht
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "Bridge port saved")
+	renderSavedRedirect(w, "Bridge port saved", "/configure/interfaces")
 }
 
 // buildBridgePortBody assembles the bridge-port augment from form
@@ -1577,7 +1570,8 @@ func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderSaved(w, "Bridge saved")
+	// The VLAN editor lists the bridge ports, so the page is rendered again
+	renderSavedRedirect(w, "Bridge saved", "/configure/interfaces")
 }
 
 // AddVLAN creates a new VLAN on an ieee8021q bridge.
@@ -1682,7 +1676,7 @@ func (h *ConfigureInterfacesHandler) SaveLagPort(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "LAG port saved")
+	renderSavedRedirect(w, "LAG port saved", "/configure/interfaces")
 }
 
 // SaveBridgeSTP PATCHes the bridge STP container. Split out from

@@ -51,14 +51,14 @@
 
   <section class="info-card">
     <div class="card-header">Channel Survey</div>
-    <div id="wifi-survey-{{.Name}}">
+    <div id="wifi-survey-{{.Name}}" hx-preserve="true">
       {{template "wifi-survey" .Survey}}
     </div>
   </section>
 
   <section class="info-card">
     <div class="card-header">Networks</div>
-    <div id="wifi-scan-{{.Name}}">
+    <div id="wifi-scan-{{.Name}}" hx-preserve="true">
       {{template "wifi-scan" .Scan}}
     </div>
   </section>

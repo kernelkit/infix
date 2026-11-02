@@ -1700,6 +1700,37 @@ function markActiveOpt(cls, attr, value) {
   });
 })();
 
+// A save that renders the page again, e.g. the bridge port list, keeps
+// the fold-out rows the user had open
+(function() {
+  var open = null;
+
+  function samePage(evt) {
+    var cfg = evt.detail && evt.detail.requestConfig;
+    var target = evt.detail && evt.detail.target;
+    return !!(cfg && cfg.verb === 'get' && target && target.id === 'content' &&
+              cfg.path.split('?')[0] === window.location.pathname);
+  }
+
+  function key(btn) { return btn.textContent.trim(); }
+
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    if (!samePage(evt)) return;
+    open = {};
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="true"]').forEach(function(btn) {
+      open[key(btn)] = true;
+    });
+  });
+
+  document.addEventListener('htmx:afterSwap', function(evt) {
+    if (!open || !samePage(evt)) return;
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="false"]').forEach(function(btn) {
+      if (open[key(btn)]) btn.click();
+    });
+    open = null;
+  });
+})();
+
 // mDNS extra-address row toggle
 (function() {
   document.addEventListener('click', function(e) {
@@ -2548,14 +2579,16 @@ function renderCfgLog() {
 })();
 
 // ─── Auto-refresh of status pages ──────────────────────────────────────────
-// Re-fetches the current status page into #content every few seconds, the
-// interval chosen in the user menu and kept in localStorage.  The status
-// pages are the sidebar's Status links, except those with data-no-refresh,
-// e.g. the YANG tree with its own expand state, and pages that carry a
-// data-auto-refresh element, e.g. a modem's detail.  Opened and closed toggles
-// are put back after a refresh.  A refresh is skipped while
-// the tab is hidden, the previous one is still running, or the user is busy
-// with the page: selecting text, typing, or in a menu or dialog.
+// Re-fetches the current status page every few seconds, the interval chosen
+// in the user menu and kept in localStorage, and morphs it into #content:
+// idiomorph updates only the text and attributes that changed, so the page
+// keeps its scroll position, selection and focus.  The status pages are the
+// sidebar's Status links, except those with data-no-refresh, e.g. the YANG
+// tree with its own expand state, and pages that carry a data-auto-refresh
+// element, e.g. a modem's detail.  The server renders every toggle closed,
+// so opened and closed toggles are put back after a refresh.  A refresh is
+// skipped while the tab is hidden, the previous one is still running, or the
+// user is busy with the page: selecting text, typing, or in a menu or dialog.
 (function() {
   var LS_KEY = 'auto-refresh';
   var DEFAULT = '10';
@@ -2594,7 +2627,7 @@ function renderCfgLog() {
     var done = function() { running = false; };
     htmx.ajax('GET', window.location.pathname + window.location.search, {
       target: '#content',
-      swap: 'innerHTML',
+      swap: 'morph:innerHTML',
       headers: { 'X-Auto-Refresh': '1' }
     }).then(done, done);
   }

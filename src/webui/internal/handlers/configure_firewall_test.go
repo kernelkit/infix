@@ -260,7 +260,7 @@ func TestConfigureFirewallResetZoneServicesOnlyDeletesServices(t *testing.T) {
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("want 204 got %d; body: %s", w.Code, w.Body.String())
 	}
-	if got, want := w.Header().Get("HX-Location"), `{"path":"/configure/firewall","target":"#content"}`; got != want {
+	if got, want := w.Header().Get("HX-Location"), `{"path":"/configure/firewall","target":"#content","swap":"morph:innerHTML"}`; got != want {
 		t.Fatalf("want HX-Location %q got %q", want, got)
 	}
 	if mock.putCalls != 0 {
