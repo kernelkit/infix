@@ -51,6 +51,13 @@ static void get_timestamp_filename(char *buf, size_t len, time_t ts)
 		 tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
+/* Snapshots are redacted but still hold the configuration, admins only */
+static void set_owner(const char *path)
+{
+	if (chown(path, 0, 10) || chmod(path, 0640)) /* root:wheel */
+		ERROR("Error, setting owner/mode on %s: %s", path, strerror(errno));
+}
+
 /* Compress a file using gzip */
 static int gzip_file(const char *src, const char *dst)
 {
@@ -101,6 +108,7 @@ static int create_snapshot(const struct lyd_node *tree)
 		ERROR("Error, writing operational.json: %d", ret);
 		return -1;
 	}
+	set_owner(DUMP_FILE);
 
 	/* Compress operational.json to timestamped archive */
 	now = time(NULL);
@@ -174,6 +182,7 @@ static void snapshot_process(void)
 	int skipped = 0;
 	int count = 0;
 	long ms;
+	int i;
 
 	prctl(PR_SET_NAME, "statd-journal", 0, 0, 0);
 	closelog();	/* drop log connection inherited from statd */
@@ -183,12 +192,11 @@ static void snapshot_process(void)
 	NOTE("Starting operational datastore snapshot");
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
-	/* The dump is read without NACM, so only root may read it back */
-	umask(077);
-	if (mkdir(JOURNAL_DIR, 0700) && errno != EEXIST)
+	umask(027);
+	if (mkdir(JOURNAL_DIR, 0750) && errno != EEXIST)
 		ERROR("Error, creating directory " JOURNAL_DIR ": %s", strerror(errno));
-	if (chmod(JOURNAL_DIR, 0700))
-		ERROR("Error, setting mode on " JOURNAL_DIR ": %s", strerror(errno));
+	if (chown(JOURNAL_DIR, 0, 10) || chmod(JOURNAL_DIR, 0750)) /* root:wheel */
+		ERROR("Error, setting owner/mode on " JOURNAL_DIR ": %s", strerror(errno));
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
 		ERROR("Error, connecting to sysrepo");
@@ -216,6 +224,13 @@ static void snapshot_process(void)
 	sr_release_context(conn);
 
 	if (journal_scan_snapshots(JOURNAL_DIR, &snapshots, &count) == 0) {
+		for (i = 0; i < count; i++) {
+			char path[512];
+
+			snprintf(path, sizeof(path), JOURNAL_DIR "/%s", snapshots[i].filename);
+			set_owner(path);
+		}
+
 		DEBUG("Applying retention policy to %d snapshots", count);
 		journal_apply_retention_policy(JOURNAL_DIR, snapshots, count, time(NULL));
 		free(snapshots);
