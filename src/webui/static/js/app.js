@@ -1700,6 +1700,37 @@ function markActiveOpt(cls, attr, value) {
   });
 })();
 
+// A save that renders the page again, e.g. the bridge port list, keeps
+// the fold-out rows the user had open
+(function() {
+  var open = null;
+
+  function samePage(evt) {
+    var cfg = evt.detail && evt.detail.requestConfig;
+    var target = evt.detail && evt.detail.target;
+    return !!(cfg && cfg.verb === 'get' && target && target.id === 'content' &&
+              cfg.path.split('?')[0] === window.location.pathname);
+  }
+
+  function key(btn) { return btn.textContent.trim(); }
+
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    if (!samePage(evt)) return;
+    open = {};
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="true"]').forEach(function(btn) {
+      open[key(btn)] = true;
+    });
+  });
+
+  document.addEventListener('htmx:afterSwap', function(evt) {
+    if (!open || !samePage(evt)) return;
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="false"]').forEach(function(btn) {
+      if (open[key(btn)]) btn.click();
+    });
+    open = null;
+  });
+})();
+
 // mDNS extra-address row toggle
 (function() {
   document.addEventListener('click', function(e) {

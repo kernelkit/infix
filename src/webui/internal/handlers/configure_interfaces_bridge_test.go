@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -193,5 +194,39 @@ func TestDeleteUnreferencedInterfaceWritesNoPatch(t *testing.T) {
 	}
 	if len(rc.Patches) != 0 {
 		t.Fatalf("patches %+v", rc.Patches)
+	}
+}
+
+func TestSaveBridgeRendersThePageAgain(t *testing.T) {
+	h, _ := ifaceRefHandler(t)
+	form := url.Values{"bridge-type": {"ieee8021q"}, "members": {"lan1", "backhaul"}}
+	req := httptest.NewRequest(http.MethodPost, "/configure/interfaces/br0/bridge", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetPathValue("name", "br0")
+	w := httptest.NewRecorder()
+	h.SaveBridge(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("HX-Location"); !strings.Contains(got, `"/configure/interfaces"`) || !strings.Contains(got, "morph") {
+		t.Fatalf("HX-Location %q", got)
+	}
+}
+
+func TestSaveBridgePortRendersThePageAgain(t *testing.T) {
+	h, _ := ifaceRefHandler(t)
+	form := url.Values{"bridge": {"br0"}, "pvid": {"99"}}
+	req := httptest.NewRequest(http.MethodPost, "/configure/interfaces/backhaul/bridge-port", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetPathValue("name", "backhaul")
+	w := httptest.NewRecorder()
+	h.SaveBridgePort(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status %d: %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("HX-Location"); !strings.Contains(got, `"/configure/interfaces"`) {
+		t.Fatalf("HX-Location %q", got)
 	}
 }

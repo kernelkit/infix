@@ -1417,7 +1417,7 @@ func (h *ConfigureInterfacesHandler) SaveBridgePort(w http.ResponseWriter, r *ht
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "Bridge port saved")
+	renderSavedRedirect(w, "Bridge port saved", "/configure/interfaces")
 }
 
 // buildBridgePortBody assembles the bridge-port augment from form
@@ -1570,7 +1570,8 @@ func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderSaved(w, "Bridge saved")
+	// The VLAN editor lists the bridge ports, so the page is rendered again
+	renderSavedRedirect(w, "Bridge saved", "/configure/interfaces")
 }
 
 // AddVLAN creates a new VLAN on an ieee8021q bridge.
@@ -1675,7 +1676,7 @@ func (h *ConfigureInterfacesHandler) SaveLagPort(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "LAG port saved")
+	renderSavedRedirect(w, "LAG port saved", "/configure/interfaces")
 }
 
 // SaveBridgeSTP PATCHes the bridge STP container. Split out from
