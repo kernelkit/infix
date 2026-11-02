@@ -2179,7 +2179,9 @@ details[open] > .cfg-multi-summary {
   border-top: none !important;
   text-align: left !important;
 }
-.key-detail-body { display: flex; flex-direction: column; gap: 0.6rem; }
+/* width 0 keeps a wide fold-out, e.g. a bridge VLAN table, from
+   stretching the row's table; the fold-out scrolls on its own instead */
+.key-detail-body { display: flex; flex-direction: column; gap: 0.6rem; width: 0; min-width: 100%; }
 .key-field { display: flex; flex-direction: column; gap: 0.2rem; }
 .key-field-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); }
 .key-field-value {
