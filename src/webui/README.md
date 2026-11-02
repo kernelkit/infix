@@ -126,9 +126,29 @@ templates/
 static/
   css/style.css                  All styles
   js/htmx.min.js                htmx library
+  js/idiomorph-ext.min.js       idiomorph htmx extension (morph swaps)
+  js/app.js                     Auto-refresh, user menu, toggles
   img/                           Logo, favicon
 ```
 
+
+## Dependencies
+
+Both are vendored under `static/js/` and embedded in the binary, no
+build step or CDN.
+
+- **htmx 2.0.4** -- drives navigation, polling and form submission
+  from attributes in the templates.
+- **idiomorph 0.8.0** (htmx extension) -- the `morph` swap used for the
+  auto-refresh and the polled fragments.  The default htmx swap
+  replaces the target subtree with the new HTML, which drops focus,
+  scroll position and any element the user has interacted with, and
+  repaints the whole page.  idiomorph diffs the new HTML against the
+  live DOM and only touches nodes whose attributes or text changed, so
+  a refresh looks like a value update rather than a page load, and
+  elements marked `hx-preserve` (WiFi scan and survey results) survive
+  it.  Loaded in `layouts/base.html` and enabled with `hx-ext="morph"`
+  on `<body>`.
 
 ## License
 
