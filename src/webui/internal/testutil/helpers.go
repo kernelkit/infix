@@ -21,6 +21,8 @@ type MockFetcher struct {
 	errors    map[string]error
 	// Patches records every YangPatch sent, for tests to assert on.
 	Patches []*restconf.YangPatch
+	// Datastores holds the raw JSON GetDatastore returns per datastore name.
+	Datastores map[string]json.RawMessage
 }
 
 func NewMockFetcher() *MockFetcher {
@@ -114,7 +116,10 @@ func (m *MockFetcher) YangPatch(_ context.Context, p *restconf.YangPatch) error 
 	return nil
 }
 
-func (m *MockFetcher) GetDatastore(_ context.Context, _ string) (json.RawMessage, error) {
+func (m *MockFetcher) GetDatastore(_ context.Context, datastore string) (json.RawMessage, error) {
+	if raw, ok := m.Datastores[datastore]; ok {
+		return raw, nil
+	}
 	return json.RawMessage("{}"), nil
 }
 
