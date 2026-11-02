@@ -67,3 +67,5 @@ genimage \
     --inputpath  "${WORKDIR}"      \
     --outputpath "${BINARIES_DIR}" \
     --config "${WORKDIR}"/genimage.cfg
+
+qemu-img resize -q "${BINARIES_DIR}/${ARTIFACT}.qcow2" "${QCOW_SIZE}"
