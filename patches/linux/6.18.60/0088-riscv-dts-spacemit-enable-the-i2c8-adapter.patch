@@ -1,7 +1,7 @@
-From 004734ebaaeec8d1091e98a62e7ec79b7fede1fc Mon Sep 17 00:00:00 2001
+From f1da50df705207472f023869c70f1ed12b504bb8 Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:54 -0500
-Subject: [PATCH 088/139] riscv: dts: spacemit: enable the i2c8 adapter
+Subject: [PATCH 088/140] riscv: dts: spacemit: enable the i2c8 adapter
 Organization: Wires
 
 Define properties for the I2C adapter that provides access to the

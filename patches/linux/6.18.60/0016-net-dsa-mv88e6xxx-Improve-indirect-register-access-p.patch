@@ -1,7 +1,7 @@
-From cbe9b498e34cdf52e76f21840878d33ff69a54dd Mon Sep 17 00:00:00 2001
+From c404b9691e3d5843ca2d71a1a74143f54eaff06f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 016/139] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 016/140] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
 Organization: Wires
 

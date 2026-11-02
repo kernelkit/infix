@@ -1,7 +1,7 @@
-From 655d9f59362f902b6a1f8a8ce70bfc25b7c5704e Mon Sep 17 00:00:00 2001
+From 08f642ca9fba3c606de516c9df48fe96d59b66ac Mon Sep 17 00:00:00 2001
 From: Felix Fietkau <nbd@nbd.name>
 Date: Mon, 20 Oct 2025 15:59:12 +0200
-Subject: [PATCH 084/139] wifi: mt76: mt7915: add WDS support when WED is
+Subject: [PATCH 084/140] wifi: mt76: mt7915: add WDS support when WED is
  enabled
 Organization: Wires
 

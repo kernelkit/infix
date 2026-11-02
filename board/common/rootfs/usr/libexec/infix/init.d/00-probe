@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import glob
 import json
 import onieprom
 import os
@@ -92,6 +93,13 @@ class DTSystem:
         }
 
     def infix_usb_devices(self, out):
+        def all_ports_hardwired(root):
+            types = []
+            for path in glob.glob(f"{root}/*-0:1.0/usb*-port*/connect_type"):
+                with open(path) as f:
+                    types.append(f.read().strip())
+            return bool(types) and all(t == "hardwired" for t in types)
+
         names = self.infix.str_array("usb-port-names", ())
         phs = self.__get_phandle_array("usb-ports")
         data = dict(zip(names, phs))
@@ -122,6 +130,11 @@ class DTSystem:
                                 break
                 except:
                     pass  # Fall back to original path if resolution fails
+
+                # A root hub with only hard-wired ports, e.g. an onboard NIC,
+                # has nothing for the user to plug in
+                if all_ports_hardwired(usb_path):
+                    continue
 
                 if usb_path not in paths:
                     paths.append(usb_path)

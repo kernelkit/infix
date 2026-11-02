@@ -3,18 +3,42 @@
 #include "infix.dtsi"
 
 / {
-	compatible = "friendlyarm,nanopi-r2s", "rockchip,rk3328";
+	compatible = "friendlyarm,nanopi-r2s-plus", "friendlyarm,nanopi-r2s",
+		     "rockchip,rk3328";
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		clocks = <&rk805 1>;
+		clock-names = "ext_clock";
+		post-power-on-delay-ms = <200>;
+		reset-gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_LOW>;
+	};
 };
 
-&rtl8153 {
-	/*
-	 * Fix port number: device is on port 1, not port 2.
-	 */
-	reg = <1>;
+/* GMAC pins (GPIO1) at 3.3 V, Wi-Fi pins (GPIO3) at 1.8 V */
+&io_domains {
+	vccio4-supply = <&vcc_io_33>;
+	vccio6-supply = <&vcc_18>;
+};
+
+/* RTL8822CS Wi-Fi module */
+&sdmmc_ext {
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	no-mmc;
+	no-sd;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0ext_clk &sdmmc0ext_cmd &sdmmc0ext_bus4>;
+	vmmc-supply = <&vcc_io_33>;
+	vqmmc-supply = <&vcc_18>;
+	status = "okay";
 };
 
 &{/chosen/infix} {
-	/* Expose only the external USB 2.0 port for user management */
-	usb-ports = <&usb_host0_ehci>;
-	usb-port-names = "usb";
+	/* Front port by the LEDs, side port by the antenna */
+	usb-ports = <&usb_host0_ehci>, <&usbdrd3>;
+	usb-port-names = "usb1", "usb2";
 };

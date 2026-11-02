@@ -1,7 +1,7 @@
-From 9b3e9906616d4640be87b0ef547e5cc93cfe17b8 Mon Sep 17 00:00:00 2001
+From 6c899441c883e70593850f4a89a974c9a44ef295 Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Mon, 11 May 2026 10:53:57 +0200
-Subject: [PATCH 096/139] mmc: sdhci-of-k1: enable essential clock
+Subject: [PATCH 096/140] mmc: sdhci-of-k1: enable essential clock
  infrastructure for SD operation
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From 1df6feaf775fe20c454785d2ddfd5a1104c5b73f Mon Sep 17 00:00:00 2001
+From de086daa02308a13048089b83fcfcf692f236684 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 15 May 2026 13:59:09 +0200
-Subject: [PATCH 061/139] arm64: dts: microchip: lan969x: add OTP node
+Subject: [PATCH 061/140] arm64: dts: microchip: lan969x: add OTP node
 Organization: Wires
 
 Add the required OTP on LAN969x.

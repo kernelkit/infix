@@ -1,7 +1,7 @@
-From a9dac34281b66c2257d2d0fdfa2be1cddb319ffd Mon Sep 17 00:00:00 2001
+From 2ab5daf523dd5884d255ec095934ab63cf06aa38 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:16:11 +0200
-Subject: [PATCH 045/139] arm64: dts: mediatek: bananapi-bpi-r4: enable SFP+
+Subject: [PATCH 045/140] arm64: dts: mediatek: bananapi-bpi-r4: enable SFP+
  ports and WPS button
 Organization: Wires
 

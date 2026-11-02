@@ -1,7 +1,7 @@
-From 19c151444fab769615c4c308d7e06809936d5dd8 Mon Sep 17 00:00:00 2001
+From 8cac8bc7e8bd403f40ef68962a7cccbee3422a80 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Tue, 7 Jul 2026 19:04:48 +0200
-Subject: [PATCH 133/139] net: sparx5: configure TAS port link speed
+Subject: [PATCH 133/140] net: sparx5: configure TAS port link speed
 Organization: Wires
 
 On the TSN and RED variants of LAN969x and SparX-5i TAS (Time-Aware Shaper)

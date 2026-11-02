@@ -1,7 +1,7 @@
-From 9986a8f47fa3f52ee0ab2730b19ea4ed6528f4d0 Mon Sep 17 00:00:00 2001
+From fb101f0eeca11ee7de35f3b457ad530eb9bffb5f Mon Sep 17 00:00:00 2001
 From: Troy Mitchell <troy.mitchell@linux.spacemit.com>
 Date: Thu, 8 Jan 2026 14:42:40 +0800
-Subject: [PATCH 091/139] riscv: dts: spacemit: pinctrl: update register and IO
+Subject: [PATCH 091/140] riscv: dts: spacemit: pinctrl: update register and IO
  power
 Organization: Wires
 

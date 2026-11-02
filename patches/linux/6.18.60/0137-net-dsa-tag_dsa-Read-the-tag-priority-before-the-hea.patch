@@ -1,7 +1,7 @@
-From 752a0f8d87a4ae03a4aee0045c42787a38e8eeea Mon Sep 17 00:00:00 2001
+From adc072e25b2a1f1c723074a81f61352ed691bee1 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 11 Sep 2026 15:54:16 +0200
-Subject: [PATCH 137/139] net: dsa: tag_dsa: Read the tag priority before the
+Subject: [PATCH 137/140] net: dsa: tag_dsa: Read the tag priority before the
  header is stripped
 Organization: Wires
 
