@@ -42,6 +42,21 @@ var inventory = map[string]alarmType{
 		WillClear:   false,
 		Description: "The preferred software slot failed to boot, the device runs the fallback slot.",
 	},
+	"update-available": {
+		Levels:      []alarm.Severity{alarm.Warning},
+		WillClear:   true,
+		Description: "A newer software release is available from the update source.",
+	},
+	"update-check-failed": {
+		Levels:      []alarm.Severity{alarm.Minor},
+		WillClear:   true,
+		Description: "The scheduled update check could not read the update source.",
+	},
+	"update-install-failed": {
+		Levels:      []alarm.Severity{alarm.Major},
+		WillClear:   true,
+		Description: "An unattended update failed to install the new release.",
+	},
 	"external": {
 		Levels:      []alarm.Severity{alarm.Indeterminate, alarm.Warning, alarm.Minor, alarm.Major, alarm.Critical},
 		WillClear:   true,

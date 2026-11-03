@@ -13,10 +13,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -497,9 +495,6 @@ type dashboardData struct {
 	Ports  []portEntry
 	Health []healthItem
 	// Software-update banner — shown only when an update is available.
-	UpdateAvailable bool
-	UpdateMessage   string // verbatim CLI/login-banner notice
-	UpdateURL       string // release URL extracted from the notice
 	// Software Updates card.
 	Update      *updateEntry
 	UpdateError string // outcome of a Check now that failed
@@ -565,31 +560,6 @@ type diskEntry struct {
 // internetProbe is the address the Connectivity card pings for its Internet
 // reachability row — a well-known, stable anycast resolver.
 const internetProbe = "1.1.1.1"
-
-// updateNoticeFile holds the software-update notice written by
-// /usr/sbin/check-update — the same text the CLI shows at login.
-// A package var so tests can point it elsewhere.
-var updateNoticeFile = "/run/os-update"
-
-var updateURLRe = regexp.MustCompile(`https?://\S+`)
-
-// readUpdateNotice returns the software-update message verbatim (as shown in
-// the CLI login banner) and the release URL extracted from it. Both are empty
-// when no update is pending or the notice file is absent/empty.
-func readUpdateNotice() (msg, url string) {
-	b, err := os.ReadFile(updateNoticeFile)
-	if err != nil {
-		return "", ""
-	}
-	msg = strings.TrimSpace(string(b))
-	if msg == "" {
-		return "", ""
-	}
-	if u := updateURLRe.FindString(msg); u != "" {
-		url = strings.TrimRight(u, ").,;")
-	}
-	return msg, url
-}
 
 // CheckUpdate runs the check-update RPC as the logged-in user and
 // re-renders the Software Updates card with the result.
@@ -862,14 +832,6 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	data.Addresses = ifaceAddresses(ifaces)
 	data.Ports = ports(ifaces, lldp.neighbors())
 	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software)
-
-	// Software-update banner: surfaces the same notice as the CLI login
-	// banner (written by check-update to the notice file).
-	if msg, url := readUpdateNotice(); msg != "" {
-		data.UpdateAvailable = true
-		data.UpdateMessage = msg
-		data.UpdateURL = url
-	}
 
 	tmplName := "dashboard.html"
 	if r.Header.Get("HX-Request") == "true" {

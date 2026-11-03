@@ -4,6 +4,21 @@
 # Outcome of the last run, read by yangerd for /system-state/software/update.
 STATE_FILE=/run/software-update.json
 
+# Alarms, see doc/alarms.md: a file under /run/alarm/active is a raised
+# alarm, its removal clears it.  The resource is the software itself.
+ALARM_DIR=${ALARM_DIR:-/run/alarm}
+
+# alarm_raise <type> <text>
+alarm_raise() {
+    file="$ALARM_DIR/active/$1/software"
+    jq -nc --arg text "$2" '{text: $text}' > "$file.tmp" && mv "$file.tmp" "$file"
+}
+
+# alarm_clear <type>
+alarm_clear() {
+    rm -f "$ALARM_DIR/active/$1/software"
+}
+
 # Apply a jq filter to the state file, extra args go to jq (--arg name value).
 # An empty or damaged file starts over from {}.
 update_state() {
@@ -117,9 +132,16 @@ update_check() {
         update_state '. + {"last-check": (now | todate), latest: $tag, "release-url": $url, "bundle-url": $bundle, available: $avail}' \
             --arg tag "$LATEST_TAG" --arg url "$(update_release_url)" \
             --arg bundle "$(update_bundle_url)" --argjson avail "$UPDATE_AVAILABLE"
+        alarm_clear update-check-failed
+        if [ "$UPDATE_AVAILABLE" = true ]; then
+            alarm_raise update-available "Release $LATEST_TAG is available, this is $VERSION, see $(update_release_url)"
+        else
+            alarm_clear update-available
+        fi
         ;;
     2)
         update_state '.["last-check"] = (now | todate) | del(.latest, .["release-url"], .["bundle-url"], .available)'
+        alarm_raise update-check-failed "Could not read the update source $UPDATE_URL"
         ;;
     esac
     return $rc
