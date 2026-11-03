@@ -56,6 +56,15 @@ module infix-alarms {
                  the preferred slot.";
   }
 
+  identity partition-out-of-date {
+    base al:alarm-type-id;
+    description "The other software partition holds an older release, or none.
+
+                 It is the fallback if the running one fails to boot, and
+                 'upgrade' brings it up to date.  Cleared when it holds the
+                 running release or a newer one waiting for a reboot.";
+  }
+
   identity update-available {
     base al:alarm-type-id;
     description "A newer software release is available from the update source.

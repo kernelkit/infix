@@ -20,8 +20,9 @@ import (
 var CondDir = "/run/finit/cond/usr"
 
 const (
-	startupType = "startup-config-failed"
-	bootType    = "boot-fallback"
+	startupType   = "startup-config-failed"
+	bootType      = "boot-fallback"
+	partitionType = "partition-out-of-date"
 )
 
 // RunStartupConfig watches the finit conditions confd sets after the
@@ -76,32 +77,40 @@ func checkStartupConfig(log *slog.Logger) {
 
 // BootFallback raises boot-fallback for a software slot the bootloader
 // has marked bad, which is how a slot that failed to boot looks after
-// the fallback, and clears it for the others.  Fed by the D-Bus
-// monitor's RAUC status read, at start and after each install, so the
-// status is read once.  Only slots of the booted slot's class count:
-// the netboot slot is never booted from disk and is always bad.
+// the fallback, and partition-out-of-date for one holding an older
+// release than the booted one, or none, since it is the fallback the
+// next upgrade should refresh.  Fed by the D-Bus monitor's RAUC status
+// read, at start and after each install, so the status is read once.
+// Only slots of the booted slot's class count: the netboot slot is
+// never booted from disk and is always bad.
 func BootFallback(raucData map[string]interface{}, log *slog.Logger) {
 	out, err := json.Marshal(raucData)
 	if err != nil {
 		return
 	}
 	for _, slot := range slotStates(out, log) {
-		var err error
-		if slot.bad {
-			err = alarm.Raise(bootType, slot.name, "", alarm.Major,
-				fmt.Sprintf("Software slot %s failed to boot and is marked bad, the device runs %s.", slot.name, slot.booted))
-		} else {
-			err = alarm.Clear(bootType, slot.name, "")
+		set := func(typ string, raise bool, sev alarm.Severity, text string) {
+			var err error
+			if raise {
+				err = alarm.Raise(typ, slot.name, "", sev, text)
+			} else {
+				err = alarm.Clear(typ, slot.name, "")
+			}
+			if err != nil {
+				log.Warn("sysalarm: "+typ+" alarm", "err", err)
+			}
 		}
-		if err != nil {
-			log.Warn("sysalarm: boot-fallback alarm", "err", err)
-		}
+		set(bootType, slot.bad, alarm.Major,
+			fmt.Sprintf("Software slot %s failed to boot and is marked bad, the device runs %s.", slot.name, slot.booted))
+		set(partitionType, slot.outdated, alarm.Warning,
+			fmt.Sprintf("The %s partition has %s, this is %s, use 'upgrade' to update it.", slot.name, slot.version, slot.bootedVersion))
 	}
 }
 
 type slotState struct {
-	name, booted string
-	bad          bool
+	name, booted           string
+	version, bootedVersion string
+	bad, outdated          bool
 }
 
 // slotStates parses a RAUC status and returns the sibling slots of the
@@ -114,6 +123,11 @@ func slotStates(out []byte, log *slog.Logger) []slotState {
 			Class      string `json:"class"`
 			Bootname   string `json:"bootname"`
 			BootStatus string `json:"boot_status"`
+			SlotStatus struct {
+				Bundle struct {
+					Version string `json:"version"`
+				} `json:"bundle"`
+			} `json:"slot_status"`
 		} `json:"slots"`
 	}
 	if err := json.Unmarshal(out, &status); err != nil {
@@ -122,11 +136,12 @@ func slotStates(out []byte, log *slog.Logger) []slotState {
 	}
 
 	booted := strings.TrimPrefix(status.Booted, "internal-")
-	class := ""
+	class, bootedVersion := "", ""
 	for _, slots := range status.Slots {
 		for _, slot := range slots {
 			if strings.TrimPrefix(slot.Bootname, "internal-") == booted {
 				class = slot.Class
+				bootedVersion = slot.SlotStatus.Bundle.Version
 			}
 		}
 	}
@@ -141,10 +156,58 @@ func slotStates(out []byte, log *slog.Logger) []slotState {
 			if slot.Class != class || name == booted {
 				continue
 			}
-			states = append(states, slotState{name: name, booted: booted, bad: slot.BootStatus == "bad"})
+			version := slot.SlotStatus.Bundle.Version
+			st := slotState{name: name, booted: booted, version: version, bootedVersion: bootedVersion,
+				bad: slot.BootStatus == "bad", outdated: bootedVersion != "" && olderVersion(version, bootedVersion)}
+			if version == "" {
+				st.version = "no release"
+			}
+			states = append(states, st)
 		}
 	}
 	return states
+}
+
+// olderVersion reports whether release a is older than b, comparing
+// the numbers in them in order, so v26.10.0 is newer than v26.9.1 and
+// an empty or unreadable version is older than anything.
+func olderVersion(a, b string) bool {
+	na, nb := versionNumbers(a), versionNumbers(b)
+	if len(na) == 0 {
+		return len(nb) > 0
+	}
+	for i := 0; i < len(na) || i < len(nb); i++ {
+		var x, y int
+		if i < len(na) {
+			x = na[i]
+		}
+		if i < len(nb) {
+			y = nb[i]
+		}
+		if x != y {
+			return x < y
+		}
+	}
+	return false
+}
+
+func versionNumbers(v string) []int {
+	var nums []int
+	n, in := 0, false
+	for _, c := range v {
+		if c >= '0' && c <= '9' {
+			n, in = n*10+int(c-'0'), true
+			continue
+		}
+		if in {
+			nums = append(nums, n)
+			n, in = 0, false
+		}
+	}
+	if in {
+		nums = append(nums, n)
+	}
+	return nums
 }
 
 func exists(path string) bool {
