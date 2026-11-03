@@ -1,0 +1,11 @@
+#!/bin/sh
+# Hand written operational data: an active critical external alarm, a
+# cleared one that was acknowledged, an active one closed by an
+# operator, and a link-down alarm hidden by a shelf.
+
+oper_xpaths="/ietf-alarms:alarms"
+
+cli_commands="show-alarms show-alarms_--shelved show-alarms_backup show-alarms_eth7"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"
