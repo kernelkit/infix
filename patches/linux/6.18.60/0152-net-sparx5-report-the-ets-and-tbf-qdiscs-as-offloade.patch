@@ -1,0 +1,135 @@
+From ecd73c3be461a74e7aa55d545e513f1f432deeac Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 4 Nov 2026 09:56:24 +0100
+Subject: [PATCH] net: sparx5: report the ets and tbf qdiscs as offloaded
+Organization: Wires
+
+tc never shows an ets or tbf qdisc on a switch port as offloaded, so
+there is no telling whether the fabric runs it or the kernel does.
+
+The kernel marks a qdisc offloaded when the driver answers its stats
+query, and the driver refuses that query for both.
+
+Answer it, with no counters to add: for tbf when the scheduler element
+is shaped, for ets when the port's weights were taken.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 25 +++++++++++++++++--
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  2 ++
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c |  4 ++-
+ 4 files changed, 29 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index cb9a17f69d4b..053e4046e60f 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -242,6 +242,7 @@ struct sparx5_port {
+ 	struct net_device *lag_master;
+ 	enum netdev_lag_hash lag_hash_type;
+ 	bool lag_tx_active;
++	bool ets_offloaded; /* the ets qdisc runs in the hardware */
+ };
+ 
+ enum sparx5_core_clockfreq {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 768e91836f3a..b467d11a782b 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -593,13 +593,24 @@ int sparx5_tc_tbf_del(struct sparx5_port *port, u32 layer, u32 idx)
+ 	return sparx5_shaper_del(port, layer, idx);
+ }
+ 
++/* No counters to add, the element is shaped when it is in a leak group */
++int sparx5_tc_tbf_stats(struct sparx5_port *port, u32 layer, u32 idx)
++{
++	u32 group;
++
++	if (sparx5_lg_get_group_by_index(port->sparx5, layer, idx, &group) < 0)
++		return -EOPNOTSUPP;
++
++	return 0;
++}
++
+ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		      struct tc_ets_qopt_offload_replace_params *params)
+ {
+ 	struct sparx5_dwrr dwrr = {0};
+ 	/* Minimum weight for each iteration */
+ 	unsigned int w_min = 100;
+-	int i;
++	int i, err;
+ 
+ 	/* Find minimum weight for all dwrr bands */
+ 	for (i = 0; i < SPX5_PRIOS; i++) {
+@@ -626,16 +637,26 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 			sparx5_weight_to_hw_cost(w_min, params->weights[i]);
+ 	}
+ 
+-	return sparx5_dwrr_conf_set(port, &dwrr);
++	err = sparx5_dwrr_conf_set(port, &dwrr);
++	port->ets_offloaded = !err;
++
++	return err;
+ }
+ 
+ int sparx5_tc_ets_del(struct sparx5_port *port)
+ {
+ 	struct sparx5_dwrr dwrr = {0};
+ 
++	port->ets_offloaded = false;
++
+ 	return sparx5_dwrr_conf_set(port, &dwrr);
+ }
+ 
++int sparx5_tc_ets_stats(struct sparx5_port *port)
++{
++	return port->ets_offloaded ? 0 : -EOPNOTSUPP;
++}
++
+ int sparx5_tc_cbs_add(struct sparx5_port *port,
+ 		      struct tc_cbs_qopt_offload *qopt, u32 idx)
+ {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index 27a7664550b5..ba4b9c1dc9e4 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -73,6 +73,7 @@ int sparx5_tc_tbf_add(struct sparx5_port *port,
+ 		      struct tc_tbf_qopt_offload_replace_params *params,
+ 		      u32 layer, u32 idx);
+ int sparx5_tc_tbf_del(struct sparx5_port *port, u32 layer, u32 idx);
++int sparx5_tc_tbf_stats(struct sparx5_port *port, u32 layer, u32 idx);
+ 
+ /* Enhanced Transmission Selection */
+ struct tc_ets_qopt_offload_replace_params;
+@@ -80,6 +81,7 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		      struct tc_ets_qopt_offload_replace_params *params);
+ 
+ int sparx5_tc_ets_del(struct sparx5_port *port);
++int sparx5_tc_ets_stats(struct sparx5_port *port);
+ 
+ /* Credit-Based Shaper */
+ struct tc_cbs_qopt_offload;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index a30954c643ad..bb77806817d8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -100,7 +100,7 @@ static int sparx5_tc_setup_qdisc_tbf(struct net_device *ndev,
+ 	case TC_TBF_DESTROY:
+ 		return sparx5_tc_tbf_del(port, layer, se_idx);
+ 	case TC_TBF_STATS:
+-		return -EOPNOTSUPP;
++		return sparx5_tc_tbf_stats(port, layer, se_idx);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -144,6 +144,8 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 	case TC_ETS_DESTROY:
+ 
+ 		return sparx5_tc_ets_del(port);
++	case TC_ETS_STATS:
++		return sparx5_tc_ets_stats(port);
+ 	case TC_ETS_GRAFT:
+ 		return -EOPNOTSUPP;
+ 
