@@ -1,0 +1,8 @@
+:testgroup:
+== Alarms
+
+Tests for the alarm list and the alarms the system raises on its own:
+
+ - Raise, acknowledge, clear, shelve and purge an alarm
+
+include::basic/Readme.adoc[]
