@@ -165,25 +165,25 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseAdded"),
+		dbus.WithMatchMember("DhcpLeaseAdded"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseAdded match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseAdded match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseDeleted"),
+		dbus.WithMatchMember("DhcpLeaseDeleted"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseDeleted match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseDeleted match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseUpdated"),
+		dbus.WithMatchMember("DhcpLeaseUpdated"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseUpdated match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseUpdated match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
@@ -260,9 +260,9 @@ func (m *DBusMonitor) from(sig *dbus.Signal, name string) bool {
 
 func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 	switch sig.Name {
-	case dnsmasqInterface + ".DHCPLeaseAdded",
-		dnsmasqInterface + ".DHCPLeaseDeleted",
-		dnsmasqInterface + ".DHCPLeaseUpdated":
+	case dnsmasqInterface + ".DhcpLeaseAdded",
+		dnsmasqInterface + ".DhcpLeaseDeleted",
+		dnsmasqInterface + ".DhcpLeaseUpdated":
 		if !m.from(sig, dnsmasqBusName) || (sig.Path != "" && string(sig.Path) != dnsmasqPath) {
 			return nil
 		}
