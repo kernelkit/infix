@@ -4511,6 +4511,134 @@ def show_lldp(json):
             entry.print()
 
 
+def _alarm_stamp(ts):
+    """Date and time of an RFC 3339 stamp, without the zone."""
+    if not ts:
+        return "-"
+    return ts.replace("T", " ")[:16]
+
+
+def _alarm_state(alarm):
+    changes = alarm.get("operator-state-change", [])
+    operator = changes[-1]["state"] if changes else ""
+    if alarm.get("is-cleared"):
+        return "cleared"
+    if operator in ("ack", "closed"):
+        return operator
+    return "active"
+
+
+def _alarm_name(alarm):
+    """The resource as the operator knows it: the last key value of an
+    instance-identifier, e.g. eth0, or the resource itself."""
+    resource = alarm.get("resource", "")
+    if resource.startswith("/") and "='" in resource:
+        return resource.rsplit("='", 1)[1].split("'", 1)[0]
+    return resource
+
+
+def _alarm_type(alarm):
+    alarm_type = alarm.get("alarm-type-id", "").split(":", 1)[-1]
+    if alarm.get("alarm-type-qualifier"):
+        alarm_type += f" ({alarm['alarm-type-qualifier']})"
+    return alarm_type
+
+
+def _alarm_row(table, alarm, shelved):
+    state = _alarm_state(alarm)
+    severity = alarm.get("perceived-severity", "")
+    if state == "active" and not shelved:
+        if severity == "critical":
+            severity = Decore.red(severity)
+        elif severity in ("major", "minor"):
+            severity = Decore.yellow(severity)
+
+    text = alarm.get("alarm-text", "")
+    if len(text) > 30:
+        text = text[:29] + "…"
+
+    row = [_alarm_stamp(alarm.get("last-changed")), severity, state,
+           _alarm_name(alarm), _alarm_type(alarm)]
+    if shelved:
+        row.append(alarm.get("shelf-name", ""))
+    row.append(text)
+    table.row(*row)
+
+
+def _alarm_detail(alarm):
+    """One alarm in full: every stamp, the whole text and the operator history."""
+    print(Decore.bold(f"{_alarm_name(alarm)}  {_alarm_type(alarm)}"))
+    rows = [
+        ("Resource", alarm.get("resource") if _alarm_name(alarm) != alarm.get("resource") else None),
+        ("Severity", alarm.get("perceived-severity", "")),
+        ("State", _alarm_state(alarm)),
+        ("Created", alarm.get("time-created")),
+        ("Last raised", alarm.get("last-raised")),
+        ("Last change", alarm.get("last-changed")),
+        ("Shelf", alarm.get("shelf-name")),
+        ("Text", alarm.get("alarm-text", "")),
+    ]
+    for label, value in rows:
+        if value:
+            print(f"  {label:<12}: {value}")
+    changes = alarm.get("operator-state-change", [])
+    if changes:
+        print("  Operator history:")
+        for change in changes:
+            note = f"  {change['text']}" if change.get("text") else ""
+            print(f"    {_alarm_stamp(change.get('time'))}  {change.get('state', ''):<7}"
+                  f" {change.get('operator', '')}{note}")
+
+
+def show_alarms(json, shelved=False, resource=None):
+    """The alarm list, with shelved the alarms hidden by a shelf, with a
+    resource every alarm on it in full."""
+    alarms = json.get("ietf-alarms:alarms")
+    if alarms is None:
+        print("Error: No alarm data available.")
+        sys.exit(1)
+
+    entries = alarms.get("alarm-list", {}).get("alarm", [])
+    hidden = alarms.get("shelved-alarms", {}).get("shelved-alarm", [])
+    if shelved:
+        entries = hidden
+
+    def order(alarm):
+        return (alarm.get("is-cleared", False), alarm.get("last-changed", ""))
+
+    if resource:
+        if not shelved:
+            entries = entries + hidden
+        matches = [a for a in sorted(entries, key=order)
+                   if resource in (a.get("resource"), _alarm_name(a))]
+        if not matches:
+            print(f"No alarm on {resource}.")
+            sys.exit(1)
+        for i, alarm in enumerate(matches):
+            if i:
+                print()
+            _alarm_detail(alarm)
+        return
+
+    if entries:
+        columns = [Column('LAST CHANGE'), Column('SEVERITY'), Column('STATE'),
+                   Column('RESOURCE'), Column('TYPE')]
+        if shelved:
+            columns.append(Column('SHELF'))
+        columns.append(Column('TEXT'))
+        table = SimpleTable(columns)
+        for alarm in sorted(entries, key=order):
+            _alarm_row(table, alarm, shelved)
+        table.print()
+    elif shelved:
+        print("No shelved alarms.")
+    else:
+        print("No alarms.")
+
+    if not shelved and hidden:
+        print(f"{len(hidden)} shelved, see 'show alarms shelved'")
+
+
 def _mdns_sort_addrs(addresses):
     """Sort addresses: IPv4 first, then non-link-local IPv6, then link-local IPv6."""
     def key(a):
@@ -6769,6 +6897,10 @@ def main():
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
               .add_argument('-n', '--name', help='Interface name')
 
+    p = subparsers.add_parser('show-alarms', help='Show active and cleared alarms')
+    p.add_argument("-s", "--shelved", action="store_true", help="Show shelved alarms")
+    p.add_argument("resource", nargs="?", help="Show the alarms on one resource in full")
+
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
 
     subparsers.add_parser('show-mdns', help='Show mDNS configuration and neighbors')
@@ -6858,6 +6990,8 @@ def main():
         show_modem_detail(json_data, args.name)
     elif args.command == "show-interfaces":
         show_interfaces(json_data, args.name)
+    elif args.command == "show-alarms":
+        show_alarms(json_data, args.shelved, args.resource)
     elif args.command == "show-lldp":
         show_lldp(json_data)
     elif args.command == "show-mdns":

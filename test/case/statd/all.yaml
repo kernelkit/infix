@@ -1,4 +1,6 @@
 ---
+- case: alarms/test
+  name: "alarms"
 - case: bridge-mdb/test
   name: "bridge-mdb"
 - case: containers/test

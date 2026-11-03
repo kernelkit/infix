@@ -1,0 +1,8 @@
+[1meth7  link-down[0m
+  Resource    : /ietf-interfaces:interfaces/interface[name='eth7']
+  Severity    : major
+  State       : active
+  Last raised : 2026-11-03T05:00:00+00:00
+  Last change : 2026-11-03T05:00:00+00:00
+  Shelf       : spare-ports
+  Text        : An enabled interface has no link.
