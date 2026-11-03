@@ -169,11 +169,6 @@ def protocol_routes(target, proto, name="default"):
     xpath = (f"/ietf-routing:routing/control-plane-protocols"
              f"/control-plane-protocol[type='{proto}'][name='{name}']/{action}")
     routes = target.call_action_output(xpath).get("route", [])
-    for r in routes:
-        # NETCONF lifts only top-level lists, a single next hop is a dict
-        hops = r.get("next-hops", {}).get("next-hop")
-        if isinstance(hops, dict):
-            r["next-hops"]["next-hop"] = [hops]
     return {r["prefix"]: r for r in routes}
 
 

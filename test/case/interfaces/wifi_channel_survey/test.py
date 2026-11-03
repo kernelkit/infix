@@ -73,7 +73,7 @@ with infamy.Test() as test:
         found = [n for n in networks if n.get("bssid", "").lower() == ap_mac]
         assert found, networks
         assert found[0].get("ssid") == SSID, found
-        assert int(found[0].get("frequency", 0)) == FREQ, found
+        assert found[0].get("frequency") == FREQ, found
 
     with test.step("Run a channel survey on radio0 of the station"):
         channels = wifi.channel_survey(station, "radio0")
