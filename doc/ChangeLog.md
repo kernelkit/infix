@@ -29,6 +29,8 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
 - Banana Pi BPI-R2 Pro: the CPU now runs at up to 2 GHz, it was stuck
   at its boot clock
+- CLI commands and `copy` start faster, the YANG models are now loaded
+  once at boot instead of by every command
 - WebUI: the DHCP leases are grouped by subnet, in address order
 - `show dhcp-server` now shows the server statistics with the leases,
   and `show dhcp-server brief` only the leases.  The `statistics` and

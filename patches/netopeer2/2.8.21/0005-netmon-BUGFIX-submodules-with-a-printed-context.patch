@@ -1,0 +1,161 @@
+From f86fdf51fd42ce9e3d65e9e556654e993b13835b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 22:18:41 +0100
+Subject: [PATCH] netmon BUGFIX submodules with a printed context
+Organization: Wires
+
+A printed context has no parsed modules, so the schema list left out
+every submodule and get-schema could not find one.  Clients that load
+the schemas from the list then fail on modules that include them.  The
+compiled modules list their submodules with name, revision and file,
+which is all either needs.
+---
+ src/netconf_monitoring.c | 65 +++++++++++++++++++++++++++-------------
+ 1 file changed, 45 insertions(+), 20 deletions(-)
+
+diff --git a/src/netconf_monitoring.c b/src/netconf_monitoring.c
+index df5d765..d3d4b86 100644
+--- a/src/netconf_monitoring.c
++++ b/src/netconf_monitoring.c
+@@ -273,7 +273,7 @@ np2srv_ncm_oper_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const cha
+ {
+     struct lyd_node *root = NULL, *cont, *list;
+     const struct lys_module *mod;
+-    const struct lysp_submodule *submod;
++    const struct lysc_submodule *submod;
+     sr_conn_ctx_t *conn;
+     struct ly_ctx *ly_ctx;
+     char **cpblts;
+@@ -325,18 +325,16 @@ np2srv_ncm_oper_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const cha
+         lyd_new_term(list, NULL, "namespace", mod->ns, 0, NULL);
+         lyd_new_term(list, NULL, "location", "NETCONF", 0, NULL);
+ 
+-        if (mod->parsed) {
+-            LYA_FOR(mod->parsed->includes, u) {
+-                submod = mod->parsed->includes[u].submodule;
++        LYA_FOR(mod->submodules, u) {
++            submod = &mod->submodules[u];
+ 
+-                lyd_new_list(cont, NULL, "schema", 0, &list, submod->name, submod->revs ? submod->revs[0].date : "", "yang");
+-                lyd_new_term(list, NULL, "namespace", mod->ns, 0, NULL);
+-                lyd_new_term(list, NULL, "location", "NETCONF", 0, NULL);
++            lyd_new_list(cont, NULL, "schema", 0, &list, submod->name, submod->revision ? submod->revision : "", "yang");
++            lyd_new_term(list, NULL, "namespace", mod->ns, 0, NULL);
++            lyd_new_term(list, NULL, "location", "NETCONF", 0, NULL);
+ 
+-                lyd_new_list(cont, NULL, "schema", 0, &list, submod->name, submod->revs ? submod->revs[0].date : "", "yin");
+-                lyd_new_term(list, NULL, "namespace", mod->ns, 0, NULL);
+-                lyd_new_term(list, NULL, "location", "NETCONF", 0, NULL);
+-            }
++            lyd_new_list(cont, NULL, "schema", 0, &list, submod->name, submod->revision ? submod->revision : "", "yin");
++            lyd_new_term(list, NULL, "namespace", mod->ns, 0, NULL);
++            lyd_new_term(list, NULL, "location", "NETCONF", 0, NULL);
+         }
+     }
+ 
+@@ -426,9 +424,38 @@ error:
+     return SR_ERR_INTERNAL;
+ }
+ 
++/**
++ * @brief Find a submodule in the compiled modules, which a printed context also has.
++ *
++ * @param[in] ctx Context to search.
++ * @param[in] name Submodule name.
++ * @param[in] revision Submodule revision, NULL for any.
++ * @return Found submodule, NULL if not found.
++ */
++static const struct lysc_submodule *
++np_ctx_get_submodule(const struct ly_ctx *ctx, const char *name, const char *revision)
++{
++    const struct lys_module *mod;
++    const struct lysc_submodule *submod;
++    uint32_t idx = 0;
++    LYA_COUNT_T u;
++
++    while ((mod = ly_ctx_get_module_iter(ctx, &idx))) {
++        LYA_FOR(mod->submodules, u) {
++            submod = &mod->submodules[u];
++            if (!strcmp(submod->name, name) && (!revision || (submod->revision && !strcmp(submod->revision, revision)))) {
++                return submod;
++            }
++        }
++    }
++
++    return NULL;
++}
++
+ /**
+  * @brief Print YANG (sub)module data.
+  *
++ * @param[in] ctx Context of the (sub)module.
+  * @param[in] mod Module to print, if @p submod not set.
+  * @param[in] submod Submodule to print, if set.
+  * @param[out] yang_data Printed YANG data.
+@@ -436,10 +463,10 @@ error:
+  * @return server reply on error.
+  */
+ static struct nc_server_reply *
+-np_getschema_print_yang(const struct lys_module *mod, const struct lysp_submodule *submod, char **yang_data)
++np_getschema_print_yang(const struct ly_ctx *ctx, const struct lys_module *mod, const struct lysc_submodule *submod,
++        char **yang_data)
+ {
+     struct nc_server_reply *reply = NULL;
+-    const struct ly_ctx *ctx;
+     const struct lys_module *m;
+     const char *filepath, *name, *revision;
+     char *path = NULL;
+@@ -447,8 +474,6 @@ np_getschema_print_yang(const struct lys_module *mod, const struct lysp_submodul
+     uint32_t idx;
+     int len;
+ 
+-    ctx = mod ? mod->ctx : submod->mod->ctx;
+-
+     if (submod && submod->filepath) {
+         filepath = submod->filepath;
+     } else if (mod && mod->filepath) {
+@@ -469,7 +494,7 @@ np_getschema_print_yang(const struct lys_module *mod, const struct lysp_submodul
+         /* create the path to the file */
+         len = strrchr(m->filepath, '/') - m->filepath;
+         name = submod ? submod->name : mod->name;
+-        revision = submod ? (submod->revs ? submod->revs[0].date : NULL) : mod->revision;
++        revision = submod ? submod->revision : mod->revision;
+         if (asprintf(&path, "%.*s/%s%s%s.yang", len, m->filepath, name, revision ? "@" : "", revision ? revision : "") == -1) {
+             reply = np_reply_err_op_failed(NULL, ctx, "Memory allocation failed.");
+             goto cleanup;
+@@ -523,7 +548,7 @@ np2srv_rpc_getschema_cb(const struct lyd_node *rpc, struct np_user_sess *UNUSED(
+     const char *identifier = NULL, *revision = NULL, *format = NULL;
+     char *module_data = NULL;
+     const struct lys_module *module = NULL;
+-    const struct lysp_submodule *submodule = NULL;
++    const struct lysc_submodule *submodule = NULL;
+     struct lyd_node *node, *output = NULL;
+ 
+     /* identifier */
+@@ -556,7 +581,7 @@ np2srv_rpc_getschema_cb(const struct lyd_node *rpc, struct np_user_sess *UNUSED(
+         /* get specific module */
+         module = ly_ctx_get_module(LYD_CTX(rpc), identifier, revision);
+         if (!module) {
+-            submodule = ly_ctx_get_submodule(LYD_CTX(rpc), identifier, revision);
++            submodule = np_ctx_get_submodule(LYD_CTX(rpc), identifier, revision);
+         }
+     } else {
+         /* try to get implemented, then latest module */
+@@ -565,7 +590,7 @@ np2srv_rpc_getschema_cb(const struct lyd_node *rpc, struct np_user_sess *UNUSED(
+             module = ly_ctx_get_module_latest(LYD_CTX(rpc), identifier);
+         }
+         if (!module) {
+-            submodule = ly_ctx_get_submodule_latest(LYD_CTX(rpc), identifier);
++            submodule = np_ctx_get_submodule(LYD_CTX(rpc), identifier, NULL);
+         }
+     }
+     if (!module && !submodule) {
+@@ -580,7 +605,7 @@ np2srv_rpc_getschema_cb(const struct lyd_node *rpc, struct np_user_sess *UNUSED(
+     }
+ 
+     /* get module data */
+-    if ((reply = np_getschema_print_yang(module, submodule, &module_data))) {
++    if ((reply = np_getschema_print_yang(LYD_CTX(rpc), module, submodule, &module_data))) {
+         goto cleanup;
+     }
+ 
