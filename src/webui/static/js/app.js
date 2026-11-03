@@ -2692,8 +2692,11 @@ function renderCfgLog() {
       }
     });
 
-    // The indicator follows navigation between status and other pages
-    document.addEventListener('htmx:pushedIntoHistory', update);
+    // The indicator follows navigation between status and other pages,
+    // once the new page is in place, it may carry data-auto-refresh
+    document.addEventListener('htmx:afterSettle', function(evt) {
+      if (evt.detail.target && evt.detail.target.id === 'content') update();
+    });
     window.addEventListener('popstate', update);
   });
 })();
