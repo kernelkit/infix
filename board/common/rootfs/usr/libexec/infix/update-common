@@ -106,7 +106,7 @@ update_probe() {
 update_pending_version() {
     rauc status --detailed --output-format=json 2>/dev/null \
         | jq -r '(.slots | add) as $s
-                 | $s[.boot_primary].slot_status.bundle.version // empty'
+                 | if .boot_primary then $s[.boot_primary].slot_status.bundle.version // empty else empty end'
 }
 
 # Should the latest release be applied?  Requires update_probe() to have run.
