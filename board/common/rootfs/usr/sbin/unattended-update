@@ -64,10 +64,13 @@ fi
 logger -t "$TAG" "Installing ${LATEST_TAG} from ${BUNDLE_URL} (running ${VERSION})"
 if ! rauc install "$BUNDLE_URL"; then
     logger -t "$TAG" "ERROR: installation of ${LATEST_TAG} failed"
+    alarm_raise update-install-failed "Installing release $LATEST_TAG from $BUNDLE_URL failed"
     exit 1
 fi
 update_state '. + {"last-install": (now | todate), installed: $tag, available: false}' \
     --arg tag "$LATEST_TAG"
+alarm_clear update-install-failed
+alarm_clear update-available
 
 POLICY=$(read_reboot_policy)
 if [ "$POLICY" = immediate ]; then

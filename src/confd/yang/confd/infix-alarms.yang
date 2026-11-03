@@ -56,6 +56,28 @@ module infix-alarms {
                  the preferred slot.";
   }
 
+  identity update-available {
+    base al:alarm-type-id;
+    description "A newer software release is available from the update source.
+
+                 Raised by the scheduled update check and cleared when the
+                 release is installed or the source no longer offers it.";
+  }
+
+  identity update-check-failed {
+    base al:alarm-type-id;
+    description "The scheduled update check could not read the update source.
+
+                 Cleared by the next check that succeeds.";
+  }
+
+  identity update-install-failed {
+    base al:alarm-type-id;
+    description "An unattended update failed to install the new release.
+
+                 Cleared by the next unattended update that succeeds.";
+  }
+
   identity external {
     base al:alarm-type-id;
     description "An alarm raised by a script or an external system.
