@@ -3705,20 +3705,31 @@ def _analyze_group_permissions(nacm):
                     has_permit_all = True
                     break
 
+                ops = access_ops.lower()
+
                 # deny pattern for write+exec (like guest)
                 if action == 'deny' and module_name == '*':
-                    ops = access_ops.lower()
                     if all(op in ops for op in ['create', 'update', 'delete']):
                         can_write = False
                     if 'exec' in ops:
                         can_exec = False
 
+                # scoped permit (like operator), write/exec to some nodes
+                if action == 'permit':
+                    if any(op in ops for op in ['create', 'update', 'delete']):
+                        can_write = True
+                    if 'exec' in ops:
+                        can_exec = True
+
             if has_permit_all:
                 break
 
-        # If not permit-all, global denials create restrictions
-        # These affect READ too (access-operations: "*" includes read)
-        if not has_permit_all:
+        # permit-all overrides everything, including deny defaults.
+        # Otherwise global denials create restrictions, these affect
+        # READ too (access-operations: "*" includes read)
+        if has_permit_all:
+            can_read = can_write = can_exec = True
+        else:
             for rule in global_denials:
                 path = rule.get('path', '')
                 module = rule.get('module-name', '')
