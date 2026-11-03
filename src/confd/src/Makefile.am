@@ -68,6 +68,7 @@ confd_plugin_la_SOURCES =			\
 	ntp.c					\
 	ptp.c					\
 	syslog.c				\
+	alarm.c					\
 	factory-default.c			\
 	routing.c				\
 	dhcp-common.c				\
