@@ -41,6 +41,7 @@ All notable changes to the project are documented in this file.
   e.g., they stayed at zero on a switch port
 - The DHCP server counters were always zero
 - The DHCP server lease list was not updated when clients came and went
+- WebUI: the DHCP page did not show that the server was enabled
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
 - x86_64: the `.qcow2` disk image had no free space, so a virtual

@@ -76,8 +76,12 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 
 	var raw struct {
 		DHCP struct {
-			Enabled yangBool `json:"enabled"`
-			Leases  struct {
+			Enabled *yangBool `json:"enabled"` // absent is the default, true
+			Subnet  []struct {
+				Subnet      string `json:"subnet"`
+				Description string `json:"description"`
+			} `json:"subnet"`
+			Leases struct {
 				Lease []struct {
 					Address  string `json:"address"`
 					PhysAddr string `json:"phys-address"`
@@ -96,13 +100,17 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 			} `json:"statistics"`
 		} `json:"infix-dhcp-server:dhcp-server"`
 	}
-	if err := h.RC.Get(ctx, "/data/infix-dhcp-server:dhcp-server", &raw); err != nil && !restconf.IsNotFound(err) {
+	err := h.RC.Get(ctx, "/data/infix-dhcp-server:dhcp-server", &raw)
+	switch {
+	case restconf.IsNotFound(err) || (err == nil && len(raw.DHCP.Subnet) == 0):
+		// No subnet to serve, no server
+	case err != nil:
 		log.Printf("restconf dhcp-server: %v", err)
 		data.Error = "Failed to fetch DHCP data"
-	} else {
+	default:
 		d := raw.DHCP
 		dhcp := &DHCPData{
-			Enabled: bool(d.Enabled),
+			Enabled: d.Enabled == nil || bool(*d.Enabled),
 			Stats: DHCPStats{
 				InDiscoveries: int64(d.Statistics.InDiscoveries),
 				InRequests:    int64(d.Statistics.InRequests),
@@ -112,19 +120,8 @@ func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				OutNaks:       int64(d.Statistics.OutNaks),
 			},
 		}
-		var conf struct {
-			DHCP struct {
-				Subnet []struct {
-					Subnet      string `json:"subnet"`
-					Description string `json:"description"`
-				} `json:"subnet"`
-			} `json:"infix-dhcp-server:dhcp-server"`
-		}
-		if err := h.RC.Get(ctx, "/ds/ietf-datastores:running/infix-dhcp-server:dhcp-server", &conf); err != nil && !restconf.IsNotFound(err) {
-			log.Printf("restconf dhcp-server config: %v", err)
-		}
 		var subnets []DHCPSubnet
-		for _, sn := range conf.DHCP.Subnet {
+		for _, sn := range d.Subnet {
 			subnets = append(subnets, DHCPSubnet{Subnet: sn.Subnet, Description: sn.Description})
 		}
 		var leases []DHCPLease
