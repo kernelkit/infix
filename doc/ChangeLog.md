@@ -9,6 +9,11 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.62 (LTS)
+- New alarm list, RFC 8632 `ietf-alarms`, with alarms for failed
+  startup configuration, boot fallback, software partition and update
+  state, ports without link, and alarms raised by scripts.  Alarms can
+  be acknowledged, closed, shelved and purged from the CLI, the WebUI
+  and the management protocols, see [Alarms][alarms]
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
@@ -299,6 +304,7 @@ All notable changes to the project are documented in this file.
 [lan969x]: https://github.com/kernelkit/infix/blob/main/board/aarch64/microchip-lan969x/README.md
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [modem]: https://www.kernelkit.org/infix/latest/modem/
+[alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
