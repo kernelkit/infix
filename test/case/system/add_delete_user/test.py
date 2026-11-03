@@ -55,7 +55,9 @@ with infamy.Test() as test:
         util.until(lambda: newssh.run("ls").returncode == 0, attempts=200)
 
     with test.step("Delete user 'newuser01'"):
-        target.delete_xpath(f"/ietf-system:system/authentication/user[name='{username}']")
+        target.put_config_dicts({}, delete=[
+            f"/ietf-system:system/authentication/user[name='{username}']"
+        ])
 
     with test.step("Verify erasure of user 'newuser01'"):
         running = target.get_config_dict("/ietf-system:system")

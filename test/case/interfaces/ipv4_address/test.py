@@ -43,7 +43,9 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))
 
     with test.step("Remove all IPv4 addresses from target:mgmt"):
-        target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{interface_name}']/ietf-ip:ipv4")
+        target.put_config_dicts({}, delete=[
+            f"/ietf-interfaces:interfaces/interface[name='{interface_name}']/ietf-ip:ipv4"
+        ])
 
     with test.step("Verify target:mgmt no longer has the address 10.10.10.20"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address) == False)

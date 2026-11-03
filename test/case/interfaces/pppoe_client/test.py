@@ -185,7 +185,9 @@ with infamy.Test() as test:
                         test.fail()
 
             with test.step("Delete wan, verify the interface is removed"):
-                client.delete_xpath("/ietf-interfaces:interfaces/interface[name='wan']")
+                client.put_config_dicts({}, delete=[
+                    "/ietf-interfaces:interfaces/interface[name='wan']"
+                ])
                 until(lambda: not iface.exist(client, "wan"), attempts=20)
 
     test.succeed()

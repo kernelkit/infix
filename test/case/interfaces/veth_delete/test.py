@@ -87,7 +87,7 @@ with infamy.Test() as test:
     with test.step("Delete VETH pair"):
         # Both ends are mutually mandatory leafrefs, so they must be
         # removed in a single transaction.
-        target.delete_xpaths([
+        target.put_config_dicts({}, delete=[
             f"/ietf-interfaces:interfaces/interface[name='{veth0a}']",
             f"/ietf-interfaces:interfaces/interface[name='{veth0b}']",
         ])

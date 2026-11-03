@@ -44,7 +44,7 @@ def mdns_scan():
 def check(expected, allow=None, deny=None):
     """Execute complete mDNS test scenario"""
     try:
-        dut.delete_xpath("/infix-services:mdns/interfaces")
+        dut.put_config_dicts({}, delete=["/infix-services:mdns/interfaces"])
     except ValueError:
         # Ignore if xpath doesn't exist (first run)
         pass

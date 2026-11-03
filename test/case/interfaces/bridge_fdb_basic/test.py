@@ -109,9 +109,9 @@ with infamy.Test() as test:
                 test.fail(f"Unexpected learned entry: {entry}")
 
     with test.step("Remove the static FDB entry and verify it is gone"):
-        target.delete_xpath(iface.get_xpath("br0", "infix-interfaces:bridge/vlans"
+        target.put_config_dicts({}, delete=[iface.get_xpath("br0", "infix-interfaces:bridge/vlans"
                                             f"/vlan[vid='{VID}']/forwarding-database"
-                                            f"/entry[address='{STATIC}']"))
+                                            f"/entry[address='{STATIC}']")])
         until(lambda: iface.bridge_fdb_entry(target, "br0", VID, STATIC) is None)
 
     test.succeed()

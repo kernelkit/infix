@@ -111,7 +111,7 @@ with infamy.Test() as test:
         # Regression test for #941/#1546: removing a veth pair with one end
         # in a container must tear the pair down cleanly, leaving nothing
         # behind in the host namespace.
-        target.delete_xpaths([
+        target.put_config_dicts({}, delete=[
             f"/infix-containers:containers/container[name='{NAME}']",
             f"/ietf-interfaces:interfaces/interface[name='{NAME}']",
             "/ietf-interfaces:interfaces/interface[name='veth0b']",

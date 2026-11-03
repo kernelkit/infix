@@ -93,7 +93,7 @@ with infamy.Test() as test:
     with test.step("Remove IPv4 link-local addresses from target:data"):
         xpath = f"/ietf-interfaces:interfaces/interface[name='{tport}']" \
             "/ietf-ip:ipv4/infix-ip:autoconf"
-        target.delete_xpath(xpath)
+        target.put_config_dicts({}, delete=[xpath])
 
     with test.step("Verify link-local addresses has been removed from target:data"):
         until(lambda: no_linklocal(target, tport), attempts=30)

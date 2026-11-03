@@ -80,13 +80,13 @@ with infamy.Test() as test:
         target.put_config_dicts(wwan_iface("wwan1", "modem0", "sim0"))
 
     with test.step("Remove wwan0 and wwan1, verify the interfaces are gone"):
-        target.delete_xpaths([iface.get_xpath("wwan0"),
+        target.put_config_dicts({}, delete=[iface.get_xpath("wwan0"),
                               iface.get_xpath("wwan1")])
         until(lambda: target.get_iface("wwan0") is None
               and target.get_iface("wwan1") is None, attempts=30)
 
     with test.step("Remove modem and SIM hardware components"):
-        target.delete_xpaths([
+        target.put_config_dicts({}, delete=[
             "/ietf-hardware:hardware/component[name='modem0']",
             "/ietf-hardware:hardware/component[name='sim0']",
         ])

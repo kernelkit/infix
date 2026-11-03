@@ -117,7 +117,6 @@ with infamy.Test() as test:
         until(lambda: cap.offloads("transmission-selection") == taken)
 
     with test.step("Switch to the ieee-sr preset and verify SR classes on top"):
-        target.delete_xpath(qos_xpath(port, "/egress"))
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
@@ -127,7 +126,7 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        }})
+        }}, delete=[qos_xpath(port, "/egress")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
     with test.step("Add a 10 Mbit/s rate limit and verify the tbf root above the ets table"):
@@ -153,11 +152,11 @@ with infamy.Test() as test:
         print(tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout)
 
     with test.step("Remove the rate limit and verify the scheduler is the root again"):
-        target.delete_xpath(qos_xpath(port, "/egress/rate-limit"))
+        target.put_config_dicts({}, delete=[qos_xpath(port, "/egress/rate-limit")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
     with test.step("Remove qos configuration and verify the default table is back"):
-        target.delete_xpath(qos_xpath(port))
+        target.put_config_dicts({}, delete=[qos_xpath(port)])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_8_5[num_tc], num_tc, []))
         assert cap.offloads("transmission-selection") == offloaded
 

@@ -56,7 +56,7 @@ def _normalize(xpath: str) -> str:
 
 
 def track_xpath(xpath: str | None) -> None:
-    """Record a direct xpath access (get_data, delete_xpath, call_action, ...)."""
+    """Record a direct xpath access (get_data, put_config_dicts delete, call_action, ...)."""
     if xpath:
         _record([_normalize(xpath)])
 

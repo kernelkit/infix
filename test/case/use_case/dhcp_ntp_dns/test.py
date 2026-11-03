@@ -158,14 +158,7 @@ with infamy.Test() as test:
         print("DHCP server configured on server DUT")
 
     with test.step("Configure client to use DHCP and verify combined servers"):
-        # Explicitly delete static config using full path
-        try:
-            # Try to delete the entire ipv4 container from ietf-ip
-            client.delete_xpath(f"ietf-interfaces:interfaces/interface[name='{client_data}']/ietf-ip:ipv4")
-        except Exception:
-            pass
-        
-        # Enable DHCP
+        # Replace the static address with DHCP
         client.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
@@ -183,7 +176,9 @@ with infamy.Test() as test:
                     }]
                 }
             }
-        })
+        }, delete=[
+            f"/ietf-interfaces:interfaces/interface[name='{client_data}']/ietf-ip:ipv4"
+        ])
         
         print("Waiting for DHCP lease...")
         until(lambda: any_dhcp_address(client, client_data), attempts=120)

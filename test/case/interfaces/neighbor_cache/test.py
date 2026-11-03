@@ -51,10 +51,10 @@ with infamy.Test() as test:
         until(lambda: iface.neighbor_exist(target, tport, IPV6_NEIGH, IPV6_LLADR, "static"))
 
     with test.step("Remove static neighbor entries by clearing IPv4 and IPv6 config"):
-        target.delete_xpath(
-            f"/ietf-interfaces:interfaces/interface[name='{tport}']/ietf-ip:ipv4")
-        target.delete_xpath(
-            f"/ietf-interfaces:interfaces/interface[name='{tport}']/ietf-ip:ipv6")
+        target.put_config_dicts({}, delete=[
+            f"/ietf-interfaces:interfaces/interface[name='{tport}']/ietf-ip:ipv4",
+            f"/ietf-interfaces:interfaces/interface[name='{tport}']/ietf-ip:ipv6",
+        ])
 
     with test.step("Verify static neighbor entries are no longer present"):
         until(lambda: not iface.neighbor_exist(target, tport, IPV4_NEIGH))

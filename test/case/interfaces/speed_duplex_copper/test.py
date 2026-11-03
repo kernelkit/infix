@@ -177,7 +177,9 @@ def clear_target_advertise(target, interface):
     matches no entry).  Deleting the container removes all descendants in
     one go, which is exactly what this test needs.
     """
-    target.delete_xpath(iface.get_xpath(interface, "ieee802-ethernet-interface:ethernet"))
+    target.put_config_dicts({}, delete=[
+        iface.get_xpath(interface, "ieee802-ethernet-interface:ethernet")
+    ])
 
 
 def _settle_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):

@@ -101,7 +101,7 @@ with infamy.Test() as test:
     with test.step("Remove containers and VETH pair, verify clean teardown"):
         # Removing a pair with both ends in containers must tear it down
         # cleanly, leaving nothing behind in the host namespace.
-        target.delete_xpaths([
+        target.put_config_dicts({}, delete=[
             f"/infix-containers:containers/container[name='{LEFT}']",
             f"/infix-containers:containers/container[name='{RIGHT}']",
             f"/ietf-interfaces:interfaces/interface[name='{IFACE_LEFT}']",
