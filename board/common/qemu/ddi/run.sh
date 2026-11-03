@@ -453,7 +453,7 @@ gen_net_dev()
 
 gen_net_user()
 {
-    [ "$IX_QEMU_NET_USER" ] || return
+    [ "$IX_QEMU_NET_USER" ] || return 0
 
     q sect netdev user
     q param id e1
@@ -470,6 +470,37 @@ gen_net_user()
     gen_net_dev e1 1
 }
 
+# Attach e1 to a host bridge through qemu-bridge-helper, which needs
+# cap_net_admin and the bridge listed in /etc/qemu/bridge.conf.
+gen_net_bridge()
+{
+    [ "$IX_QEMU_NET_BRIDGE" ] || return 0
+
+    q sect netdev bridge
+    q param id e1
+    q param br "$IX_QEMU_NET_BRIDGE_DEV"
+
+    gen_net_dev e1 1
+}
+
+# One host TAP per port, qtap1 for e1 and so on, created by the host.
+gen_net_tap()
+{
+    local _i
+
+    [ "$IX_QEMU_NET_TAP" ] || return 0
+
+    for _i in $(seq 1 "${IX_QEMU_NET_TAP_N:-1}"); do
+	q sect netdev tap
+	q param id "e$_i"
+	q param ifname "qtap$_i"
+	q param script no
+	q param downscript no
+
+	gen_net_dev "e$_i" "$_i"
+    done
+}
+
 gen_net()
 {
     :> "$qdir"/mactab
@@ -478,6 +509,8 @@ gen_net()
     q param file "$qdir"/mactab
 
     gen_net_user
+    gen_net_bridge
+    gen_net_tap
 }
 
 gen_gdb()
