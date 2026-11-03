@@ -17,7 +17,8 @@ import (
 // All modules are loaded before Process() is called so that cross-module
 // identityref resolution and augments work correctly.
 type Manager struct {
-	ms *yang.Modules
+	ms       *yang.Modules
+	features map[string]bool // "module:feature" the device enables; nil gates nothing
 }
 
 // Load parses all .yang files in yangDir and returns a Manager.
@@ -58,7 +59,126 @@ func Load(yangDir string) (mgr *Manager, err error) {
 		log.Printf("schema: process (non-fatal): %v", err)
 	}
 
-	return &Manager{ms: ms}, nil
+	return &Manager{ms: ms, features: readFeatures(yangDir)}, nil
+}
+
+// enabled reports whether every if-feature on the entry holds.  A
+// feature is named "prefix:name", or bare for the entry's own module,
+// and an expression may combine them with not, and, or and parentheses.
+func (m *Manager) enabled(e *yang.Entry) bool {
+	if m.features == nil {
+		return true
+	}
+	on := func(f string) bool {
+		mod, name := "", f
+		if i := strings.Index(f, ":"); i >= 0 {
+			if fm := yang.FindModuleByPrefix(e.Node, f[:i]); fm != nil {
+				mod = fm.Name
+			}
+			name = f[i+1:]
+		} else if root := yang.RootNode(e.Node); root != nil {
+			mod = root.Name
+			if root.BelongsTo != nil {
+				mod = root.BelongsTo.Name
+			}
+		}
+		return m.features[mod+":"+name]
+	}
+	for _, expr := range entryIfFeatures(e) {
+		if !ifFeatureExpr(expr, on) {
+			return false
+		}
+	}
+	return true
+}
+
+// ifFeatureExpr evaluates a YANG 1.1 if-feature expression, RFC 7950
+// section 7.20.2: "not" binds tightest, then "and", then "or".
+func ifFeatureExpr(expr string, on func(string) bool) bool {
+	expr = strings.ReplaceAll(strings.ReplaceAll(expr, "(", " ( "), ")", " ) ")
+	tokens := strings.Fields(expr)
+	pos := 0
+	peek := func() string {
+		if pos < len(tokens) {
+			return tokens[pos]
+		}
+		return ""
+	}
+	var orExpr func() bool
+	atom := func() bool {
+		switch t := peek(); t {
+		case "(":
+			pos++
+			v := orExpr()
+			if peek() == ")" {
+				pos++
+			}
+			return v
+		case "not":
+			pos++
+			return !atomNot(peek, &pos, on, orExpr)
+		case "":
+			return false
+		default:
+			pos++
+			return on(t)
+		}
+	}
+	andExpr := func() bool {
+		v := atom()
+		for peek() == "and" {
+			pos++
+			v = atom() && v
+		}
+		return v
+	}
+	orExpr = func() bool {
+		v := andExpr()
+		for peek() == "or" {
+			pos++
+			v = andExpr() || v
+		}
+		return v
+	}
+	return orExpr()
+}
+
+// atomNot evaluates the operand of a "not": a feature, or a group.
+func atomNot(peek func() string, pos *int, on func(string) bool, group func() bool) bool {
+	t := peek()
+	if t == "(" {
+		*pos++
+		v := group()
+		if peek() == ")" {
+			*pos++
+		}
+		return v
+	}
+	*pos++
+	return on(t)
+}
+
+func entryIfFeatures(e *yang.Entry) []string {
+	var vals []*yang.Value
+	switch n := e.Node.(type) {
+	case *yang.Container:
+		vals = n.IfFeature
+	case *yang.Leaf:
+		vals = n.IfFeature
+	case *yang.LeafList:
+		vals = n.IfFeature
+	case *yang.List:
+		vals = n.IfFeature
+	case *yang.Choice:
+		vals = n.IfFeature
+	case *yang.Case:
+		vals = n.IfFeature
+	}
+	var names []string
+	for _, v := range vals {
+		names = append(names, v.Name)
+	}
+	return names
 }
 
 // Children returns the direct config-relevant child Nodes of the node at path.
@@ -75,7 +195,7 @@ func (m *Manager) Children(path string) ([]*Node, error) {
 	if e.Dir == nil {
 		return nil, nil
 	}
-	return dirToNodes(e.Dir, path), nil
+	return m.dirToNodes(e.Dir, path), nil
 }
 
 // ChildrenAll is like Children but includes config:false nodes, making it
@@ -93,7 +213,7 @@ func (m *Manager) ChildrenAll(path string) ([]*Node, error) {
 	if e.Dir == nil {
 		return nil, nil
 	}
-	return dirToNodesAll(e.Dir, path), nil
+	return m.dirToNodesAll(e.Dir, path), nil
 }
 
 // NodeAt returns a Node for the YANG schema node at path (without children).
@@ -306,14 +426,14 @@ var internalModules = map[string]bool{
 	"ietf-inet-types":    true,
 	"ietf-yang-types":    true,
 	// YANG library / schema mount
-	"ietf-datastores":         true,
-	"ietf-yang-schema-mount":  true,
-	"ietf-yang-library":       true,
+	"ietf-datastores":        true,
+	"ietf-yang-schema-mount": true,
+	"ietf-yang-library":      true,
 	// NETCONF infrastructure
-	"ietf-netconf":                  true,
-	"ietf-netconf-with-defaults":    true,
-	"ietf-origin":                   true,
-	"ietf-netconf-notifications":    true,
+	"ietf-netconf":               true,
+	"ietf-netconf-with-defaults": true,
+	"ietf-origin":                true,
+	"ietf-netconf-notifications": true,
 	// sysrepo internals
 	"sysrepo":            true,
 	"sysrepo-monitoring": true,
@@ -322,15 +442,15 @@ var internalModules = map[string]bool{
 	"infix-test": true,
 	"infix-meta": true,
 	// NETCONF server / transport infrastructure — managed by the system, not users
-	"ietf-netconf-server":          true,
-	"libnetconf2-netconf-server":   true,
-	"ietf-truststore":              true,
+	"ietf-netconf-server":        true,
+	"libnetconf2-netconf-server": true,
+	"ietf-truststore":            true,
 	// Notification subscriptions and filters — not user-configurable via WebUI
 	"ietf-subscribed-notifications": true,
 	// ACL, key-chains, network-instances — not exposed in WebUI yet
-	"ietf-access-control-list":  true,
-	"ietf-key-chain":            true,
-	"ietf-network-instance":     true,
+	"ietf-access-control-list": true,
+	"ietf-key-chain":           true,
+	"ietf-network-instance":    true,
 }
 
 // topLevelNodes returns a Node for each config-relevant top-level schema node
@@ -353,7 +473,7 @@ func (m *Manager) topLevelNodes() []*Node {
 			continue
 		}
 		for _, child := range sortedEntries(e.Dir) {
-			if isNonConfigNode(child) {
+			if isNonConfigNode(child) || !m.enabled(child) {
 				continue
 			}
 			nodePath := "/" + key + ":" + child.Name
@@ -534,7 +654,7 @@ func (m *Manager) topLevelNodesAll() []*Node {
 			continue
 		}
 		for _, child := range sortedEntries(e.Dir) {
-			if isNonDataNode(child) {
+			if isNonDataNode(child) || !m.enabled(child) {
 				continue
 			}
 			if internalOperationalTopNodes[child.Name] {
@@ -556,13 +676,16 @@ func (m *Manager) topLevelNodesAll() []*Node {
 
 // dirToNodesAll is like dirToNodes but uses isNonDataNode, including
 // config:false leaves and containers in the result.
-func dirToNodesAll(dir map[string]*yang.Entry, parentPath string) []*Node {
+func (m *Manager) dirToNodesAll(dir map[string]*yang.Entry, parentPath string) []*Node {
 	parentMod := extractModuleFromPath(parentPath)
 	var nodes []*Node
 	for _, e := range sortedEntries(dir) {
+		if !m.enabled(e) {
+			continue
+		}
 		if e.IsChoice() || e.IsCase() {
 			caseWhen := extractWhen(e)
-			for _, child := range dirToNodesAll(e.Dir, parentPath) {
+			for _, child := range m.dirToNodesAll(e.Dir, parentPath) {
 				if caseWhen != "" && child.When == "" {
 					child.When = caseWhen
 				}
@@ -595,10 +718,13 @@ func dirToNodesAll(dir map[string]*yang.Entry, parentPath string) []*Node {
 // module differs from its parent's — the common case being augmented nodes.
 // e.g. infix-lldp augments ieee802-dot1ab-lldp:lldp, so the path is
 // /ieee802-dot1ab-lldp:lldp/infix-lldp:enabled, not /…/enabled.
-func dirToNodes(dir map[string]*yang.Entry, parentPath string) []*Node {
+func (m *Manager) dirToNodes(dir map[string]*yang.Entry, parentPath string) []*Node {
 	parentMod := extractModuleFromPath(parentPath)
 	var nodes []*Node
 	for _, e := range sortedEntries(dir) {
+		if !m.enabled(e) {
+			continue
+		}
 		if e.IsChoice() || e.IsCase() {
 			// Extract when from the choice/case before inlining its children.
 			// Cases contributed by augments carry the augment's when (e.g.
@@ -606,7 +732,7 @@ func dirToNodes(dir map[string]*yang.Entry, parentPath string) []*Node {
 			// Propagate that constraint to each promoted child that has no when of
 			// its own; if the child already has one, leave it alone.
 			caseWhen := extractWhen(e)
-			for _, child := range dirToNodes(e.Dir, parentPath) {
+			for _, child := range m.dirToNodes(e.Dir, parentPath) {
 				if caseWhen != "" && child.When == "" {
 					child.When = caseWhen
 				}
