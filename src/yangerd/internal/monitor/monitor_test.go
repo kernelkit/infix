@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/kernelkit/infix/src/yangerd/internal/iface"
 	"github.com/kernelkit/infix/src/yangerd/internal/mcd"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -721,5 +723,98 @@ func TestAppendInterfaces(t *testing.T) {
 	}
 	if got := appendInterfaces(json.RawMessage(`{}`), map[string]json.RawMessage{"net0": json.RawMessage(`{"name":"net0"}`)}); string(got) != `{"interface":[{"name":"net0"}]}` {
 		t.Fatalf("empty document got %s", got)
+	}
+}
+
+func TestLinkCarrier(t *testing.T) {
+	for _, tc := range []struct {
+		row                        string
+		eligible, adminUp, carrier bool
+	}{
+		{`{"ifname":"e1","link_type":"ether","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"]}`, true, true, true},
+		{`{"ifname":"e1","link_type":"ether","flags":["NO-CARRIER","BROADCAST","MULTICAST","UP"]}`, true, true, false},
+		{`{"ifname":"e1","link_type":"ether","flags":["BROADCAST","MULTICAST"]}`, true, false, false},
+		{`{"ifname":"sw1","link_type":"ether","flags":["UP","LOWER_UP"],"linkinfo":{"info_kind":"dsa"}}`, true, true, true},
+		{`{"ifname":"lan1","link":"eth0","link_type":"ether","flags":["NO-CARRIER","UP"],"linkinfo":{"info_kind":"dsa"}}`, true, true, false},
+		{`{"ifname":"veth0a","link":"veth0b","link_type":"ether","flags":["NO-CARRIER","UP"],"linkinfo":{"info_kind":"veth"}}`, true, true, false},
+		{`{"ifname":"vlan10","link":"e1","link_type":"ether","flags":["UP","LOWER_UP"],"linkinfo":{"info_kind":"vlan"}}`, false, false, false},
+		{`{"ifname":"br0","link_type":"ether","flags":["NO-CARRIER","UP"],"linkinfo":{"info_kind":"bridge"}}`, false, false, false},
+		{`{"ifname":"lo","link_type":"loopback","flags":["LOOPBACK","UP","LOWER_UP"]}`, false, false, false},
+	} {
+		var row map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(tc.row), &row); err != nil {
+			t.Fatal(err)
+		}
+		e, a, c := linkCarrier(row)
+		if e != tc.eligible || a != tc.adminUp || c != tc.carrier {
+			t.Errorf("%s: got %v %v %v, want %v %v %v", tc.row, e, a, c, tc.eligible, tc.adminUp, tc.carrier)
+		}
+	}
+}
+
+// An interface up without carrier alarms after the hold-off, once;
+// carrier within the hold-off cancels it, carrier or admin down clears
+// it, and the first carrier after a restart clears whatever was left.
+func TestTrackCarrier(t *testing.T) {
+	linkDownHoldOff = 20 * time.Millisecond
+	defer func() { linkDownHoldOff = 10 * time.Second }()
+
+	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
+	var mu sync.Mutex
+	var log []string
+	m.SetLinkAlarm(func(name string, down bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		log = append(log, fmt.Sprintf("%s=%v", name, down))
+	})
+	row := func(flags string) map[string]json.RawMessage {
+		var r map[string]json.RawMessage
+		json.Unmarshal([]byte(`{"ifname":"e1","link_type":"ether","flags":[`+flags+`]}`), &r)
+		return r
+	}
+	up, noCarrier, adminDown := row(`"UP","LOWER_UP"`), row(`"NO-CARRIER","UP"`), row(`"BROADCAST"`)
+	track := func(r map[string]json.RawMessage) {
+		m.mu.Lock()
+		m.trackCarrier("e1", r)
+		m.mu.Unlock()
+	}
+	settle := func() { time.Sleep(3 * linkDownHoldOff) }
+
+	track(noCarrier) // up, no cable at start: raise after the hold-off
+	settle()
+	track(noCarrier) // still: once
+	settle()
+	track(up) // cable in: clear
+	track(noCarrier)
+	track(up) // back within the hold-off: nothing
+	settle()
+	track(noCarrier) // lost for good: raise
+	settle()
+	track(adminDown) // taken down: clear
+	settle()
+	m.mu.Lock()
+	m.forgetName("e1")
+	m.mu.Unlock()
+
+	mu.Lock()
+	defer mu.Unlock()
+	want := []string{"e1=true", "e1=false", "e1=true", "e1=false"}
+	if fmt.Sprint(log) != fmt.Sprint(want) {
+		t.Fatalf("calls = %v, want %v", log, want)
+	}
+}
+
+func TestTrackCarrierRestartClearsLeftover(t *testing.T) {
+	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
+	var log []string
+	m.SetLinkAlarm(func(name string, down bool) { log = append(log, fmt.Sprintf("%s=%v", name, down)) })
+	var up map[string]json.RawMessage
+	json.Unmarshal([]byte(`{"ifname":"e1","link_type":"ether","flags":["UP","LOWER_UP"]}`), &up)
+	m.mu.Lock()
+	m.trackCarrier("e1", up)
+	m.trackCarrier("e1", up)
+	m.mu.Unlock()
+	if fmt.Sprint(log) != "[e1=false]" {
+		t.Fatalf("calls = %v", log)
 	}
 }
