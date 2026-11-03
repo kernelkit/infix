@@ -31,10 +31,24 @@ func BootPlatform(fs FileReader) json.RawMessage {
 }
 
 func BootSoftware(ctx context.Context, cmd CommandRunner) json.RawMessage {
+	raucData, err := RaucStatus(ctx, cmd)
+	return BootSoftwareFrom(ctx, cmd, raucData, err)
+}
+
+// RaucStatus reads the RAUC status, slots and their boot status
+// included.  One read serves both the software subtree and the
+// boot-fallback alarm.
+func RaucStatus(ctx context.Context, cmd CommandRunner) (map[string]interface{}, error) {
+	var raucData map[string]interface{}
+	err := runJSON(ctx, cmd, &raucData, "rauc", "status", "--detailed", "--output-format=json")
+	return raucData, err
+}
+
+// BootSoftwareFrom builds the software subtree from a RaucStatus result.
+func BootSoftwareFrom(ctx context.Context, cmd CommandRunner, raucData map[string]interface{}, err error) json.RawMessage {
 	software := make(map[string]interface{})
 
-	var raucData map[string]interface{}
-	if err := runJSON(ctx, cmd, &raucData, "rauc", "status", "--detailed", "--output-format=json"); err != nil {
+	if err != nil {
 		log.Printf("boot: %v", err)
 	} else {
 		for _, key := range []string{"compatible", "variant", "booted"} {
