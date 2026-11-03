@@ -1,0 +1,179 @@
+module infix-alarms {
+  yang-version 1.1;
+  namespace "urn:project:yang:infix-alarms";
+  prefix infix-alarms;
+
+  import ietf-alarms {
+    prefix al;
+  }
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix alarm types, operations and deviations to ietf-alarms.
+
+                The alarm list, summary, shelving, profile and operator
+                actions come from RFC 8632.  This module adds the alarm
+                types the device raises, a way for scripts and external
+                systems to raise alarms of their own, and trims what the
+                device does not keep: the per-alarm status history.";
+  reference    "RFC 8632: A YANG Data Model for Alarm Management";
+
+  revision 2026-11-03 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Alarm types
+   */
+
+  identity link-down {
+    base al:alarm-type-id;
+    description "An enabled interface has no link.
+
+                 Raised for a port with its cable pulled, a wireless station
+                 that lost its access point, or a tunnel whose peer stopped
+                 answering.  Shelve the ports that have nothing connected.";
+  }
+
+  identity startup-config-failed {
+    base al:alarm-type-id;
+    description "The startup configuration could not be applied.
+
+                 The device runs its failure configuration until the startup
+                 configuration is repaired and the device restarted.";
+  }
+
+  identity boot-fallback {
+    base al:alarm-type-id;
+    description "The device booted the fallback software slot.
+
+                 The preferred slot failed to boot, the system runs the
+                 previous software.  Cleared at the next successful boot of
+                 the preferred slot.";
+  }
+
+  identity external {
+    base al:alarm-type-id;
+    description "An alarm raised by a script or an external system.
+
+                 The raise-alarm and clear-alarm operations manage alarms of
+                 this type.  What the alarm means is described by its
+                 resource, its qualifier and its text.";
+  }
+
+  /*
+   * Operations
+   */
+
+  rpc raise-alarm {
+    nacm:default-deny-all;
+    description "Raise, or update, an external alarm.
+
+                 For scripts and monitoring systems that know something the
+                 device does not.  Calling it again for the same resource
+                 and qualifier updates the severity and text.  Alarms of the
+                 built-in types cannot be raised this way, the device owns
+                 them.";
+
+    input {
+      leaf resource {
+        type al:resource;
+        mandatory true;
+        description "What the alarm is about.";
+      }
+
+      leaf alarm-type-qualifier {
+        type al:alarm-type-qualifier;
+        default "";
+        description "Tells several alarms on the same resource apart.";
+      }
+
+      leaf severity {
+        type al:severity;
+        default major;
+        description "How serious it is.";
+      }
+
+      leaf text {
+        type al:alarm-text {
+          length "1..256";
+        }
+        mandatory true;
+        description "What happened, in words.";
+      }
+    }
+  }
+
+  rpc clear-alarm {
+    nacm:default-deny-all;
+    description "Clear an external alarm.
+
+                 The alarm stays in the list as cleared until purged.";
+
+    input {
+      leaf resource {
+        type al:resource;
+        mandatory true;
+        description "The resource the alarm was raised for.";
+      }
+
+      leaf alarm-type-qualifier {
+        type al:alarm-type-qualifier;
+        default "";
+        description "The qualifier the alarm was raised with.";
+      }
+    }
+  }
+
+  /*
+   * Operator state on many alarms at once
+   */
+
+  augment "/al:alarms/al:alarm-list" {
+    description "Operator actions on the whole alarm list.";
+
+    action set-operator-state {
+      description "Acknowledge or close every alarm the filter selects.
+
+                   The same as the action on one alarm, applied to all the
+                   alarms the filter matches.  Shelved alarms and alarms
+                   already in the requested state are left alone, so the
+                   action can be repeated without adding to any history.";
+
+      input {
+        uses al:filter-input;
+
+        leaf state {
+          type al:writable-operator-state;
+          mandatory true;
+          description "The operator state to set.";
+        }
+
+        leaf text {
+          type string;
+          description "Note for whoever reads the alarms next.";
+        }
+      }
+
+      output {
+        leaf changed-alarms {
+          type uint32;
+          description "How many alarms were given the state.";
+        }
+      }
+    }
+  }
+
+  /*
+   * Deviations
+   */
+
+  deviation "/al:alarms/al:control/al:max-alarm-status-changes" {
+    deviate not-supported;
+    description "No per-alarm status history is kept.";
+  }
+}
