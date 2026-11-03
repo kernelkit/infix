@@ -915,6 +915,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = services_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* ietf-alarms */
+	if ((rc = alarm_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* ietf-snmp */
 	if ((rc = snmp_change(session, config, diff, event, confd)))
 		goto free_diff;
@@ -1132,6 +1136,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		ERROR("Failed to subscribe to infix-schedule");
 		goto err;
 	}
+	rc = subscribe_model("ietf-alarms", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to ietf-alarms");
+		goto err;
+	}
 	rc = subscribe_model("infix-firewall", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-firewall");
@@ -1214,6 +1223,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = syslog_rpc_init(&confd);
+	if (rc)
+		goto err;
+
+	rc = alarm_rpc_init(&confd);
 	if (rc)
 		goto err;
 
