@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/features"
+	"github.com/kernelkit/infix/src/yangerd/internal/alarm"
 	"github.com/kernelkit/infix/src/yangerd/internal/alarmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
@@ -204,6 +205,17 @@ func main() {
 	// inotify says nothing when a /proc/sys/net/*/conf/<if> directory
 	// comes or goes, so follow the interface set from netlink instead.
 	linkSetCh := make(chan struct{}, 1)
+	nlmon.SetLinkAlarm(func(name string, down bool) {
+		var err error
+		if down {
+			err = alarm.Raise("link-down", name, "", alarm.Major, "No link on "+name)
+		} else {
+			err = alarm.Clear("link-down", name, "")
+		}
+		if err != nil {
+			slogLog.Warn("link-down alarm", "ifname", name, "err", err)
+		}
+	})
 	nlmon.SetLinkSetChange(func() {
 		select {
 		case linkSetCh <- struct{}{}:

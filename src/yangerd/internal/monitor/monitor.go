@@ -93,6 +93,15 @@ type NLMonitor struct {
 	vlanEvents bool
 
 	lastOperStatus map[string]string
+	// pending, alarmed and seen drive the link-down alarm: an
+	// interface that is up without carrier alarms once linkDownHoldOff
+	// has passed, so a port still negotiating after boot stays quiet,
+	// and once per loss.
+	pending   map[string]*time.Timer
+	alarmed   map[string]bool
+	seen      map[string]bool // carrier seen since start
+	linkAlarm func(name string, down bool)
+
 	// lastChange stamps the operstate transitions seen since start.
 	// Kept as time.Time for the monotonic reading: the wall clock is
 	// derived at GET time, so a later NTP step corrects old stamps.
@@ -152,6 +161,9 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 		containers:     make(map[string]json.RawMessage),
 		lastOperStatus: make(map[string]string),
 		lastChange:     make(map[string]time.Time),
+		pending:        make(map[string]*time.Timer),
+		alarmed:        make(map[string]bool),
+		seen:           make(map[string]bool),
 	}
 }
 
@@ -175,6 +187,12 @@ func (m *NLMonitor) linkRefreshed(name string) {
 
 // SetLinkSetChange sets an optional callback run when an interface
 // appears, goes away or is renamed.
+// SetLinkAlarm sets the callback that raises (down) or clears the
+// link-down alarm of an interface.
+func (m *NLMonitor) SetLinkAlarm(fn func(name string, down bool)) {
+	m.linkAlarm = fn
+}
+
 func (m *NLMonitor) SetLinkSetChange(fn func()) {
 	m.linkSet = fn
 }
@@ -460,6 +478,7 @@ func (m *NLMonitor) initialDump() error {
 				}
 				m.lastOperStatus[name] = st
 			}
+			m.trackCarrier(name, row)
 		}
 	}
 	m.mu.Unlock()
@@ -697,6 +716,100 @@ func (m *NLMonitor) forgetName(name string) {
 	delete(m.wireguard, name)
 	delete(m.lastOperStatus, name)
 	delete(m.lastChange, name)
+	m.cancelPending(name)
+	if m.alarmed[name] && m.linkAlarm != nil {
+		m.linkAlarm(name, false)
+	}
+	delete(m.alarmed, name)
+	delete(m.seen, name)
+}
+
+// linkDownHoldOff is how long an interface may be up without carrier
+// before it alarms, long enough for autonegotiation after boot.
+var linkDownHoldOff = 10 * time.Second
+
+// linkCarrier classifies a link row for the link-down alarm: whether
+// the interface can lose link on its own, a port, a Wi-Fi interface or
+// a veth, not something stacked on another interface or made of other
+// interfaces, and whether it is administratively up and has carrier.
+func linkCarrier(row map[string]json.RawMessage) (eligible, adminUp, carrier bool) {
+	if rowString(row, "link_type") != "ether" {
+		return false, false, false
+	}
+	var li struct {
+		Kind string `json:"info_kind"`
+	}
+	json.Unmarshal(row["linkinfo"], &li)
+	switch li.Kind {
+	case "dsa", "veth":
+		// "link" is the conduit or the peer, not a lower interface.
+	case "":
+		if _, stacked := row["link"]; stacked {
+			return false, false, false
+		}
+	default:
+		return false, false, false
+	}
+	var flags []string
+	json.Unmarshal(row["flags"], &flags)
+	for _, f := range flags {
+		switch f {
+		case "UP":
+			adminUp = true
+		case "LOWER_UP":
+			carrier = true
+		}
+	}
+	return true, adminUp, carrier
+}
+
+// trackCarrier raises the link-down alarm when an interface is up
+// without carrier for linkDownHoldOff, and clears it when carrier
+// returns or the interface is taken down.  The first sight of carrier
+// also clears a marker left from before a restart.  Caller holds m.mu.
+func (m *NLMonitor) trackCarrier(name string, row map[string]json.RawMessage) {
+	if m.linkAlarm == nil {
+		return
+	}
+	eligible, adminUp, carrier := linkCarrier(row)
+	if !eligible {
+		return
+	}
+	switch {
+	case carrier, !adminUp:
+		m.cancelPending(name)
+		if m.alarmed[name] || (carrier && !m.seen[name]) {
+			m.linkAlarm(name, false)
+		}
+		m.alarmed[name] = false
+		if carrier {
+			m.seen[name] = true
+		}
+	case !m.alarmed[name] && m.pending[name] == nil:
+		m.pending[name] = time.AfterFunc(linkDownHoldOff, func() { m.linkDownExpired(name) })
+	}
+}
+
+// linkDownExpired raises the alarm when the hold-off passes with the
+// interface still up and without carrier; a cancelled timer that fires
+// anyway finds no pending entry.
+func (m *NLMonitor) linkDownExpired(name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.pending[name] == nil {
+		return
+	}
+	delete(m.pending, name)
+	m.alarmed[name] = true
+	m.linkAlarm(name, true)
+}
+
+// cancelPending stops a running hold-off.  Caller holds m.mu.
+func (m *NLMonitor) cancelPending(name string) {
+	if t := m.pending[name]; t != nil {
+		t.Stop()
+		delete(m.pending, name)
+	}
 }
 
 // batchesAlive tells whether every batch subprocess is up, so a re-dump
@@ -761,6 +874,9 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 		}
 	}
 	m.updateOperStatus(name, linkRaw)
+	if rows := decodeRows(linkRaw); len(rows) > 0 {
+		m.trackCarrier(name, rows[0])
+	}
 	m.links = replaceRows(m.links, "ifindex", index, linkRaw)
 	if addrRaw != nil {
 		m.addrs = replaceRows(m.addrs, "ifindex", index, addrRaw)
