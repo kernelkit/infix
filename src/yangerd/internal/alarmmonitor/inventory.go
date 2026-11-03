@@ -42,6 +42,11 @@ var inventory = map[string]alarmType{
 		WillClear:   false,
 		Description: "The preferred software slot failed to boot, the device runs the fallback slot.",
 	},
+	"partition-out-of-date": {
+		Levels:      []alarm.Severity{alarm.Warning},
+		WillClear:   true,
+		Description: "The other software partition holds an older release, or none.",
+	},
 	"update-available": {
 		Levels:      []alarm.Severity{alarm.Warning},
 		WillClear:   true,
