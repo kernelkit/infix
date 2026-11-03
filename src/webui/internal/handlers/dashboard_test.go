@@ -258,21 +258,21 @@ func TestHealthItems(t *testing.T) {
 	sw.Slot[0].Bundle.Version = "v2"
 	sw.Slot[1].Bundle.Version = "v1"
 
-	items := healthItems([]serviceJSON{{Name: "hostapd", Status: "crashed"}, {Name: "sshd", Status: "running"}}, sw)
+	items := healthItems([]serviceJSON{{Name: "hostapd", Status: "crashed"}, {Name: "sshd", Status: "running"}}, sw, nil)
 	if len(items) != 2 || items[0].Text != "hostapd crashed" || items[1].Text != "secondary partition is out of date" || items[1].Title != "v1" {
 		t.Errorf("items = %+v", items)
 	}
 
 	sw.Update.RebootPending = true
 	sw.Update.Installed = "v3"
-	items = healthItems(nil, sw)
+	items = healthItems(nil, sw, nil)
 	if len(items) != 1 || items[0].Text != "Reboot to activate v3" || items[0].Class != "status-warn" {
 		t.Errorf("reboot items = %+v", items)
 	}
 
 	sw.Update.RebootPending = false
 	sw.Slot[1].Bundle.Version = "v2"
-	items = healthItems(nil, sw)
+	items = healthItems(nil, sw, nil)
 	if len(items) != 1 || items[0].Class != "status-up" {
 		t.Errorf("healthy items = %+v", items)
 	}

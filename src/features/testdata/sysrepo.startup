@@ -23,6 +23,15 @@
         "revision": "2020-02-20"
       },
       {
+        "name": "ietf-alarms",
+        "revision": "2019-09-11",
+        "enabled-feature": [
+          "operator-actions",
+          "alarm-shelving",
+          "alarm-summary"
+        ]
+      },
+      {
         "name": "infix-hardware",
         "revision": "2026-10-11",
         "enabled-feature": [

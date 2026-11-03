@@ -232,22 +232,24 @@ type healthItem struct {
 }
 
 // healthItems lists what needs attention: services that are not running,
-// an installed release waiting for a reboot, and a partition left behind.
+// the alarms that are not cleared, an installed release waiting for a
+// reboot, and on a device without alarms a partition left behind.
 // Nothing to report gives one reassuring line.
-func healthItems(services []serviceJSON, sw software) []healthItem {
+func healthItems(services []serviceJSON, sw software, alarms []Alarm) []healthItem {
 	var items []healthItem
 	for _, svc := range services {
 		if serviceStatusClass(svc.Status) == "svc-error" {
 			items = append(items, healthItem{Class: "status-down", Text: svc.Name + " " + svc.Status, Link: "/services"})
 		}
 	}
+	items = append(items, alarmHealthItems(alarms)...)
 	if sw.Update.RebootPending {
 		text := "Reboot to activate the installed release"
 		if sw.Update.Installed != "" {
 			text = "Reboot to activate " + sw.Update.Installed
 		}
 		items = append(items, healthItem{Class: "status-warn", Text: text, Link: "/system-control"})
-	} else if booted := softwareVersion(sw); booted != "" {
+	} else if booted := softwareVersion(sw); booted != "" && alarms == nil {
 		for _, s := range sw.Slot {
 			if s.Class == "rootfs" && s.BootName != sw.Booted && s.Bundle.Version != "" && s.Bundle.Version != booted {
 				items = append(items, healthItem{Class: "status-warn",
@@ -257,7 +259,7 @@ func healthItems(services []serviceJSON, sw software) []healthItem {
 		}
 	}
 	if len(items) == 0 {
-		items = append(items, healthItem{Class: "status-up", Text: "All services running"})
+		items = append(items, healthItem{Class: "status-up", Text: "All services running, no alarms"})
 	}
 	return items
 }
@@ -639,7 +641,16 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		wg                       sync.WaitGroup
 	)
 
-	wg.Add(8)
+	wg.Add(9)
+	var alarms []Alarm
+	go func() {
+		defer wg.Done()
+		if list, _, err := fetchAlarms(ctx, h.RC); err != nil {
+			log.Printf("restconf alarms: %v", err)
+		} else {
+			alarms = list
+		}
+	}()
 	go func() {
 		defer wg.Done()
 		stateErr = h.RC.Get(ctx, "/data/ietf-system:system-state", &state)
@@ -831,7 +842,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Addresses = ifaceAddresses(ifaces)
 	data.Ports = ports(ifaces, lldp.neighbors())
-	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software)
+	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software, alarms)
 
 	tmplName := "dashboard.html"
 	if r.Header.Get("HX-Request") == "true" {

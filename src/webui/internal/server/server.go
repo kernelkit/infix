@@ -112,6 +112,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	alarmsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/alarms.html")
+	if err != nil {
+		return nil, err
+	}
 	mdnsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/mdns.html")
 	if err != nil {
 		return nil, err
@@ -238,6 +242,7 @@ func New(
 	dhcp := &handlers.DHCPHandler{Template: dhcpTmpl, RC: rc}
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
 	lldp := &handlers.LLDPHandler{Template: lldpTmpl, RC: rc}
+	alarms := &handlers.AlarmsHandler{Template: alarmsTmpl, RC: rc}
 	mdns := &handlers.MDNSHandler{Template: mdnsTmpl, RC: rc}
 	nacm := &handlers.NACMHandler{Template: nacmTmpl, RC: rc}
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
@@ -330,6 +335,11 @@ func New(
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
+	mux.HandleFunc("GET /alarms", alarms.Overview)
+	mux.HandleFunc("POST /alarms/state", alarms.SetState)
+	mux.HandleFunc("POST /alarms/close-all", alarms.CloseAll)
+	mux.HandleFunc("POST /alarms/clear", alarms.Clear)
+	mux.HandleFunc("POST /alarms/purge", alarms.Purge)
 	mux.HandleFunc("GET /mdns", mdns.Overview)
 	mux.HandleFunc("GET /nacm", nacm.Overview)
 	mux.HandleFunc("GET /services", services.Overview)
