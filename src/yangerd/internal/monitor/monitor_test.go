@@ -523,34 +523,33 @@ func TestOnDemandRefreshesDescriptionFromSysfs(t *testing.T) {
 // Counters change without link events, the provider must take them
 // from sysfs on every read.
 func TestOnDemandRefreshesStatisticsFromSysfs(t *testing.T) {
-	fc := sysfsFiles{
-		"/sys/class/net/lan1/statistics/rx_bytes": "123456\n",
-		"/sys/class/net/lan1/statistics/tx_bytes": "7890\n",
-		"/sys/class/net/lan2/statistics/rx_bytes": "0\n",
-		"/sys/class/net/lan2/statistics/tx_bytes": "0\n",
+	fc := sysfsFiles{}
+	for _, c := range iface.Counters {
+		fc["/sys/class/net/lan1/statistics/"+c.File] = "0\n"
 	}
+	fc["/sys/class/net/lan1/statistics/rx_bytes"] = "123456\n"
+	fc["/sys/class/net/lan1/statistics/tx_bytes"] = "7890\n"
+	fc["/sys/class/net/lan1/statistics/rx_errors"] = "3\n"
 	m := New(nil, nil, nil, nil, tree.New(), fc, slog.Default())
 	m.tree.Set(treeKey, json.RawMessage(`{"interface":[`+
 		`{"name":"lan1","statistics":{"in-octets":"64"}},`+
-		`{"name":"lan2","statistics":{"in-octets":"64"}},`+
 		`{"name":"veth0","statistics":{"in-octets":"64"}}]}`))
 
 	var out struct {
 		Interface []struct {
-			Statistics map[string]string `json:"statistics"`
+			Statistics json.RawMessage `json:"statistics"`
 		} `json:"interface"`
 	}
 	if err := json.Unmarshal(m.OnDemand(), &out); err != nil {
 		t.Fatal(err)
 	}
-	if got := out.Interface[0].Statistics; got["in-octets"] != "123456" || got["out-octets"] != "7890" {
-		t.Errorf("lan1: want counters from sysfs, got %v", got)
+	// counter64 is a string in JSON, counter32 a number
+	want := `{"in-discards":0,"in-errors":3,"in-multicast-pkts":"0","in-octets":"123456","out-discards":0,"out-errors":0,"out-octets":"7890"}`
+	if got := string(out.Interface[0].Statistics); got != want {
+		t.Errorf("lan1: want %s from sysfs, got %s", want, got)
 	}
-	if got := out.Interface[1].Statistics; got != nil {
-		t.Errorf("lan2: counters reset in sysfs, want no statistics, got %v", got)
-	}
-	if got := out.Interface[2].Statistics["in-octets"]; got != "64" {
-		t.Errorf("veth0: unreadable in sysfs, want link row value kept, got %v", got)
+	if got := string(out.Interface[1].Statistics); got != `{"in-octets":"64"}` {
+		t.Errorf("veth0: unreadable in sysfs, want link row value kept, got %s", got)
 	}
 }
 

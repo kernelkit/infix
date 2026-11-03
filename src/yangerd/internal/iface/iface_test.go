@@ -664,12 +664,17 @@ func TestStatistics(t *testing.T) {
 	t.Run("with stats64", func(t *testing.T) {
 		st := statistics(map[string]any{
 			"stats64": map[string]any{
-				"rx": map[string]any{"bytes": json.Number("123")},
-				"tx": map[string]any{"bytes": uint64(456)},
+				"rx": map[string]any{"bytes": json.Number("123"), "multicast": uint64(7), "dropped": uint64(2), "errors": uint64(0)},
+				"tx": map[string]any{"bytes": uint64(456), "dropped": uint64(1), "errors": uint64(1<<32 + 5)},
 			},
 		})
-		if st["in-octets"] != "123" || st["out-octets"] != "456" {
-			t.Fatalf("unexpected statistics map: %#v", st)
+		// counter64 is a string in JSON, counter32 a number that wraps
+		want := map[string]any{
+			"in-octets": "123", "in-multicast-pkts": "7", "in-discards": uint32(2), "in-errors": uint32(0),
+			"out-octets": "456", "out-discards": uint32(1), "out-errors": uint32(5),
+		}
+		if !reflect.DeepEqual(st, want) {
+			t.Fatalf("want %#v, got %#v", want, st)
 		}
 	})
 

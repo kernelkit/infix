@@ -1167,7 +1167,7 @@ func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
 // OnDemand is the tree provider for the interface list.  It stamps
 // last-change on every interface whose operstate changed since start,
 // interfaces up since before yangerd started carry no stamp, and it
-// re-reads each description and byte counter from sysfs.  The kernel
+// re-reads each description and counter from sysfs.  The kernel
 // sends no link event for an alias set on an interface that is down, or
 // for counters that change, so the staged link row may hold stale values,
 // while the sysfs files are always current.
@@ -1293,27 +1293,23 @@ func refreshDescription(ifaceObj map[string]any, name string, fc iface.FileCheck
 	}
 }
 
-// refreshStatistics replaces the byte counters with the current ones
-// from sysfs.  An interface it cannot read keeps what the link row said.
+// refreshStatistics replaces the counters with the current ones from
+// sysfs.  An interface it cannot read keeps what the link row said.
 func refreshStatistics(ifaceObj map[string]any, name string, fc iface.FileChecker) {
 	if fc == nil || name == "" {
 		return
 	}
 	stats := map[string]any{}
-	for leaf, file := range map[string]string{"in-octets": "rx_bytes", "out-octets": "tx_bytes"} {
-		raw, err := fc.ReadFile("/sys/class/net/" + name + "/statistics/" + file)
+	for _, c := range iface.Counters {
+		raw, err := fc.ReadFile("/sys/class/net/" + name + "/statistics/" + c.File)
 		if err != nil {
 			return
 		}
-		if v := strings.TrimSpace(raw); v != "" && v != "0" {
-			stats[leaf] = v
+		if n, err := strconv.ParseUint(strings.TrimSpace(raw), 10, 64); err == nil {
+			stats[c.Leaf] = iface.CounterValue(n, c.Is32)
 		}
 	}
-	if len(stats) > 0 {
-		ifaceObj["statistics"] = stats
-	} else {
-		delete(ifaceObj, "statistics")
-	}
+	ifaceObj["statistics"] = stats
 }
 
 // query runs one command on a batch worker.  A dead worker asks for a
