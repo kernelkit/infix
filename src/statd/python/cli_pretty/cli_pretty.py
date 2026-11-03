@@ -1053,6 +1053,7 @@ class DhcpServer:
                "host": lease["hostname"],
                "exp": exp
             })
+        self.leases.sort(key=lambda lease: ipaddress.ip_address(lease["ip"]))
 
         stats = get_json_data([], self.data, 'statistics')
         self.out_offers   = stats["out-offers"]
