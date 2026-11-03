@@ -29,6 +29,7 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [SNMP](snmp.md)
    - [Cellular Modem (WWAN)](modem.md)
    - [Syslog Support](syslog.md)
+   - [Alarms](alarms.md)
  - **Infix In-Depth**
    - [Boot Procedure](boot.md)
    - [Branding & Releases](branding.md)

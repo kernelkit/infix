@@ -254,7 +254,11 @@ Software updates
 </code></pre>
 
 The same data is available under `/system-state/software/update` in the
-operational datastore, and on the WebUI dashboard.
+operational datastore, and on the WebUI dashboard.  The outcome is also
+an alarm, see [Alarms](alarms.md): a release waiting to be installed, an
+update source that could not be read, and an unattended install that
+failed each raise one, so `show alarms` and a monitoring system see
+them without reading this page.
 
 To check right away, run `upgrade` without a bundle.  It reads the feed
 at `update-url` for the latest release and, when there is a newer one,
