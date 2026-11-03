@@ -1,3 +1,6 @@
 ---
 - name: Alarms
   case: basic/test.py
+
+- name: Link-Down Alarm
+  case: link_down/test.py
