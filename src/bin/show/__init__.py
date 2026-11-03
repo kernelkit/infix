@@ -61,13 +61,16 @@ def cli_pretty(json_data: dict, command: str, *args: str):
 def dhcp(args: List[str]) -> None:
     data = get_json("/infix-dhcp-server:dhcp-server")
     if not data:
-        print("No interface data retrieved.")
+        print("DHCP server not enabled.")
         return
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-    cli_pretty(data, "show-dhcp-server")
+    if args and args[0] == "brief":
+        cli_pretty(data, "show-dhcp-server", "-b")
+    else:
+        cli_pretty(data, "show-dhcp-server")
 
 
 def tftp(args: List[str]) -> None:

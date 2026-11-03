@@ -4378,24 +4378,24 @@ def show_system(json):
         disk_table.print()
 
 
-def show_dhcp_server(json, stats):
+def show_dhcp_server(json, brief):
     data = json.get("infix-dhcp-server:dhcp-server")
-    if not data:
+    if not data or data.get("enabled") is False:
         print("DHCP server not enabled.")
         return
 
     server = DhcpServer(data)
 
-    if stats:
+    if not brief:
         server.print_stats()
-    else:
-        hdr = (f"{'IP ADDRESS':<{PadDhcpServer.ip}}"
-               f"{'MAC':<{PadDhcpServer.mac}}"
-               f"{'HOSTNAME':<{PadDhcpServer.host}}"
-               f"{'CLIENT ID':<{PadDhcpServer.cid}}"
-               f"{'EXPIRES':>{PadDhcpServer.exp}}")
-        print(Decore.invert(hdr))
-        server.print()
+        print()
+    hdr = (f"{'IP ADDRESS':<{PadDhcpServer.ip}}"
+           f"{'MAC':<{PadDhcpServer.mac}}"
+           f"{'HOSTNAME':<{PadDhcpServer.host}}"
+           f"{'CLIENT ID':<{PadDhcpServer.cid}}"
+           f"{'EXPIRES':>{PadDhcpServer.exp}}")
+    print(Decore.invert(hdr))
+    server.print()
 
 
 def show_tftp(json):
@@ -6702,7 +6702,7 @@ def main():
     subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
-              .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+              .add_argument("-b", "--brief", action="store_true", help="Show only the leases")
 
     subparsers.add_parser('show-tftp', help='Show TFTP server')
     subparsers.add_parser('show-container', help='Show containers table')
@@ -6792,7 +6792,7 @@ def main():
     elif args.command == "show-bridge-stp":
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":
-        show_dhcp_server(json_data, args.stats)
+        show_dhcp_server(json_data, args.brief)
     elif args.command == "show-tftp":
         show_tftp(json_data)
     elif args.command == "show-container":

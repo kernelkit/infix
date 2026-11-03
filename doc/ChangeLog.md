@@ -28,6 +28,9 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
 - WebUI: the DHCP leases are grouped by subnet, in address order
+- `show dhcp-server` now shows the server statistics with the leases,
+  and `show dhcp-server brief` only the leases.  The `statistics` and
+  `detailed` keywords are removed
 - Interfaces now report their multicast, discard and error counters,
   not only the octet counters
 

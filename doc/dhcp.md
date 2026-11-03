@@ -180,14 +180,9 @@ admin@example:/config/dhcp-server/…/192.168.2.10/> <b>leave</b>
 
 ## Monitoring
 
-View active leases and server statistics:
+View the server statistics and active leases, in address order:
 
 <pre class="cli"><code>admin@example:/> <b>show dhcp-server</b>
-<span class="header">IP ADDRESS       MAC                HOSTNAME            CLIENT ID             EXPIRES</span>
-192.168.2.22     00:a0:85:00:02:05                      00:c0:ff:ee           3591s
-192.168.1.11     00:a0:85:00:04:06  foo                 01:00:a0:85:00:04:06  3591s
-
-admin@example:/> <b>show dhcp-server statistics</b>
 DHCP offers sent                : 6
 DHCP ACK messages sent          : 5
 DHCP NAK messages sent          : 0
@@ -196,7 +191,13 @@ DHCP discover messages received : 6
 DHCP request messages received  : 5
 DHCP release messages received  : 6
 DHCP inform messages received   : 6
+
+<span class="header">IP ADDRESS       MAC                HOSTNAME             CLIENT ID                EXPIRES</span>
+192.168.1.11     00:a0:85:00:04:06  foo                  01:00:a0:85:00:04:06      59m51s
+192.168.2.22     00:a0:85:00:02:05                       00:c0:ff:ee               59m51s
 </code></pre>
+
+Use `show dhcp-server brief` for only the leases.
 
 
 [^1]: This requires the system DNS resolver to be configured.

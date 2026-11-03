@@ -621,18 +621,13 @@ echo "Public:  $pub"
     <ACTION sym="script">show ntp</ACTION>
   </COMMAND>
 
-  <COMMAND name="dhcp-server" help="Show DHCP server status">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp</ACTION>
+  <COMMAND name="dhcp-server" help="Show DHCP server statistics and leases">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp |pager</ACTION>
 
     <SWITCH name="optional" min="0">
-      <COMMAND name="statistics" help="Show DHCP server statistics">
-        <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp stat</ACTION>
+      <COMMAND name="brief" help="Show only the leases">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp brief |pager</ACTION>
       </COMMAND>
-
-      <COMMAND name="detailed" help="Detailed (full operational) output">
-        <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp detail</ACTION>
-      </COMMAND>
-
     </SWITCH>
   </COMMAND>
 
