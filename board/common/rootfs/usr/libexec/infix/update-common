@@ -134,7 +134,7 @@ update_check() {
             --arg bundle "$(update_bundle_url)" --argjson avail "$UPDATE_AVAILABLE"
         alarm_clear update-check-failed
         if [ "$UPDATE_AVAILABLE" = true ]; then
-            alarm_raise update-available "Release $LATEST_TAG is available, this is $VERSION, see $(update_release_url)"
+            alarm_raise update-available "Release $LATEST_TAG is available, see $(update_release_url)"
         else
             alarm_clear update-available
         fi
