@@ -1,0 +1,68 @@
+From b3bcfd9ec22d4a50481912fdf4ca4b19cf615078 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <mattias.walstrom@wires.se>
+Date: Sat, 24 Oct 2026 09:40:25 +0200
+Subject: [PATCH 5/6] restconf: YANG Patch delete/remove of a typed leaf
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The edit for an operation without a value was created with newPath2()
+and no value, which only works for leaves whose type accepts the empty
+string. Removing an enumeration or boolean leaf failed with LY_EVALID.
+Create the node opaque, as the DELETE method already does, and set the
+operation as an attribute when it is.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index ae3bf82..dc1281d 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -402,9 +402,11 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+     auto [lyParentPath, lastPathSegment] = asLibyangPathSplit(ctx, uriPath);
+ 
+     if (!valueStr) {
+-        // Some YANG patch operations do not have a value node, e.g., delete or move
++        // Some YANG patch operations do not have a value node, e.g., delete or move.
++        // A leaf cannot be created without a value unless it is opaque, so ask for that;
++        // containers and list entries still come out as regular nodes.
+         auto lyFullPath = asRestconfRequest(ctx, "PATCH", uriPath).path;
+-        auto [parent, node] = ctx.newPath2(lyFullPath);
++        auto [parent, node] = ctx.newPath2(lyFullPath, std::nullopt, libyang::CreationOptions::Opaque);
+         editNode = parent;
+         replacementNode = node;
+     } else if (!lyParentPath.empty()) {
+@@ -654,6 +656,16 @@ void processYangPatchEdit(const std::shared_ptr<RequestContext>& requestCtx, con
+     auto target = childLeafValue(editContainer, "target");
+     auto operation = childLeafValue(editContainer, "operation");
+ 
++    // An opaque node (a typed leaf being deleted) cannot carry metadata; sysrepo reads the
++    // operation from an attribute on those instead, same as for the DELETE method.
++    auto setOperation = [&netconfMod](libyang::DataNode& node, const std::string& op) {
++        if (node.isOpaque()) {
++            node.newAttrOpaqueJSON("ietf-netconf", "operation", op);
++        } else {
++            node.newMeta(netconfMod, "operation", op);
++        }
++    };
++
+     auto [singleEdit, replacementNode] = createEditForPutAndPatch(ctx,
+                                                                   uriJoin(requestCtx->req.uri().raw_path, target),
+                                                                   yangPatchValueAsJSON(editContainer),
+@@ -677,10 +689,10 @@ void processYangPatchEdit(const std::shared_ptr<RequestContext>& requestCtx, con
+             throw ErrorResponse(400, "protocol", "invalid-value", "Leaf 'point' must always come with leaf 'where' set to 'before' or 'after'");
+         }
+ 
+-        replacementNode->newMeta(netconfMod, "operation", operation == "insert" ? "create" : "merge");
++        setOperation(*replacementNode, operation == "insert" ? "create" : "merge");
+         yangInsert(ctx, *replacementNode, where, point);
+     } else {
+-        replacementNode->newMeta(netconfMod, "operation", operation);
++        setOperation(*replacementNode, operation);
+     }
+ 
+     if (!mergedEdits) {
