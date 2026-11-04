@@ -280,8 +280,10 @@ fabric forwards as well, and `offload` under `capabilities` then lists
 
 ### Credit-Based Shaper
 
-On products built with the TSN feature, a traffic class can reserve
-bandwidth with the IEEE 802.1Qav credit-based shaper.  Turning it on
+A traffic class can reserve bandwidth with the IEEE 802.1Qav
+credit-based shaper.  The shaper runs in the switch fabric where the
+hardware has one, see [Hardware Offload](#hardware-offload); elsewhere
+the kernel runs it for the traffic it forwards itself.  Turning it on
 takes two settings in two places, as the standard splits them: the
 class's `algorithm` under `qos egress`, and the reservation as
 `admin-idle-slope`, in bits per second, in the `cbsa` table beside
@@ -305,11 +307,12 @@ The reservation in force is reported as `oper-idle-slope`.
 
 ### Time-Aware Shaper
 
-On products built with the TSN feature, a port can run the IEEE
-802.1Qbv time-aware shaper: a repeating cycle in which each traffic
-class's gate is open only in defined windows, so a reserved window
-stays quiet whatever else is queued.  The schedule needs synchronised
-time across the network, see [PTP](ptp.md).
+A port can run the IEEE 802.1Qbv time-aware shaper: a repeating cycle
+in which each traffic class's gate is open only in defined windows, so
+a reserved window stays quiet whatever else is queued.  The gates run
+in the switch fabric where the hardware has one, see [Hardware
+Offload](#hardware-offload), and the schedule needs synchronised time
+across the network, see [PTP](ptp.md).
 
 The gate control list lives in `gate-parameter-table` beside `qos` on
 the interface.  Each entry opens the gates in `gate-states-value`, a
@@ -478,16 +481,20 @@ and each port reports it under `qos capabilities`:
 |-------------------------|-------------------------------------------------|
 | `max-traffic-classes`   | Traffic classes on the port, eight unless shown |
 | `supported-trust-order` | `trust` values the driver accepts               |
-| `offload`               | Stages the driver runs in hardware              |
+| `supported-offload`     | Stages the port's switch fabric can run         |
+| `offload`               | Stages the driver runs in hardware right now    |
 /// table-caption
 QoS capabilities a port reports.
 ///
 
-`supported-trust-order` is absent when the driver has no ingress
-classification support.  `offload` lists `classification`, `remarking`,
-`transmission-selection`, `rate-limit`, `credit-based-shaper` and
-`time-aware-shaper` as the driver takes them; a stage not listed runs
-in the kernel.
+`supported-trust-order` and `supported-offload` describe the switch
+the port belongs to and are absent on a port without one.  Both list
+from `classification`, `remarking`, `transmission-selection`,
+`rate-limit`, `credit-based-shaper` and `time-aware-shaper`:
+`supported-offload` what the fabric can run, `offload` what the driver
+has taken with the current configuration.  A supported stage missing
+from `offload` fell back to the kernel, e.g. a traffic class table the
+fabric cannot carry; a stage not supported always runs there.
 
 Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:
@@ -585,6 +592,55 @@ hardware details show through:
 
 Without any `qos` configuration the class table is IEEE 802.1Q-2022
 Table 8-5 with every class strict, as on any other port.
+
+### Microchip LAN969x
+
+The Laguna family of switch chips, in the Tactical 1000 and the
+EV23X71A, is managed by the `sparx5` driver.  The classification and
+remarking tables are reached through DCB as on Marvell, and every stage
+runs in the fabric, the credit-based and time-aware shapers included.
+
+| Stage                   | On LAN969x                                              |
+|-------------------------|---------------------------------------------------------|
+| Trust orders            | `pcp`, `dscp` and `dscp-pcp`                            |
+| `pcp-map`               | Per port, as is `default-priority`                      |
+| `dscp-map`              | One table for the chip, written by the ports that trust DSCP; the port configured last defines it |
+| `remark pcp`            | Per port, from the priority                             |
+| `remark dscp`           | One table for the chip, defined the same way by the ports that remark DSCP |
+| Traffic classes         | Eight per port, chosen by the ingress port, see below   |
+| Transmission selection  | Strict priority and Deficit Weighted Round Robin (DWRR) with the `bandwidth` shares as weights, in 31 steps relative to the smallest share |
+| `rate-limit`            | The port's own shaper, rate in steps of 40 kbit/s, burst in steps of 4 KiB up to 508 KiB |
+| Credit-based shaper     | One per queue, idle slope in steps of 4 kbit/s.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
+| Time-aware shaper       | One gate control list per port, limits in the next table |
+/// table-caption
+QoS offload on LAN969x.
+///
+
+Give the ports that trust DSCP one `dscp-map`, and the ports that remark
+DSCP one `remark dscp` setting, since the chip holds one table of each.
+
+The fabric has no table of its own between priority and queue: a frame
+is queued, on every port it leaves by, in the class its ingress port
+assigned it.  The `traffic-class-table` is therefore applied by the
+ingress classification and undone by the egress remarking, so a table
+that puts several priorities in one class remarks them all with the
+lowest of those priorities.
+
+| Gate control list     | On LAN969x                                              |
+|-----------------------|---------------------------------------------------------|
+| Entries               | Up to 3000, from a memory shared by all ports            |
+| Cycle time            | 1 µs to 999 999 999 ns                                   |
+| Interval              | 1 µs to 999 999 999 ns, and the intervals may not exceed the cycle |
+| Tick granularity      | 1 ns                                                     |
+| Cycle time extension  | Not supported                                            |
+| Base time             | From the switch clock; one in the past is moved forward by whole cycles |
+| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening |
+| Classes under gates   | Served strictly; weighted classes and a `rate-limit` are refused |
+/// table-caption
+Time-aware shaper limits on LAN969x.  Each port reports them under
+`gate-parameter-table` as `supported-list-max`, `supported-cycle-max`,
+`supported-interval-max` and `tick-granularity`.
+///
 
 
 ## VLAN Interfaces
