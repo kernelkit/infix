@@ -16,11 +16,68 @@
 
 
 /* Absent, null, and false are the only values jq -e treats as unset */
+static bool quirk_true(json_t *val)
+{
+	return val && !json_is_null(val) && !json_is_false(val);
+}
+
 static bool quirk_is_set(json_t *quirks, const char *quirkname)
 {
-	json_t *val = json_object_get(quirks, quirkname);
+	return quirk_true(json_object_get(quirks, quirkname));
+}
 
-	return val && !json_is_null(val) && !json_is_false(val);
+/* The driver bound to the interface's device, NULL when it has none */
+static const char *iface_driver(const char *ifname, char *buf, size_t len)
+{
+	char path[PATH_MAX], line[128];
+	const char *driver = NULL;
+	FILE *fp;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/device/uevent", ifname);
+	fp = fopen(path, "r");
+	if (!fp)
+		return NULL;
+
+	while (fgets(line, sizeof(line), fp)) {
+		if (strncmp(line, "DRIVER=", 7))
+			continue;
+		strlcpy(buf, chomp(line + 7), len);
+		driver = buf;
+		break;
+	}
+	fclose(fp);
+
+	return driver;
+}
+
+/*
+ * The value of a quirk from the interface's own entry, else from the
+ * entry of its driver, @driver=<name>.  NULL when neither sets it; a
+ * null or false is as good as absent, as has-quirk sees it.
+ */
+json_t *iface_quirk(const char *ifname, const char *quirkname)
+{
+	char buf[64], key[80];
+	const char *driver;
+	json_t *quirks, *val;
+
+	if (!confd.ifquirks)
+		return NULL;
+
+	quirks = json_object_get(confd.ifquirks, ifname);
+	val = quirks ? json_object_get(quirks, quirkname) : NULL;
+	if (quirk_true(val))
+		return val;
+
+	driver = iface_driver(ifname, buf, sizeof(buf));
+	if (!driver)
+		return NULL;
+
+	snprintf(key, sizeof(key), "@driver=%s", driver);
+	quirks = json_object_get(confd.ifquirks, key);
+	val = quirks ? json_object_get(quirks, quirkname) : NULL;
+
+	return quirk_true(val) ? val : NULL;
 }
 
 bool iface_has_quirk(const char *ifname, const char *quirkname)
@@ -28,11 +85,7 @@ bool iface_has_quirk(const char *ifname, const char *quirkname)
 	const char *pattern;
 	json_t *quirks;
 
-	if (!confd.ifquirks)
-		return false;
-
-	quirks = json_object_get(confd.ifquirks, ifname);
-	if (quirks && quirk_is_set(quirks, quirkname))
+	if (iface_quirk(ifname, quirkname))
 		return true;
 
 	/* @ethtool: patterns match on driver info, left to has-quirk */
