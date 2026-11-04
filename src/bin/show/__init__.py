@@ -882,6 +882,8 @@ def system(args: List[str]) -> None:
         classes = {c.get("name"): c.get("class") for c in components}
         soc_temps = []
         for component in components:
+            if component.get("class") == "iana-hardware:cpu":
+                runtime["cpu"] = component
             sensor_data = component.get("sensor-data", {})
             if not sensor_data:
                 continue
