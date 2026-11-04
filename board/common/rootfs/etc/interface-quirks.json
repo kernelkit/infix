@@ -2,5 +2,18 @@
     "@ethtool:driver=iwlwifi": {
 	"comment": "LAR firmware disables 5 and 6 GHz until a scan has seen the country of nearby APs",
 	"lar-needs-scan": true
+    },
+    "@driver=mv88e6085": {
+	"comment": "Marvell LinkStreet switch ports; the fabric encodes PCP from the priority itself, so remarking PCP changes nothing",
+	"qos-trust-order": ["pcp", "dscp", "pcp-dscp", "dscp-pcp"],
+	"qos-pcp-encoded": true,
+	"qos-offload": ["classification", "remarking", "transmission-selection", "rate-limit"],
+	"qos-root-qdisc": ["ets"]
+    },
+    "@driver=lan966x-switch": {
+	"comment": "Microchip LAN966x switch ports",
+	"qos-trust-order": ["pcp", "dscp", "dscp-pcp"],
+	"qos-offload": ["classification", "remarking", "transmission-selection", "rate-limit"],
+	"qos-root-qdisc": ["ets"]
     }
 }

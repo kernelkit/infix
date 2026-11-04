@@ -1,0 +1,13 @@
+{
+    "@driver=sparx5-switch": {
+	"comment": "LAN969x switch ports; the gate control list memory is shared by all ports",
+	"qos-trust-order": ["pcp", "dscp", "dscp-pcp"],
+	"qos-offload": ["classification", "remarking", "transmission-selection", "rate-limit", "credit-based-shaper", "time-aware-shaper"],
+	"qos-root-qdisc": ["ets", "mqprio", "taprio"],
+	"sched-supported-list-max": 3000,
+	"sched-supported-cycle-max": 999999999,
+	"sched-supported-interval-max": 999999999,
+	"sched-queue-max-sdu": true,
+	"sched-tick-granularity": 10
+    }
+}
