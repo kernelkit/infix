@@ -38,7 +38,8 @@ submodule infix-if-qos {
   revision 2026-10-28 {
     description "Add QoS profiles: the pipeline inline or by reference
                  to /system/qos/profile, a choice.  rate-limit moves
-                 from egress to qos.";
+                 from egress to qos.  capabilities gain supported-offload,
+                 the stages the fabric can run.";
     reference "internal";
   }
 
@@ -99,32 +100,19 @@ submodule infix-if-qos {
           reference "12.6.3.1 of IEEE Std 802.1Q-2022";
         }
 
+        leaf-list supported-offload {
+          type qos:offload-stage-type;
+          description "Pipeline stages the switch fabric of this port
+             can run.  A stage not listed always runs in the kernel,
+             which on a switch covers only CPU-forwarded frames.";
+        }
+
         leaf-list offload {
-          type enumeration {
-            enum classification {
-              description "Ingress classification and trust order run
-                 in the switch fabric.";
-            }
-            enum remarking {
-              description "Egress remarking runs in the switch fabric.";
-            }
-            enum transmission-selection {
-              description "Traffic classes and transmission selection
-                 run in the switch fabric.";
-            }
-            enum rate-limit {
-              description "The port rate limit runs in the switch fabric.";
-            }
-            enum credit-based-shaper {
-              description "The credit-based shaper runs in the switch fabric.";
-            }
-            enum time-aware-shaper {
-              description "The gate control list runs in the switch fabric.";
-            }
-          }
+          type qos:offload-stage-type;
           description "Pipeline stages the driver has taken into
-             hardware.  A stage not listed runs in the kernel, which on
-             a switch covers only CPU-forwarded frames.";
+             hardware with the current configuration.  A supported
+             stage missing here fell back to the kernel, e.g. a traffic
+             class table the fabric cannot carry.";
         }
 
         /* Read from the driver's dcb apptrust policy set. */
