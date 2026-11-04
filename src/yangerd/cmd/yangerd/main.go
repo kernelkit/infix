@@ -35,6 +35,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/qosmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/quirks"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -536,5 +537,5 @@ func startQoS(ctx context.Context, feat *features.Set, links func() json.RawMess
 	return qosmonitor.New(tc, dcb, qosmonitor.Modules{
 		Sched: feat.HasModule("ieee802-dot1dc-sched-if"),
 		CBSA:  feat.HasModule("ieee802-dot1dc-cbsa-if"),
-	}, links, log)
+	}, quirks.Load(quirks.Files...), links, log)
 }

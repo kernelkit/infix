@@ -35,9 +35,10 @@ func TestBuildNothing(t *testing.T) {
 
 func TestBuildSwitchPort(t *testing.T) {
 	p := port{
-		TxQueues: 4,
-		Driver:   "mv88e6085",
-		App:      true,
+		TxQueues:  4,
+		Trust:     []string{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
+		Supported: []string{"classification", "remarking", "transmission-selection", "rate-limit"},
+		App:       true,
 		Qdiscs: json.RawMessage(`[
 			{"kind":"tbf","handle":"8001:","root":true,"offloaded":true,"options":{"rate":12500000,"burst":15000}},
 			{"kind":"ets","handle":"8002:","parent":"8001:1","offloaded":true,"options":{"bands":4}}]`),
@@ -48,6 +49,7 @@ func TestBuildSwitchPort(t *testing.T) {
 		"capabilities": map[string]any{
 			"max-traffic-classes":   4.0,
 			"supported-trust-order": []any{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
+			"supported-offload":     []any{"classification", "remarking", "transmission-selection", "rate-limit"},
 			"offload":               []any{"classification", "rate-limit", "transmission-selection"},
 		},
 		"profile":    "edge",
@@ -142,6 +144,29 @@ func TestBuildGates(t *testing.T) {
 	}
 }
 
+func TestBuildSchedLimits(t *testing.T) {
+	p := port{
+		TxQueues: 8,
+		Sched:    schedLimits{ListMax: 3000, CycleMax: 999999999, IntervalMax: 999999999, Tick: 10},
+		Qdiscs:   json.RawMessage(`[{"kind":"ets","handle":"1:","root":true,"options":{"bands":8}}]`),
+	}
+	got := buildJSON(t, p, Modules{Sched: true})
+	want := map[string]any{
+		"ieee802-dot1dc-sched-if:gate-parameter-table": map[string]any{
+			"supported-list-max":     3000.0,
+			"supported-cycle-max":    map[string]any{"numerator": 999999999.0, "denominator": 1000000000.0},
+			"supported-interval-max": 999999999.0,
+			"tick-granularity":       10.0,
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got  %v\nwant %v", got, want)
+	}
+	if out := build(p, Modules{}); out != nil {
+		t.Fatalf("limits reported without the sched module: %v", out)
+	}
+}
+
 type fakeDCB struct{ app, rewr bool }
 
 func (f fakeDCB) Tables(string) (bool, bool, error) { return f.app, f.rewr, nil }
@@ -159,7 +184,7 @@ func TestDrainOnlyOnChange(t *testing.T) {
 	dir := t.TempDir()
 	tc := fakeBatch{"qdisc show dev if7": `[{"kind":"ets","handle":"1:","root":true,"offloaded":true,"options":{"bands":8}}]`}
 	links := `[{"ifname":"e1","ifindex":7,"num_tx_queues":8}]`
-	m := New(tc, fakeDCB{}, Modules{}, func() json.RawMessage { return json.RawMessage(links) },
+	m := New(tc, fakeDCB{}, Modules{}, nil, func() json.RawMessage { return json.RawMessage(links) },
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	m.runDir = dir
 	m.sysfs = dir
@@ -191,7 +216,7 @@ func TestDrainOnlyOnChange(t *testing.T) {
 }
 
 func TestDispatch(t *testing.T) {
-	m := New(fakeBatch{}, fakeDCB{}, Modules{}, func() json.RawMessage { return nil },
+	m := New(fakeBatch{}, fakeDCB{}, Modules{}, nil, func() json.RawMessage { return nil },
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	ae := netlink.NewAttributeEncoder()
