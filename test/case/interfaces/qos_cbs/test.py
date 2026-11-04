@@ -77,6 +77,7 @@ with infamy.Test() as test:
         infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
         if not target.has_model("ieee802-dot1dc-cbsa-if"):
             test.skip("the product has no credit-based shaper model")
+        port.require_offload(test, "credit-based-shaper")
         top = port.traffic_classes - 1
 
     with test.step("Reject a credit-based-shaper class without a reservation"):
@@ -99,8 +100,6 @@ with infamy.Test() as test:
             {"cbsa-parameter-table": [{"traffic-class": top, "admin-idle-slope": RESERVE}]}))
         until(lambda: any(q.get("kind") == "cbs" for q in qos.qdiscs(tgtssh, td1)))
         qos.show_offload(port, "credit-based-shaper")
-
-        port.require_offload(test, "credit-based-shaper")
 
     with test.step("Verify the port reports the reservation as its operational idle slope"):
         until(lambda: oper_idle_slope(target, td1, top) == RESERVE)

@@ -63,6 +63,7 @@ with infamy.Test() as test:
         cap = infamy.capability.Port(target, port, tgtssh)
         if not target.has_model("ieee802-dot1dc-sched-if"):
             test.skip("the product has no time-aware shaper model")
+        cap.require_offload(test, "time-aware-shaper")
         num_tc = cap.traffic_classes
         top = 1 << (num_tc - 1)
         mid = 1 << (num_tc - 3) if num_tc > 2 else 0
