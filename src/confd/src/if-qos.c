@@ -124,23 +124,6 @@ static bool qos_is_explicit(struct lyd_node *node)
 	return false;
 }
 
-/*
- * Drivers with DCB rewrite support, and the trust orders their dcb
- * apptrust accepts; the kernel has no query for either.  Same table as
- * yanger's capabilities.  The rewrite table cannot be probed by trying:
- * a driver with dcbnl operations but no dcbnl_setrewr gets the kernel's
- * generic table, which accepts the entries and programs nothing.
- */
-static const struct {
-	const char *driver;
-	const char *orders[5];
-	bool pcp_encoded;	/* fabric always encodes PCP from the priority */
-} dcb_drivers[] = {
-	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL }, false },
-	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL }, false },
-	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true },
-};
-
 /* Transmit queues of a port, 0 for one that does not exist yet. */
 static int qos_num_txq(const char *ifname)
 {
@@ -203,41 +186,28 @@ static bool qos_is_dsa(const char *ifname)
 	return dsa;
 }
 
-static const char *qos_driver(const char *ifname, char *buf, size_t len)
+static bool qos_list_has(json_t *list, const char *word)
 {
-	char path[PATH_MAX], line[128];
-	const char *driver = NULL;
-	FILE *fp;
-
-	snprintf(path, sizeof(path), "/sys/class/net/%s/device/uevent", ifname);
-	fp = fopen(path, "r");
-	if (!fp)
-		return NULL;
-
-	while (fgets(line, sizeof(line), fp)) {
-		if (strncmp(line, "DRIVER=", 7))
-			continue;
-		strlcpy(buf, chomp(line + 7), len);
-		driver = buf;
-		break;
-	}
-	fclose(fp);
-
-	return driver;
-}
-
-static int qos_dcb_driver(const char *ifname)
-{
-	char buf[64];
-	const char *driver = qos_driver(ifname, buf, sizeof(buf));
+	json_t *val;
 	size_t i;
 
-	if (driver)
-		for (i = 0; i < NELEMS(dcb_drivers); i++)
-			if (!strcmp(dcb_drivers[i].driver, driver))
-				return i;
+	json_array_foreach(list, i, val)
+		if (json_is_string(val) && !strcmp(json_string_value(val), word))
+			return true;
 
-	return -1;
+	return false;
+}
+
+/* Whether a quirk list of the port, e.g. qos-offload, holds @word */
+static bool qos_quirk_has(const char *ifname, const char *quirk, const char *word)
+{
+	return qos_list_has(iface_quirk(ifname, quirk), word);
+}
+
+/* Whether the port's fabric can run a stage of the pipeline */
+static bool qos_offloads(const char *ifname, const char *stage)
+{
+	return qos_quirk_has(ifname, "qos-offload", stage);
 }
 
 /*
@@ -249,25 +219,51 @@ static int qos_dcb_driver(const char *ifname)
  */
 static bool qos_pcp_encoded(const char *ifname)
 {
-	int i = qos_dcb_driver(ifname);
-
-	return i >= 0 && dcb_drivers[i].pcp_encoded;
+	return iface_has_quirk(ifname, "qos-pcp-encoded");
 }
 
 /* Unknown drivers are not limited: without DCB the order is honoured in software. */
 static bool qos_trust_supported(const char *ifname, const char *order)
 {
-	int i = qos_dcb_driver(ifname);
-	size_t j;
+	json_t *orders = iface_quirk(ifname, "qos-trust-order");
 
-	if (i < 0)
-		return true;
+	return !orders || qos_list_has(orders, order);
+}
 
-	for (j = 0; dcb_drivers[i].orders[j]; j++)
-		if (!strcmp(dcb_drivers[i].orders[j], order))
+static bool qos_has_cbs(const struct qos_egress *eg)
+{
+	int i;
+
+	for (i = 0; i < MAX_TC; i++)
+		if (eg->algo[i] == TSA_CBS)
 			return true;
 
 	return false;
+}
+
+/* The root qdisc of a port: ets inverts the class numbering, the others queue by it. */
+enum qos_root {
+	ROOT_ETS,
+	ROOT_MQPRIO,
+	ROOT_TAPRIO,
+};
+
+/*
+ * A fabric shapes a queue, not an ets band, so a shaped class needs a
+ * root with one queue per class, mqprio, where the fabric takes it; so
+ * does a fabric that takes mqprio but not ets, to queue by the table.
+ * Gates take taprio in any case.
+ */
+static enum qos_root qos_root(const char *ifname, const struct qos_egress *eg)
+{
+	json_t *roots = iface_quirk(ifname, "qos-root-qdisc");
+
+	if (eg->gates.enabled)
+		return ROOT_TAPRIO;
+	if (qos_list_has(roots, "mqprio") && (qos_has_cbs(eg) || !qos_list_has(roots, "ets")))
+		return ROOT_MQPRIO;
+
+	return ROOT_ETS;
 }
 
 static enum tsa tsa_from_str(const char *val)
@@ -542,6 +538,7 @@ static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname, c
 				struct qos_egress *eg)
 {
 	uint64_t link = qos_link_rate(ifname);
+	enum qos_root root = qos_root(ifname, eg);
 	enum tsa below = TSA_CBS;
 	int i;
 
@@ -578,6 +575,13 @@ static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname, c
 						     "laid out credit-based-shaper, then strict-"
 						     "priority, then weighted, from the top",
 						     label, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] == TSA_ETS && root == ROOT_MQPRIO) {
+			sr_session_set_error_message(session, "%s: traffic class %d: enhanced-"
+						     "transmission-selection cannot share the port "
+						     "with a credit-based shaper, its fabric serves "
+						     "shaped queues under strict priority", label, i);
 			return -EINVAL;
 		}
 		below = eg->algo[i];
@@ -930,7 +934,7 @@ static void gen_remark(FILE *fp, const char *ifname, struct lyd_node *remark)
 	pcp  = remark ? lydx_get_cattr(remark, "pcp") : NULL;
 	dscp = remark ? lydx_get_cattr(remark, "dscp") : NULL;
 
-	if (qos_dcb_driver(ifname) < 0) {
+	if (!qos_offloads(ifname, "remarking")) {
 		fputs("rewr_err=1\n", fp);
 	} else {
 		bool encoded = qos_pcp_encoded(ifname);
@@ -1002,14 +1006,15 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
  * idle slope; the send slope and the credits follow IEEE 802.1Q-2022
  * Annex L from it and the link rate, with one maximum frame as the
  * interfering burst.  tc takes the slopes in kbit/s.  The shaper is
- * offloaded on a switch port, where frames never pass the kernel, and
- * is the real thing in software elsewhere.
+ * offloaded where the fabric runs it, and is the real thing in software
+ * elsewhere.
  */
-static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int handle)
+static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int handle,
+		    bool by_queue)
 {
 	uint64_t link = qos_link_rate(ifname) / 1000;
 	long frame = qos_sysfs_long(ifname, "mtu", 1500) + FRAME_OVERHEAD;
-	bool offload = qos_is_dsa(ifname);
+	bool offload = qos_offloads(ifname, "credit-based-shaper");
 	int tc;
 
 	for (tc = 0; tc < eg->num_tc; tc++) {
@@ -1022,16 +1027,13 @@ static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int han
 		/*
 		 * A gated class earns credit only while its gate is open, so
 		 * the slope is scaled by the cycle over the open time to keep
-		 * the reservation, IEEE 802.1Q-2022 8.6.8.2.  taprio numbers
-		 * its classes as the standard does, ets inverts them.
+		 * the reservation, IEEE 802.1Q-2022 8.6.8.2.  A queue root
+		 * numbers its classes as the standard does, ets inverts them.
 		 */
 		idle = eg->idle[tc] / 1000;
-		if (eg->gates.enabled) {
+		if (eg->gates.enabled)
 			idle = idle * qos_gate_cycle(&eg->gates) / qos_gate_open(&eg->gates, tc);
-			band = tc + 1;
-		} else {
-			band = eg->num_tc - tc;
-		}
+		band = by_queue ? tc + 1 : eg->num_tc - tc;
 		send = link - idle;
 		fprintf(fp, "qdisc replace dev %s parent %d:%d handle %d: cbs idleslope %" PRIu64
 			" sendslope -%" PRIu64 " hicredit %" PRIu64 " locredit -%" PRIu64
@@ -1040,22 +1042,42 @@ static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int han
 	}
 }
 
+/* One class per queue in standard numbering, as mqprio and taprio take it */
+static void gen_queue_map(FILE *fp, const struct qos_egress *eg)
+{
+	int i;
+
+	fprintf(fp, " num_tc %d map", eg->num_tc);
+	for (i = 0; i < NUM_PRIO; i++)
+		fprintf(fp, " %d", eg->map[i]);
+	fputs(" queues", fp);
+	for (i = 0; i < eg->num_tc; i++)
+		fprintf(fp, " 1@%d", i);
+}
+
+/*
+ * A root for a fabric that shapes queues: the classes on their queues,
+ * served under strict priority by the hardware, the shapers below.
+ */
+static void gen_mqprio(FILE *fp, const char *ifname, struct qos_egress *eg)
+{
+	fprintf(fp, "qdisc replace dev %s root handle 1: mqprio", ifname);
+	gen_queue_map(fp, eg);
+	fputs(" hw 1\n", fp);
+}
+
 /*
  * The gate control list as a taprio root: one class per queue in
  * standard numbering, the gate masks and intervals as given, offloaded
- * on a switch port and run against TAI in software elsewhere.
+ * where the fabric runs it and against TAI in software elsewhere.
  */
 static void gen_taprio(FILE *fp, const char *ifname, struct qos_egress *eg)
 {
 	struct qos_gates *gates = &eg->gates;
 	int i;
 
-	fprintf(fp, "qdisc replace dev %s root handle 1: taprio num_tc %d map", ifname, eg->num_tc);
-	for (i = 0; i < NUM_PRIO; i++)
-		fprintf(fp, " %d", eg->map[i]);
-	fputs(" queues", fp);
-	for (i = 0; i < eg->num_tc; i++)
-		fprintf(fp, " 1@%d", i);
+	fprintf(fp, "qdisc replace dev %s root handle 1: taprio", ifname);
+	gen_queue_map(fp, eg);
 	fprintf(fp, " base-time %" PRIu64, gates->base);
 	if (gates->cycle)
 		fprintf(fp, " cycle-time %" PRIu64, gates->cycle);
@@ -1070,7 +1092,7 @@ static void gen_taprio(FILE *fp, const char *ifname, struct qos_egress *eg)
 		for (i = 0; i < eg->num_tc; i++)
 			fprintf(fp, " %u", gates->max_sdu[i]);
 	}
-	fputs(qos_is_dsa(ifname) ? " flags 0x2\n" : " clockid CLOCK_TAI\n", fp);
+	fputs(qos_offloads(ifname, "time-aware-shaper") ? " flags 0x2\n" : " clockid CLOCK_TAI\n", fp);
 }
 
 /*
@@ -1122,11 +1144,20 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	}
 
 	if (eg->num_tc >= 2) {
-		if (eg->gates.enabled)
+		enum qos_root root = qos_root(ifname, eg);
+
+		switch (root) {
+		case ROOT_TAPRIO:
 			gen_taprio(fp, ifname, eg);
-		else
+			break;
+		case ROOT_MQPRIO:
+			gen_mqprio(fp, ifname, eg);
+			break;
+		case ROOT_ETS:
 			gen_ets(fp, ifname, eg, attach);
-		gen_cbs(fp, ifname, eg, handle);
+			break;
+		}
+		gen_cbs(fp, ifname, eg, handle, root != ROOT_ETS);
 	}
 	fputs("EOF\n", fp);
 }
