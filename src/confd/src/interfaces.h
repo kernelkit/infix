@@ -96,6 +96,7 @@ static inline bool is_member_port(struct lyd_node *cif)
 	return false;
 }
 
+json_t *iface_quirk(const char *ifname, const char *quirkname);
 bool iface_has_quirk(const char *ifname, const char *quirkname);
 
 

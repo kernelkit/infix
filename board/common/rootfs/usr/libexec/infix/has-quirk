@@ -51,6 +51,9 @@ for pattern in $patterns; do
 	@ethtool:*)
 	    ethtoolmatch "$pattern" || continue
 	    ;;
+	@driver=*)
+	    [ "$(sed -n 's/^DRIVER=//p' "/sys/class/net/$ifname/device/uevent" 2>/dev/null)" = "${pattern#@driver=}" ] || continue
+	    ;;
 	"$ifname")
 	    ;;
 	*)
