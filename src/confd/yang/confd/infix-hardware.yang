@@ -23,6 +23,12 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-11-04 {
+    description "Add cpu container with the cores and clock frequencies of
+                 the CPU.";
+    reference "internal";
+  }
+
   revision 2026-10-11 {
     description "Add cellular modem and SIM hardware components: class
                  identities, modem and sim configuration, modem-state and
@@ -661,6 +667,54 @@ module infix-hardware {
 	leaf extension-data {
 	  type string;
 	}
+      }
+    }
+
+    container cpu {
+      when "derived-from-or-self(../iehw:class, 'iahw:cpu')";
+      config false;
+      description
+        "Processor cores and clock frequencies.
+
+         Cores of the same type and clock range form a cluster.  A
+         big.LITTLE system has one cluster for each core type, e.g. four
+         Cortex-A76 and four Cortex-A55.";
+
+      list cluster {
+        key id;
+        description "Cores of the same type and clock range.";
+        leaf id {
+          type uint16;
+          description "Number of the first core in the cluster, from 0.";
+        }
+        leaf model {
+          type string;
+          description "Core type, e.g. 'Cortex-A72'.";
+        }
+        leaf cores {
+          type uint16;
+          description "Number of cores in the cluster.";
+        }
+        leaf frequency {
+          type uint32;
+          units "MHz";
+          description
+            "Current clock frequency.
+
+             The highest of the cluster's cores when they are clocked
+             separately.  Changes with the load when frequency scaling
+             is active.";
+        }
+        leaf min-frequency {
+          type uint32;
+          units "MHz";
+          description "Lowest clock frequency the cores support.";
+        }
+        leaf max-frequency {
+          type uint32;
+          units "MHz";
+          description "Highest clock frequency the cores support.";
+        }
       }
     }
 

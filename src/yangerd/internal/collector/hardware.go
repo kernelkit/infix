@@ -63,6 +63,9 @@ type HardwareCollector struct {
 	wifiInfo map[string]map[string]interface{} // PHY info the radios were built from
 	reported map[string]bool                   // duplicate names already warned about
 
+	cpuOnce sync.Once
+	cpu     cpuInfo // read once, only the clocks change
+
 	sysMu     sync.Mutex
 	sysRaw    []byte                 // system.json as last read
 	sysParsed map[string]interface{} // and parsed, shared, never modified
@@ -169,7 +172,7 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 
 	components := make([]interface{}, 0, len(inventory)+len(sensors)+len(radios)+len(gps)+1)
 	components = append(components, inventory...)
-	components = append(components, cpuComponentFor(sensors)...)
+	components = append(components, c.cpuComponentFor(systemjson, sensors)...)
 	components = append(components, sensors...)
 	components = append(components, radios...)
 	components = append(components, gps...)
@@ -411,26 +414,6 @@ func normalizeSensorName(name string) string {
 
 	name = hwTrailingNumUnderscoreRe.ReplaceAllString(name, "$1")
 	return strings.ReplaceAll(name, "_", "-")
-}
-
-// cpuComponentFor is the SoC that die temperature sensors belong to.  Only
-// created when something references it, boards without a die sensor have
-// nothing to say about their SoC.
-func cpuComponentFor(sensors []interface{}) []interface{} {
-	for _, raw := range sensors {
-		if sensor, ok := raw.(map[string]interface{}); ok && sensor["parent"] == cpuComponent {
-			return []interface{}{map[string]interface{}{
-				"name":   cpuComponent,
-				"class":  "iana-hardware:cpu",
-				"parent": "mainboard",
-				"state": map[string]interface{}{
-					"admin-state": "unknown",
-					"oper-state":  "enabled",
-				},
-			}}
-		}
-	}
-	return nil
 }
 
 // uniqueNames renames duplicate component names "<name>-1", "<name>-2"

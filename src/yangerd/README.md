@@ -110,6 +110,7 @@ build vendors them from `go.sum`.
 | | clock, memory, load, filesystems, installer | on demand | procfs, statfs, RAUC D-Bus |
 | | NTP sources | on demand | chronyd cmdmon |
 | `ietf-hardware:hardware` | mainboard, VPD, USB ports | on demand | `/run/system.json`, sysfs |
+| | CPU cores and clocks | on demand | sysfs cpufreq, `/run/system.json`, `/proc/cpuinfo`, all but the clocks read once |
 | | radio capabilities | event | nl80211 phy, regulatory and interface events |
 | | radio channel survey | on demand | nl80211 survey dump |
 | | sensors | on demand | hwmon, thermal zones |
