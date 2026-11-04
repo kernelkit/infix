@@ -8,6 +8,11 @@
 	    "status-err":   { "path": "/run/led/status-err" },
 	    "status-crit":  { "path": "/run/led/status-crit" },
 
+	    "fault-prime":  { "path": "/run/led/fault-prime" },
+	    "fault-ok":     { "path": "/run/led/fault-ok" },
+	    "fault-err":    { "path": "/run/led/fault-err" },
+	    "fault-crit":   { "path": "/run/led/fault-crit" },
+
 	    "startup":   { "path": "/run/finit/cond/usr/startup-config-ok" },
 	    "fail-safe": { "path": "/run/finit/cond/usr/failure-config-ok" },
 	    "panic":     { "path": "/run/finit/cond/usr/failure-config-error" }
@@ -22,7 +27,9 @@
 		    { "if": "panic", "then": "@blink-5hz" },
 		    { "if": "fail-safe", "then": "@blink-5hz" },
 		    { "if": "status-crit", "then": "@blink-1hz" },
-		    { "if": "status-err", "then": "@on" }
+		    { "if": "status-err", "then": "@on" },
+		    { "if": "fault-crit", "then": "@blink-1hz" },
+		    { "if": "fault-err", "then": "@on" }
 		]
 	    },
 	    "green:status": {
@@ -32,6 +39,8 @@
 		    { "if": "fail-safe", "then": "@off" },
 		    { "if": "status-crit", "then": "@off" },
 		    { "if": "status-err", "then": "@off" },
+		    { "if": "fault-crit", "then": "@off" },
+		    { "if": "fault-err", "then": "@off" },
 		    { "if": "status-prime", "then": "@blink-1hz" },
 		    { "if": "status-ok", "then": "@on" },
 		    { "if": "startup", "then": "@on" },
