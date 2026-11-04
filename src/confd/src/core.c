@@ -80,8 +80,9 @@ FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...)
 }
 
 /* The event session runs as confd itself, the caller is only known
- * from the originator data: netopeer2 pushes the NETCONF session id
- * and then the username, rousette pushes nothing */
+ * from the originator: netopeer2 pushes the NETCONF session id and
+ * then the username as data, rousette and the rpc tool name the
+ * session after the user */
 const char *rpc_user(sr_session_ctx_t *session, const char **via)
 {
 	const char *orig = sr_session_get_orig_name(session);
