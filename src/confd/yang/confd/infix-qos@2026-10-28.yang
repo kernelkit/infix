@@ -64,6 +64,34 @@ module infix-qos {
    * Typedefs and groupings
    */
 
+  typedef offload-stage-type {
+    type enumeration {
+      enum classification {
+        description "Ingress classification runs in the switch fabric.
+
+           The trust order runs there too.";
+      }
+      enum remarking {
+        description "Egress remarking runs in the switch fabric.";
+      }
+      enum transmission-selection {
+        description "Transmission selection runs in the switch fabric.
+
+           The traffic classes run there too.";
+      }
+      enum rate-limit {
+        description "The port rate limit runs in the switch fabric.";
+      }
+      enum credit-based-shaper {
+        description "The credit-based shaper runs in the switch fabric.";
+      }
+      enum time-aware-shaper {
+        description "The gate control list runs in the switch fabric.";
+      }
+    }
+    description "A stage of the QoS pipeline a switch fabric can run.";
+  }
+
   typedef trust-order-type {
     type enumeration {
       enum none {
