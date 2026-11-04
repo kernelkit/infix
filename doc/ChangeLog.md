@@ -55,6 +55,10 @@ All notable changes to the project are documented in this file.
   - QoS profiles, the classification and traffic class settings of a
     port defined once as a `system qos-profile` and shared by any
     number of ports
+  - Microchip LAN969x (Laguna) switch ports offload the traffic class
+    table and the credit-based and time-aware shapers to the switch
+  - `qos capabilities` lists `supported-offload`, the stages a port's
+    switch fabric can run, next to `offload`, those it runs right now
 
 ### Fixes
 
