@@ -10,15 +10,6 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 )
 
-// trustOrders are the orders a driver's dcb apptrust accepts, by driver
-// name; the kernel has no query for it.  Same table as confd's qos
-// validation.
-var trustOrders = map[string][]string{
-	"sparx5-switch":  {"pcp", "dscp", "dscp-pcp"},
-	"lan966x-switch": {"pcp", "dscp", "dscp-pcp"},
-	"mv88e6085":      {"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
-}
-
 // Modules tells which optional YANG modules are installed, so their
 // nodes may be reported.
 type Modules struct {
@@ -26,14 +17,25 @@ type Modules struct {
 	CBSA  bool // ieee802-dot1dc-cbsa-if
 }
 
-// port is what the kernel says about one port's QoS.
+// schedLimits are the bounds of a port's gate control list, from its
+// quirks, in nanoseconds; zero when the port names none.
+type schedLimits struct {
+	ListMax     int64
+	CycleMax    int64
+	IntervalMax int64
+	Tick        int64 // tenths of a nanosecond
+}
+
+// port is what the kernel and the quirks say about one port's QoS.
 type port struct {
-	TxQueues int
-	Driver   string
-	App      bool            // PCP or DSCP entries in the DCB app table
-	Rewr     bool            // PCP or DSCP entries in the DCB rewrite table
-	Qdiscs   json.RawMessage // tc qdisc show
-	Profile  string          // the profile confd applied, from /run/qos
+	TxQueues  int
+	Trust     []string // quirk qos-trust-order, nil without DCB
+	Supported []string // quirk qos-offload
+	Sched     schedLimits
+	App       bool            // PCP or DSCP entries in the DCB app table
+	Rewr      bool            // PCP or DSCP entries in the DCB rewrite table
+	Qdiscs    json.RawMessage // tc qdisc show
+	Profile   string          // the profile confd applied, from /run/qos
 }
 
 type qdisc struct {
@@ -88,7 +90,7 @@ func build(p port, mods Modules) map[string]any {
 		qos["rate-limit"] = limit
 	}
 
-	out := shapers(qdiscs, mods)
+	out := shapers(qdiscs, mods, p.Sched)
 	if len(qos) > 0 {
 		out["infix-interfaces:qos"] = qos
 	}
@@ -108,15 +110,17 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["max-traffic-classes"] = p.TxQueues
 	}
 
-	trust := trustOrders[p.Driver]
-	if trust != nil {
-		caps["supported-trust-order"] = trust
+	if p.Trust != nil {
+		caps["supported-trust-order"] = p.Trust
+	}
+	if p.Supported != nil {
+		caps["supported-offload"] = p.Supported
 	}
 
 	// Stages the driver runs.  ets and tbf report offloaded when the
 	// driver took them.
 	var offload []string
-	if trust != nil {
+	if p.Trust != nil {
 		if p.App {
 			offload = append(offload, "classification")
 		}
@@ -188,7 +192,8 @@ func rateLimit(qdiscs []qdisc) map[string]any {
 }
 
 // shapers is the IEEE 802.1DC credit-based and time-aware shaper state
-// of a port, read back from its qdisc tree.
+// of a port, read back from its qdisc tree, with the limits of its gate
+// control list.
 //
 // The sched entries of a taprio root are the operational gate control
 // list.  A cbs child reports the idle slope the kernel runs; under gates
@@ -196,8 +201,17 @@ func rateLimit(qdiscs []qdisc) map[string]any {
 // it is scaled back to the reservation it came from.  The classes of an
 // ets root count down from the top, those of mqprio and taprio are the
 // queues.
-func shapers(qdiscs []qdisc, mods Modules) map[string]any {
+func shapers(qdiscs []qdisc, mods Modules, limits schedLimits) map[string]any {
 	out := map[string]any{}
+	table := map[string]any{}
+
+	if mods.Sched && limits.ListMax != 0 {
+		table["supported-list-max"] = limits.ListMax
+		table["supported-cycle-max"] = rational(limits.CycleMax)
+		table["supported-interval-max"] = limits.IntervalMax
+		table["tick-granularity"] = limits.Tick
+		out["ieee802-dot1dc-sched-if:gate-parameter-table"] = table
+	}
 
 	var root, sched *qdisc
 	for i := range qdiscs {
@@ -245,7 +259,6 @@ func shapers(qdiscs []qdisc, mods Modules) map[string]any {
 
 	if gated && mods.Sched {
 		const ns = 1_000_000_000
-		div := gcd(cycle, ns)
 		list := make([]any, 0, len(schedule))
 		for i, g := range schedule {
 			list = append(list, map[string]any{
@@ -255,15 +268,13 @@ func shapers(qdiscs []qdisc, mods Modules) map[string]any {
 				"time-interval-value": g.interval,
 			})
 		}
-		table := map[string]any{
-			"oper-control-list": map[string]any{"gate-control-entry": list},
-			"oper-cycle-time":   map[string]any{"numerator": cycle / div, "denominator": ns / div},
-			"oper-base-time": map[string]any{
-				"seconds":     strconv.FormatInt(o.BaseTime/ns, 10),
-				"nanoseconds": o.BaseTime % ns,
-			},
-			"config-pending": len(o.Admin) > 0,
+		table["oper-control-list"] = map[string]any{"gate-control-entry": list}
+		table["oper-cycle-time"] = rational(cycle)
+		table["oper-base-time"] = map[string]any{
+			"seconds":     strconv.FormatInt(o.BaseTime/ns, 10),
+			"nanoseconds": o.BaseTime % ns,
 		}
+		table["config-pending"] = len(o.Admin) > 0
 		if o.Extension != 0 {
 			table["oper-cycle-time-extension"] = o.Extension
 		}
@@ -313,6 +324,14 @@ func shapers(qdiscs []qdisc, mods Modules) map[string]any {
 		out["ieee802-dot1dc-cbsa-if:cbsa"] = map[string]any{"cbsa-parameter-table": classes}
 	}
 	return out
+}
+
+// rational is a time in nanoseconds as the seconds fraction the IEEE
+// modules want.
+func rational(ns int64) map[string]any {
+	const sec = 1_000_000_000
+	div := gcd(ns, sec)
+	return map[string]any{"numerator": ns / div, "denominator": sec / div}
 }
 
 // number reads a JSON value tc prints either as a number or as a hex
