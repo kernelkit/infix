@@ -44,16 +44,17 @@
     </div>
   </div>
 
-  {{if .Board.Model}}
+  {{if or .Board.Model .CPU}}
   <div class="info-card">
     <div class="card-header">Board</div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
-        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Model}}<tr><th>Model</th><td>{{.Board.Model}}</td></tr>{{end}}
         {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
         {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
+        {{if .CPU}}<tr><th>CPU</th><td>{{.CPU}}</td></tr>{{end}}
       </table>
     </div>
   </div>

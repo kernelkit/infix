@@ -10,7 +10,7 @@
 <section class="info-grid">
 
   {{/* ── Board ─────────────────────────────────────────────────────────── */}}
-  {{if .Board.Model}}
+  {{if or .Board.Model .CPU.SoC .CPU.Clusters}}
   <div class="info-card">
     <div class="card-header">Board
       <button class="btn btn-sm btn-outline card-header-action"
@@ -20,11 +20,13 @@
     </div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
-        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Model}}<tr><th>Model</th><td>{{.Board.Model}}</td></tr>{{end}}
         {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
         {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td><span class="num">{{.Board.BaseMAC}}</span></td></tr>{{end}}
+        {{if .CPU.SoC}}<tr><th>SoC</th><td>{{.CPU.SoC}}</td></tr>{{end}}
+        {{range .CPU.Clusters}}<tr><th>Cores</th><td>{{.}}</td></tr>{{end}}
       </table>
       <div id="hw-locate-result" hx-preserve="true"></div>
     </div>

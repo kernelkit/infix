@@ -31,6 +31,9 @@ All notable changes to the project are documented in this file.
   at its boot clock
 - CLI commands and `copy` start faster, the YANG models are now loaded
   once at boot instead of by every command
+- The CPU model, number of cores and current clock frequency are now in
+  the hardware operational data, shown by `show hardware`, `show system`
+  and the WebUI Overview and Hardware pages, see [Hardware][hw]
 - WebUI: the DHCP leases are grouped by subnet, in address order
 - `show dhcp-server` now shows the server statistics with the leases,
   and `show dhcp-server brief` only the leases.  The `statistics` and
@@ -245,6 +248,7 @@ All notable changes to the project are documented in this file.
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 [locate]: https://www.kernelkit.org/infix/latest/hardware/#locate
+[hw]: https://www.kernelkit.org/infix/latest/hardware/#processor
 [ripng]: https://www.kernelkit.org/infix/latest/routing/#ripng-routing
 [ospfv3]: https://www.kernelkit.org/infix/latest/routing/#ospfv3-routing
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
