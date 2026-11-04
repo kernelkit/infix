@@ -23,6 +23,7 @@ import (
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/inotify"
+	"github.com/kernelkit/infix/src/yangerd/internal/quirks"
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
 )
@@ -61,6 +62,7 @@ type Monitor struct {
 	tc       Querier
 	dcb      DCBReader
 	mods     Modules
+	quirks   quirks.Quirks
 	links    func() json.RawMessage
 	log      *slog.Logger
 	onUpdate func(map[string]json.RawMessage)
@@ -77,12 +79,13 @@ type Monitor struct {
 
 // New creates a Monitor reading qdiscs through tc and DCB tables through
 // dcb, see DCB, for the interfaces in links, an `ip -json -d link show`
-// dump.
-func New(tc Querier, dcb DCBReader, mods Modules, links func() json.RawMessage, log *slog.Logger) *Monitor {
+// dump.  What a port's fabric can do comes from its quirks.
+func New(tc Querier, dcb DCBReader, mods Modules, q quirks.Quirks, links func() json.RawMessage, log *slog.Logger) *Monitor {
 	return &Monitor{
 		tc:         tc,
 		dcb:        dcb,
 		mods:       mods,
+		quirks:     q,
 		links:      links,
 		log:        log,
 		runDir:     runDir,
@@ -328,7 +331,18 @@ func (m *Monitor) linkTable() []link {
 
 // read asks the kernel about one port.
 func (m *Monitor) read(l link) port {
-	p := port{TxQueues: l.TxQueues, Driver: m.driver(l.Name)}
+	q := m.quirks.For(l.Name, m.driver(l.Name))
+	p := port{
+		TxQueues:  l.TxQueues,
+		Trust:     q.Strings("qos-trust-order"),
+		Supported: q.Strings("qos-offload"),
+		Sched: schedLimits{
+			ListMax:     q.Int("sched-supported-list-max"),
+			CycleMax:    q.Int("sched-supported-cycle-max"),
+			IntervalMax: q.Int("sched-supported-interval-max"),
+			Tick:        q.Int("sched-tick-granularity"),
+		},
+	}
 
 	// By index: tc caches names for the life of the process, so a name
 	// reused by a new interface would resolve to the old one.
@@ -336,7 +350,7 @@ func (m *Monitor) read(l link) port {
 	if p.Qdiscs, err = m.tc.Query("qdisc show dev if" + strconv.Itoa(l.Index)); err != nil {
 		m.log.Debug("qosmonitor: tc", "ifname", l.Name, "err", err)
 	}
-	if trustOrders[p.Driver] != nil {
+	if p.Trust != nil {
 		if p.App, p.Rewr, err = m.dcb.Tables(l.Name); err != nil {
 			m.log.Debug("qosmonitor: dcb", "ifname", l.Name, "err", err)
 		}
