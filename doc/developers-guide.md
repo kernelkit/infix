@@ -196,6 +196,10 @@ and named after it with a `-kkit` suffix, e.g. `v4.4-kkit` in
 `kernelkit/linuxptp`.  Forks of projects we already track, the kernel,
 Buildroot and FRR, have their own naming, see below.
 
+The package recipe always pins the upstream site and version, never a
+commit on the fork.  The fork only hosts the branch; a release that
+pins a fork commit stops building the day that branch is rebased.
+
 To add or change a patch:
 
 1. Fork the project under the `kernelkit` organization if it is not
