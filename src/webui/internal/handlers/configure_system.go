@@ -442,6 +442,20 @@ func (h *ConfigureSystemHandler) DeleteNTPServer(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
+	// The last server takes the ntp container with it, an enabled client
+	// without servers is not what the user asked for.
+	var wrap struct {
+		NTP cfgNTPJSON `json:"ietf-system:ntp"`
+	}
+	err := h.RC.Get(r.Context(), ntpCandPath, &wrap)
+	if err == nil && len(wrap.NTP.Servers) == 0 {
+		err = h.RC.Delete(r.Context(), ntpCandPath)
+	}
+	if err != nil && !restconf.IsNotFound(err) && !restconf.IsDataMissing(err) {
+		log.Printf("configure ntp delete container: %v", err)
+		renderSaveError(w, err)
+		return
+	}
 	renderSavedRedirect(w, "NTP server deleted", "/configure/ntp")
 }
 
