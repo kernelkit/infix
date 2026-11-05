@@ -29,6 +29,17 @@ func IsDataMissing(err error) bool {
 	return errors.As(err, &e) && e.Tag == "data-missing"
 }
 
+// IsAccessDenied reports whether the device refused the request under
+// NACM, as opposed to rejecting the credentials.
+func IsAccessDenied(err error) bool {
+	var e *Error
+	if errors.As(err, &e) {
+		return e.StatusCode == http.StatusForbidden || e.Tag == "access-denied"
+	}
+	var a *AuthError
+	return errors.As(err, &a) && a.Code == http.StatusForbidden
+}
+
 // AuthError is returned when RESTCONF rejects credentials (401/403).
 type AuthError struct {
 	Code int

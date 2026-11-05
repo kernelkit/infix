@@ -1566,6 +1566,20 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
+    // NACM refused the candidate copy: the page is of no use, say so instead.
+    var configureDenied = false;
+    document.addEventListener('htmx:responseError', function(evt) {
+      var d = evt.detail;
+      if (!d || !d.xhr || d.xhr.status !== 403 ||
+          !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
+      configureDenied = true;
+      var content = document.getElementById('content');
+      if (content) {
+        content.innerHTML = '<div class="alert alert-error">' +
+          'You do not have permission to change the configuration.</div>';
+      }
+    });
+
     // The Configure accordion is open on page load only on a configure
     // page, which the server rendered from the candidate as it was: enter
     // configure mode, then render the page again from the fresh copy.
@@ -1576,6 +1590,7 @@ function markActiveOpt(cls, attr, value) {
       if (content) content.classList.add('cfg-entering');
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
         .then(function() {
+          if (configureDenied) return;
           return htmx.ajax('GET', window.location.pathname + window.location.search,
                            {target: '#content', swap: 'innerHTML'});
         })

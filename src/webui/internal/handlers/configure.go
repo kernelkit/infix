@@ -78,6 +78,11 @@ func cfgUnsavedFromRequest(r *http.Request) bool {
 func (h *ConfigureHandler) Enter(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "running", "candidate"); err != nil {
 		log.Printf("configure enter: %v", err)
+		if restconf.IsAccessDenied(err) {
+			hxTrigger(w, "cfgError", "You do not have permission to change the configuration")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 		http.Error(w, "Could not initialise candidate datastore", http.StatusBadGateway)
 		return
 	}

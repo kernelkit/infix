@@ -134,7 +134,9 @@ func (h *NACMHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	var authRaw nacmAuthWrapper
 	authErr := h.RC.Get(r.Context(), "/data/ietf-system:system/authentication", &authRaw)
 
-	if nacmErr != nil {
+	if restconf.IsAccessDenied(nacmErr) || restconf.IsNotFound(nacmErr) {
+		data.Error = "You do not have permission to view users and groups"
+	} else if nacmErr != nil {
 		log.Printf("restconf nacm: %v", nacmErr)
 		data.Error = "Could not fetch NACM data"
 	} else {
