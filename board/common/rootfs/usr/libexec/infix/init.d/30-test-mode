@@ -1,0 +1,28 @@
+#!/bin/sh
+# In test mode, forward all logs to the test controller's syslog sink.
+#
+# The test mode settings are a JSON object, from qemu (fw_cfg) or the
+# test-mode file on aux, which is an empty marker on older setups:
+#
+#   { "management-interface": "e1", "physical-name": "dut1" }
+
+ident=$(basename "$0")
+conf=/etc/syslog.d/test-mode.conf
+group=ff02::161
+
+[ -f /mnt/aux/test-mode ] || exit 0
+
+# Qemu settings (for testing) take precedence over the test-mode file
+file=/sys/firmware/qemu_fw_cfg/by_name/opt/test-mode/raw
+[ -f "$file" ] || file=/mnt/aux/test-mode
+
+iface=$(jq -r '."management-interface" // empty' "$file" 2>/dev/null)
+[ -n "$iface" ] || exit 0
+name=$(jq -r '."physical-name" // empty' "$file" 2>/dev/null)
+
+opts="RFC5424,iface=$iface"
+[ -n "$name" ] && opts="$opts,sd=[device@32473 name=\"$name\"]"
+echo "*.*	@[$group]	;$opts" > "$conf"
+
+logger -k -p user.notice -t "$ident" "Forwarding logs to $group on $iface"
+kill -HUP "$(cat /run/syslogd.pid)"

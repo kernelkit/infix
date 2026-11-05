@@ -12,6 +12,7 @@ TESTS              ?= $(test-dir)/case/all.yaml
 
 yang_extractor     := $(test-dir)/utils/extract_xpaths.py
 coverage_reporter  := $(test-dir)/utils/coverage_report.py
+syslog_split       := $(test-dir)/utils/syslog_split.py
 YANG_DIR           ?= $(BR2_EXTERNAL_INFIX_PATH)/src/confd/yang/confd
 xpaths_all_csv     := $(test-dir)/.log/xpaths_all.csv
 
@@ -43,6 +44,11 @@ test:
 		           $(test-dir)/.log/last/xpath_coverage.log \
 		           $(test-dir)/.log/last/xpath_coverage_report.md \
 		           2>/dev/null || true; \
+		       test ! -f "$$TEST_SYSLOG" || { \
+		           python3 $(syslog_split) -o $(test-dir)/.log/last/syslog "$$TEST_SYSLOG" && \
+		           ln -f "$$TEST_SYSLOG" $(test-dir)/.log/last/syslog/full.log && \
+		           tar czf $(test-dir)/.log/last/logs.tar.gz -C $(test-dir)/.log/last syslog; } || true; \
+		       chmod -R 777 $(test-dir)/.log; \
 		       exit $$rc'
 
 test-sh:
