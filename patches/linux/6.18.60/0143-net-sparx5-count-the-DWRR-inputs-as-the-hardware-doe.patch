@@ -1,0 +1,42 @@
+From 249b8667fa8caf032b8a14980161c09657defeb6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 22:16:43 +0100
+Subject: [PATCH] net: sparx5: count the DWRR inputs as the hardware does
+Organization: Wires
+
+An ets qdisc with weighted bands also weighted the lowest strict
+band.  With
+
+    tc qdisc add dev eth0 root handle 1: ets bands 8 strict 4 \
+        quanta 4500 4500 500 500
+
+queue 4 shared the port with queues 0 to 3 instead of taking
+precedence over them.
+
+SE_DWRR_CNT was written as the number of weighted queues, but the
+register counts from one: "0: No inputs uses DWRR, 1: 2 lowest
+inputs used DWRR, n: (n+1) lowest inputs uses DWRR", per the LAN969x
+register description, and the vendor API subtracts one as well.
+
+Write the count less one, and zero for none.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 14331f1a0c57..7ee5c90f1a79 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -394,8 +394,8 @@ static int sparx5_dwrr_conf_set(struct sparx5_port *port,
+ 		 HSCH_HSCH_CFG_CFG_HSCH_LAYER | HSCH_HSCH_CFG_CFG_CFG_SE_IDX,
+ 		 port->sparx5, HSCH_HSCH_CFG_CFG);
+ 
+-	/* Number of *lower* indexes that are arbitrated dwrr */
+-	spx5_rmw(HSCH_SE_CFG_SE_DWRR_CNT_SET(dwrr->count),
++	/* The inputs 0 to SE_DWRR_CNT are arbitrated dwrr, the rest strict */
++	spx5_rmw(HSCH_SE_CFG_SE_DWRR_CNT_SET(dwrr->count ? dwrr->count - 1 : 0),
+ 		 HSCH_SE_CFG_SE_DWRR_CNT, port->sparx5,
+ 		 HSCH_SE_CFG(port->portno));
+ 
