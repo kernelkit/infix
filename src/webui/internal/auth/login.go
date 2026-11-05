@@ -37,7 +37,11 @@ type loginData struct {
 
 // ShowLogin renders the login page (GET /login).
 func (h *LoginHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
-	h.renderLogin(w, r, "")
+	msg := ""
+	if r.URL.Query().Has("expired") {
+		msg = "The login page had expired, please try again."
+	}
+	h.renderLogin(w, r, msg)
 }
 
 // DoLogin validates credentials against RESTCONF and creates a session (POST /login).
