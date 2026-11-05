@@ -1731,6 +1731,17 @@ function markActiveOpt(cls, attr, value) {
   });
 })();
 
+// A morph swap keeps a <dialog> node and only strips its open attribute,
+// which leaves the page inert after a modal in Chrome.  Close the dialogs
+// in the target the proper way before the swap.
+(function() {
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    var target = evt.detail && evt.detail.target;
+    if (!target || !target.querySelectorAll) return;
+    target.querySelectorAll('dialog[open]').forEach(function(dlg) { dlg.close(); });
+  });
+})();
+
 // mDNS extra-address row toggle
 (function() {
   document.addEventListener('click', function(e) {
