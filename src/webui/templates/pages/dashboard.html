@@ -44,16 +44,17 @@
     </div>
   </div>
 
-  {{if .Board.Model}}
+  {{if or .Board.Model .CPU}}
   <div class="info-card">
     <div class="card-header">Board</div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
-        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Model}}<tr><th>Model</th><td>{{.Board.Model}}</td></tr>{{end}}
         {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
         {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
         {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
         {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
+        {{if .CPU}}<tr><th>CPU</th><td>{{.CPU}}</td></tr>{{end}}
       </table>
     </div>
   </div>
@@ -95,12 +96,12 @@
         <tr>
           <th>Gateway</th>
           <td>
-            {{range .Gateways}}<div><span class="reach-slot" hx-get="/dashboard/reachability?ip={{.Addr | urlquery}}&amp;iface={{.Iface | urlquery}}" hx-trigger="load" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.Addr}}{{if .Iface}} <span class="text-muted">via {{.Iface}}</span>{{end}}</div>{{else}}<span class="text-muted">none</span>{{end}}
+            {{range $i, $gw := .Gateways}}<div><span id="reach-gw-{{$i}}" class="reach-slot" hx-preserve="true" hx-get="/dashboard/reachability?ip={{.Addr | urlquery}}&amp;iface={{.Iface | urlquery}}" hx-trigger="load, refreshed from:body" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.Addr}}{{if .Iface}} <span class="text-muted">via {{.Iface}}</span>{{end}}</div>{{else}}<span class="text-muted">none</span>{{end}}
           </td>
         </tr>
         <tr>
           <th>Internet</th>
-          <td><span class="reach-slot" hx-get="/dashboard/reachability?ip={{.InternetProbe | urlquery}}" hx-trigger="load" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.InternetProbe}}</td>
+          <td><span id="reach-inet" class="reach-slot" hx-preserve="true" hx-get="/dashboard/reachability?ip={{.InternetProbe | urlquery}}" hx-trigger="load, refreshed from:body" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.InternetProbe}}</td>
         </tr>
         <tr>
           <th>DNS</th>

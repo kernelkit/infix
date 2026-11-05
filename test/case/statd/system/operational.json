@@ -13,6 +13,25 @@
         }
       },
       {
+        "class": "iana-hardware:cpu",
+        "infix-hardware:cpu": {
+          "cluster": [
+            {
+              "cores": 1,
+              "id": 0
+            }
+          ]
+        },
+        "mfg-name": "AMD",
+        "model-name": "Ryzen 7 PRO 5850U with Radeon Graphics",
+        "name": "cpu",
+        "parent": "mainboard",
+        "state": {
+          "admin-state": "unknown",
+          "oper-state": "enabled"
+        }
+      },
+      {
         "class": "infix-hardware:wifi",
         "description": "WiFi Radio",
         "infix-hardware:wifi-radio": {

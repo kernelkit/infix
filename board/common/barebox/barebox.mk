@@ -6,15 +6,19 @@ IX_BAREBOX_BUILD := $(BUILD_DIR)/infix-bareboxenv
 define BAREBOX_PRE_BUILD_CREATE_ENV
 	@$(call IXMSG,"Creating Barebox environment")
 	rsync -a $(IX_BAREBOX_DIR)/env/ $(IX_BAREBOX_BUILD)
-	dtc <$(IX_BAREBOX_DIR)/state.dts >$(IX_BAREBOX_BUILD)/state.dtb
+	$(HOST_DIR)/bin/dtc <$(IX_BAREBOX_DIR)/state.dts >$(IX_BAREBOX_BUILD)/state.dtb
 endef
 BAREBOX_PRE_BUILD_HOOKS += BAREBOX_PRE_BUILD_CREATE_ENV
 
 define BAREBOX_POST_BUILD_INSTALL_STATE
 	@$(call IXMSG,"Installing state.dtb in rootfs")
 	mkdir -p $(TARGET_DIR)/etc/barebox \
-		&& dtc <$(IX_BAREBOX_DIR)/state.dts >$(TARGET_DIR)/etc/barebox/state.dtb
+		&& $(HOST_DIR)/bin/dtc <$(IX_BAREBOX_DIR)/state.dts >$(TARGET_DIR)/etc/barebox/state.dtb
 endef
 BAREBOX_POST_BUILD_HOOKS += BAREBOX_POST_BUILD_INSTALL_STATE
+
+# Too late for barebox.mk to pick up, add it to the configure step too
+BAREBOX_DEPENDENCIES += host-dtc
+$(BAREBOX_TARGET_CONFIGURE): | host-dtc
 
 endif

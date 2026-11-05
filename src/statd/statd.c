@@ -427,7 +427,8 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "infix-containers", XPATH_CONTAIN_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 #endif
-	if (subscribe(statd, "infix-dhcp-server", XPATH_DHCP_SERVER_BASE, sr_generic_cb))
+	/* Merged, so the server's configuration stays next to its leases */
+	if (subscribe_opts(statd, "infix-dhcp-server", XPATH_DHCP_SERVER_BASE, SR_SUBSCR_OPER_MERGE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "infix-services", XPATH_TFTP_FILES, sr_generic_cb))
 		return SR_ERR_INTERNAL;

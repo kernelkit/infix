@@ -27,6 +27,19 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
+- Banana Pi BPI-R2 Pro: the CPU now runs at up to 2 GHz, it was stuck
+  at its boot clock
+- CLI commands and `copy` start faster, the YANG models are now loaded
+  once at boot instead of by every command
+- The CPU model, number of cores and current clock frequency are now in
+  the hardware operational data, shown by `show hardware`, `show system`
+  and the WebUI Overview and Hardware pages, see [Hardware][hw]
+- WebUI: the DHCP leases are grouped by subnet, in address order
+- `show dhcp-server` now shows the server statistics with the leases,
+  and `show dhcp-server brief` only the leases.  The `statistics` and
+  `detailed` keywords are removed
+- Interfaces now report their multicast, discard and error counters,
+  not only the octet counters
 
 ### Fixes
 
@@ -36,9 +49,12 @@ All notable changes to the project are documented in this file.
   point, made the whole configuration change fail to apply, although
   the commit was reported as successful
 - NanoPi R2S: the LAN port got a random MAC address on every boot
-
-### Fixes
-
+- `show interface` was slow, in particular on devices with a modem
+- The octet counters of an interface stopped counting after a while,
+  e.g., they stayed at zero on a switch port
+- The DHCP server counters were always zero
+- The DHCP server lease list was not updated when clients came and went
+- WebUI: the DHCP page did not show that the server was enabled
 - Fix Wi-Fi and PPP connection failures caused by extra characters in
   decoded passwords
 - x86_64: the `.qcow2` disk image had no free space, so a virtual
@@ -235,6 +251,7 @@ All notable changes to the project are documented in this file.
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 [locate]: https://www.kernelkit.org/infix/latest/hardware/#locate
+[hw]: https://www.kernelkit.org/infix/latest/hardware/#processor
 [ripng]: https://www.kernelkit.org/infix/latest/routing/#ripng-routing
 [ospfv3]: https://www.kernelkit.org/infix/latest/routing/#ospfv3-routing
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database

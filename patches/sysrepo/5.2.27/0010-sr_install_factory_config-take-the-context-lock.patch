@@ -1,0 +1,40 @@
+From ba3d7ab869edd3bee016dfe0189f63e00de50cbc Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 23:54:39 +0100
+Subject: [PATCH] sr_install_factory_config(): take the context lock
+Organization: Wires
+
+Without the lock the process-global context is not loaded.  With a
+printed context it is NULL in the process that printed it, so every
+module lookup against it fails and logs an invalid argument error.
+
+---
+ src/sysrepo.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index a3446564..a11f7cb8 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -1777,6 +1777,11 @@ sr_install_factory_config(sr_conn_ctx_t *conn, const char *factory_file) {
+     struct lyd_node *mod_data = NULL;
+     struct sr_lycc_ds_data_s data_info = {0};
+ 
++    /* CONTEXT LOCK */
++    if ((err_info = sr_lycc_lock(conn, SR_LOCK_WRITE, 1, __func__))) {
++        return sr_api_ret(NULL, err_info);
++    }
++
+     /* create new temporary context */
+     if ((err_info = sr_ly_ctx_new(&new_ctx))) {
+         goto cleanup;
+@@ -1814,6 +1819,9 @@ cleanup:
+     lyd_free_siblings(sr_mods);
+     lyd_free_siblings(mod_data);
+     ly_ctx_destroy(new_ctx);
++
++    /* CONTEXT UNLOCK */
++    sr_lycc_unlock(conn, SR_LOCK_WRITE, 1, __func__);
+     return sr_api_ret(NULL, err_info);
+ }
+ 

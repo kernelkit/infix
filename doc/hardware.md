@@ -31,6 +31,27 @@ Which hwmon device or thermal zone belongs to which component is decided
 when the data is collected, and is the only place platform specific names
 are recognized.
 
+## Processor
+
+The `cpu` component has the SoC, when the device tree names one, in
+`mfg-name` and `model-name`, and the cores in the `infix-hardware:cpu`
+container: one cluster for each core type and clock range, with the
+number of cores and the current, lowest and highest clock frequency.
+The current frequency changes with the load when frequency scaling is
+active.
+
+<pre class="cli"><code>admin@example:/> <b>show hardware</b>
+...
+<span class="title">Processor                                                    </span>
+SoC                 : Rockchip RK3568
+Cores               : 4x Cortex-A55 @ 1992 MHz (408-1992 MHz)
+</code></pre>
+
+`show system` has the same on one line:
+
+<pre class="cli"><code>CPU                 : Rockchip RK3568, quad core Cortex-A55 @ 1992 MHz
+</code></pre>
+
 ## Locate
 
 To find a chassis, e.g., in a rack, its LEDs can be set to blink.  Which

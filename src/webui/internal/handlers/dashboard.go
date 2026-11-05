@@ -447,6 +447,7 @@ type hwComponentJSON struct {
 	SimState    *simStateJSON    `json:"infix-hardware:sim-state"`
 	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
 	GPSReceiver *gpsReceiverJSON `json:"infix-hardware:gps-receiver"`
+	CPU         *cpuJSON         `json:"infix-hardware:cpu"`
 	SensorData  *struct {
 		ValueType  string    `json:"value-type"`
 		Value      yangInt64 `json:"value"`
@@ -469,6 +470,7 @@ type dashboardData struct {
 	OSName      string
 	OSVersion   string
 	Machine     string
+	CPU         string
 	CurrentTime string
 	Software    string
 	Uptime      string
@@ -816,6 +818,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 					HardwareRev:  c.HardwareRev,
 					BaseMAC:      c.PhysAddress,
 				}
+			}
+			if shortClass(c.Class) == classCPU {
+				data.CPU = summarizeCPU(c).Summary
 			}
 			if v, ok := keyVital(c, classByName); ok {
 				data.KeyVitals = append(data.KeyVitals, v)

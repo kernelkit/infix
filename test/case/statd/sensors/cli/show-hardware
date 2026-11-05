@@ -5,6 +5,10 @@ Model               : EV23X71A
 Manufacturer        : Microchip
 Base MAC Address    : 00:a0:85:00:03:00
 ──────────────────────────────────────────────────────────────
+[1mProcessor[0m
+SoC                 : Microchip LAN9691
+Cores               : 1x Cortex-A53
+──────────────────────────────────────────────────────────────
 [1mSensors[0m
 [7mNAME                          VALUE                 STATUS    [0m
 

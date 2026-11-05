@@ -2586,7 +2586,8 @@ function renderCfgLog() {
 // sidebar's Status links, except those with data-no-refresh, e.g. the YANG
 // tree with its own expand state, and pages that carry a data-auto-refresh
 // element, e.g. a modem's detail.  The server renders every toggle closed,
-// so opened and closed toggles are put back after a refresh.  A refresh is
+// so opened and closed toggles are put back after a refresh, and a
+// `refreshed` event on body lets an element reload itself.  A refresh is
 // skipped while the tab is hidden, the previous one is still running, or the
 // user is busy with the page: selecting text, typing, or in a menu or dialog.
 (function() {
@@ -2629,7 +2630,10 @@ function renderCfgLog() {
       target: '#content',
       swap: 'morph:innerHTML',
       headers: { 'X-Auto-Refresh': '1' }
-    }).then(done, done);
+    }).then(function() {
+      htmx.trigger(document.body, 'refreshed');
+      done();
+    }, done);
   }
 
   // Toggles the user opened or closed, e.g. a bridge or an mDNS host,
@@ -2688,8 +2692,11 @@ function renderCfgLog() {
       }
     });
 
-    // The indicator follows navigation between status and other pages
-    document.addEventListener('htmx:pushedIntoHistory', update);
+    // The indicator follows navigation between status and other pages,
+    // once the new page is in place, it may carry data-auto-refresh
+    document.addEventListener('htmx:afterSettle', function(evt) {
+      if (evt.detail.target && evt.detail.target.id === 'content') update();
+    });
     window.addEventListener('popstate', update);
   });
 })();

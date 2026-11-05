@@ -348,19 +348,44 @@ func iplink2yangOperstate(oper string, flags []string) string {
 	}
 }
 
+// Counters are the ietf-interfaces counters the kernel keeps for every
+// interface, by direction and field in stats64 and by sysfs file.  The
+// errors and discards are counter32 in the model, the rest counter64.
+var Counters = []struct {
+	Leaf, Dir, Field, File string
+	Is32                   bool
+}{
+	{"in-octets", "rx", "bytes", "rx_bytes", false},
+	{"in-multicast-pkts", "rx", "multicast", "multicast", false},
+	{"in-discards", "rx", "dropped", "rx_dropped", true},
+	{"in-errors", "rx", "errors", "rx_errors", true},
+	{"out-octets", "tx", "bytes", "tx_bytes", false},
+	{"out-discards", "tx", "dropped", "tx_dropped", true},
+	{"out-errors", "tx", "errors", "tx_errors", true},
+}
+
+// CounterValue is the JSON value of a kernel counter: a counter64 is a
+// string, a counter32 a number that wraps like the counter does.
+func CounterValue(v uint64, is32 bool) any {
+	if is32 {
+		return uint32(v)
+	}
+	return strconv.FormatUint(v, 10)
+}
+
 func statistics(iplink map[string]any) map[string]any {
 	out := map[string]any{}
 
 	stats64, _ := asMap(iplink["stats64"])
-	rx, _ := asMap(stats64["rx"])
-	tx, _ := asMap(stats64["tx"])
-
-	if octets, ok := rx["bytes"]; ok && isTruthy(octets) {
-		out["in-octets"] = toCounterString(octets)
-	}
-
-	if octets, ok := tx["bytes"]; ok && isTruthy(octets) {
-		out["out-octets"] = toCounterString(octets)
+	for _, c := range Counters {
+		dir, _ := asMap(stats64[c.Dir])
+		v, ok := dir[c.Field]
+		if !ok {
+			continue
+		}
+		if n, err := strconv.ParseUint(toCounterString(v), 10, 64); err == nil {
+			out[c.Leaf] = CounterValue(n, c.Is32)
+		}
 	}
 
 	return out
@@ -943,15 +968,6 @@ func contains(values []string, needle string) bool {
 		}
 	}
 	return false
-}
-
-func isTruthy(v any) bool {
-	if v == nil {
-		return false
-	}
-
-	s := strings.TrimSpace(fmt.Sprintf("%v", v))
-	return s != "" && s != "0"
 }
 
 func toCounterString(v any) string {

@@ -5,6 +5,10 @@ Model               : Standard PC (i440FX + PIIX, 1996)
 Manufacturer        : QEMU
 Base MAC Address    : 00:a0:85:00:03:00
 ──────────────────────────────────────────────────────────────
+[1mProcessor[0m
+SoC                 : AMD Ryzen 7 PRO 5850U with Radeon Graphics
+Cores               : 1 core
+──────────────────────────────────────────────────────────────
 [1mWiFi radios[0m
 [7mNAME     MANUFACTURER             BANDS      STANDARDS  MAX AP[0m
 radio0   Virtual (hwsim)  2.4 GHz/5 GHz  11n/11ac/11ax    2048

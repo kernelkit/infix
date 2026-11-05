@@ -262,19 +262,21 @@ type ipAddr struct {
 	Origin       string    `json:"origin"`
 }
 
+// ifaceStats are the interface counters, a nil counter is one the
+// device does not report.
 type ifaceStats struct {
-	InOctets         yangInt64 `json:"in-octets"`
-	OutOctets        yangInt64 `json:"out-octets"`
-	InUnicastPkts    yangInt64 `json:"in-unicast-pkts"`
-	InBroadcastPkts  yangInt64 `json:"in-broadcast-pkts"`
-	InMulticastPkts  yangInt64 `json:"in-multicast-pkts"`
-	InDiscards       yangInt64 `json:"in-discards"`
-	InErrors         yangInt64 `json:"in-errors"`
-	OutUnicastPkts   yangInt64 `json:"out-unicast-pkts"`
-	OutBroadcastPkts yangInt64 `json:"out-broadcast-pkts"`
-	OutMulticastPkts yangInt64 `json:"out-multicast-pkts"`
-	OutDiscards      yangInt64 `json:"out-discards"`
-	OutErrors        yangInt64 `json:"out-errors"`
+	InOctets         yangInt64  `json:"in-octets"`
+	OutOctets        yangInt64  `json:"out-octets"`
+	InUnicastPkts    *yangInt64 `json:"in-unicast-pkts"`
+	InBroadcastPkts  *yangInt64 `json:"in-broadcast-pkts"`
+	InMulticastPkts  *yangInt64 `json:"in-multicast-pkts"`
+	InDiscards       *yangInt64 `json:"in-discards"`
+	InErrors         *yangInt64 `json:"in-errors"`
+	OutUnicastPkts   *yangInt64 `json:"out-unicast-pkts"`
+	OutBroadcastPkts *yangInt64 `json:"out-broadcast-pkts"`
+	OutMulticastPkts *yangInt64 `json:"out-multicast-pkts"`
+	OutDiscards      *yangInt64 `json:"out-discards"`
+	OutErrors        *yangInt64 `json:"out-errors"`
 }
 
 type ethernetJSON struct {
@@ -834,18 +836,26 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 func buildCounters(s *ifaceStats) ifaceCounters {
 	return ifaceCounters{
 		RxBytes:     humanBytes(int64(s.InOctets)),
-		RxUnicast:   formatCount(int64(s.InUnicastPkts)),
-		RxBroadcast: formatCount(int64(s.InBroadcastPkts)),
-		RxMulticast: formatCount(int64(s.InMulticastPkts)),
-		RxDiscards:  formatCount(int64(s.InDiscards)),
-		RxErrors:    formatCount(int64(s.InErrors)),
+		RxUnicast:   formatOptCount(s.InUnicastPkts),
+		RxBroadcast: formatOptCount(s.InBroadcastPkts),
+		RxMulticast: formatOptCount(s.InMulticastPkts),
+		RxDiscards:  formatOptCount(s.InDiscards),
+		RxErrors:    formatOptCount(s.InErrors),
 		TxBytes:     humanBytes(int64(s.OutOctets)),
-		TxUnicast:   formatCount(int64(s.OutUnicastPkts)),
-		TxBroadcast: formatCount(int64(s.OutBroadcastPkts)),
-		TxMulticast: formatCount(int64(s.OutMulticastPkts)),
-		TxDiscards:  formatCount(int64(s.OutDiscards)),
-		TxErrors:    formatCount(int64(s.OutErrors)),
+		TxUnicast:   formatOptCount(s.OutUnicastPkts),
+		TxBroadcast: formatOptCount(s.OutBroadcastPkts),
+		TxMulticast: formatOptCount(s.OutMulticastPkts),
+		TxDiscards:  formatOptCount(s.OutDiscards),
+		TxErrors:    formatOptCount(s.OutErrors),
 	}
+}
+
+// formatOptCount is formatCount for a counter that may not be reported.
+func formatOptCount(n *yangInt64) string {
+	if n == nil {
+		return "—"
+	}
+	return formatCount(int64(*n))
 }
 
 // ethFrameStats runs the get-statistics action on an Ethernet port.

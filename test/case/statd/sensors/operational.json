@@ -29,6 +29,17 @@
         "state": {
           "admin-state": "unknown",
           "oper-state": "enabled"
+        },
+        "mfg-name": "Microchip",
+        "model-name": "LAN9691",
+        "infix-hardware:cpu": {
+          "cluster": [
+            {
+              "id": 0,
+              "model": "Cortex-A53",
+              "cores": 1
+            }
+          ]
         }
       },
       {

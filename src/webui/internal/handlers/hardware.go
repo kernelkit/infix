@@ -24,6 +24,7 @@ import (
 type hardwarePageData struct {
 	PageData
 	Board        boardInfo
+	CPU          cpuInfo
 	USBPorts     []usbPortEntry
 	WiFiRadios   []wifiEntry
 	GPSReceivers []gpsEntry
@@ -192,6 +193,8 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 				HardwareRev:  c.HardwareRev,
 				BaseMAC:      c.PhysAddress,
 			}
+		case classCPU:
+			data.CPU = summarizeCPU(c)
 		case classUSB:
 			data.USBPorts = append(data.USBPorts, usbPortEntry{
 				Name:        c.Name,

@@ -686,7 +686,8 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   font-variant-numeric: tabular-nums;
 }
 
-.sensor-group-hdr th {
+.sensor-group-hdr th,
+.group-hdr th {
   padding: 0.35rem 1.25rem 0.2rem;
   font-size: 0.7rem;
   font-weight: 600;

@@ -165,25 +165,25 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseAdded"),
+		dbus.WithMatchMember("DhcpLeaseAdded"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseAdded match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseAdded match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseDeleted"),
+		dbus.WithMatchMember("DhcpLeaseDeleted"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseDeleted match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseDeleted match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
 		dbus.WithMatchSender(dnsmasqBusName),
 		dbus.WithMatchInterface(dnsmasqInterface),
-		dbus.WithMatchMember("DHCPLeaseUpdated"),
+		dbus.WithMatchMember("DhcpLeaseUpdated"),
 	); err != nil {
-		return fmt.Errorf("add dnsmasq DHCPLeaseUpdated match: %w", err)
+		return fmt.Errorf("add dnsmasq DhcpLeaseUpdated match: %w", err)
 	}
 
 	if err := conn.AddMatchSignal(
@@ -260,9 +260,9 @@ func (m *DBusMonitor) from(sig *dbus.Signal, name string) bool {
 
 func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 	switch sig.Name {
-	case dnsmasqInterface + ".DHCPLeaseAdded",
-		dnsmasqInterface + ".DHCPLeaseDeleted",
-		dnsmasqInterface + ".DHCPLeaseUpdated":
+	case dnsmasqInterface + ".DhcpLeaseAdded",
+		dnsmasqInterface + ".DhcpLeaseDeleted",
+		dnsmasqInterface + ".DhcpLeaseUpdated":
 		if !m.from(sig, dnsmasqBusName) || (sig.Path != "" && string(sig.Path) != dnsmasqPath) {
 			return nil
 		}
@@ -362,17 +362,14 @@ func (m *DBusMonitor) loadDHCP(conn *dbus.Conn, retry bool) error {
 	}
 
 	leases := parseDnsmasqLeases(data)
-	stats := defaultDHCPStats()
 
+	var metrics map[string]uint32
 	obj := conn.Object(dnsmasqBusName, dbus.ObjectPath(dnsmasqPath))
-	call := obj.Call(dnsmasqInterface+".GetMetrics", 0)
-	if call.Err != nil {
-		m.log.Warn("dbus monitor: dnsmasq GetMetrics failed", "err", call.Err)
-	} else if len(call.Body) > 0 {
-		stats = mergeDHCPStats(stats, decodeDHCPMetrics(call.Body[0]))
+	if err := obj.Call(dnsmasqInterface+".GetMetrics", 0).Store(&metrics); err != nil {
+		m.log.Warn("dbus monitor: dnsmasq GetMetrics failed", "err", err)
 	}
 
-	m.tree.Set(dhcpTreeKey, buildDHCPTree(leases, stats))
+	m.tree.Set(dhcpTreeKey, buildDHCPTree(leases, decodeDHCPMetrics(metrics)))
 	return nil
 }
 
@@ -936,54 +933,19 @@ func buildFirewallTree(defaultZone, logDenied string, lockdown bool, zones, poli
 	return raw
 }
 
-func defaultDHCPStats() map[string]any {
+// decodeDHCPMetrics maps dnsmasq's GetMetrics, a{su}, to the counters,
+// all zero when there are none.
+func decodeDHCPMetrics(metrics map[string]uint32) map[string]any {
 	return map[string]any{
-		"out-offers":   uint64(0),
-		"out-acks":     uint64(0),
-		"out-naks":     uint64(0),
-		"in-declines":  uint64(0),
-		"in-discovers": uint64(0),
-		"in-requests":  uint64(0),
-		"in-releases":  uint64(0),
-		"in-informs":   uint64(0),
+		"out-offers":   uint64(metrics["dhcp_offer"]),
+		"out-acks":     uint64(metrics["dhcp_ack"]),
+		"out-naks":     uint64(metrics["dhcp_nak"]),
+		"in-declines":  uint64(metrics["dhcp_decline"]),
+		"in-discovers": uint64(metrics["dhcp_discover"]),
+		"in-requests":  uint64(metrics["dhcp_request"]),
+		"in-releases":  uint64(metrics["dhcp_release"]),
+		"in-informs":   uint64(metrics["dhcp_inform"]),
 	}
-}
-
-func decodeDHCPMetrics(v any) map[string]any {
-	metrics := map[string]any{}
-
-	switch raw := v.(type) {
-	case map[string]dbus.Variant:
-		for k, val := range raw {
-			metrics[k] = val.Value()
-		}
-	case map[string]any:
-		for k, val := range raw {
-			metrics[k] = val
-		}
-	}
-
-	return map[string]any{
-		"out-offers":   numconv.Uint64(metrics["dhcp_offer"]),
-		"out-acks":     numconv.Uint64(metrics["dhcp_ack"]),
-		"out-naks":     numconv.Uint64(metrics["dhcp_nak"]),
-		"in-declines":  numconv.Uint64(metrics["dhcp_decline"]),
-		"in-discovers": numconv.Uint64(metrics["dhcp_discover"]),
-		"in-requests":  numconv.Uint64(metrics["dhcp_request"]),
-		"in-releases":  numconv.Uint64(metrics["dhcp_release"]),
-		"in-informs":   numconv.Uint64(metrics["dhcp_inform"]),
-	}
-}
-
-func mergeDHCPStats(base, override map[string]any) map[string]any {
-	out := map[string]any{}
-	for k, v := range base {
-		out[k] = v
-	}
-	for k, v := range override {
-		out[k] = v
-	}
-	return out
 }
 
 func parseServicePorts(settings map[string]any) []map[string]any {

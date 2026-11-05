@@ -1053,6 +1053,7 @@ class DhcpServer:
                "host": lease["hostname"],
                "exp": exp
             })
+        self.leases.sort(key=lambda lease: ipaddress.ip_address(lease["ip"]))
 
         stats = get_json_data([], self.data, 'statistics')
         self.out_offers   = stats["out-offers"]
@@ -1106,8 +1107,8 @@ class DhcpServer:
         print(f"{'DHCP decline messages received':<{32}}: {self.in_declines}")
         print(f"{'DHCP discover messages received':<{32}}: {self.in_discovers}")
         print(f"{'DHCP request messages received':<{32}}: {self.in_requests}")
-        print(f"{'DHCP release messages received':<{32}}: {self.in_discovers}")
-        print(f"{'DHCP inform messages received':<{32}}: {self.in_discovers}")
+        print(f"{'DHCP release messages received':<{32}}: {self.in_releases}")
+        print(f"{'DHCP inform messages received':<{32}}: {self.in_informs}")
 
 
 class Iface:
@@ -2803,6 +2804,44 @@ def _build_usb_device_table(usb_devices):
     return table
 
 
+CORE_COUNT = {1: "single", 2: "dual", 4: "quad", 6: "hexa", 8: "octa"}
+
+
+def cpu_soc(cpu):
+    """SoC of a cpu component, e.g., 'Rockchip RK3568'."""
+    return " ".join(filter(None, (cpu.get("mfg-name"), cpu.get("model-name"))))
+
+
+def cpu_clusters(cpu):
+    return cpu.get("infix-hardware:cpu", {}).get("cluster", [])
+
+
+def cpu_cluster(cl, word=False, ranges=False):
+    """A cluster, e.g., '4x Cortex-A55 @ 1992 MHz (408-1992 MHz)', or with
+    word 'quad core Cortex-A55 @ 1992 MHz'."""
+    cores, model = cl.get("cores", 0), cl.get("model", "")
+    if word and cores in CORE_COUNT:
+        text = f"{CORE_COUNT[cores]} core {model}".strip()
+    elif model:
+        text = f"{cores}x {model}"
+    else:
+        text = f"{cores} core{'s' if cores != 1 else ''}"
+    if cl.get("frequency"):
+        text += f" @ {cl['frequency']} MHz"
+    if ranges and cl.get("min-frequency") and cl.get("max-frequency"):
+        text += f" ({cl['min-frequency']}-{cl['max-frequency']} MHz)"
+    return text
+
+
+def cpu_summary(cpu):
+    """One line for a cpu component, e.g., 'Rockchip RK3568, quad core
+    Cortex-A55 @ 1992 MHz', or one '4x ...' per cluster joined by '+'."""
+    clusters = cpu_clusters(cpu)
+    cores = " + ".join(cpu_cluster(cl, word=len(clusters) == 1) for cl in clusters)
+    text = ", ".join(filter(None, (cpu_soc(cpu), cores)))
+    return text[:1].upper() + text[1:]
+
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
         print("Error, top level \"ietf-hardware:component\" missing")
@@ -2811,6 +2850,7 @@ def show_hardware(json):
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
 
     motherboard = [c for c in components if c.get("class") == "iana-hardware:chassis"]
+    cpus = [c for c in components if c.get("class") == "iana-hardware:cpu"]
     usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
     usb_devices = [c for c in components if c.get("class") == "infix-hardware:usb-device"]
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
@@ -2835,6 +2875,13 @@ def show_hardware(json):
             canvas.add_text(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
         if board.get("hardware-rev"):
             canvas.add_text(f"Hardware Revision   : {board['hardware-rev']}")
+
+    for cpu in cpus:
+        canvas.add_title("Processor")
+        if cpu_soc(cpu):
+            canvas.add_text(f"SoC                 : {cpu_soc(cpu)}")
+        for cl in cpu_clusters(cpu):
+            canvas.add_text(f"Cores               : {cpu_cluster(cl, ranges=True)}")
 
     for title, build, items in (
             ("WiFi radios", _build_radio_table, wifi_radios),
@@ -4280,6 +4327,9 @@ def show_system(json):
     print(f"{'OS Name':<20}: {platform.get('os-name', 'Unknown')}")
     print(f"{'OS Version':<20}: {platform.get('os-version', 'Unknown')}")
     print(f"{'Architecture':<20}: {platform.get('machine', 'Unknown')}")
+    cpu = cpu_summary(runtime.get("cpu", {}))
+    if cpu:
+        print(f"{'CPU':<20}: {cpu}")
 
     booted = software.get("booted", "Unknown")
     slots = software.get("slot", [])
@@ -4377,24 +4427,24 @@ def show_system(json):
         disk_table.print()
 
 
-def show_dhcp_server(json, stats):
+def show_dhcp_server(json, brief):
     data = json.get("infix-dhcp-server:dhcp-server")
-    if not data:
+    if not data or data.get("enabled") is False:
         print("DHCP server not enabled.")
         return
 
     server = DhcpServer(data)
 
-    if stats:
+    if not brief:
         server.print_stats()
-    else:
-        hdr = (f"{'IP ADDRESS':<{PadDhcpServer.ip}}"
-               f"{'MAC':<{PadDhcpServer.mac}}"
-               f"{'HOSTNAME':<{PadDhcpServer.host}}"
-               f"{'CLIENT ID':<{PadDhcpServer.cid}}"
-               f"{'EXPIRES':>{PadDhcpServer.exp}}")
-        print(Decore.invert(hdr))
-        server.print()
+        print()
+    hdr = (f"{'IP ADDRESS':<{PadDhcpServer.ip}}"
+           f"{'MAC':<{PadDhcpServer.mac}}"
+           f"{'HOSTNAME':<{PadDhcpServer.host}}"
+           f"{'CLIENT ID':<{PadDhcpServer.cid}}"
+           f"{'EXPIRES':>{PadDhcpServer.exp}}")
+    print(Decore.invert(hdr))
+    server.print()
 
 
 def show_tftp(json):
@@ -6701,7 +6751,7 @@ def main():
     subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
-              .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+              .add_argument("-b", "--brief", action="store_true", help="Show only the leases")
 
     subparsers.add_parser('show-tftp', help='Show TFTP server')
     subparsers.add_parser('show-container', help='Show containers table')
@@ -6791,7 +6841,7 @@ def main():
     elif args.command == "show-bridge-stp":
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":
-        show_dhcp_server(json_data, args.stats)
+        show_dhcp_server(json_data, args.brief)
     elif args.command == "show-tftp":
         show_tftp(json_data)
     elif args.command == "show-container":

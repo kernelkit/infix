@@ -1,7 +1,9 @@
 package dbusmonitor
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -876,5 +878,35 @@ func TestSpoofedSignalsIgnored(t *testing.T) {
 	}
 	if m.owners[dnsmasqBusName] != ":1.3" {
 		t.Errorf("dnsmasq owner = %q after a spoofed NameOwnerChanged", m.owners[dnsmasqBusName])
+	}
+}
+
+// GetMetrics replies a{su}, which godbus decodes to map[string]uint32.
+func TestDecodeDHCPMetricsFromWire(t *testing.T) {
+	reply := &dbus.Message{
+		Type:    dbus.TypeMethodReply,
+		Headers: map[dbus.HeaderField]dbus.Variant{dbus.FieldReplySerial: dbus.MakeVariant(uint32(1))},
+		Body:    []any{map[string]uint32{"dhcp_offer": 3, "dhcp_ack": 2, "dhcp_discover": 4}},
+	}
+	reply.Headers[dbus.FieldSignature] = dbus.MakeVariant(dbus.SignatureOf(reply.Body...))
+	var buf bytes.Buffer
+	if err := reply.EncodeTo(&buf, binary.LittleEndian); err != nil {
+		t.Fatal(err)
+	}
+	wire, err := dbus.DecodeMessage(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var metrics map[string]uint32
+	if err := dbus.Store(wire.Body, &metrics); err != nil {
+		t.Fatal(err)
+	}
+	got := decodeDHCPMetrics(metrics)
+	want := map[string]uint64{"out-offers": 3, "out-acks": 2, "in-discovers": 4, "out-naks": 0}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s: want %d, got %v", k, v, got[k])
+		}
 	}
 }
