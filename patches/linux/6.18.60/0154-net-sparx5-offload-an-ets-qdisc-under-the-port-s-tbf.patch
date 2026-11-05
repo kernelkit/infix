@@ -1,0 +1,164 @@
+From 23424d1495b838c2d53669105fbbecb27dc00260 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 15:09:40 +0100
+Subject: [PATCH] net: sparx5: offload an ets qdisc under the port's tbf
+Organization: Wires
+
+A port rate limit is a tbf at the root, so the scheduler has to hang
+under it, but the ets offload accepted the root only.  With
+
+    tc qdisc add dev eth0 root handle 1: tbf rate 10mbit burst 10k latency 100ms
+    tc qdisc add dev eth0 parent 1:1 handle 2: ets bands 8 strict 8
+
+the fabric kept its default scheduler and the ets ran in software,
+where the frames the fabric forwards never pass.
+
+Remember the handle of an offloaded root tbf and accept an ets under
+it, as mv88e6xxx does.  The tbf also answers the graft of its child.
+The ets is known by its handle too, since the tbf above it goes first
+on destroy, and its handle with it.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  3 +-
+ .../ethernet/microchip/sparx5/sparx5_qos.c    |  8 ----
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  1 -
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c | 37 ++++++++++++++-----
+ 4 files changed, 29 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index beed052e3673..ef9bc9718db5 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -242,7 +242,8 @@ struct sparx5_port {
+ 	struct net_device *lag_master;
+ 	enum netdev_lag_hash lag_hash_type;
+ 	bool lag_tx_active;
+-	bool ets_offloaded; /* the ets qdisc runs in the hardware */
++	u32 ets_handle; /* the ets qdisc the hardware runs */
++	u32 tbf_handle; /* the root tbf, which an ets may hang under */
+ 	u8 prio_tc[SPX5_PRIOS]; /* the class a priority is queued in */
+ 	u8 tc_prio[SPX5_PRIOS]; /* the lowest priority queued in a class */
+ };
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index edc2c607d0c0..d14210c08852 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -657,7 +657,6 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 	}
+ 
+ 	err = sparx5_dwrr_conf_set(port, &dwrr);
+-	port->ets_offloaded = !err;
+ 	if (err)
+ 		return err;
+ 
+@@ -673,18 +672,11 @@ int sparx5_tc_ets_del(struct sparx5_port *port)
+ 	struct sparx5_dwrr dwrr = {0};
+ 	int err;
+ 
+-	port->ets_offloaded = false;
+-
+ 	err = sparx5_dwrr_conf_set(port, &dwrr);
+ 
+ 	return err ?: sparx5_tc_prio_tc_set(port, NULL);
+ }
+ 
+-int sparx5_tc_ets_stats(struct sparx5_port *port)
+-{
+-	return port->ets_offloaded ? 0 : -EOPNOTSUPP;
+-}
+-
+ int sparx5_tc_cbs_add(struct sparx5_port *port,
+ 		      struct tc_cbs_qopt_offload *qopt, u32 idx)
+ {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index b5b7fc69528e..c7f59c0f09f0 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -85,7 +85,6 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		      struct tc_ets_qopt_offload_replace_params *params);
+ 
+ int sparx5_tc_ets_del(struct sparx5_port *port);
+-int sparx5_tc_ets_stats(struct sparx5_port *port);
+ 
+ /* Credit-Based Shaper */
+ struct tc_cbs_qopt_offload;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index 62a0bd40e1e3..6017a62030ed 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -88,19 +88,29 @@ static int sparx5_tc_setup_qdisc_tbf(struct net_device *ndev,
+ 				     struct tc_tbf_qopt_offload *qopt)
+ {
+ 	struct sparx5_port *port = netdev_priv(ndev);
++	bool root = qopt->parent == TC_H_ROOT;
+ 	u32 layer, se_idx;
++	int err;
+ 
+ 	sparx5_tc_get_layer_and_idx(port->sparx5, qopt->parent, port->portno,
+ 				    &layer, &se_idx);
+ 
+ 	switch (qopt->command) {
+ 	case TC_TBF_REPLACE:
+-		return sparx5_tc_tbf_add(port, &qopt->replace_params, layer,
+-					 se_idx);
++		err = sparx5_tc_tbf_add(port, &qopt->replace_params, layer,
++					se_idx);
++		if (!err && root)
++			port->tbf_handle = qopt->handle;
++		return err;
+ 	case TC_TBF_DESTROY:
++		if (root)
++			port->tbf_handle = 0;
+ 		return sparx5_tc_tbf_del(port, layer, se_idx);
+ 	case TC_TBF_STATS:
+ 		return sparx5_tc_tbf_stats(port, layer, se_idx);
++	case TC_TBF_GRAFT:
++		/* The child brings its own offload */
++		return root && port->tbf_handle ? 0 : -EOPNOTSUPP;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -114,14 +124,14 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 	struct tc_ets_qopt_offload_replace_params *params =
+ 		&qopt->replace_params;
+ 	struct sparx5_port *port = netdev_priv(ndev);
+-	int i;
+-
+-	/* Only allow ets on ports  */
+-	if (qopt->parent != TC_H_ROOT)
+-		return -EOPNOTSUPP;
++	int i, err;
+ 
+ 	switch (qopt->command) {
+ 	case TC_ETS_REPLACE:
++		/* The root of the port, or under its tbf */
++		if (qopt->parent != TC_H_ROOT &&
++		    TC_H_MAJ(qopt->parent) != port->tbf_handle)
++			return -EOPNOTSUPP;
+ 
+ 		/* We support eight priorities */
+ 		if (params->bands != SPX5_PRIOS)
+@@ -137,12 +147,19 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 			}
+ 		}
+ 
+-		return sparx5_tc_ets_add(port, params);
++		err = sparx5_tc_ets_add(port, params);
++		if (!err)
++			port->ets_handle = qopt->handle;
++		return err;
+ 	case TC_ETS_DESTROY:
+-
++		/* By its handle, a tbf above it is destroyed first */
++		if (qopt->handle != port->ets_handle)
++			return -EOPNOTSUPP;
++		port->ets_handle = 0;
+ 		return sparx5_tc_ets_del(port);
+ 	case TC_ETS_STATS:
+-		return sparx5_tc_ets_stats(port);
++		/* Nothing to report, but this is what marks it offloaded */
++		return qopt->handle == port->ets_handle ? 0 : -EOPNOTSUPP;
+ 	case TC_ETS_GRAFT:
+ 		return -EOPNOTSUPP;
+ 
