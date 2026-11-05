@@ -2467,8 +2467,8 @@ function renderCfgLog() {
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
     cfgLog('ok', msg);
-    var span = findSaveStatusSpan(e);
-    if (span) {
+    function showSaved(span) {
+      if (!span) return;
       span.textContent = '✓ ' + msg;
       span.classList.add('saved');
       setTimeout(function() {
@@ -2476,6 +2476,7 @@ function renderCfgLog() {
         span.classList.remove('saved');
       }, 3000);
     }
+    showSaved(findSaveStatusSpan(e));
 
     // Re-render the whole current tree page from the (now fresh) candidate.
     // The save handlers only WRITE — they don't echo back what confd
@@ -2483,13 +2484,20 @@ function renderCfgLog() {
     // normalised values), and inference can land outside the edited node.
     // Re-fetching the page the user is on surfaces all of it.  Guarded on
     // #yang-detail so curated pages that also emit cfgSaved are unaffected.
+    // The swap replaces the form, so the message is put on the new one.
     var detail = document.getElementById('yang-detail');
     if (detail && window.htmx) {
       var node = (history.state && history.state.yangDetailPath) ||
                  new URLSearchParams(window.location.search).get('node');
+      var form = e.target && e.target.closest && e.target.closest('form');
+      var formKey = form && form.getAttribute('hx-put');
       if (node) {
         htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(node),
-          { target: '#yang-detail', swap: 'innerHTML' });
+          { target: '#yang-detail', swap: 'innerHTML' }).then(function() {
+            if (!formKey) return;
+            var fresh = detail.querySelector('form[hx-put="' + formKey + '"] .cfg-save-status');
+            showSaved(fresh);
+          });
       }
     }
   });
