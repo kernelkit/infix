@@ -289,13 +289,21 @@ func (h *ConfigureSystemHandler) SaveIdentity(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	body := map[string]any{
-		"ietf-system:system": map[string]any{
-			"hostname": r.FormValue("hostname"),
-			"contact":  r.FormValue("contact"),
-			"location": r.FormValue("location"),
-		},
+	// An empty contact or location removes the leaf; "" is a value too.
+	sys := map[string]any{"hostname": r.FormValue("hostname")}
+	for _, leaf := range []string{"contact", "location"} {
+		if v := r.FormValue(leaf); v != "" {
+			sys[leaf] = v
+			continue
+		}
+		err := h.RC.Delete(r.Context(), candidatePath+"/ietf-system:system/"+leaf)
+		if err != nil && !restconf.IsDataMissing(err) {
+			log.Printf("configure system identity %s: %v", leaf, err)
+			renderSaveError(w, err)
+			return
+		}
 	}
+	body := map[string]any{"ietf-system:system": sys}
 	if err := h.RC.Patch(r.Context(), candidatePath+"/ietf-system:system", body); err != nil {
 		log.Printf("configure system identity: %v", err)
 		renderSaveError(w, err)

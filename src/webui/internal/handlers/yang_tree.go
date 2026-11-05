@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -1188,12 +1189,7 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		rawValue := r.FormValue(child.Name)
-		qualName, qErr := mgr.ModuleQualifiedName(child.Path)
-		if qErr != nil {
-			qualName = child.Name
-		}
-		body := map[string]any{qualName: coerceLeafValue(rawValue, child)}
-		if putErr := h.RC.Put(r.Context(), candidateDS+child.Path, body); putErr != nil && firstErr == "" {
+		if putErr := h.putLeaf(r.Context(), mgr, child, rawValue); putErr != nil && firstErr == "" {
 			firstErr = child.Name + ": " + putErr.Error()
 		}
 	}
@@ -1205,6 +1201,25 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	hxTrigger(w, "cfgSaved", "Saved "+node.Name+" to candidate")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// putLeaf writes one form value to the candidate.  An empty field removes
+// the leaf, so the box falls back to its default instead of storing "".
+func (h *TreeHandler) putLeaf(ctx context.Context, mgr *schema.Manager, node *schema.Node, raw string) error {
+	isBool := node.Type != nil && node.Type.Kind == "boolean"
+	if raw == "" && !isBool {
+		err := h.RC.Delete(ctx, candidateDS+node.Path)
+		if restconf.IsDataMissing(err) || restconf.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	qualName, err := mgr.ModuleQualifiedName(node.Path)
+	if err != nil {
+		qualName = node.Name
+	}
+	body := map[string]any{qualName: coerceLeafValue(raw, node)}
+	return h.RC.Put(ctx, candidateDS+node.Path, body)
 }
 
 // SaveLeaf serves PUT /configure/tree/node?path=...
@@ -1228,19 +1243,10 @@ func (h *TreeHandler) SaveLeaf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawValue := r.FormValue("value")
-	qualName, err := mgr.ModuleQualifiedName(path)
-	if err != nil {
-		log.Printf("yang: qualified name for %s: %v", path, err)
-		qualName = node.Name
-	}
-
-	body := map[string]any{qualName: coerceLeafValue(rawValue, node)}
-
 	// Emit cfgSaved/cfgError like SaveGroup and let the client re-fetch the
 	// whole current page from the fresh candidate (so confd inference and
 	// normalisation surface) — don't echo the raw input back, which hid it.
-	if putErr := h.RC.Put(r.Context(), candidateDS+path, body); putErr != nil {
+	if putErr := h.putLeaf(r.Context(), mgr, node, r.FormValue("value")); putErr != nil {
 		hxTrigger(w, "cfgError", node.Name+": "+putErr.Error())
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
