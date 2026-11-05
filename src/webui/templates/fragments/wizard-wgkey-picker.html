@@ -3,7 +3,7 @@
   {{if .Keys}}
     {{range .Keys}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
   {{else}}
-    <option value="" disabled selected>No keystore keys</option>
+    <option value="" disabled selected>No WireGuard keys</option>
   {{end}}
 </select>
 {{end}}
