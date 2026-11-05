@@ -60,7 +60,7 @@
             {{if and (not .ConfigTags) (not .AddrSummary)}}<span class="text-muted">—</span>{{end}}
           </td>
           <td style="text-align:right">
-            {{if ne .TypeSlug "loopback"}}
+            {{if ne .Name "lo"}}
             <button type="button" class="btn-icon btn-icon-danger"
                     hx-delete="/configure/interfaces/{{.Name}}"
                     hx-confirm="Delete interface {{.Name}}?"

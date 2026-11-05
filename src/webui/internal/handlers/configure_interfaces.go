@@ -1153,13 +1153,13 @@ func containsRadioName(rs []wifiRadioOption, want string) bool {
 // DeleteInterface removes an interface from running config. For virtual
 // interfaces (bridge, lag, vlan, dummy, …) confd unbinds and tears down the
 // netdev; for physical interfaces it just sets them administratively DOWN.
-// Loopback is rejected at this layer — the UI guards it by TypeSlug too
-// (configure-interfaces.html), but a direct DELETE shouldn't slip through.
+// The system loopback is rejected at this layer — the UI hides its delete
+// button too, but a direct DELETE shouldn't slip through.
 // DELETE /configure/interfaces/{name}
 func (h *ConfigureInterfacesHandler) DeleteInterface(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "lo" || name == "loopback" {
-		renderSaveError(w, fmt.Errorf("loopback interface cannot be deleted"))
+	if name == "lo" {
+		renderSaveError(w, fmt.Errorf("the system loopback cannot be deleted"))
 		return
 	}
 	// Clear other interfaces' references to this one first: detach enslaved
