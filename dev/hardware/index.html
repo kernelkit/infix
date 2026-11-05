@@ -1708,6 +1708,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#processor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#locate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2623,6 +2634,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#processor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#locate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2823,6 +2845,24 @@ and the hottest is the one to report.  Over RESTCONF:</p>
 <p>Which hwmon device or thermal zone belongs to which component is decided
 when the data is collected, and is the only place platform specific names
 are recognized.</p>
+<h2 id="processor">Processor<a class="headerlink" href="#processor" title="Permanent link">¶</a></h2>
+<p>The <code>cpu</code> component has the SoC, when the device tree names one, in
+<code>mfg-name</code> and <code>model-name</code>, and the cores in the <code>infix-hardware:cpu</code>
+container: one cluster for each core type and clock range, with the
+number of cores and the current, lowest and highest clock frequency.
+The current frequency changes with the load when frequency scaling is
+active.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware</b>
+...
+<span class="title">Processor                                                    </span>
+SoC                 : Rockchip RK3568
+Cores               : 4x Cortex-A55 @ 1992 MHz (408-1992 MHz)
+</code></pre>
+
+<p><code>show system</code> has the same on one line:</p>
+<pre class="cli"><code>CPU                 : Rockchip RK3568, quad core Cortex-A55 @ 1992 MHz
+</code></pre>
+
 <h2 id="locate">Locate<a class="headerlink" href="#locate" title="Permanent link">¶</a></h2>
 <p>To find a chassis, e.g., in a rack, its LEDs can be set to blink.  Which
 LEDs blink, and how, depends on the device.  Locate stops by itself after
