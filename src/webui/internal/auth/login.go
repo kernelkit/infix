@@ -129,7 +129,8 @@ func (h *LoginHandler) DoLogout(w http.ResponseWriter, r *http.Request) {
 		Secure:   security.IsSecureRequest(r),
 		SameSite: http.SameSiteLaxMode,
 	})
-	security.ClearToken(w, r)
+	// The CSRF cookie stays: the browser may already have rendered the
+	// login form with it, and a new one is issued at login anyway.
 
 	fullRedirect(w, r, "/login")
 }
