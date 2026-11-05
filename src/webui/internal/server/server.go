@@ -427,7 +427,6 @@ func New(
 	mux.HandleFunc("POST /configure/hardware/usb/{name}",           cfgHw.SaveUSBPort)
 	mux.HandleFunc("POST /configure/hardware/wifi",                 cfgHw.SaveWiFiCountry)
 	mux.HandleFunc("POST /configure/hardware/wifi/{name}",          cfgHw.SaveWiFiRadio)
-	mux.HandleFunc("POST /configure/hardware/gps/{name}",           cfgHw.SaveGPS)
 	mux.HandleFunc("DELETE /configure/hardware/{name}",             cfgHw.DeleteComponent)
 	mux.HandleFunc("GET /configure/routes",               cfgRoutes.Overview)
 	mux.HandleFunc("POST /configure/routes",              cfgRoutes.AddRoute)
