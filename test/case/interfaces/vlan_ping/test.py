@@ -62,7 +62,9 @@ with infamy.Test() as test:
             datanet.must_reach("10.0.0.2")
 
       with test.step("Remove VLAN interface from target:data"):
-            target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{tport}.10']")
+            target.put_config_dicts({}, delete=[
+                f"/ietf-interfaces:interfaces/interface[name='{tport}.10']"
+            ])
 
       with test.step("Verify that host:data can no longer reach 10.0.0.2"):
             hport = env["host"]["data"]

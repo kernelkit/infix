@@ -227,7 +227,7 @@ with infamy.Test() as test:
             ns0.must_reach("2001:db8:3c4d:200::1")
 
         with test.step("Remove all static routes from R1"):
-            R1.delete_xpath("/ietf-routing:routing/control-plane-protocols")
+            R1.put_config_dicts({}, delete=["/ietf-routing:routing/control-plane-protocols"])
             parallel(lambda: until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32") is False),
                      lambda: until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128") is False))
 

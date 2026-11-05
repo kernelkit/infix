@@ -31,7 +31,7 @@ def reset_mac(tgt, port):
     """Reset DUT interface MAC address to default."""
     node = "infix-interfaces:custom-phys-address"
     xpath = iface.get_xpath(port, node)
-    tgt.delete_xpath(xpath)
+    tgt.put_config_dicts({}, delete=[xpath])
 
 
 with infamy.Test() as test:

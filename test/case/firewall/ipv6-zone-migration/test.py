@@ -189,7 +189,6 @@ with infamy.Test() as test:
                                                         [(CUSTOM_PORT, "tcp", "myapp")])
 
             with test.step("Perform dynamic zone migration"):
-                target.delete_xpath(f"/infix-firewall:firewall/zone[name='untrusted']/interface[.='{data1_if}']")
                 target.put_config_dicts({
                     "infix-firewall": {
                         "firewall": {
@@ -199,7 +198,9 @@ with infamy.Test() as test:
                             }]
                         }
                     }
-                })
+                }, delete=[
+                    f"/infix-firewall:firewall/zone[name='untrusted']/interface[.='{data1_if}']"
+                ])
 
                 # Wait for the migration to actually land in operational.
                 # Both zones were already action 'accept' before the move,

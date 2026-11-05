@@ -1,0 +1,34 @@
+From ad38833e880f9aff486de4dba8918268c9cd7831 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 3 Nov 2026 23:24:17 +0100
+Subject: [PATCH 6/6] auth: name the sysrepo session after the authenticated
+ user
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+An RPC or action subscriber sees nothing of the NACM user, only the
+originator name and data of the session, which netopeer2 sets and the
+Infix rpc tool sets to the user.  Audit logs and the operator recorded
+on an alarm therefore showed "local session" for every RESTCONF client.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/auth/Nacm.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/auth/Nacm.cpp b/src/auth/Nacm.cpp
+index a4cc8cc..ed64108 100644
+--- a/src/auth/Nacm.cpp
++++ b/src/auth/Nacm.cpp
+@@ -115,6 +115,9 @@ bool Nacm::authorize(sysrepo::Session session, const std::string& user) const
+     }
+ 
+     session.setNacmUser(user);
++    // Subscribers only learn who sent an RPC from the originator name,
++    // the NACM user stays with this session.
++    session.setOriginatorName(user);
+     spdlog::trace("Authenticated as user {}", user);
+     return true;
+ }

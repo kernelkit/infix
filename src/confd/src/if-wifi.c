@@ -18,6 +18,7 @@
 #include "base64.h"
 
 #define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
+#define WPA_SUPPLICANT_PID       "/var/run/wpa_supplicant-%s.pid"
 
 
 /*
@@ -202,7 +203,7 @@ static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct da
 	case wifi_station:
 		if (!lydx_get_descendant(lyd_child(cif), "wifi", "station", NULL))
 			return SR_ERR_OK;
-		svc = "wifi";
+		svc = "station";
 		break;
 	case wifi_mesh:
 		svc = "mesh";
@@ -711,12 +712,9 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		if (!station)
 			break;	/* No mode yet, the netdev is created but idle */
 		wifi_gen_station(cif);
-		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
-		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);
-		/* A running instance from before the netdev was recreated
-		 * only gets a SIGHUP from the touch and keeps stale driver
-		 * state, so make sure it starts over on the new netdev. */
-		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
+		fprintf(iw, "initctl -bfq enable station@%s\n", ifname);
+		fprintf(iw, "initctl -bfq touch station@%s\n", ifname);
+		fprintf(iw, "initctl -bnq restart station:%s\n", ifname);
 		break;
 	}
 	case wifi_wds: {
@@ -736,7 +734,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		wifi_gen_mesh(cif);
 		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);
-		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
+		fprintf(iw, "initctl -bnq restart mesh:%s\n", ifname);
 		break;
 	default:
 		ERROR("WiFi mode %d unknown", mode);
@@ -768,7 +766,14 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 
 	erasef(WPA_SUPPLICANT_CONF, ifname);
 	fprintf(iw, "initctl -bfq disable mesh@%s\n", ifname);
-	fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
+	fprintf(iw, "initctl -bfq disable station@%s\n", ifname);
+
+	/* Still running, it adopts the recreated netdev as a station */
+	fprintf(iw, "initctl -bnq stop station:%s\n", ifname);
+	fprintf(iw, "initctl -bnq stop mesh:%s\n", ifname);
+	fprintf(iw, "if pid=$(cat " WPA_SUPPLICANT_PID " 2>/dev/null); then\n"
+		"\ttimeout 5 sh -c \"while kill -0 $pid 2>/dev/null; do sleep 0.1; done\"\n"
+		"fi\n", ifname);
 
 	/* hostapd adopts a re-added netdev of a name it still holds and
 	 * turns it back into an AP, so make it forget the name first.

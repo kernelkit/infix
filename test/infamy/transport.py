@@ -36,14 +36,6 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    def delete_xpath(self, xpath):
-        pass
-
-    @abstractmethod
-    def delete_xpaths(self, xpaths):
-        pass
-
-    @abstractmethod
     def copy(self, source, target):
         pass
 

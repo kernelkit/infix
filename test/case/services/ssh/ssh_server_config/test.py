@@ -39,7 +39,6 @@ with infamy.Test() as test:
                 "enabled": False
             }
         }})
-        target.delete_xpath("/infix-services:ssh/hostkey[name()='genkey']")
         target.put_config_dicts({
             "ietf-keystore": {
                 "keystore": {
@@ -99,7 +98,7 @@ with infamy.Test() as test:
                 ]
             }
         }
-    })
+    }, delete=["/infix-services:ssh/hostkey[name()='genkey']"])
 
     with test.step("Wait until SSH server is ready to accept connections"):
         until(lambda: netutil.tcp_port_is_open(target.get_mgmt_ip(), 22))

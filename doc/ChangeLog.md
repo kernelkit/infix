@@ -32,6 +32,9 @@ All notable changes to the project are documented in this file.
 
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
+- Changing the mode of a Wi-Fi interface, e.g., from station to mesh
+  point, made the whole configuration change fail to apply, although
+  the commit was reported as successful
 - NanoPi R2S: the LAN port got a random MAC address on every boot
 
 ### Fixes

@@ -72,7 +72,11 @@ with infamy.Test() as test:
             with test.step("Drop hostname option from client request"):
                 path = f"/ietf-interfaces:interfaces/interface[name='{port}']" \
                      + "/ietf-ip:ipv4/infix-dhcp-client:dhcp/option[id='hostname']"
-                client.delete_xpath(path)
+                client.put_config_dicts({"ietf-system": {
+                    "system": {
+                        "hostname": CONF_HOSTNAME
+                    }
+                }}, delete=[path])
 
             with test.step("Verify hostname reverts to configured value"):
                 until(lambda: verify_hostname(client, CONF_HOSTNAME))

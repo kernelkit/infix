@@ -79,7 +79,9 @@ with infamy.Test() as test:
         assert cat(tgtssh, SHADOW) == original
 
     with test.step("Delete the new file entry"):
-        target.delete_xpath(f"/ietf-system:system/infix-system:advanced/defaults/default[name='{NEW}']")
+        target.put_config_dicts({}, delete=[
+            f"/ietf-system:system/infix-system:advanced/defaults/default[name='{NEW}']"
+        ])
 
     with test.step("Verify /etc/default/infamy-test is removed"):
         assert tgtssh.run_retry(f"test -e /etc/default/{NEW}").returncode == 1

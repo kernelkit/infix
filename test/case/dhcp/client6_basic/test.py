@@ -95,8 +95,10 @@ with infamy.Test() as test:
                                                      pref=20, active_check=True), attempts=30)
 
             with test.step("Remove DHCPv6 client"):
-                client.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                                    "/ietf-ip:ipv6/infix-dhcpv6-client:dhcp")
+                client.put_config_dicts({}, delete=[
+                    f"/ietf-interfaces:interfaces/interface[name='{port}']"
+                    "/ietf-ip:ipv6/infix-dhcpv6-client:dhcp"
+                ])
 
             with test.step("Verify client default route ::/0 is removed"):
                 until(lambda: not route.ipv6_route_exist(client, "::/0", proto="ietf-routing:static"),

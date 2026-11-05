@@ -84,9 +84,11 @@ with infamy.Test() as test:
             until(lambda: client.lease() == (SERVER, HOST_FILE))
 
         with test.step("Remove subnet and host boot, verify client falls back to global boot file and server"):
-            target.delete_xpath(f"/infix-dhcp-server:dhcp-server/subnet[subnet='{SUBNET}']/boot")
-            target.delete_xpath(f"/infix-dhcp-server:dhcp-server/subnet[subnet='{SUBNET}']"
-                                f"/host[address='{HOST_ADDR}']/boot")
+            target.put_config_dicts({}, delete=[
+                f"/infix-dhcp-server:dhcp-server/subnet[subnet='{SUBNET}']/boot",
+                f"/infix-dhcp-server:dhcp-server/subnet[subnet='{SUBNET}']"
+                f"/host[address='{HOST_ADDR}']/boot",
+            ])
             until(lambda: client.lease() == (OTHER_SERVER, GLOBAL_FILE))
 
     test.succeed()

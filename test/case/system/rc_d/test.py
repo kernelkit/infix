@@ -26,7 +26,7 @@ def script(text):
 def cleanup(env):
     print("Removing rc.d test scripts from startup-config")
     target = env.attach("target", "mgmt", test_reset=False)
-    target.delete_xpath("/ietf-system:system/infix-system:advanced")
+    target.put_config_dicts({}, delete=["/ietf-system:system/infix-system:advanced"])
     target.copy("running", "startup")
 
 

@@ -265,7 +265,9 @@ with infamy.Test() as test:
             until(lambda: reaches(ns, GUEST_IP), attempts=60, interval=2)
 
         with test.step("Remove access point wifi10 from the repeater"):
-            repeater.delete_xpath("/ietf-interfaces:interfaces/interface[name='wifi10']")
+            repeater.put_config_dicts({}, delete=[
+                "/ietf-interfaces:interfaces/interface[name='wifi10']"
+            ])
 
         with test.step("Verify wifi2 on the repeater is back at the third derived address and guest followed it"):
             until(lambda: wifi.phys_address(repeater, "wifi2") == guest_ap_mac, attempts=30, interval=2)

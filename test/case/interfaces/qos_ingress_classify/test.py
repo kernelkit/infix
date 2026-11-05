@@ -172,8 +172,8 @@ with infamy.Test() as test:
             assert not cap.offloads("classification")
 
     with test.step("Remove qos configuration and verify the defaults are back"):
-        target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                            "/infix-interfaces:qos")
+        target.put_config_dicts({}, delete=[f"/ietf-interfaces:interfaces/interface[name='{port}']"
+                            "/infix-interfaces:qos"])
         if dcb:
             until(lambda: dcb_tokens(tgtssh, "app", port).get("default-prio") == ["0"])
             assert dcb_tokens(tgtssh, "apptrust", port).get("order") == ["pcp"]

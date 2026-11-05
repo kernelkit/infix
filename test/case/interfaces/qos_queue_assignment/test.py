@@ -97,14 +97,10 @@ with infamy.Test() as test:
             assert dut_mac, "DUT MAC not resolved"
             print(f"DUT {td0}.10 is {dut_mac}")
 
+        cleared = []
         for name, (table, prio_map) in tables.items():
             with test.step(f"Apply the {name} traffic class table on the egress port"):
-                # Preset and custom leaves are a choice, so clear the previous
-                # table; the first round has none to clear
-                try:
-                    target.delete_xpath(qos.xpath(td1, "/egress/traffic-class-table"))
-                except ValueError:
-                    pass
+                # Preset and custom leaves are a choice, so clear the previous table
                 target.put_config_dicts({"ietf-interfaces": {
                     "interfaces": {
                         "interface": [{
@@ -112,7 +108,8 @@ with infamy.Test() as test:
                             "infix-interfaces:qos": {"egress": {"traffic-class-table": table}}
                         }]
                     }
-                }})
+                }}, delete=cleared)
+                cleared = [qos.xpath(td1, "/egress/traffic-class-table")]
                 until(lambda: qos.scheduler_matches(qos.scheduler(tgtssh, td1), num_tc, prio_map))
                 ns0.must_reach("192.168.11.2")
 

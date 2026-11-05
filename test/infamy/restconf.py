@@ -312,7 +312,7 @@ class Device(Transport):
             # Return the whole result if no specific container was specified
             return ds
 
-    def put_config_dicts(self, models, retries=3):
+    def put_config_dicts(self, models, retries=3, delete=()):
         """PATCH configuration of all models to running-config
 
         Uses candidate datastore + copy to running to trigger sysrepo
@@ -321,6 +321,8 @@ class Device(Transport):
         Args:
             models:  Dictionary of models to configure
             retries: Number of retry attempts on failure (default 3)
+            delete:  XPaths removed in the same commit, before the models
+                     are patched in, for changes only valid as one commit
         """
         infer_put_dict(self.name, models)
         for mod, data in models.items():
@@ -328,6 +330,7 @@ class Device(Transport):
 
         # Copy running to candidate first (to preserve existing config)
         self.copy("running", "candidate")
+        self._delete_candidate(delete)
 
         # PATCH each model to candidate datastore
         for model, config in models.items():
@@ -571,28 +574,8 @@ class Device(Transport):
                 return value
         return data
 
-    def delete_xpath(self, xpath):
-        """Delete XPath from running config"""
-        coverage.track_xpath(xpath)
-        path = f"/ds/ietf-datastores:running{xpath_to_uri(xpath)}"
-        url = f"{self.restconf_url}{path}"
-        response = requests_workaround_delete(url, headers=self.headers,
-                                              auth=self.auth, verify=False)
-
-        # Raise exceptions for HTTP errors
-        response.raise_for_status()
-
-        return True
-
-    def delete_xpaths(self, xpaths):
-        """Delete several xpaths in a single transaction.
-
-        Needed when the targets reference one another, e.g. both ends of a
-        VETH pair (mutually mandatory leafrefs), and so cannot be removed
-        one at a time.  Stage the deletions in the candidate datastore, then
-        copy it to running so they commit and validate together.
-        """
-        self.copy("running", "candidate")
+    def _delete_candidate(self, xpaths):
+        """DELETE each xpath from the candidate datastore"""
         for xpath in xpaths:
             coverage.track_xpath(xpath)
             path = f"/ds/ietf-datastores:candidate{xpath_to_uri(xpath)}"
@@ -600,6 +583,3 @@ class Device(Transport):
             response = requests_workaround_delete(url, headers=self.headers,
                                                   auth=self.auth, verify=False)
             response.raise_for_status()
-        self.copy("candidate", "running")
-
-        return True

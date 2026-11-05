@@ -82,8 +82,9 @@ with infamy.Test() as test:
         verify_usb_state(target, available, "unlocked")
 
     with test.step("Remove all hardware configuration"):
-        for port in available:
-            target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
+        target.put_config_dicts({}, delete=[
+            f"/ietf-hardware:hardware/component[name='{port}']" for port in available
+        ])
 
     with test.step("Verify that all USB ports are locked"):
         verify_usb_state(target, available, "locked")
