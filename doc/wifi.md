@@ -583,9 +583,11 @@ You can verify the configuration with `show hardware radio0` to see
 radio settings, and `show interface` to see all active AP interfaces.
 
 > [!NOTE]
-> A radio hosts any number of access points but only one station, and
-> the station follows its access point's channel, see [Current
-> Limitations](#current-limitations).
+> A radio hosts any number of access points but only one enabled
+> station.  More stations can be configured on it as long as they are
+> disabled, e.g., to keep the settings for other networks and switch
+> with the `enabled` flag.  The station follows its access point's
+> channel, see [Current Limitations](#current-limitations).
 
 ## Fast Roaming Between Access Points
 

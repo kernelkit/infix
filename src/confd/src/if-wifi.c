@@ -187,6 +187,29 @@ int wifi_mode_changed(struct lyd_node *wifi)
 }
 
 /*
+ * The mode's wpa_supplicant runs only while the interface is enabled,
+ * another station on the radio may be the enabled one.  A running
+ * instance keeps stale driver state on a recreated netdev, so restart.
+ */
+static void wifi_gen_service(FILE *fp, const char *svc, const char *ifname,
+			     struct lyd_node *cif, bool restart)
+{
+	if (!lydx_is_enabled(cif, "enabled")) {
+		fprintf(fp, "initctl -bfq disable %s@%s\n", svc, ifname);
+		fprintf(fp, "initctl -bnq stop %s:%s\n", svc, ifname);
+		fprintf(fp, "if pid=$(cat " WPA_SUPPLICANT_PID " 2>/dev/null); then\n"
+			"\ttimeout 5 sh -c \"while kill -0 $pid 2>/dev/null; do sleep 0.1; done\"\n"
+			"fi\n", ifname);
+		return;
+	}
+
+	fprintf(fp, "initctl -bfq enable %s@%s\n", svc, ifname);
+	fprintf(fp, "initctl -bfq touch %s@%s\n", svc, ifname);
+	if (restart)
+		fprintf(fp, "initctl -bnq restart %s:%s\n", svc, ifname);
+}
+
+/*
  * A changed wpa_supplicant config only takes effect when the daemon
  * reloads it, so nudge the service whenever the wifi subtree changed.
  */
@@ -196,7 +219,7 @@ static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct da
 	const char *svc;
 	FILE *fp;
 
-	if (!lydx_get_child(dif, "wifi"))
+	if (!lydx_get_child(dif, "wifi") && !lydx_get_child(dif, "enabled"))
 		return SR_ERR_OK;
 
 	switch (wifi_get_mode(cif)) {
@@ -216,7 +239,7 @@ static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct da
 	if (!fp)
 		return SR_ERR_INTERNAL;
 
-	fprintf(fp, "initctl -bfq touch %s@%s\n", svc, ifname);
+	wifi_gen_service(fp, svc, ifname, cif, false);
 	fclose(fp);
 
 	return SR_ERR_OK;
@@ -712,9 +735,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		if (!station)
 			break;	/* No mode yet, the netdev is created but idle */
 		wifi_gen_station(cif);
-		fprintf(iw, "initctl -bfq enable station@%s\n", ifname);
-		fprintf(iw, "initctl -bfq touch station@%s\n", ifname);
-		fprintf(iw, "initctl -bnq restart station:%s\n", ifname);
+		wifi_gen_service(iw, "station", ifname, cif, true);
 		break;
 	}
 	case wifi_wds: {
@@ -732,9 +753,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 	case wifi_mesh:
 		fprintf(iw, "iw phy %s interface add %s type mesh%s\n", radio, ifname, addr);
 		wifi_gen_mesh(cif);
-		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
-		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);
-		fprintf(iw, "initctl -bnq restart mesh:%s\n", ifname);
+		wifi_gen_service(iw, "mesh", ifname, cif, true);
 		break;
 	default:
 		ERROR("WiFi mode %d unknown", mode);
