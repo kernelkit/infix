@@ -1,0 +1,38 @@
+From ea59223f9d1872fcb522dfca6d67975c857ba9f5 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 6 Nov 2026 09:25:22 +0100
+Subject: [PATCH] net: sparx5: size the leak period from the 17-bit rate field
+Organization: Wires
+
+A credit-based shaper on a LAN969x queue lets three times its idle
+slope through.  The leak period of the chip's slowest leak group,
+655 Mbit/s, comes out as 400 us, which does not fit the 18-bit
+LEAK_TIME field, so the group leaks every 137 us instead.
+
+    cbs se 92: cir 0004e201 ... layer 0 timers 137856 0 0 0
+
+The period derives from a rate maximum of 262143, but CIR_RATE is a
+17-bit field.  SparX-5's groups are fast enough for the period to fit
+either way.
+
+Use the field's maximum, 131071.
+
+Signed-off-by: Joachim Wiberg <joachim.wiberg@wires.se>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index 0f47b4ac1560..466a4b8b85ef 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -28,7 +28,7 @@ int sparx5_hsch_l0_get_idx(struct sparx5 *sparx5, int port, int queue);
+ #define SPX5_SE_MODE_DATARATE 1
+ 
+ /* Rate and burst */
+-#define SPX5_SE_RATE_MAX 262143
++#define SPX5_SE_RATE_MAX 131071
+ #define SPX5_SE_BURST_MAX 127
+ #define SPX5_SE_RATE_MIN 1
+ #define SPX5_SE_BURST_MIN 1
