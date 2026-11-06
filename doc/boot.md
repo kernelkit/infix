@@ -265,6 +265,67 @@ will then boot from the newly installed image.  Since the image from
 which you were originally running is now inactive, running the same
 upgrade command again will bring both images into sync.
 
+## Signing Keys
+
+The boot image and every upgrade bundle are signed, and a trust store
+in the image decides which signatures the running system accepts:
+
+| What                | Build setting                          | Checked by                       |
+|---------------------|----------------------------------------|----------------------------------|
+| Kernel, boot image  | `IX_KERNEL_SIGN_KEY`, `IX_IMAGE_*_KEY` | the bootloader, with secure boot |
+| RAUC upgrade bundle | `IX_IMAGE_*_RAUC_KEY`                  | RAUC, against the trust store    |
+| Trust store         | `IX_TRUSTED_KEYS_*`                    | installed as `/etc/rauc/keys`    |
+
+All of them default to the *development key* in
+`board/common/signing-keys/development/`, which is part of the public
+repository, and every defconfig in `configs/` trusts it.  The public
+images are therefore signed with a key anyone has: the signature on an
+upgrade bundle proves it arrived intact, not where it came from, and
+anyone building from the tree can produce a bundle the public images
+accept.
+
+This is deliberate.  The public images are a base for products, and
+they must stay upgradable by anyone who builds from source.  Proof of
+origin belongs to the product built on top: its own key pair, a trust
+store holding only its own certificate, and secure boot on hardware
+that supports it.  Nothing in the public tree provides that on its
+own.
+
+### Using Your Own Keys
+
+Generate a key pair, or use one held in an HSM; the RAUC settings also
+accept a PKCS#11 URI:
+
+```
+$ openssl req -x509 -newkey rsa:4096 -nodes -days 7300 \
+      -subj "/O=Example/CN=Example Signing Key" \
+      -keyout example.key -out example.crt
+```
+
+Then, in `make menuconfig` under *External options*, point the signing
+settings of the image types the board uses at the new key, drop the
+development key from the trust store and add your certificate instead:
+
+```
+IX_KERNEL_SIGN_KEY="/path/to/example.key"
+IX_KERNEL_SIGN_CERT="/path/to/example.crt"
+IX_IMAGE_ITB_RAUC_KEY="/path/to/example.key"
+IX_IMAGE_ITB_RAUC_CERT="/path/to/example.crt"
+# IX_TRUSTED_KEYS_DEVELOPMENT is not set
+IX_TRUSTED_KEYS_EXTRA_PATH="/path/to/example.crt"
+```
+
+An image built this way no longer accepts the public upgrade bundles,
+which is the point.  The trust store can hold more than one
+certificate, so to roll keys, ship an image trusting both the old and
+the new certificate before signing with the new key.
+
+A bundle fetched over plain HTTP or FTP can be swapped by anyone on
+the path.  With your own key the signature check catches that.  With
+the development key it does not, since the attacker can sign too, so a
+system that still trusts the development key should only install
+bundles from HTTPS or local media.
+
 ## Image Formats
 
 Infix is built in one of two families of image formats, depending on

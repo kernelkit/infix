@@ -12,6 +12,16 @@ When reporting, include:
 - Steps to reproduce the issue.
 - Potential impact of the vulnerability.
 
+## Scope
+
+The public images are built with, and trust, the development signing
+key in `board/common/signing-keys/development/`.  The key is in the
+repository on purpose: the images are a base for products, and anyone
+building from the tree must be able to upgrade them.  A product built on
+Infix replaces the key with its own, see [Signing Keys][keys].  That the
+development key is public, or that a bundle signed with it installs on a
+public image, is therefore not a vulnerability.
+
 ## Supported Versions
 
 Security fixes are made on `main` and reach users in the next release,
@@ -42,6 +52,7 @@ We appreciate the efforts of the security community to help improve the security
 of Infix. Thank you for your responsible disclosure.
 
 [report]:   https://github.com/kernelkit/infix/security/advisories/new
+[keys]:     https://github.com/kernelkit/infix/blob/main/doc/boot.md#signing-keys
 [releases]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [support]:  https://github.com/kernelkit/infix/blob/main/.github/SUPPORT.md
 [wires]:    https://wires.se
