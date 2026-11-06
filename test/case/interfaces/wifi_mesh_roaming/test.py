@@ -7,10 +7,10 @@ and Roaming", https://www.kernelkit.org/posts/wifi-mesh-roaming/
 
 Three gateway nodes, gw1, gw2 and gw3, each have two radios:
 
-- radio0 is an 802.11s mesh point.  The three join one mesh, "backhaul",
-  on 5GHz.  It carries traffic between the nodes, so only gw1 needs a
-  wire to the rest of the LAN
-- radio1 is a WPA2/WPA3-personal Access Point on 2.4GHz.  All three use
+- the mesh radio is an 802.11s mesh point.  The three join one mesh,
+  "backhaul", on 5GHz.  It carries traffic between the nodes, so only
+  gw1 needs a wire to the rest of the LAN
+- the ap radio is a WPA2/WPA3-personal Access Point on 2.4GHz.  All three use
   the same SSID, "campus", and the same 802.11r mobility domain, so a
   client roams between them as in one network
 
@@ -49,18 +49,18 @@ GWS = ["gw1", "gw2", "gw3"]
 SECRETS = {"mesh-secret": MESH_PSK, "wifi-secret": WIFI_PSK}
 
 
-def gw_config(uplink=None):
+def gw_config(mesh, ap, uplink=None):
     interfaces = [
         {"name": "br0", "type": "infix-if-type:bridge", "enabled": True},
         wifi.iface("wifi0", {
-            "radio": "radio0",
+            "radio": mesh,
             "mesh-point": {
                 "mesh-id": MESH_ID,
                 "security": {"secret": "mesh-secret"},
             },
         }, bridge="br0"),
         wifi.iface("wifi1", {
-            "radio": "radio1",
+            "radio": ap,
             "access-point": {
                 "ssid": SSID,
                 "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi-secret"},
@@ -79,8 +79,8 @@ def gw_config(uplink=None):
         })
     return {
         "ietf-hardware": wifi.hardware(
-            wifi.radio("radio0", band="5GHz", channel=36),
-            wifi.radio("radio1", band="2.4GHz", channel=1)),
+            wifi.radio(mesh, band="5GHz", channel=36),
+            wifi.radio(ap, band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": interfaces}},
     }
@@ -111,21 +111,17 @@ with infamy.Test() as test:
     with test.step("Configure gw1, gw2, gw3 as mesh nodes with a roaming AP"):
         gw1_uplink = gw1["uplink"]
         parallel(*[lambda name=name, dut=dut:
-                   dut.put_config_dicts(gw_config(uplink=gw1_uplink if name == "gw1" else None))
+                   dut.put_config_dicts(gw_config(dut["mesh"], dut["ap"],
+                                                  uplink=gw1_uplink if name == "gw1" else None))
                    for name, dut in gws])
 
     with test.step("Configure the client as a station for the 'campus' SSID"):
-        # The client joins the gw APs, which run on radio1 (2.4GHz).  In the
-        # virtual topology a wireless cell is shared per radio index, so the
-        # client's station must use radio1 too -- a station and the AP it
-        # associates to live in the same cell only when they share an index.
-        # See doc/wifi.md and test/virt/quad.
         client.put_config_dicts({
-            "ietf-hardware": wifi.hardware(wifi.radio("radio1", band="2.4GHz", channel=1)),
+            "ietf-hardware": wifi.hardware(wifi.radio(client["wifi"], band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore(SECRETS),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", {
-                    "radio": "radio1",
+                    "radio": client["wifi"],
                     "station": {
                         "ssid": SSID,
                         "security": {"mode": "auto", "secret": "wifi-secret"},
