@@ -9,10 +9,10 @@ and Roaming", https://www.kernelkit.org/posts/wifi-mesh-roaming/
 
 Three gateway nodes, gw1, gw2 and gw3, each have two radios:
 
-- radio0 is an 802.11s mesh point.  The three join one mesh, "backhaul",
-  on 5GHz.  It carries traffic between the nodes, so only gw1 needs a
-  wire to the rest of the LAN
-- radio1 is a WPA2/WPA3-personal Access Point on 2.4GHz.  All three use
+- the mesh radio is an 802.11s mesh point.  The three join one mesh,
+  "backhaul", on 5GHz.  It carries traffic between the nodes, so only
+  gw1 needs a wire to the rest of the LAN
+- the ap radio is a WPA2/WPA3-personal Access Point on 2.4GHz.  All three use
   the same SSID, "campus", and the same 802.11r mobility domain, so a
   client roams between them as in one network
 
