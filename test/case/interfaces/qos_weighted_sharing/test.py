@@ -24,9 +24,11 @@ Each flow's share of what the port delivers in the middle seconds of
 the flows must land within five points of its configured share of the
 two, and both flows must be held back by more than a tenth of what they
 offer in both measurements; a port that was never full proves nothing.
-The test's own iperf3 control traffic, DSCP 0, is classified to
-priority 7.  Skipped on a switch fabric whose scheduler is not
-offloaded, where forwarded frames never meet the configured algorithm.
+The test's own iperf3 control traffic, DSCP 0, rides with CS1 in the
+lowest loaded class, so a talker's end-of-test message leaves the port
+behind its last datagram.  Skipped on a switch fabric whose scheduler
+is not offloaded, where forwarded frames never meet the configured
+algorithm.
 """
 import infamy
 import infamy.qos as qos
@@ -71,7 +73,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": HIGH, "8": LOW})}
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": HIGH, "8": LOW})}
                         }
                     },
                     {

@@ -24,11 +24,11 @@ default.  Three measurements, in this order:
 
 The low flow must be held back by more than a tenth of what it offers
 in every measurement; a port that was never full proves nothing.
-Shares come from the middle seconds of the flows.  The test's own
-iperf3 control traffic, DSCP 0, is classified to priority 7 so the
-contest never cuts it off.  Skipped on a switch fabric whose scheduler
-is not offloaded, where forwarded frames never meet the configured
-algorithm.
+Shares come from the middle seconds of the flows, and the test's own
+iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
+class, so a talker's end-of-test message leaves the port behind its
+last datagram.  Skipped on a switch fabric whose scheduler is not
+offloaded, where forwarded frames never meet the configured algorithm.
 """
 import infamy
 import infamy.qos as qos
@@ -53,7 +53,7 @@ with infamy.Test() as test:
               f"EF at priority {HIGH}, CS1 at priority {LOW}")
         port.require_offload(test, "transmission-selection")
 
-    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic on top"):
+    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic with CS1"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
@@ -64,7 +64,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": HIGH, "8": LOW})}
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": HIGH, "8": LOW})}
                         }
                     },
                     {
@@ -98,7 +98,7 @@ with infamy.Test() as test:
                     "interface": [{
                         "name": td0,
                         "infix-interfaces:qos": {
-                            "ingress": {"dscp-map": qos.dscp_map(**{"0": 7, "46": ef_prio,
+                            "ingress": {"dscp-map": qos.dscp_map(**{"0": LOW, "46": ef_prio,
                                                                      "8": cs1_prio})}
                         }
                     }]
