@@ -20,13 +20,13 @@ Two measurements:
    wrong bands
  - 2:1, configured as 60 and 30 percent, must move the split to match
 
-Each flow's share of the delivered datagrams must land within five
-points of its configured share of the two, and both flows must lose more
-than a tenth of their frames in both measurements; a port that was never
-full proves nothing.  The test's own iperf3 control traffic, DSCP 0, is
-classified to priority 7.  Skipped on a switch fabric whose scheduler is
-not offloaded, where forwarded frames never meet the configured
-algorithm.
+Each flow's share of what the port delivers in the middle seconds of
+the flows must land within five points of its configured share of the
+two, and both flows must be held back by more than a tenth of what they
+offer in both measurements; a port that was never full proves nothing.
+The test's own iperf3 control traffic, DSCP 0, is classified to
+priority 7.  Skipped on a switch fabric whose scheduler is not
+offloaded, where forwarded frames never meet the configured algorithm.
 """
 import infamy
 import infamy.qos as qos
@@ -128,8 +128,7 @@ with infamy.Test() as test:
             print(f"shares: EF {ef.share(total):.1f}%, CS1 {cs1.share(total):.1f}%, "
                   f"configured {high}:{low}")
             for flow in flows:
-                assert flow.result["lost_percent"] > 10, \
-                    f"{flow.name} lost {flow.result['lost_percent']:.1f}%, the port was never full"
+                flow.require_backlog()
             assert abs(ef.share(total) - expect) < 5, \
                 f"EF got {ef.share(total):.1f}% of the port, configured {expect:.0f}%"
 

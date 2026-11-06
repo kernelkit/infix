@@ -6,10 +6,11 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_rate_limit]
 
 One talker, bridged through the DUT and out an egress port with a
 10 Mbit/s rate limit, offering three times that.  What arrives at the
-listener must be the limit, within a fifth, whatever the priority of the
-flow: once marked EF, in a strict class near the top, once marked CS1,
-in the lowest class.  Then both at once, each offering one and a half
-times the limit, must still add up to the limit.
+listener in the middle seconds of the flow must be the limit, within a
+fifth, whatever the priority of the flow: once marked EF, in a strict
+class near the top, once marked CS1, in the lowest class.  Then both at
+once, each offering one and a half times the limit, must still add up
+to the limit.
 
 A limit that lets more through is not a limit, and a limit that only
 bites on some queues is a scheduler fault dressed up as one.  The test's
