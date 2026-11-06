@@ -24,12 +24,13 @@ default.  Three measurements, in this order:
  - starve: EF raised to 120 percent of the port on its own leaves CS1
    below 5 percent of the served datagrams
 
-The low flow must lose more than a tenth of its frames in every
-measurement; a port that was never full proves nothing.  The test's own
-iperf3 control traffic, DSCP 0, is classified to priority 7 so the
-contest never cuts it off.  Skipped on a switch fabric whose scheduler
-is not offloaded, where forwarded frames never meet the configured
-algorithm.
+The low flow must be held back by more than a tenth of what it offers
+in every measurement; a port that was never full proves nothing.
+Shares come from the middle seconds of the flows, and the test's own
+iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
+class, so a talker's end-of-test message leaves the port behind its
+last datagram.  Skipped on a switch fabric whose scheduler is not
+offloaded, where forwarded frames never meet the configured algorithm.
 
 ==== Topology
 
@@ -38,7 +39,7 @@ image::topology.svg[QoS Strict Priority topology, align=center, scaledwidth=75%]
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Bridge the two ports, classify by DSCP on ingress, control traffic on top
+. Bridge the two ports, classify by DSCP on ingress, control traffic with CS1
 . Slow the egress port so its queues can fill
 . Set up the talker and listener namespaces
 . Baseline: both flows at one priority, 80 percent each, expect neither starved

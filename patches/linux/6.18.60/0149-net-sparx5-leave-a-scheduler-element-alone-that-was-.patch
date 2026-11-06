@@ -1,0 +1,36 @@
+From 5dc90b3e1cf728f6e4b213d37d311602312e92a3 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 13:30:24 +0100
+Subject: [PATCH] net: sparx5: leave a scheduler element alone that was never
+ shaped
+Organization: Wires
+
+Deleting a tbf qdisc whose offload was refused, e.g. for a rate the
+chip cannot represent, still reaches sparx5_tc_tbf_del().
+
+The element is in no leak group, so sparx5_lg_get_group_by_index()
+fails and leaves the group uninitialised, and the leak group update
+that follows indexes the group table with it.
+
+Skip the teardown when the element is in no leak group.
+
+Fixes: e02a5ac6bf77 ("net: microchip: sparx5: add support for offloading tbf qdisc")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 3b95b8a20845..bc7ac89b4fef 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -580,7 +580,8 @@ static int sparx5_shaper_del(struct sparx5_port *port, u32 layer, u32 idx)
+ 	struct sparx5_shaper sh = {0};
+ 	u32 group;
+ 
+-	sparx5_lg_get_group_by_index(port->sparx5, layer, idx, &group);
++	if (sparx5_lg_get_group_by_index(port->sparx5, layer, idx, &group) < 0)
++		return 0;
+ 
+ 	return sparx5_shaper_conf_set(port, &sh, layer, idx, group);
+ }

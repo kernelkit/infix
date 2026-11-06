@@ -8,7 +8,7 @@ import (
 )
 
 // testdata/sysrepo.startup is trimmed from an x86_64 image with WiFi,
-// GPS, containers and FRR built in, but not modems.
+// GPS, containers, FRR, QoS and TSN built in, but not modems.
 func TestSysrepoModules(t *testing.T) {
 	s, err := LoadSysrepoModules("testdata/sysrepo.startup")
 	if err != nil {
@@ -49,8 +49,10 @@ func TestYangLibraryMinimal(t *testing.T) {
 
 func TestYangLibraryFull(t *testing.T) {
 	s, err := ParseYangLibrary([]byte(`{"ietf-yang-library:yang-library":{"module-set":[{"name":"complete","module":[
-		{"name":"infix-interfaces","feature":["wifi","containers"]},
+		{"name":"infix-interfaces","feature":["wifi","containers","rate-limit"]},
 		{"name":"infix-hardware","feature":["gps","modem"]},
+		{"name":"infix-qos"},
+		{"name":"infix-tsn"},
 		{"name":"ietf-ospf"}]}]}}`))
 	if err != nil {
 		t.Fatal(err)

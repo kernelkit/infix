@@ -34,6 +34,16 @@ class Port:
         return qos.get("capabilities", {})
 
     @property
+    def profile(self):
+        """The QoS profile the port runs, None when it runs its own settings"""
+        data = self.target.get_data(
+            f"/ietf-interfaces:interfaces/interface[name='{self.name}']"
+            "/infix-interfaces:qos")
+        iface = next(iter(data["interfaces"]["interface"]), {}) if data else {}
+        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
+        return qos.get("profile")
+
+    @property
     def switched(self):
         """Whether the port belongs to a switch fabric.
 
@@ -68,6 +78,11 @@ class Port:
         return self.caps.get("offload", [])
 
     @property
+    def supported(self):
+        """The stages the port's fabric can run, [] when it names none"""
+        return self.caps.get("supported-offload", [])
+
+    @property
     def traffic_classes(self):
         """How many traffic classes the port has"""
         return self.caps.get("max-traffic-classes", 8)
@@ -82,12 +97,12 @@ class Port:
         return stage in self.offload
 
     def require_offload(self, test, stage):
-        """Skip unless a fabric port runs @stage in hardware
+        """Skip unless a fabric port can run @stage in hardware
 
         A port the CPU serves needs no offload: the kernel does the work
         and the measurement means what it says.
         """
-        if self.switched and not self.offloads(stage):
+        if self.switched and stage not in self.supported:
             test.skip(f"{self.name} forwards in hardware and its driver "
                       f"does not offload {stage}")
 

@@ -108,6 +108,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	qosTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "pages/qos.html")
+	if err != nil {
+		return nil, err
+	}
 	lldpTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/lldp.html")
 	if err != nil {
 		return nil, err
@@ -133,6 +137,10 @@ func New(
 		return nil, err
 	}
 	cfgNTPTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-ntp.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgQoSTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-qos.html")
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +264,8 @@ func New(
 	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
 	cfgAdv := &handlers.ConfigureAdvancedHandler{Template: cfgAdvTmpl, RC: rc, Schema: schemaCache}
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
+	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc, Schema: schemaCache}
+	cfgQoS := &handlers.ConfigureQoSHandler{Template: cfgQoSTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
 	treeH := &handlers.TreeHandler{
@@ -330,6 +340,7 @@ func New(
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
+	mux.HandleFunc("GET /qos", qosh.Overview)
 	mux.HandleFunc("GET /mdns", mdns.Overview)
 	mux.HandleFunc("GET /nacm", nacm.Overview)
 	mux.HandleFunc("GET /services", services.Overview)
@@ -403,6 +414,13 @@ func New(
 	mux.HandleFunc("POST /configure/interfaces/{name}/lag/members",      cfgIf.SaveLAGMembers)
 	mux.HandleFunc("POST /configure/interfaces/{name}/lag-port",         cfgIf.SaveLagPort)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/lag-port",       cfgIf.DeleteLagPort)
+	mux.HandleFunc("GET /configure/qos", cfgQoS.Overview)
+	mux.HandleFunc("POST /configure/qos/profiles", cfgQoS.AddProfile)
+	mux.HandleFunc("POST /configure/qos/profiles/{name}", cfgQoS.SaveProfile)
+	mux.HandleFunc("DELETE /configure/qos/profiles/{name}", cfgQoS.DeleteProfile)
+	mux.HandleFunc("POST /configure/interfaces/{name}/qos", cfgIf.SaveQoS)
+	mux.HandleFunc("POST /configure/interfaces/{name}/cbs", cfgIf.SaveCBS)
+	mux.HandleFunc("POST /configure/interfaces/{name}/gates", cfgIf.SaveGates)
 	mux.HandleFunc("GET /configure/firewall",                        cfgFw.Overview)
 	mux.HandleFunc("POST /configure/firewall/enable",               cfgFw.Enable)
 	mux.HandleFunc("POST /configure/firewall/settings",             cfgFw.SaveSettings)

@@ -260,6 +260,39 @@ This is the recommended one-shot command for setting up a development
 build from a freshly selected defconfig.
 
 
+### Interface Quirks
+
+What a network interface cannot do, or does differently, is kept out of
+the code in `/etc/interface-quirks.json`, shipped from
+`board/common/rootfs`, and the product's `/etc/product/interface-quirks.json`
+from its `board/<arch>/<board>/rootfs/usr/share/product/<compatible>/`
+directory, which overrides the former entry by entry.  Each entry names
+an interface, or a pattern matching several, and holds its quirks:
+
+```json
+{
+    "sfp1": {
+        "comment": "Reports it supports autoneg, but if setting it, dagger crashes",
+        "broken-autoneg": true
+    },
+    "@driver=sparx5-switch": {
+        "qos-trust-order": ["pcp", "dscp", "dscp-pcp"],
+        "qos-root-qdisc": ["ets", "mqprio", "taprio"]
+    }
+}
+```
+
+An `@driver=<name>` entry matches every interface whose device is bound
+to that kernel driver, as `/sys/class/net/<if>/device/uevent` names it,
+which is how the ports of a switch chip are told apart from the rest.
+An `@ethtool:<field>=<value>;...` entry matches on the `ethtool -i`
+output of a running interface, for pluggable hardware such as Wi-Fi
+cards.  A quirk is a flag when its value is `true`, read with
+`iface_has_quirk()` in `confd` and `has-quirk` from shell, and a value,
+a list or a number, when the code needs more than a yes, read with
+`iface_quirk()` and from the `quirks` package of `yangerd`.  Boards
+with the same chip share an entry by symlinking their product file.
+
 ### YANG Model
 
 When making changes to the `confd` and `statd` services, you will often

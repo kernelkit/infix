@@ -1,0 +1,69 @@
+From 515b7cd6b021f86be4a189e6407596fbe5a28785 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 13:25:50 +0100
+Subject: [PATCH] net: sparx5: compute the layer 0 scheduler element from the
+ chip constants
+Organization: Wires
+
+A tbf qdisc below the root is offloaded on the layer 0 scheduler
+element of its queue, which SPX5_HSCH_L0_GET_IDX computes with the
+SparX-5 layout: 64 elements per port, 8 per queue.  LAN969x has 32 per
+port and 4 per queue, so the shaper lands on another port's element.
+
+Compute the index from the per-chip constants instead, as the vendor
+BSP does.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.c | 8 ++++++++
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.h | 4 ++--
+ drivers/net/ethernet/microchip/sparx5/sparx5_tc.c  | 2 +-
+ 3 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 972da8a71f5a..14331f1a0c57 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -85,6 +85,14 @@ static const u32 spx5_hsch_max_group_rate[SPX5_HSCH_LEAK_GRP_CNT] = {
+ 	26214200 /* 26.214 Gbps */
+ };
+ 
++int sparx5_hsch_l0_get_idx(struct sparx5 *sparx5, int port, int queue)
++{
++	const struct sparx5_consts *consts = sparx5->data->consts;
++
++	return (consts->n_hsch_l1_elems * port) +
++	       (consts->n_hsch_queues * queue);
++}
++
+ u32 sparx5_get_hsch_max_group_rate(int grp)
+ {
+ 	return spx5_hsch_max_group_rate[grp];
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index a92a699c551f..2aae77d23d11 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -17,8 +17,8 @@
+ #define SPX5_HSCH_L1_SE_CNT 64
+ #define SPX5_HSCH_L2_SE_CNT 64
+ 
+-/* Calculate Layer 0 Scheduler Element when using normal hierarchy */
+-#define SPX5_HSCH_L0_GET_IDX(port, queue) ((64 * (port)) + (8 * (queue)))
++/* Layer 0 Scheduler Element of a port queue in the normal hierarchy */
++int sparx5_hsch_l0_get_idx(struct sparx5 *sparx5, int port, int queue);
+ 
+ /* Number of leak groups */
+ #define SPX5_HSCH_LEAK_GRP_CNT 4
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index 28b2514c8330..07fab81c720a 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -69,7 +69,7 @@ static void sparx5_tc_get_layer_and_idx(struct sparx5 *sparx5, u32 parent,
+ 	} else {
+ 		u32 queue = TC_H_MIN(parent) - 1;
+ 		*layer = 0;
+-		*idx = SPX5_HSCH_L0_GET_IDX(portno, queue);
++		*idx = sparx5_hsch_l0_get_idx(sparx5, portno, queue);
+ 	}
+ }
+ 

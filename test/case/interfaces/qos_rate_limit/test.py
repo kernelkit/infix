@@ -4,16 +4,18 @@ QoS Rate Limit
 
 One talker, bridged through the DUT and out an egress port with a
 10 Mbit/s rate limit, offering three times that.  What arrives at the
-listener must be the limit, within a fifth, whatever the priority of the
-flow: once marked EF, in a strict class near the top, once marked CS1,
-in the lowest class.  Then both at once, each offering one and a half
-times the limit, must still add up to the limit.
+listener in the middle seconds of the flow must be the limit, within a
+fifth, whatever the priority of the flow: once marked EF, in a strict
+class near the top, once marked CS1, in the lowest class.  Then both at
+once, each offering one and a half times the limit, must still add up
+to the limit.
 
 A limit that lets more through is not a limit, and a limit that only
 bites on some queues is a scheduler fault dressed up as one.  The test's
-own iperf3 control traffic, DSCP 0, is classified to priority 7 at the
-ingress port.  Skipped on a switch fabric whose driver does not offload
-the rate limit, where forwarded frames never meet the bucket.
+own iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
+class, so a talker's end-of-test message leaves the port behind its
+last datagram.  Skipped on a switch fabric whose driver does not
+offload the rate limit, where forwarded frames never meet the bucket.
 """
 import infamy
 import infamy.qos as qos
@@ -55,16 +57,14 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": 5, "8": 1})}
+                                        "dscp-map": qos.dscp_map(**{"0": 1, "46": 5, "8": 1})}
                         }
                     },
                     {
                         "name": td1,
                         "enabled": True,
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
-                        "infix-interfaces:qos": {
-                            "egress": {"rate-limit": {"rate": LIMIT}}
-                        }
+                        "infix-interfaces:qos": {"rate-limit": {"rate": LIMIT}}
                     },
                 ]
             }

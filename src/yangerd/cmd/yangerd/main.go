@@ -35,6 +35,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/qosmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/quirks"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -186,7 +187,7 @@ func main() {
 		return qs
 	})
 
-	if qosMon := startQoS(ctx, nlmon.Links, slogLog); qosMon != nil {
+	if qosMon := startQoS(ctx, feat, nlmon.Links, slogLog); qosMon != nil {
 		qosMon.SetOnUpdate(nlmon.SetQoSData)
 		nlmon.SetLinkRefresh(qosMon.Refresh)
 		spawn("qosmonitor", func(ctx context.Context) error {
@@ -521,7 +522,7 @@ func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string)
 
 // startQoS starts the QoS monitor, its tc batch and DCB reader.  Without
 // them the ports carry no QoS state, which is no reason to stop.
-func startQoS(ctx context.Context, links func() json.RawMessage, log *slog.Logger) *qosmonitor.Monitor {
+func startQoS(ctx context.Context, feat *features.Set, links func() json.RawMessage, log *slog.Logger) *qosmonitor.Monitor {
 	tc, err := ipbatch.NewTC(ctx, log)
 	if err != nil {
 		log.Warn("no QoS state, tc batch did not start", "err", err)
@@ -533,5 +534,8 @@ func startQoS(ctx context.Context, links func() json.RawMessage, log *slog.Logge
 		tc.Close()
 		return nil
 	}
-	return qosmonitor.New(tc, dcb, links, log)
+	return qosmonitor.New(tc, dcb, qosmonitor.Modules{
+		Sched: feat.HasModule("ieee802-dot1dc-sched-if"),
+		CBSA:  feat.HasModule("ieee802-dot1dc-cbsa-if"),
+	}, quirks.Load(quirks.Files...), links, log)
 }

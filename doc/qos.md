@@ -28,16 +28,16 @@ Annex I names a traffic type for each priority.  Higher is better,
 except that priority 1 is meant for traffic that may yield to best
 effort:
 
-| Priority | Traffic type          |
-|---------:|-----------------------|
-| 7        | Network Control       |
-| 6        | Internetwork Control  |
-| 5        | Voice                 |
-| 4        | Video                 |
-| 3        | Critical Applications |
-| 2        | Excellent Effort      |
-| 1        | Background            |
-| 0        | Best Effort (default) |
+|    Priority | Acronym | Traffic type          |
+|------------:|--------:|-----------------------|
+|           7 |      NC | Network Control       |
+|           6 |      IC | Internetwork Control  |
+|           5 |      VO | Voice                 |
+|           4 |      VI | Video                 |
+|           3 |      CA | Critical Applications |
+|           2 |      EE | Excellent Effort      |
+| 0 (default) |      BE | Best Effort           |
+|           1 |      BK | Background            |
 /// table-caption
 IEEE 802.1Q-2022 Table I-2, traffic types.
 ///
@@ -259,7 +259,7 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 ### Rate Limit
 
 A port can be held below its link speed with one token bucket on the
-whole port, configured under `qos egress rate-limit`.  `rate` is the
+whole port, configured under `qos rate-limit`.  `rate` is the
 sustained rate in bits per second and `burst` how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
@@ -267,15 +267,80 @@ frame.  The bucket sits above the traffic classes: it bounds what the
 port sends in total, and transmission selection decides which class
 gets the bounded rate.
 
-<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/> <b>set rate-limit rate 10000000</b>
-admin@example:/config/interface/…/egress/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/> <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/…/qos/> <b>leave</b>
 </code></pre>
 
 On a port without offload the limit applies to the frames the CPU
 sends.  Where the driver takes the bucket it applies to the frames the
 fabric forwards as well, and `offload` under `capabilities` then lists
 `rate-limit`.
+
+
+### Credit-Based Shaper
+
+A traffic class can reserve bandwidth with the IEEE 802.1Qav
+credit-based shaper.  The shaper runs in the switch fabric where the
+hardware has one, see [Hardware Offload](#hardware-offload); elsewhere
+the kernel runs it for the traffic it forwards itself.  Turning it on
+takes two settings in two places, as the standard splits them: the
+class's `algorithm` under `qos egress`, and the reservation as
+`admin-idle-slope`, in bits per second, in the `cbsa` table beside
+`qos` on the interface.  One without the other is rejected.
+
+Reserve 20 Mbit/s for class 7 on a port:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1</b>
+admin@example:/config/interface/e1/> <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
+admin@example:/config/interface/e1/> <b>set cbsa cbsa-parameter-table 7 admin-idle-slope 20000000</b>
+admin@example:/config/interface/e1/> <b>leave</b>
+</code></pre>
+
+The class sends at most its reservation on average, and credit earned
+while it waits lets it burst by about one frame.  Shaped classes must
+be the highest-numbered ones, above the strict classes, as IEEE
+802.1Q-2022 34.5 lays a port out, and the reservation may not exceed
+the link rate.  A port with a `rate-limit` cannot shape per class.
+The reservation in force is reported as `oper-idle-slope`.
+
+
+### Time-Aware Shaper
+
+A port can run the IEEE 802.1Qbv time-aware shaper: a repeating cycle
+in which each traffic class's gate is open only in defined windows, so
+a reserved window stays quiet whatever else is queued.  The gates run
+in the switch fabric where the hardware has one, see [Hardware
+Offload](#hardware-offload), and the schedule needs synchronised time
+across the network, see [PTP](ptp.md).
+
+The gate control list lives in `gate-parameter-table` beside `qos` on
+the interface.  Each entry opens the gates in `gate-states-value`, a
+bit per traffic class with bit 0 for class 0, for `time-interval-value`
+nanoseconds.  `admin-cycle-time` is a fraction of a second, unset it is
+the sum of the entries, and `admin-base-time` anchors the cycle to the
+clock.  A 100 µs cycle with class 7 alone for 20 µs, classes 7 and 5
+for 20 µs, and the rest for 60 µs:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set gate-enabled true</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-cycle-time numerator 1 denominator 10000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-base-time seconds 0 nanoseconds 200</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 0 operation-name set-gate-states gate-states-value 128 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 1 operation-name set-gate-states gate-states-value 160 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set admin-control-list gate-control-entry 2 operation-name set-gate-states gate-states-value 95 time-interval-value 60000</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
+</code></pre>
+
+The list applies at commit.  Gated classes are served strictly, so a
+gated port rejects weighted classes, and the schedule takes the whole
+port, so it rejects a `rate-limit` as well.  A shaped class under gates
+keeps its reservation: credit is earned only while its gate is open,
+and the shaper is set up with the slope raised by the cycle over the
+class's open time, as 802.1Q-2022 8.6.8.2 specifies.  A shaped class
+whose gate never opens is rejected.  The list, cycle and base time the
+port runs are reported as `oper-control-list`, `oper-cycle-time` and
+`oper-base-time`.
 
 
 ### Egress Remarking
@@ -374,6 +439,38 @@ admin@example:/config/interface/…/traffic-class-table/> <b>leave</b>
 </code></pre>
 
 
+## Profiles
+
+Ports in the same role share their classification and traffic class
+settings, and a switch with many such ports would repeat them per
+port.  A profile holds one port's `ingress` and `egress` settings under
+a name, defined once under `system qos`, and a port references it
+instead of carrying the settings inline:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos profile edge</b>
+admin@example:/config/system/…/edge/> <b>set ingress trust dscp-pcp</b>
+admin@example:/config/system/…/edge/> <b>set egress remark dscp from-priority</b>
+admin@example:/config/system/…/edge/> <b>leave</b>
+admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set interface e3 qos profile edge</b>
+admin@example:/config/> <b>set interface e4 qos profile edge</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+A port holds either a profile reference or inline settings, never
+both: setting one replaces the other.  A profile has no effect until a
+port references it, and a profile that ports still reference cannot be
+deleted.  Changing a profile applies the change on every port that
+references it.  The profile is validated against each port it is
+applied to, so a class table that reaches beyond a port's traffic
+classes is rejected with the port and the profile named.
+
+What stays on the port is what follows the link rather than the role:
+the `rate-limit`, the credit-based shaper reservations and the gate
+control list.  The operational datastore shows the profile a port
+runs under `qos profile`.
+
+
 ## Hardware Offload
 
 The system runs on a wide range of hardware, and offload is best effort.
@@ -384,26 +481,33 @@ and each port reports it under `qos capabilities`:
 |-------------------------|-------------------------------------------------|
 | `max-traffic-classes`   | Traffic classes on the port, eight unless shown |
 | `supported-trust-order` | `trust` values the driver accepts               |
-| `offload`               | Stages the driver runs in hardware              |
+| `supported-offload`     | Stages the port's switch fabric can run         |
+| `offload`               | Stages the driver runs in hardware right now    |
 /// table-caption
 QoS capabilities a port reports.
 ///
 
-`supported-trust-order` is absent when the driver has no ingress
-classification support.  `offload` lists `classification`, `remarking`, `transmission-selection`
-and `rate-limit` as the driver takes them; a stage not listed runs in
-the kernel.
+`supported-trust-order` and `supported-offload` describe the switch
+the port belongs to and are absent on a port without one.  Both list
+from `classification`, `remarking`, `transmission-selection`,
+`rate-limit`, `credit-based-shaper` and `time-aware-shaper`:
+`supported-offload` what the fabric can run, `offload` what the driver
+has taken with the current configuration.  A supported stage missing
+from `offload` fell back to the kernel, e.g. a traffic class table the
+fabric cannot carry; a stage not supported always runs there.
 
 Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:
 
-| Feature                | Linux tool     | Driver hook          | Fallback              |
-|------------------------|----------------|----------------------|-----------------------|
-| Ingress classification | `dcb app`      | `dcbnl` app ops      | `tc flower`, software |
-| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`  | Rule order, software  |
-| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`      | DSCP only, software   |
-| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS` | software              |
-| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF` | software              |
+| Feature                | Linux tool     | Driver hook             | Fallback              |
+|------------------------|----------------|-------------------------|-----------------------|
+| Ingress classification | `dcb app`      | `dcbnl` app ops         | `tc flower`, software |
+| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`     | Rule order, software  |
+| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`         | DSCP only, software   |
+| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS`    | software              |
+| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF`    | software              |
+| Credit-based shaper    | `tc cbs`       | `TC_SETUP_QDISC_CBS`    | software              |
+| Time-aware shaper      | `tc taprio`    | `TC_SETUP_QDISC_TAPRIO` | software              |
 /// table-caption
 QoS features and their Linux backends.
 ///
@@ -488,6 +592,55 @@ hardware details show through:
 
 Without any `qos` configuration the class table is IEEE 802.1Q-2022
 Table 8-5 with every class strict, as on any other port.
+
+### Microchip LAN969x
+
+The Laguna family of switch chips, in the Tactical 1000 and the
+EV23X71A, is managed by the `sparx5` driver.  The classification and
+remarking tables are reached through DCB as on Marvell, and every stage
+runs in the fabric, the credit-based and time-aware shapers included.
+
+| Stage                   | On LAN969x                                              |
+|-------------------------|---------------------------------------------------------|
+| Trust orders            | `pcp`, `dscp` and `dscp-pcp`                            |
+| `pcp-map`               | Per port, as is `default-priority`                      |
+| `dscp-map`              | One table for the chip, written by the ports that trust DSCP; the port configured last defines it |
+| `remark pcp`            | Per port, from the priority                             |
+| `remark dscp`           | One table for the chip, defined the same way by the ports that remark DSCP |
+| Traffic classes         | Eight per port, chosen by the ingress port, see below   |
+| Transmission selection  | Strict priority and Deficit Weighted Round Robin (DWRR) with the `bandwidth` shares as weights, in 31 steps relative to the smallest share |
+| `rate-limit`            | The port's own shaper, rate in steps of 40 kbit/s, burst in steps of 4 KiB up to 508 KiB |
+| Credit-based shaper     | One per queue, idle slope in steps of 4 kbit/s.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
+| Time-aware shaper       | One gate control list per port, limits in the next table |
+/// table-caption
+QoS offload on LAN969x.
+///
+
+Give the ports that trust DSCP one `dscp-map`, and the ports that remark
+DSCP one `remark dscp` setting, since the chip holds one table of each.
+
+The fabric has no table of its own between priority and queue: a frame
+is queued, on every port it leaves by, in the class its ingress port
+assigned it.  The `traffic-class-table` is therefore applied by the
+ingress classification and undone by the egress remarking, so a table
+that puts several priorities in one class remarks them all with the
+lowest of those priorities.
+
+| Gate control list     | On LAN969x                                              |
+|-----------------------|---------------------------------------------------------|
+| Entries               | Up to 3000, from a memory shared by all ports            |
+| Cycle time            | 1 µs to 999 999 999 ns                                   |
+| Interval              | 1 µs to 999 999 999 ns, and the intervals may not exceed the cycle |
+| Tick granularity      | 1 ns                                                     |
+| Cycle time extension  | Not supported                                            |
+| Base time             | From the switch clock; one in the past is moved forward by whole cycles |
+| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening |
+| Classes under gates   | Served strictly; weighted classes and a `rate-limit` are refused |
+/// table-caption
+Time-aware shaper limits on LAN969x.  Each port reports them under
+`gate-parameter-table` as `supported-list-max`, `supported-cycle-max`,
+`supported-interval-max` and `tick-granularity`.
+///
 
 
 ## VLAN Interfaces

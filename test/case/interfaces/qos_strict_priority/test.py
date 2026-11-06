@@ -22,12 +22,13 @@ default.  Three measurements, in this order:
  - starve: EF raised to 120 percent of the port on its own leaves CS1
    below 5 percent of the served datagrams
 
-The low flow must lose more than a tenth of its frames in every
-measurement; a port that was never full proves nothing.  The test's own
-iperf3 control traffic, DSCP 0, is classified to priority 7 so the
-contest never cuts it off.  Skipped on a switch fabric whose scheduler
-is not offloaded, where forwarded frames never meet the configured
-algorithm.
+The low flow must be held back by more than a tenth of what it offers
+in every measurement; a port that was never full proves nothing.
+Shares come from the middle seconds of the flows, and the test's own
+iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
+class, so a talker's end-of-test message leaves the port behind its
+last datagram.  Skipped on a switch fabric whose scheduler is not
+offloaded, where forwarded frames never meet the configured algorithm.
 """
 import infamy
 import infamy.qos as qos
@@ -52,7 +53,7 @@ with infamy.Test() as test:
               f"EF at priority {HIGH}, CS1 at priority {LOW}")
         port.require_offload(test, "transmission-selection")
 
-    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic on top"):
+    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic with CS1"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
@@ -63,7 +64,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": HIGH, "8": LOW})}
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": HIGH, "8": LOW})}
                         }
                     },
                     {
@@ -97,7 +98,7 @@ with infamy.Test() as test:
                     "interface": [{
                         "name": td0,
                         "infix-interfaces:qos": {
-                            "ingress": {"dscp-map": qos.dscp_map(**{"0": 7, "46": ef_prio,
+                            "ingress": {"dscp-map": qos.dscp_map(**{"0": LOW, "46": ef_prio,
                                                                      "8": cs1_prio})}
                         }
                     }]
@@ -114,8 +115,7 @@ with infamy.Test() as test:
             total = qos.run_flows(ns0, ns1, "192.168.20.2", flows)
             high, low = flows
             print(f"shares: EF {high.share(total):.1f}%, CS1 {low.share(total):.1f}%")
-            assert low.result["lost_percent"] > 10, \
-                f"the low priority flow lost {low.result['lost_percent']:.1f}%, the port was never full"
+            low.require_backlog()
             return high, low, total
 
         with test.step("Baseline: both flows at one priority, 80 percent each, expect neither starved"):

@@ -1,12 +1,17 @@
 package schema
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/openconfig/goyang/pkg/yang"
+)
 
 // IdentityOption is a schema-resolved identity/enum value for use in select dropdowns.
 type IdentityOption struct {
-	Value     string // full identity, e.g. "infix-system:clish" — submitted to RESTCONF
-	Label     string // display label with module prefix stripped, e.g. "clish"
-	IsDefault bool   // true if this matches the leaf's YANG default
+	Value       string // full identity, e.g. "infix-system:clish" — submitted to RESTCONF
+	Label       string // display label with module prefix stripped, e.g. "clish"
+	Description string // the enum's or identity's YANG description
+	IsDefault   bool   // true if this matches the leaf's YANG default
 }
 
 // StripModulePrefix strips the "module:" prefix from an identity or enum value.
@@ -34,15 +39,85 @@ func OptionsFor(mgr *Manager, path string) []IdentityOption {
 	// An identity default is written with the module's own prefix, or none
 	// at all, so only the name tells.
 	def := StripModulePrefix(node.Default)
+	desc := valueDescriptions(mgr, path)
 	opts := make([]IdentityOption, 0, len(values))
 	for _, v := range values {
 		opts = append(opts, IdentityOption{
-			Value:     v,
-			Label:     StripModulePrefix(v),
-			IsDefault: def != "" && StripModulePrefix(v) == def,
+			Value:       v,
+			Label:       StripModulePrefix(v),
+			Description: Reflow(desc[StripModulePrefix(v)]),
+			IsDefault:   def != "" && StripModulePrefix(v) == def,
 		})
 	}
 	return opts
+}
+
+// OptionDescriptions maps each option's value to its description.
+func OptionDescriptions(opts []IdentityOption) map[string]string {
+	m := make(map[string]string, len(opts))
+	for _, o := range opts {
+		m[o.Value] = o.Description
+	}
+	return m
+}
+
+// valueDescriptions collects the descriptions of a leaf's enum values or
+// derived identities, by bare name.  Enums sit on the type statement that
+// declares them: the leaf's own, or the base of a typedef chain.
+func valueDescriptions(mgr *Manager, path string) map[string]string {
+	e, err := mgr.entryAt(path)
+	if err != nil || e == nil || e.Type == nil {
+		return nil
+	}
+	desc := map[string]string{}
+	if e.Type.IdentityBase != nil {
+		for _, id := range e.Type.IdentityBase.Values {
+			if id.Description != nil {
+				desc[id.Name] = id.Description.Name
+			}
+		}
+		return desc
+	}
+	var t *yang.Type
+	switch n := e.Node.(type) {
+	case *yang.Leaf:
+		t = n.Type
+	case *yang.LeafList:
+		t = n.Type
+	}
+	for t != nil && len(t.Enum) == 0 {
+		next := (*yang.Type)(nil)
+		if t.YangType != nil && t.YangType.Base != t {
+			next = t.YangType.Base
+		}
+		t = next
+	}
+	if t != nil {
+		for _, en := range t.Enum {
+			if en.Description != nil {
+				desc[en.Name] = en.Description.Name
+			}
+		}
+	}
+	return desc
+}
+
+// RangeBounds splits a YANG range such as "1..100" into its ends; a
+// single value or an open end comes back empty on that side.
+func RangeBounds(r string) (lo, hi string) {
+	r = strings.TrimSpace(r)
+	if i := strings.Index(r, ".."); i >= 0 {
+		lo, hi = strings.TrimSpace(r[:i]), strings.TrimSpace(r[i+2:])
+	} else if r != "" {
+		lo, hi = r, r
+	}
+	if lo == "min" {
+		lo = ""
+	}
+	if hi == "max" {
+		hi = ""
+	}
+	return lo, hi
 }
 
 // DescriptionOf returns the YANG description for the leaf at path, or "".
