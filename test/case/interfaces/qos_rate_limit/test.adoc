@@ -14,9 +14,10 @@ to the limit.
 
 A limit that lets more through is not a limit, and a limit that only
 bites on some queues is a scheduler fault dressed up as one.  The test's
-own iperf3 control traffic, DSCP 0, is classified to priority 7 at the
-ingress port.  Skipped on a switch fabric whose driver does not offload
-the rate limit, where forwarded frames never meet the bucket.
+own iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
+class, so a talker's end-of-test message leaves the port behind its
+last datagram.  Skipped on a switch fabric whose driver does not
+offload the rate limit, where forwarded frames never meet the bucket.
 
 ==== Topology
 

@@ -339,8 +339,66 @@ class Flow:
         return 100.0 * self.throughput() / total if total else 0.0
 
 
+def _connected(talker, flows, spread=0.5):
+    """Whether the clients' TCP control and UDP data sockets all came up
+    within @spread seconds of each other"""
+    up = {}
+    start = time.monotonic()
+    while len(up) < len(flows) and time.monotonic() - start < 5:
+        peers = talker.runsh("ss -Htun state established").stdout.split()
+        for f in flows:
+            if f.port not in up and sum(p.endswith(f":{f.port}") for p in peers) >= 2:
+                up[f.port] = time.monotonic()
+    return len(up) == len(flows) and max(up.values()) - min(up.values()) <= spread
+
+
+def _start_flows(talker, listener, dst, flows):
+    """One attempt: the servers, and the datagrams each client offered,
+    None for a client that failed or connected late"""
+    servers = {}
+    for f in flows:
+        servers[f.name] = listener.popen(["iperf3", "-s", "-1", "--json", "-p", str(f.port)],
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         text=True)
+    time.sleep(1)
+
+    clients = {}
+    for f in sorted(flows, key=lambda f: f.tos):
+        clients[f.name] = talker.popen(["iperf3", "-c", dst, "-p", str(f.port), "-u",
+                                        "-b", str(f.rate), "-t", str(f.seconds),
+                                        "-l", str(f.size), "--tos", str(f.tos), "--json"],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       text=True)
+    in_step = _connected(talker, flows)
+
+    offered = {}
+    for f in flows:
+        out, err = clients[f.name].communicate(timeout=f.seconds + 30)
+        sent = json.loads(out or "{}").get("end", {}).get("sum", {}).get("packets")
+        if clients[f.name].returncode or sent is None:
+            print(f"{f.name}: iperf3 client failed: {err.strip() or out.strip()[:200]}")
+        offered[f.name] = sent if in_step else None
+
+    if not in_step:
+        print("iperf3 clients connected too far apart to share their middle seconds")
+    return servers, offered
+
+
 def run_flows(talker, listener, dst, flows):
     """Run the flows at once, one server and one client process each
+
+    The listener counts until the talker's end-of-test message reaches
+    it over the iperf3 control connection, DSCP 0.  The DUT must
+    classify that traffic behind the data, into the lowest class a
+    flow loads: the message then follows the last datagram out of the
+    port, every datagram the port let through is counted, and the loss
+    is what the port dropped.
+
+    That class starves under a strict class the port cannot drain, so
+    a client still connecting when the data of another fills the port
+    never gets through.  The clients start back to back, lowest marking
+    first, and the flows run again when one fails to connect, or connects
+    so late that the flows' middle seconds no longer line up.
 
     The steady state is the middle seconds of a flow, after the queues
     filled and before the talkers stopped.  Shares and throughput are
@@ -352,27 +410,15 @@ def run_flows(talker, listener, dst, flows):
     payload bit rate.  Returns the total steady-state payload bit rate
     across the flows.
     """
-    servers = {}
-    for f in flows:
-        servers[f.name] = listener.popen(["iperf3", "-s", "-1", "--json", "-p", str(f.port)],
-                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                         text=True)
-    time.sleep(1)
-
-    clients = {}
-    for f in flows:
-        clients[f.name] = talker.popen(["iperf3", "-c", dst, "-p", str(f.port), "-u",
-                                        "-b", str(f.rate), "-t", str(f.seconds),
-                                        "-l", str(f.size), "--tos", str(f.tos), "--json"],
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       text=True)
-
-    offered = {}
-    for f in flows:
-        out, err = clients[f.name].communicate(timeout=f.seconds + 30)
-        if clients[f.name].returncode:
-            print(f"{f.name}: iperf3 client failed: {err.strip() or out.strip()[:200]}")
-        offered[f.name] = json.loads(out)["end"]["sum"]["packets"]
+    for _ in range(3):
+        servers, offered = _start_flows(talker, listener, dst, flows)
+        if None not in offered.values():
+            break
+        for server in servers.values():
+            server.kill()
+            server.communicate()
+    else:
+        raise RuntimeError("iperf3 clients failed to connect together three times")
 
     total = 0.0
     for f in flows:

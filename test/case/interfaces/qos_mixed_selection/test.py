@@ -15,10 +15,11 @@ EF offers 40 percent of what the port drains, the two weighted talkers
 always have a backlog.  EF must arrive intact, and the two weighted
 flows must divide what EF leaves 2:1, within five points, both of them
 held back by more than a tenth of what they offer.  Shares come from
-the middle seconds of the flows.  The test's own iperf3 control
-traffic, DSCP 0, is classified to priority 7.  Skipped on a switch
-fabric whose scheduler is not offloaded, where forwarded frames never
-meet the configured algorithm.
+the middle seconds of the flows, and the test's own iperf3 control
+traffic, DSCP 0, rides with CS1 in the lowest loaded class, so a
+talker's end-of-test message leaves the port behind its last datagram.
+Skipped on a switch fabric whose scheduler is not offloaded, where
+forwarded frames never meet the configured algorithm.
 """
 import infamy
 import infamy.qos as qos
@@ -59,7 +60,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": STRICT,
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": STRICT,
                                                                      "18": HIGH, "8": LOW})}
                         }
                     },
