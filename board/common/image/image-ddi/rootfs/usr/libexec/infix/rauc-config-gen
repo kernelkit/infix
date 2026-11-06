@@ -5,7 +5,7 @@
 {
     cat <<EOF
 [system]
-compatible=${IMAGE_ID}
+compatible=${INFIX_COMPATIBLE}
 bootloader=barebox
 barebox-dtbpath=/etc/barebox/state.dtb
 data-directory=/var/lib/rauc

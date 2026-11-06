@@ -89,6 +89,9 @@ rm -f "$TARGET_DIR/etc/os-release"
     if [ -n "$IX_DESC" ]; then
 	echo "INFIX_DESC=\"$IX_DESC\""
     fi
+    if [ -n "$IX_COMPATIBLE" ]; then
+	echo "INFIX_COMPATIBLE=\"$IX_COMPATIBLE\""
+    fi
 } > "$TARGET_DIR/etc/os-release"
 
 if [ -f "$TARGET_DIR"/loader/entries/os.conf ]; then
