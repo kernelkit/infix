@@ -1,0 +1,107 @@
+From c0b36464b3e45cd00436f38e1737211e7d327534 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 6 Nov 2026 13:33:31 +0100
+Subject: [PATCH] net: sparx5: round the DWRR weights to the costs the element
+ holds
+Organization: Wires
+
+The scheduler serves a weighted input in inverse proportion to a cost
+of 1 to 32.  The driver scaled every weight to the smallest one at the
+biggest cost, so the others were rounded coarsely: 60:30:5:5 became
+3:5:32:32 and the two big classes shared 5:3 instead of 2:1.
+
+Try every scale and keep the one whose rounded costs stray least from
+the weights; 60:30:5:5 is then 2:4:24:24, exact.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 56 +++++++++++++------
+ 1 file changed, 39 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index d14210c08852..63cbb1d3c986 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -366,10 +366,43 @@ static int sparx5_shaper_conf_set(struct sparx5_port *port,
+ 	return 0;
+ }
+ 
+-static u32 sparx5_weight_to_hw_cost(u32 weight_min, u32 weight)
++/* The element serves a weighted input in inverse proportion to its cost,
++ * 1 to 32, held as cost - 1.  The scale is the cost of the smallest
++ * weight: the biggest scale rounds the other costs coarsest, 60:30:5:5
++ * at scale 32 becomes 3:5:32:32, a 5:3 split, where scale 24 gives
++ * 2:4:24:24.  Try every scale and keep the one whose costs stray least
++ * from the weights.
++ */
++static void sparx5_dwrr_cost_set(struct sparx5_dwrr *dwrr, const u32 *weight)
+ {
+-	return ((((SPX5_DWRR_COST_MAX << 4) * weight_min / weight) + 8) >> 4) -
+-	       1;
++	u32 w_min = U32_MAX, w_max = 0, best = U32_MAX;
++	u32 scale, ref, err, i;
++	u8 cost[SPX5_PRIOS];
++
++	if (!dwrr->count)
++		return;
++
++	for (i = 0; i < dwrr->count; i++) {
++		w_min = min(w_min, weight[i]);
++		w_max = max(w_max, weight[i]);
++	}
++
++	for (scale = SPX5_DWRR_COST_MAX + 1; scale > 0; scale--) {
++		ref = scale * w_min;
++		err = 0;
++		for (i = 0; i < dwrr->count; i++) {
++			cost[i] = max(DIV_ROUND_CLOSEST(ref, weight[i]), 1U);
++			err = max(err, abs_diff(cost[i] * weight[i], ref) * 1000 / ref);
++		}
++		if (err < best) {
++			best = err;
++			for (i = 0; i < dwrr->count; i++)
++				dwrr->cost[i] = cost[i] - 1;
++		}
++		/* A smaller scale cannot resolve the biggest weight */
++		if (ref <= w_max)
++			break;
++	}
+ }
+ 
+ static int sparx5_dwrr_conf_set(struct sparx5_port *port,
+@@ -626,18 +659,10 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		      struct tc_ets_qopt_offload_replace_params *params)
+ {
+ 	struct sparx5_dwrr dwrr = {0};
+-	/* Minimum weight for each iteration */
+-	unsigned int w_min = 100;
++	u32 weight[SPX5_PRIOS];
+ 	u8 prio_tc[SPX5_PRIOS];
+ 	int i, err;
+ 
+-	/* Find minimum weight for all dwrr bands */
+-	for (i = 0; i < SPX5_PRIOS; i++) {
+-		if (params->quanta[i] == 0)
+-			continue;
+-		w_min = min(w_min, params->weights[i]);
+-	}
+-
+ 	for (i = 0; i < SPX5_PRIOS; i++) {
+ 		/* Strict band; skip */
+ 		if (params->quanta[i] == 0)
+@@ -648,13 +673,10 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		/* On the sparx5, bands with higher indexes are preferred and
+ 		 * arbitrated strict. Strict bands are put in the lower indexes,
+ 		 * by tc, so we reverse the bands here.
+-		 *
+-		 * Also convert the weight to something the hardware
+-		 * understands.
+ 		 */
+-		dwrr.cost[SPX5_PRIOS - i - 1] =
+-			sparx5_weight_to_hw_cost(w_min, params->weights[i]);
++		weight[SPX5_PRIOS - i - 1] = params->weights[i];
+ 	}
++	sparx5_dwrr_cost_set(&dwrr, weight);
+ 
+ 	err = sparx5_dwrr_conf_set(port, &dwrr);
+ 	if (err)
