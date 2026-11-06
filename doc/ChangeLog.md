@@ -46,6 +46,9 @@ All notable changes to the project are documented in this file.
 - A container `command` containing `$(...)` or `$VAR` was
   expanded on the host before the container started.  The command now
   reaches the container exactly as configured.  Reported by Dave Seddon
+- An interface handed to a container could be renamed from inside the
+  container to a string that the host then ran as a command.  Such names
+  are now rejected.  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh

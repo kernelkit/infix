@@ -356,20 +356,6 @@ static const struct eth_counter eth_counters[] = {
 	{ "out-good-octets",              { { "eth-mac", "OctetsTransmittedOK" } } },
 };
 
-static bool valid_ifname(const char *name)
-{
-	size_t len = strnlen(name, IFNAMSIZ);
-
-	if (!len || len >= IFNAMSIZ)
-		return false;
-	for (; *name; name++) {
-		if (!isalnum(*name) && !strchr("._-", *name))
-			return false;
-	}
-
-	return true;
-}
-
 /* The get-statistics action, the IEEE 802.3 counters ethtool reads from the port */
 static int ethernet_get_statistics(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
 				   const struct lyd_node *input, sr_event_t event, uint32_t request_id,

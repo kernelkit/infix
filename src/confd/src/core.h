@@ -240,6 +240,7 @@ int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 const char *rpc_user(sr_session_ctx_t *session, const char **via);
+bool valid_ifname(const char *name);
 int fputq(const char *str, FILE *fp);
 void fputqw(const char *str, FILE *fp);
 FILE *fopenp(const char *path, mode_t mode, const char *group);

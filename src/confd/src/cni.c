@@ -56,7 +56,10 @@ static char *cni_find_ifalias(pid_t pid, const char *ifname)
 	buf[0] = 0;
 	if (fgets(buf, sizeof(buf), pp)) {
 		chomp(buf);
-		ptr = buf;
+		if (valid_ifname(buf))
+			ptr = buf;
+		else
+			ERROR("Interface %s in container %d has an unsafe name, ignoring", ifname, pid);
 	}
 	pclose(pp);
 
