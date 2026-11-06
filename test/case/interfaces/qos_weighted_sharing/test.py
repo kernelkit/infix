@@ -21,9 +21,10 @@ Two measurements:
  - 2:1, configured as 60 and 30 percent, must move the split to match
 
 Each flow's share of what the port delivers in the middle seconds of
-the flows must land within five points of its configured share of the
-two, and both flows must be held back by more than a tenth of what they
-offer in both measurements; a port that was never full proves nothing.
+the flows must land within ten points of its configured share of the
+two, since a fabric holds its weights in a few steps, and both flows
+must be held back by more than a tenth of what they offer in both
+measurements; a port that was never full proves nothing.
 The test's own iperf3 control traffic, DSCP 0, rides with CS1 in the
 lowest loaded class, so a talker's end-of-test message leaves the port
 behind its last datagram.  Skipped on a switch fabric whose scheduler
@@ -131,7 +132,7 @@ with infamy.Test() as test:
                   f"configured {high}:{low}")
             for flow in flows:
                 flow.require_backlog()
-            assert abs(ef.share(total) - expect) < 5, \
+            assert abs(ef.share(total) - expect) < 10, \
                 f"EF got {ef.share(total):.1f}% of the port, configured {expect:.0f}%"
 
         with test.step("Equal weights, both flows at 80 percent, expect an even split"):
