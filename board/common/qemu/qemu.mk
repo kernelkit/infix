@@ -4,6 +4,10 @@
 #
 ################################################################################
 
+# show-info needs these to name qemu-scripts in the SBOM
+QEMU_SCRIPTS_NAME := qemu-scripts
+QEMU_SCRIPTS_TYPE := rootfs
+
 qemu-scripts-dir := $(pkgdir)/$(if $(IX_IMAGE_DDI),ddi,itb)
 qemu-image := ../$(INFIX_ARTIFACT).$(if $(IX_IMAGE_DDI),raw,qcow2)
 qemu-disk := $(if $(IX_IMAGE_DDI_DISK),../$(INFIX_ARTIFACT).disk)
