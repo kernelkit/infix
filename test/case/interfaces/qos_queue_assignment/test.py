@@ -13,10 +13,12 @@ and the traffic class table on the egress port is all that is under
 test.  A hundred datagrams are sent at each priority, routed through the
 DUT to the listener, and the per-class counters of the egress scheduler
 are read before and after: the class the table names must grow by at
-least that many, and no other class by anywhere near it.  The DUT's own
-chatter, mDNS and neighbour discovery at priority 0 and control frames
-at priority 7, is a handful of frames and stays well below the burst.
-No load, no congestion.
+least that many, and no other class by anywhere near it.  mDNS is
+switched off: the system announces its services for some ten seconds
+after the egress port gets its address, over a hundred frames at
+priority 0.  What remains of its own chatter, neighbour discovery and
+LLDP at priority 0 and control frames at priority 7, is a handful of
+frames.  No load, no congestion.
 """
 import infamy
 import infamy.qos as qos
@@ -46,6 +48,7 @@ with infamy.Test() as test:
         tables["custom"] = ({f"priority{p}": tc for p, tc in enumerate(custom)}, custom)
 
     with test.step("Configure a routed path, tagged ingress with priority from PCP, egress under test"):
+        target.put_config_dicts({"infix-services": {"mdns": {"enabled": False}}})
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
