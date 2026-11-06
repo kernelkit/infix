@@ -6,9 +6,10 @@ Reserve 10 Mbit/s for the top traffic class with the IEEE 802.1Qav
 credit-based shaper and offer three times that through it: what
 arrives at the listener in the middle seconds of the flow must be the
 reservation, within a fifth, since the shaper bounds the class to its
-idle slope.  The port
-reports the reservation back as the operational idle slope, and that
-the shaper runs in the fabric where it forwards in hardware.
+idle slope.  The test's own iperf3 control traffic, DSCP 0, rides in
+the shaped class, behind the data.  The port reports the reservation
+back as the operational idle slope, and that the shaper runs in the
+fabric where it forwards in hardware.
 
 Turning the shaper on takes two nodes in two modules, the algorithm on
 the traffic class and the idle slope in the cbsa table, and one without
@@ -37,7 +38,7 @@ def config(td0, td1, top, egress, cbsa):
                     "infix-interfaces:bridge-port": {"bridge": "br0"},
                     "infix-interfaces:qos": {
                         "ingress": {"trust": "dscp",
-                                    "dscp-map": qos.dscp_map(**{"0": 0, "46": 7})}
+                                    "dscp-map": qos.dscp_map(**{"0": 7, "46": 7})}
                     }
                 },
                 {

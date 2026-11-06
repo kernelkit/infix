@@ -342,6 +342,13 @@ class Flow:
 def run_flows(talker, listener, dst, flows):
     """Run the flows at once, one server and one client process each
 
+    The listener counts until the talker's end-of-test message reaches
+    it over the iperf3 control connection, DSCP 0.  The DUT must
+    classify that traffic behind the data, into the lowest class a
+    flow loads: the message then follows the last datagram out of the
+    port, every datagram the port let through is counted, and the loss
+    is what the port dropped.
+
     The steady state is the middle seconds of a flow, after the queues
     filled and before the talkers stopped.  Shares and throughput are
     measured there, so the queues draining after the talkers stop do
