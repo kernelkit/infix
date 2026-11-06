@@ -22,8 +22,9 @@ default.  Three measurements, in this order:
  - starve: EF raised to 120 percent of the port on its own leaves CS1
    below 5 percent of the served datagrams
 
-The low flow must lose more than a tenth of its frames in every
-measurement; a port that was never full proves nothing.  The test's own
+The low flow must be held back by more than a tenth of what it offers
+in every measurement; a port that was never full proves nothing.
+Shares come from the middle seconds of the flows.  The test's own
 iperf3 control traffic, DSCP 0, is classified to priority 7 so the
 contest never cuts it off.  Skipped on a switch fabric whose scheduler
 is not offloaded, where forwarded frames never meet the configured
@@ -114,8 +115,7 @@ with infamy.Test() as test:
             total = qos.run_flows(ns0, ns1, "192.168.20.2", flows)
             high, low = flows
             print(f"shares: EF {high.share(total):.1f}%, CS1 {low.share(total):.1f}%")
-            assert low.result["lost_percent"] > 10, \
-                f"the low priority flow lost {low.result['lost_percent']:.1f}%, the port was never full"
+            low.require_backlog()
             return high, low, total
 
         with test.step("Baseline: both flows at one priority, 80 percent each, expect neither starved"):

@@ -14,7 +14,8 @@ EF offers 40 percent of what the port drains, the two weighted talkers
 60 percent each, so the port is oversubscribed and both weighted classes
 always have a backlog.  EF must arrive intact, and the two weighted
 flows must divide what EF leaves 2:1, within five points, both of them
-losing more than a tenth of their frames.  The test's own iperf3 control
+held back by more than a tenth of what they offer.  Shares come from
+the middle seconds of the flows.  The test's own iperf3 control
 traffic, DSCP 0, is classified to priority 7.  Skipped on a switch
 fabric whose scheduler is not offloaded, where forwarded frames never
 meet the configured algorithm.
@@ -107,11 +108,10 @@ with infamy.Test() as test:
             assert ef.result["lost_percent"] < 1, \
                 f"EF lost {ef.result['lost']} of {ef.result['offered']} datagrams"
 
-        with test.step("Verify AF21 and CS1 both lost frames and split the rest 2:1"):
+        with test.step("Verify AF21 and CS1 were both held back and split the rest 2:1"):
             for flow in (af21, cs1):
-                assert flow.result["lost_percent"] > 10, \
-                    f"{flow.name} lost {flow.result['lost_percent']:.1f}%, the port was never full"
-            rest = af21.result["packets"] + cs1.result["packets"]
+                flow.require_backlog()
+            rest = af21.throughput() + cs1.throughput()
             af21_share = af21.share(rest)
             print(f"of what EF left: AF21 {af21_share:.1f}%, CS1 {100 - af21_share:.1f}%")
             assert abs(af21_share - 100 * 60 / 90) < 5, \

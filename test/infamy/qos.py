@@ -320,19 +320,37 @@ class Flow:
         self.result = None
 
     def throughput(self):
-        """Payload bit rate that arrived, over the flow's duration"""
-        return 8.0 * self.result["packets"] * self.size / self.seconds
+        """Payload bit rate that arrived in the steady state"""
+        return self.result["steady"]
+
+    def shortfall(self):
+        """Share of the offered rate the port held back in the steady state"""
+        return 1.0 - self.throughput() / self.rate
+
+    def require_backlog(self, share=0.1):
+        """The port must hold back this share of the flow; one that was
+        never full proves nothing"""
+        assert self.shortfall() > share, \
+            f"{self.name} got {self.throughput() / 1e6:.2f} of the " \
+            f"{self.rate / 1e6:.2f} Mbit/s it offered, the port was never full"
 
     def share(self, total):
-        return 100.0 * self.result["packets"] / total if total else 0.0
+        """Percent of total, the steady-state bit rate of a set of flows"""
+        return 100.0 * self.throughput() / total if total else 0.0
 
 
 def run_flows(talker, listener, dst, flows):
     """Run the flows at once, one server and one client process each
 
-    Fills in flow.result from the listener side: bytes and packets
-    received, lost packets and the loss in percent.  Returns the total
-    datagrams received across the flows.
+    The steady state is the middle seconds of a flow, after the queues
+    filled and before the talkers stopped.  Shares and throughput are
+    measured there, so the queues draining after the talkers stop do
+    not count towards them.
+
+    Fills in flow.result from the listener side: datagrams offered and
+    received, lost datagrams, the loss in percent and the steady-state
+    payload bit rate.  Returns the total steady-state payload bit rate
+    across the flows.
     """
     servers = {}
     for f in flows:
@@ -356,10 +374,11 @@ def run_flows(talker, listener, dst, flows):
             print(f"{f.name}: iperf3 client failed: {err.strip() or out.strip()[:200]}")
         offered[f.name] = json.loads(out)["end"]["sum"]["packets"]
 
-    total = 0
+    total = 0.0
     for f in flows:
         out, err = servers[f.name].communicate(timeout=30)
-        end = json.loads(out)["end"]
+        report = json.loads(out)
+        end = report["end"]
         got = end.get("sum_received") or end["sum"]
         # iperf3's receiver keeps its packet count as the highest sequence
         # number seen, so it hides every loss but a tail drop.  The byte
@@ -368,12 +387,15 @@ def run_flows(talker, listener, dst, flows):
         sent = offered[f.name]
         received = got["bytes"] // f.size
         lost = max(sent - received, 0)
-        f.result = {"bytes": got["bytes"], "packets": received,
-                    "offered": sent, "lost": lost,
-                    "lost_percent": 100.0 * lost / sent if sent else 0.0}
-        total += f.result["packets"]
+        middle = report["intervals"][1:f.seconds - 1]
+        steady = 8.0 * sum(iv["sum"]["bytes"] for iv in middle) / len(middle)
+        f.result = {"packets": received, "offered": sent, "lost": lost,
+                    "lost_percent": 100.0 * lost / sent if sent else 0.0,
+                    "steady": steady}
+        total += f.throughput()
         print(f"{f.name}: {f.result['packets']}/{sent} datagrams through, "
-              f"{lost} lost ({f.result['lost_percent']:.1f}%)")
+              f"{lost} lost ({f.result['lost_percent']:.1f}%), "
+              f"{f.throughput() / 1e6:.2f} Mbit/s in the steady state")
 
     return total
 
