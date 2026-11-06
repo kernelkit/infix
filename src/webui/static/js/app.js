@@ -1566,6 +1566,20 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
+    // NACM refused the candidate copy: the page is of no use, say so instead.
+    var configureDenied = false;
+    document.addEventListener('htmx:responseError', function(evt) {
+      var d = evt.detail;
+      if (!d || !d.xhr || d.xhr.status !== 403 ||
+          !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
+      configureDenied = true;
+      var content = document.getElementById('content');
+      if (content) {
+        content.innerHTML = '<div class="alert alert-error">' +
+          'You do not have permission to change the configuration.</div>';
+      }
+    });
+
     // The Configure accordion is open on page load only on a configure
     // page, which the server rendered from the candidate as it was: enter
     // configure mode, then render the page again from the fresh copy.
@@ -1576,6 +1590,7 @@ function markActiveOpt(cls, attr, value) {
       if (content) content.classList.add('cfg-entering');
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
         .then(function() {
+          if (configureDenied) return;
           return htmx.ajax('GET', window.location.pathname + window.location.search,
                            {target: '#content', swap: 'innerHTML'});
         })
@@ -1728,6 +1743,17 @@ function markActiveOpt(cls, attr, value) {
       if (open[key(btn)]) btn.click();
     });
     open = null;
+  });
+})();
+
+// A morph swap keeps a <dialog> node and only strips its open attribute,
+// which leaves the page inert after a modal in Chrome.  Close the dialogs
+// in the target the proper way before the swap.
+(function() {
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    var target = evt.detail && evt.detail.target;
+    if (!target || !target.querySelectorAll) return;
+    target.querySelectorAll('dialog[open]').forEach(function(dlg) { dlg.close(); });
   });
 })();
 
@@ -2441,8 +2467,8 @@ function renderCfgLog() {
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
     cfgLog('ok', msg);
-    var span = findSaveStatusSpan(e);
-    if (span) {
+    function showSaved(span) {
+      if (!span) return;
       span.textContent = '✓ ' + msg;
       span.classList.add('saved');
       setTimeout(function() {
@@ -2450,6 +2476,7 @@ function renderCfgLog() {
         span.classList.remove('saved');
       }, 3000);
     }
+    showSaved(findSaveStatusSpan(e));
 
     // Re-render the whole current tree page from the (now fresh) candidate.
     // The save handlers only WRITE — they don't echo back what confd
@@ -2457,13 +2484,20 @@ function renderCfgLog() {
     // normalised values), and inference can land outside the edited node.
     // Re-fetching the page the user is on surfaces all of it.  Guarded on
     // #yang-detail so curated pages that also emit cfgSaved are unaffected.
+    // The swap replaces the form, so the message is put on the new one.
     var detail = document.getElementById('yang-detail');
     if (detail && window.htmx) {
       var node = (history.state && history.state.yangDetailPath) ||
                  new URLSearchParams(window.location.search).get('node');
+      var form = e.target && e.target.closest && e.target.closest('form');
+      var formKey = form && form.getAttribute('hx-put');
       if (node) {
         htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(node),
-          { target: '#yang-detail', swap: 'innerHTML' });
+          { target: '#yang-detail', swap: 'innerHTML' }).then(function() {
+            if (!formKey) return;
+            var fresh = detail.querySelector('form[hx-put="' + formKey + '"] .cfg-save-status');
+            showSaved(fresh);
+          });
       }
     }
   });

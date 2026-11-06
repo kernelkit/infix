@@ -290,7 +290,24 @@ func (h *ConfigureRoutesHandler) DeleteRoute(w http.ResponseWriter, r *http.Requ
 		renderSaveError(w, err)
 		return
 	}
+	// The last route takes the static protocol instance with it.
+	cpps, err := h.fetchProtocols(r.Context())
+	if err == nil {
+		if st := findInstance(cpps, "infix-routing:static"); st != nil && !hasStaticRoutes(st) {
+			err = h.RC.Delete(r.Context(), candidatePath+staticCPPSuffix)
+		}
+	}
+	if err != nil && !restconf.IsNotFound(err) && !restconf.IsDataMissing(err) {
+		log.Printf("configure routes delete static instance: %v", err)
+		renderSaveError(w, err)
+		return
+	}
 	renderSavedRedirect(w, "Route deleted", "/configure/routes")
+}
+
+func hasStaticRoutes(p *rtProtoJSON) bool {
+	return (p.StaticRoutes.IPv4 != nil && len(p.StaticRoutes.IPv4.Routes) > 0) ||
+		(p.StaticRoutes.IPv6 != nil && len(p.StaticRoutes.IPv6.Routes) > 0)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

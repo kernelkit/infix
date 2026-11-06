@@ -61,6 +61,14 @@ func CapabilitiesFromContext(ctx context.Context) *Capabilities {
 	return caps
 }
 
+// DetectNACMAccess reports whether the user may read the NACM data, which
+// the Users & Groups page is made of.  A denied read comes back as no
+// data, not as an error, and the factory config always has NACM data.
+func DetectNACMAccess(ctx context.Context, rc restconf.Fetcher) bool {
+	var raw json.RawMessage
+	return rc.Get(ctx, "/data/ietf-netconf-acm:nacm", &raw) == nil
+}
+
 // webConfig mirrors the slice of infix-services we need to gate the
 // external web-app shortcuts (console, netbrowse).
 type webConfig struct {

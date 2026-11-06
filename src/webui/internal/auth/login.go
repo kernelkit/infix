@@ -37,7 +37,11 @@ type loginData struct {
 
 // ShowLogin renders the login page (GET /login).
 func (h *LoginHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
-	h.renderLogin(w, r, "")
+	msg := ""
+	if r.URL.Query().Has("expired") {
+		msg = "The login page had expired, please try again."
+	}
+	h.renderLogin(w, r, msg)
 }
 
 // DoLogin validates credentials against RESTCONF and creates a session (POST /login).
@@ -83,6 +87,7 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	// The User's Guide is bundled at build time (a filesystem check, not
 	// config); gate the Help entry on its presence.
 	caps.Features()["docs"] = handlers.DetectDocs()
+	caps.Features()["nacm"] = handlers.DetectNACMAccess(ctx, h.RC)
 
 	// Trigger any post-login hooks (e.g. schema sync) with full credentials.
 	if h.OnLogin != nil {
@@ -124,7 +129,8 @@ func (h *LoginHandler) DoLogout(w http.ResponseWriter, r *http.Request) {
 		Secure:   security.IsSecureRequest(r),
 		SameSite: http.SameSiteLaxMode,
 	})
-	security.ClearToken(w, r)
+	// The CSRF cookie stays: the browser may already have rendered the
+	// login form with it, and a new one is issued at login anyway.
 
 	fullRedirect(w, r, "/login")
 }

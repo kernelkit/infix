@@ -83,17 +83,10 @@ func validToken(token string) bool {
 	return err == nil
 }
 
-// ClearToken removes the CSRF cookie.
-func ClearToken(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   IsSecureRequest(r),
-		SameSite: http.SameSiteStrictMode,
-	})
+// HasCookie reports whether the request carries a CSRF cookie at all.
+func HasCookie(r *http.Request) bool {
+	_, err := r.Cookie(csrfCookieName)
+	return err == nil
 }
 
 // IsSecureRequest returns true for TLS or proxy-terminated HTTPS.

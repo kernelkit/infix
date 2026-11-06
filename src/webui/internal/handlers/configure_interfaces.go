@@ -5,6 +5,7 @@ package handlers
 import (
 	"context"
 	"crypto/ecdh"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -14,7 +15,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -459,7 +459,9 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		log.Printf("configure interfaces: keystore fetch: %v", ksErr)
 	} else {
 		for _, k := range ks.Keystore.AsymmetricKeys.AsymmetricKey {
-			data.WizardAsymKeys = append(data.WizardAsymKeys, k.Name)
+			if isWGKey(k) {
+				data.WizardAsymKeys = append(data.WizardAsymKeys, k.Name)
+			}
 		}
 		for _, k := range ks.Keystore.SymmetricKeys.SymmetricKey {
 			data.WizardSymKeys = append(data.WizardSymKeys, symKeyEntry{
@@ -870,10 +872,8 @@ func (h *ConfigureInterfacesHandler) WizardCreateSymKey(w http.ResponseWriter, r
 	h.renderPSKPicker(w, r, name)
 }
 
-// WizardCreateAsymKey creates an asymmetric key from a PEM private-key
-// blob pasted by the user and returns the refreshed WireGuard private-
-// key picker. Mirrors AddAsymKey in configure_keystore.go but returns a
-// fragment instead of redirecting.
+// WizardCreateAsymKey stores a WireGuard private key pasted by the user
+// and returns the refreshed private-key picker.
 // POST /configure/interfaces/wizard/asym-key
 func (h *ConfigureInterfacesHandler) WizardCreateAsymKey(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -881,28 +881,30 @@ func (h *ConfigureInterfacesHandler) WizardCreateAsymKey(w http.ResponseWriter, 
 		return
 	}
 	name := strings.TrimSpace(r.FormValue("key-name"))
-	privPEM := r.FormValue("key-value")
+	value := strings.TrimSpace(r.FormValue("key-value"))
 	if name == "" {
 		renderSaveError(w, fmt.Errorf("key name is required"))
 		return
 	}
-	if privPEM == "" {
-		renderSaveError(w, fmt.Errorf("private key (PEM) is required"))
+	if value == "" {
+		renderSaveError(w, fmt.Errorf("private key is required"))
 		return
 	}
-	if err := h.putAsymKeyFromPEM(r.Context(), name, privPEM); err != nil {
-		log.Printf("wizard create asym key %q: %v", name, err)
+	priv, err := parseWGPrivateKey(value)
+	if err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.putWGKey(r.Context(), name, priv); err != nil {
+		log.Printf("wizard create wg key %q: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	h.renderWGKeyPicker(w, r, name)
 }
 
-// WizardGenerateWGKey freshly generates a Curve25519 (X25519) keypair
-// using the `wg genkey` tool already shipped on the target, wraps the
-// 32-byte private key in PKCS8 DER via Go's stdlib (crypto/ecdh +
-// x509.MarshalPKCS8PrivateKey), and stores it in the candidate keystore.
-// Returns the refreshed WireGuard private-key picker.
+// WizardGenerateWGKey generates a fresh X25519 key pair, stores it in
+// the candidate keystore and returns the refreshed private-key picker.
 // POST /configure/interfaces/wizard/wg-genkey
 func (h *ConfigureInterfacesHandler) WizardGenerateWGKey(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -914,13 +916,13 @@ func (h *ConfigureInterfacesHandler) WizardGenerateWGKey(w http.ResponseWriter, 
 		renderSaveError(w, fmt.Errorf("key name is required"))
 		return
 	}
-	privPEM, err := generateX25519PEM()
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	if err != nil {
 		log.Printf("wizard wg-genkey: %v", err)
 		renderSaveError(w, fmt.Errorf("generate X25519 key: %v", err))
 		return
 	}
-	if err := h.putAsymKeyFromPEM(r.Context(), name, privPEM); err != nil {
+	if err := h.putWGKey(r.Context(), name, priv); err != nil {
 		log.Printf("wizard wg-genkey put %q: %v", name, err)
 		renderSaveError(w, err)
 		return
@@ -928,56 +930,54 @@ func (h *ConfigureInterfacesHandler) WizardGenerateWGKey(w http.ResponseWriter, 
 	h.renderWGKeyPicker(w, r, name)
 }
 
-// putAsymKeyFromPEM is the shared keystore-PUT path used by both the
-// paste-PEM and generate flows. Decodes the PEM block, derives the
-// public key when possible, and writes the entry to the candidate
-// keystore.
-func (h *ConfigureInterfacesHandler) putAsymKeyFromPEM(ctx context.Context, name, privPEM string) error {
-	block, _ := pem.Decode([]byte(privPEM))
-	if block == nil {
-		return fmt.Errorf("invalid private key PEM: no PEM block found")
+const (
+	x25519PrivateKeyFormat = "infix-crypto-types:x25519-private-key-format"
+	x25519PublicKeyFormat  = "infix-crypto-types:x25519-public-key-format"
+)
+
+// parseWGPrivateKey accepts the base64 string `wg genkey` prints, or a
+// PEM-encoded PKCS#8 X25519 private key.
+func parseWGPrivateKey(value string) (*ecdh.PrivateKey, error) {
+	if block, _ := pem.Decode([]byte(value)); block != nil {
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("invalid private key PEM: %v", err)
+		}
+		priv, ok := key.(*ecdh.PrivateKey)
+		if !ok || priv.Curve() != ecdh.X25519() {
+			return nil, fmt.Errorf("WireGuard needs an X25519 private key")
+		}
+		return priv, nil
 	}
+	raw, err := base64.StdEncoding.DecodeString(value)
+	if err != nil || len(raw) != 32 {
+		return nil, fmt.Errorf("private key must be the base64 output of wg genkey or a PEM X25519 key")
+	}
+	priv, err := ecdh.X25519().NewPrivateKey(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid X25519 private key: %v", err)
+	}
+	return priv, nil
+}
+
+// putWGKey writes an X25519 key pair to the candidate keystore in the
+// raw 32-byte form WireGuard and the keystore model use.
+func (h *ConfigureInterfacesHandler) putWGKey(ctx context.Context, name string, priv *ecdh.PrivateKey) error {
 	keyBody := map[string]any{
 		"name":                  name,
-		"private-key-format":    pemTypeToKeyFormat(block.Type),
-		"cleartext-private-key": base64.StdEncoding.EncodeToString(block.Bytes),
-	}
-	if pubPEM := derivePublicKeyFromDER(block.Bytes, block.Type); pubPEM != "" {
-		if err := applyPublicKey(keyBody, pubPEM); err != nil {
-			return err
-		}
+		"private-key-format":    x25519PrivateKeyFormat,
+		"cleartext-private-key": base64.StdEncoding.EncodeToString(priv.Bytes()),
+		"public-key-format":     x25519PublicKeyFormat,
+		"public-key":            base64.StdEncoding.EncodeToString(priv.PublicKey().Bytes()),
 	}
 	body := map[string]any{"ietf-keystore:asymmetric-key": []map[string]any{keyBody}}
 	path := keystoreCandPath + "/asymmetric-keys/asymmetric-key=" + url.PathEscape(name)
 	return h.RC.Put(ctx, path, body)
 }
 
-// generateX25519PEM runs `wg genkey` to source the 32 raw key bytes
-// (random + Curve25519-clamped by wg's standard implementation) and
-// wraps them in PKCS8 PEM via crypto/ecdh + x509.MarshalPKCS8PrivateKey.
-// Returns the PEM-encoded private key.
-func generateX25519PEM() (string, error) {
-	out, err := exec.Command("wg", "genkey").Output()
-	if err != nil {
-		return "", fmt.Errorf("wg genkey: %w", err)
-	}
-	priv64 := strings.TrimSpace(string(out))
-	privRaw, err := base64.StdEncoding.DecodeString(priv64)
-	if err != nil {
-		return "", fmt.Errorf("decode wg key output: %w", err)
-	}
-	if len(privRaw) != 32 {
-		return "", fmt.Errorf("wg genkey returned %d bytes, expected 32", len(privRaw))
-	}
-	ecdhPriv, err := ecdh.X25519().NewPrivateKey(privRaw)
-	if err != nil {
-		return "", fmt.Errorf("ecdh new key: %w", err)
-	}
-	der, err := x509.MarshalPKCS8PrivateKey(ecdhPriv)
-	if err != nil {
-		return "", fmt.Errorf("marshal pkcs8: %w", err)
-	}
-	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})), nil
+// isWGKey reports whether a keystore entry can back a WireGuard interface.
+func isWGKey(k asymmetricKeyJSON) bool {
+	return k.PrivateKeyFormat == x25519PrivateKeyFormat
 }
 
 func (h *ConfigureInterfacesHandler) renderPSKPicker(w http.ResponseWriter, r *http.Request, selected string) {
@@ -1007,7 +1007,9 @@ func (h *ConfigureInterfacesHandler) renderWGKeyPicker(w http.ResponseWriter, r 
 	ks := h.fetchKeystore(r.Context())
 	var names []string
 	for _, k := range ks.Keystore.AsymmetricKeys.AsymmetricKey {
-		names = append(names, k.Name)
+		if isWGKey(k) {
+			names = append(names, k.Name)
+		}
 	}
 	sort.Strings(names)
 	if !containsString(names, selected) {
@@ -1151,13 +1153,13 @@ func containsRadioName(rs []wifiRadioOption, want string) bool {
 // DeleteInterface removes an interface from running config. For virtual
 // interfaces (bridge, lag, vlan, dummy, …) confd unbinds and tears down the
 // netdev; for physical interfaces it just sets them administratively DOWN.
-// Loopback is rejected at this layer — the UI guards it by TypeSlug too
-// (configure-interfaces.html), but a direct DELETE shouldn't slip through.
+// The system loopback is rejected at this layer — the UI hides its delete
+// button too, but a direct DELETE shouldn't slip through.
 // DELETE /configure/interfaces/{name}
 func (h *ConfigureInterfacesHandler) DeleteInterface(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "lo" || name == "loopback" {
-		renderSaveError(w, fmt.Errorf("loopback interface cannot be deleted"))
+	if name == "lo" {
+		renderSaveError(w, fmt.Errorf("the system loopback cannot be deleted"))
 		return
 	}
 	// Clear other interfaces' references to this one first: detach enslaved

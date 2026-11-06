@@ -545,7 +545,7 @@ func (h *ConfigureUsersHandler) RemoveGroupMember(w http.ResponseWriter, r *http
 		break
 	}
 	if !found {
-		w.WriteHeader(http.StatusOK)
+		renderSavedRedirect(w, userName+" is not in "+groupName, "/configure/users")
 		return
 	}
 
@@ -554,5 +554,5 @@ func (h *ConfigureUsersHandler) RemoveGroupMember(w http.ResponseWriter, r *http
 		renderSaveError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	renderSavedRedirect(w, userName+" removed from "+groupName, "/configure/users")
 }

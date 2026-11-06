@@ -60,7 +60,7 @@
             {{if and (not .ConfigTags) (not .AddrSummary)}}<span class="text-muted">—</span>{{end}}
           </td>
           <td style="text-align:right">
-            {{if ne .TypeSlug "loopback"}}
+            {{if ne .Name "lo"}}
             <button type="button" class="btn-icon btn-icon-danger"
                     hx-delete="/configure/interfaces/{{.Name}}"
                     hx-confirm="Delete interface {{.Name}}?"
@@ -1419,11 +1419,8 @@
         </table>
       </fieldset>
 
-      {{/* WireGuard — private-key references a keystore asymmetric-key by
-           name. The YANG `must` clause additionally enforces X25519 format
-           at commit; we expose all asym keys here and let the backend
-           validate. Inline keystore key creation is a Phase 4 follow-up
-           (same keystore-integration work as the WiFi PSK picker). */}}
+      {{/* WireGuard: the private key is an X25519 keystore entry, the
+           picker lists only those; "+ New" generates or imports one. */}}
       <fieldset class="iface-fields" id="iface-fields-wireguard" hidden disabled>
         <table class="info-table">
           <tr>
@@ -1457,10 +1454,10 @@
                     </td>
                   </tr>
                   <tr>
-                    <th>PEM{{template "field-info" "Optional — paste a PEM-encoded X25519 private key here if you want to import an existing one. Leave empty to generate a fresh keypair via `wg genkey` on the target."}}</th>
+                    <th>Key{{template "field-info" "Optional. Paste the output of wg genkey, or a PEM-encoded X25519 private key, to import an existing key. Leave empty and press Generate for a new key pair."}}</th>
                     <td>
-                      <textarea class="cfg-input cfg-input-mono" name="key-value" rows="6"
-                                placeholder="-----BEGIN PRIVATE KEY-----&#10;… (paste here to import, leave empty to generate) …&#10;-----END PRIVATE KEY-----"></textarea>
+                      <textarea class="cfg-input cfg-input-mono" name="key-value" rows="3"
+                                placeholder="Paste a wg genkey key to import, or leave empty and press Generate"></textarea>
                     </td>
                   </tr>
                 </table>
@@ -1477,7 +1474,7 @@
                           hx-include="closest .ks-create-form"
                           hx-target="#add-iface-wg-key"
                           hx-swap="outerHTML"
-                          data-ks-create-success="add-wg-key-form">Save pasted PEM</button>
+                          data-ks-create-success="add-wg-key-form">Import</button>
                   <button type="button" class="btn btn-sm"
                           data-hide="add-wg-key-form">Cancel</button>
                 </div>

@@ -41,7 +41,6 @@ type hwCompCfgRow struct {
 	Name         string
 	Class        string
 	ClassDisplay string
-	Description  string
 	IsUSB        bool
 	IsWiFi       bool
 	IsGPS        bool
@@ -57,7 +56,6 @@ type hwCompCfgRow struct {
 	// self-contained — Go templates can't pass extra arguments through
 	// {{template}}.
 	BandOptions     []schema.IdentityOption
-	DescDescription string
 	DescAdminState  string
 	DescBand        string
 	DescChannel     string
@@ -115,7 +113,6 @@ func (h *ConfigureHardwareHandler) Overview(w http.ResponseWriter, r *http.Reque
 		compPath := "/ietf-hardware:hardware/component"
 		radioPath := compPath + "/infix-hardware:wifi-radio"
 		data.Desc = map[string]string{
-			"description": schema.DescriptionOf(mgr, compPath+"/description"),
 			"admin-state": schema.DescriptionOf(mgr, compPath+"/state/admin-state"),
 			"channel":     schema.DescriptionOf(mgr, radioPath+"/channel"),
 			"band":        schema.DescriptionOf(mgr, radioPath+"/band"),
@@ -203,8 +200,6 @@ func (h *ConfigureHardwareHandler) buildRow(c hwComponentJSON, class string, dat
 		Name:            c.Name,
 		Class:           class,
 		ClassDisplay:    hwClassDisplay(class),
-		Description:     c.Description,
-		DescDescription: data.Desc["description"],
 		DescAdminState:  data.Desc["admin-state"],
 	}
 	switch class {
@@ -226,7 +221,7 @@ func (h *ConfigureHardwareHandler) buildRow(c hwComponentJSON, class string, dat
 	return row
 }
 
-// SaveUSBPort writes description and admin-state for a USB component.
+// SaveUSBPort writes admin-state for a USB component.
 // Per-leaf PUT so the component-list entry is auto-created when it lived
 // only in operational before — component-level PATCH 404s otherwise.
 // POST /configure/hardware/usb/{name}
@@ -240,11 +235,6 @@ func (h *ConfigureHardwareHandler) SaveUSBPort(w http.ResponseWriter, r *http.Re
 	if r.FormValue("enabled") == "true" {
 		state = adminStateUnlocked
 	}
-	if err := h.saveDescription(r.Context(), name, r.FormValue("description")); err != nil {
-		log.Printf("configure hardware usb %s description: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
 	if err := h.putAdminState(r.Context(), name, state); err != nil {
 		log.Printf("configure hardware usb %s state: %v", name, err)
 		renderSaveError(w, err)
@@ -253,7 +243,7 @@ func (h *ConfigureHardwareHandler) SaveUSBPort(w http.ResponseWriter, r *http.Re
 	renderSavedRedirect(w, name+" "+state, "/configure/hardware")
 }
 
-// SaveWiFiRadio writes description and the wifi-radio container.
+// SaveWiFiRadio writes the wifi-radio container.
 // POST /configure/hardware/wifi/{name}
 func (h *ConfigureHardwareHandler) SaveWiFiRadio(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -266,35 +256,12 @@ func (h *ConfigureHardwareHandler) SaveWiFiRadio(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	if err := h.saveDescription(r.Context(), name, r.FormValue("description")); err != nil {
-		log.Printf("configure hardware wifi %s description: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
 	if err := h.putWiFiRadio(r.Context(), name, radio); err != nil {
 		log.Printf("configure hardware wifi %s: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	renderSavedRedirect(w, "Radio "+name+" saved", "/configure/hardware")
-}
-
-// SaveGPS writes description for an already-configured GPS component. The
-// gps-receiver presence container is the configured signal; once added it
-// is left in place by Save and only removed by DeleteComponent.
-// POST /configure/hardware/gps/{name}
-func (h *ConfigureHardwareHandler) SaveGPS(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	name := r.PathValue("name")
-	if err := h.saveDescription(r.Context(), name, r.FormValue("description")); err != nil {
-		log.Printf("configure hardware gps %s description: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
-	renderSavedRedirect(w, "GPS "+name+" saved", "/configure/hardware")
 }
 
 // CreateHardware adds a detected-but-unconfigured component to running
@@ -404,21 +371,6 @@ func parseWiFiRadio(r *http.Request) (map[string]any, error) {
 		}
 	}
 	return radio, nil
-}
-
-// saveDescription PUTs or DELETEs the description leaf depending on whether
-// the form value is empty — empty means "no user-supplied description", and
-// PUT-ing the empty string would leave a stray empty leaf around.
-func (h *ConfigureHardwareHandler) saveDescription(ctx context.Context, name, desc string) error {
-	desc = strings.TrimSpace(desc)
-	path := hwComponentPath(name) + "/description"
-	if desc == "" {
-		if err := h.RC.Delete(ctx, path); err != nil && !restconf.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}
-	return h.RC.Put(ctx, path, map[string]any{"ietf-hardware:description": desc})
 }
 
 // DeleteComponent removes the entire running-config entry for a component,

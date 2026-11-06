@@ -3,6 +3,7 @@
 package server
 
 import (
+	"log"
 	"maps"
 	"net/http"
 	"net/url"
@@ -85,11 +86,21 @@ func csrfMiddleware(next http.Handler) http.Handler {
 		}
 
 		if !sameOrigin(r) {
+			log.Printf("csrf: refused %s %s: origin %q referer %q host %q",
+				r.Method, r.URL.Path, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Host)
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
 		if !validCSRF(r, token) {
+			log.Printf("csrf: refused %s %s: token mismatch, cookie %v, form token %v",
+				r.Method, r.URL.Path, security.HasCookie(r), r.FormValue("csrf") != "")
+			// A login form rendered before the cookie changed, say in
+			// another tab: a fresh form is the way forward, not a dead end.
+			if r.URL.Path == "/login" {
+				http.Redirect(w, r, "/login?expired=1", http.StatusSeeOther)
+				return
+			}
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}

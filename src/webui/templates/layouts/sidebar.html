@@ -49,6 +49,7 @@
             Services
           </a>
         </li>
+        {{if and .Capabilities (.Capabilities.Has "nacm")}}
         <li>
           <a href="/nacm"
              hx-get="/nacm"
@@ -59,6 +60,7 @@
             Users &amp; Groups
           </a>
         </li>
+        {{end}}
       </ul>
 
       <div class="nav-section-label">Network</div>
