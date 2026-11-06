@@ -619,7 +619,7 @@ required to configure the boot order.
 | **Parameter** | **Value**         |
 |---------------|-------------------|
 | Required      | Yes               |
-| Size          | >= 256 MiB        |
+| Size          | >= 512 MiB        |
 | Format        | Squash filesystem |
 
 Holds the [SquashFS Image](#squashfs-image). Two copies exist so that
