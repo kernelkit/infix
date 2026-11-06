@@ -28,16 +28,16 @@ Annex I names a traffic type for each priority.  Higher is better,
 except that priority 1 is meant for traffic that may yield to best
 effort:
 
-| Priority | Traffic type          |
-|---------:|-----------------------|
-| 7        | Network Control       |
-| 6        | Internetwork Control  |
-| 5        | Voice                 |
-| 4        | Video                 |
-| 3        | Critical Applications |
-| 2        | Excellent Effort      |
-| 1        | Background            |
-| 0        | Best Effort (default) |
+|    Priority | Acronym | Traffic type          |
+|------------:|--------:|-----------------------|
+|           7 |      NC | Network Control       |
+|           6 |      IC | Internetwork Control  |
+|           5 |      VO | Voice                 |
+|           4 |      VI | Video                 |
+|           3 |      CA | Critical Applications |
+|           2 |      EE | Excellent Effort      |
+| 0 (default) |      BE | Best Effort           |
+|           1 |      BK | Background            |
 /// table-caption
 IEEE 802.1Q-2022 Table I-2, traffic types.
 ///
