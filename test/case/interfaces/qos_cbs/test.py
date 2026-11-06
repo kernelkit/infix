@@ -4,10 +4,11 @@ QoS Credit-Based Shaper
 
 Reserve 10 Mbit/s for the top traffic class with the IEEE 802.1Qav
 credit-based shaper and offer three times that through it: what
-arrives at the listener must be the reservation, within a fifth, since
-the shaper bounds the class to its idle slope.  The port reports the
-reservation back as the operational idle slope, and that the shaper
-runs in the fabric where it forwards in hardware.
+arrives at the listener in the middle seconds of the flow must be the
+reservation, within a fifth, since the shaper bounds the class to its
+idle slope.  The port
+reports the reservation back as the operational idle slope, and that
+the shaper runs in the fabric where it forwards in hardware.
 
 Turning the shaper on takes two nodes in two modules, the algorithm on
 the traffic class and the idle slope in the cbsa table, and one without
