@@ -27,6 +27,18 @@
             Hardware
           </a>
         </li>
+        {{if and .Capabilities (.Capabilities.Has "alarms")}}
+        <li>
+          <a href="/alarms"
+             hx-get="/alarms"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "alarms"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/alarms.svg')"></span>
+            Alarms
+          </a>
+        </li>
+        {{end}}
         {{if and .Capabilities (.Capabilities.Has "containers")}}
         <li>
           <a href="/containers"

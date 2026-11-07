@@ -49,8 +49,9 @@ Each is explained in the doc named above; these are the ones that come back in r
 - Discuss YANG changes with the core team first. At most one new revision per release
   cycle. Description first line is a short complete sentence, then a blank line.
 - A package patch is a commit on the `<version>-kkit` branch of a `kernelkit/` fork of
-  the project, `patches/<pkg>/` is only its `git format-patch` export. Never hand-edit a
-  patch file; fix the commit, regenerate the series, push the branch. A new or changed
+  the project, `patches/<pkg>/` is only its `git format-patch` export. The recipe pins
+  the upstream site and version, never a fork commit. Never hand-edit a patch file; fix
+  the commit, regenerate the series, push the branch. A new or changed
   file in `patches/` needs `<pkg>-dirclean`, `-rebuild` misses it.
 - Tests are the specification: one action or check per step, concrete values, literal
   strings. A failing test that encodes the real use case beats a green one bent to pass.

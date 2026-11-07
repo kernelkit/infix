@@ -1,0 +1,117 @@
+{{define "alarms.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "alarm-rows"}}
+{{range .}}
+<tr class="alarm-row {{if .Cleared}}alarm-cleared{{end}}">
+  <td><span class="badge badge-{{.Severity}}{{if .Cleared}} badge-muted{{end}}">{{.Severity}}</span></td>
+  <td>{{.State}}</td>
+  <td title="{{.Resource}}">{{if .Link}}<a href="{{.Link}}" hx-get="{{.Link}}" hx-target="#content" hx-push-url="true">{{.Name}}</a>{{else}}{{.Name}}{{end}}</td>
+  <td title="{{.TypeID}}">{{.Type}}{{if .Qualifier}} ({{.Qualifier}}){{end}}</td>
+  <td class="alarm-text">{{.TextHTML}}</td>
+  <td class="num" title="Created {{.Created}}, last change {{.LastChanged}}">{{.Changed}}</td>
+  <td class="alarm-actions">
+    {{if .Shelf}}
+    <span class="text-muted" title="Shelf">{{.Shelf}}</span>
+    {{else}}
+    {{if ne .State "ack"}}{{if ne .State "closed"}}
+    <button class="btn btn-sm btn-outline" hx-post="/alarms/state" hx-target="#content"
+            hx-vals="{{.AckVals}}" title="Someone is dealing with it">Ack</button>
+    {{end}}{{end}}
+    {{if ne .State "closed"}}
+    <button class="btn btn-sm btn-outline" hx-post="/alarms/state" hx-target="#content"
+            hx-vals="{{.CloseVals}}" title="Dealt with, may be purged">Close</button>
+    {{end}}
+    {{if and .External (not .Cleared)}}
+    <button class="btn btn-sm btn-outline" hx-post="/alarms/clear" hx-target="#content"
+            hx-vals="{{.ClearVals}}" hx-confirm="Clear the alarm on {{.Resource}}?">Clear</button>
+    {{end}}
+    {{end}}
+  </td>
+</tr>
+{{if .History}}
+<tr class="alarm-history {{if .Cleared}}alarm-cleared{{end}}">
+  <td></td>
+  <td colspan="6">
+    {{range .History}}<div class="text-muted"><span class="num" title="{{.Time}}">{{.When}}</span> {{.State}} by {{.Operator}}{{if .Text}}: {{.Text}}{{end}}</div>{{end}}
+  </td>
+</tr>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+{{if .Notice}}
+<div class="alert alert-success">{{.Notice}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">Alarms
+    {{if .Active}}<span class="badge badge-count">{{.Active}} active</span>{{end}}
+    <span class="card-header-action">
+      {{if .Open}}
+      <button class="btn btn-sm btn-outline" hx-post="/alarms/close-all" hx-target="#content"
+              hx-confirm="Close every active alarm? They stay listed until cleared and purged."
+              title="Dealt with, all of them">Close all</button>
+      {{end}}
+      <button class="btn btn-sm btn-outline" hx-post="/alarms/purge" hx-target="#content"
+              hx-confirm="Remove every cleared alarm from the list?">Purge cleared</button>
+      <a href="/configure/tree?path=/ietf-alarms:alarms"
+         hx-get="/configure/tree?path=/ietf-alarms:alarms"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline">Shelves &rarr;</a>
+    </span>
+  </div>
+  {{if .Alarms}}
+  <div class="data-table-wrap">
+    <table class="data-table alarm-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>State</th>
+          <th>Resource</th>
+          <th>Type</th>
+          <th>Text</th>
+          <th>Last change</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{template "alarm-rows" .Alarms}}
+      </tbody>
+    </table>
+  </div>
+  {{else if not .Error}}
+  <p class="empty-message">No alarms.</p>
+  {{end}}
+</section>
+
+{{if .Shelved}}
+<section class="info-card">
+  <div class="card-header">Shelved</div>
+  <div class="data-table-wrap">
+    <table class="data-table alarm-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>State</th>
+          <th>Resource</th>
+          <th>Type</th>
+          <th>Text</th>
+          <th>Last change</th>
+          <th>Shelf</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{template "alarm-rows" .Shelved}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}
+{{end}}

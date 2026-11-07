@@ -1,0 +1,73 @@
+#!/bin/sh
+# Acknowledge or close an alarm from the CLI, resolving its type from
+# the alarm files when the resource is unambiguous.
+#
+#   alarm-state <ack|closed> <resource> [-t type] [-q qualifier] [-m text] [-n]
+#
+# Runs the set-operator-state action as $KLISH_USER, so NACM applies.
+# With -n the rpc command is printed instead of run.
+
+usage()
+{
+    echo "usage: $(basename "$0") <ack|closed> <resource> [-t type] [-q qualifier] [-m text]" >&2
+    exit 1
+}
+
+dir=${ALARM_DIR:-/run/alarm}
+state=$1; resource=$2
+[ -n "$state" ] && [ -n "$resource" ] || usage
+shift 2
+
+type= qualifier= text= dry=
+while [ $# -gt 0 ]; do
+    case $1 in
+	-t) type=$2; shift ;;
+	-q) qualifier=$2; shift ;;
+	-m) text=$2; shift ;;
+	-n) dry=1 ;;
+	*) usage ;;
+    esac
+    shift
+done
+
+name=$resource${qualifier:+@$qualifier}
+if [ -z "$type" ]; then
+    set --
+    for f in "$dir"/entry/*/"$name"; do
+	[ -f "$f" ] && set -- "$@" "$(basename "$(dirname "$f")")"
+    done
+    case $# in
+	0) echo "No such alarm: $name"; exit 1 ;;
+	1) type=$1 ;;
+	*) echo "Alarm $name exists for several types ($*), select one with 'type'"; exit 1 ;;
+    esac
+elif [ ! -f "$dir/entry/$type/$name" ]; then
+    echo "No such alarm: $name of type $type"
+    exit 1
+fi
+
+# A shelved alarm is not in the alarm list, so it has no operator state
+shelf=$(jq -r '.shelf // empty' "$dir/entry/$type/$name" 2>/dev/null)
+if [ -n "$shelf" ]; then
+    echo "Alarm $name ($type) is shelved by '$shelf', remove the shelf first"
+    exit 1
+fi
+
+# A link-down alarm names its interface by instance-identifier, which
+# holds single quotes, so the predicate is double quoted
+full=$(jq -r '.resource // empty' "$dir/entry/$type/$name" 2>/dev/null)
+path="/ietf-alarms:alarms/alarm-list/alarm[resource=\"${full:-$resource}\"][alarm-type-id='infix-alarms:$type'][alarm-type-qualifier='$qualifier']/set-operator-state"
+set -- rpc "$path" state "$state"
+[ -n "$text" ] && set -- "$@" text "$text"
+[ -n "$KLISH_USER" ] && set -- doas -u "$KLISH_USER" "$@"
+
+if [ -n "$dry" ]; then
+    echo "$@"
+    exit 0
+fi
+
+"$@" || exit 1
+case $state in
+    ack)    echo "Alarm $name ($type) acknowledged." ;;
+    closed) echo "Alarm $name ($type) closed." ;;
+esac

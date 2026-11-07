@@ -810,6 +810,19 @@ def routes(args: List[str]):
     cli_pretty(data, "show-routing-table", "-i", ip_version)
 
 
+def alarms(args: List[str]):
+    data = get_json("/ietf-alarms:alarms")
+    if not data:
+        print("No alarm data retrieved.")
+        return
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    opts = ["-s"] if "shelved" in args else []
+    opts += [a for a in args if a != "shelved"][:1]
+    cli_pretty(data, "show-alarms", *opts)
+
+
 def lldp(args: List[str]):
     data = get_json("/ieee802-dot1ab-lldp:lldp")
     if not data:
@@ -1058,6 +1071,7 @@ def ptp(args: List[str]) -> None:
 
 def execute_command(command: str, args: List[str]):
     command_mapping = {
+        'alarms': alarms,
         'bfd': bfd,
         'boot-order': boot_order,
         'container': container,

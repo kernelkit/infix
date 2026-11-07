@@ -8,6 +8,16 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- New alarm list, RFC 8632 `ietf-alarms`, see [Alarms][alarms].  The
+  device raises an alarm when the startup configuration fails to apply,
+  when it boots the fallback software slot, when the other software
+  partition is out of date, when an enabled port has no link, and when a scheduled update check finds a new release, cannot
+  read the update source, or an unattended update fails; scripts and external
+  systems raise their own with the new `raise-alarm` and `clear-alarm`
+  operations or by creating a file in `/run/alarm/active/external/`.
+  Alarms can be acknowledged, closed, shelved and purged from the CLI,
+  the WebUI and the management protocols, and the fault LED follows the
+  list on boards that have one
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
@@ -250,6 +260,7 @@ All notable changes to the project are documented in this file.
 [lan969x]: https://github.com/kernelkit/infix/blob/main/board/aarch64/microchip-lan969x/README.md
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [modem]: https://www.kernelkit.org/infix/latest/modem/
+[alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port

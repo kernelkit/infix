@@ -1,0 +1,13 @@
+:testgroup:
+== Alarms
+
+Tests for the alarm list and the alarms the system raises on its own:
+
+ - Raise, acknowledge, clear, shelve and purge an alarm
+ - Link-down alarm on an interface that loses carrier
+
+include::basic/Readme.adoc[]
+
+<<<
+
+include::link_down/Readme.adoc[]

@@ -142,6 +142,43 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<!-- Alarms are files, /run/alarm/entry/<type>/<resource>[@<qualifier>] -->
+<PTYPE name="ALARM_RESOURCES">
+  <COMPL>
+    <ACTION sym="script">
+      for f in /run/alarm/entry/*/*; do [ -f "$f" ] &amp;&amp; echo "${f##*/}"; done | sed 's/@.*//' | sort -u
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="ALARM_EXTERNAL_RESOURCES">
+  <COMPL>
+    <ACTION sym="script">
+      for f in /run/alarm/active/external/*; do [ -f "$f" ] &amp;&amp; echo "${f##*/}"; done | sed 's/@.*//' | sort -u
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="ALARM_TYPES">
+  <COMPL>
+    <ACTION sym="script">
+      for d in /run/alarm/entry/*/; do [ -d "$d" ] &amp;&amp; basename "$d"; done
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="ALARM_QUALIFIERS">
+  <COMPL>
+    <ACTION sym="script">
+      for f in /run/alarm/entry/*/*@*; do [ -f "$f" ] &amp;&amp; echo "${f##*@}"; done | sort -u
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="FIREWALL_ZONES">
   <COMPL>
     <ACTION sym="firewall_zones@infix"/>
@@ -293,6 +330,78 @@
     done
     doas -u "$KLISH_USER" rpc "$@" message "$msg"
   </ACTION>
+</COMMAND>
+
+<COMMAND name="alarm" help="Acknowledge, close, clear or purge alarms" mode="switch">
+  <COMMAND name="ack" help="Acknowledge an alarm, someone is dealing with it">
+    <PARAM name="resource" ptype="/ALARM_RESOURCES" help="What the alarm is about, e.g. eth0 or backup"/>
+    <SWITCH name="optional" min="0" max="3">
+      <COMMAND name="type" help="Alarm type, needed only when the resource has alarms of several types">
+        <PARAM name="alarm_type" ptype="/ALARM_TYPES" help="Alarm type, e.g. link-down"/>
+      </COMMAND>
+      <COMMAND name="qualifier" help="Qualifier the alarm was raised with">
+        <PARAM name="qual" ptype="/ALARM_QUALIFIERS" help="Qualifier"/>
+      </COMMAND>
+      <COMMAND name="text" help="Note for whoever reads the alarm next">
+        <PARAM name="note" ptype="/STRING" help="Note"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script">
+      set -- ack "$KLISH_PARAM_resource"
+      [ -n "$KLISH_PARAM_alarm_type" ] &amp;&amp; set -- "$@" -t "$KLISH_PARAM_alarm_type"
+      [ -n "$KLISH_PARAM_qual" ] &amp;&amp; set -- "$@" -q "$KLISH_PARAM_qual"
+      [ -n "$KLISH_PARAM_note" ] &amp;&amp; set -- "$@" -m "$KLISH_PARAM_note"
+      /usr/libexec/infix/alarm-state "$@"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="close" help="Close an alarm, it is dealt with and may be purged">
+    <PARAM name="resource" ptype="/ALARM_RESOURCES" help="What the alarm is about, e.g. eth0 or backup"/>
+    <SWITCH name="optional" min="0" max="3">
+      <COMMAND name="type" help="Alarm type, needed only when the resource has alarms of several types">
+        <PARAM name="alarm_type" ptype="/ALARM_TYPES" help="Alarm type, e.g. link-down"/>
+      </COMMAND>
+      <COMMAND name="qualifier" help="Qualifier the alarm was raised with">
+        <PARAM name="qual" ptype="/ALARM_QUALIFIERS" help="Qualifier"/>
+      </COMMAND>
+      <COMMAND name="text" help="Note for whoever reads the alarm next">
+        <PARAM name="note" ptype="/STRING" help="Note"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script">
+      set -- closed "$KLISH_PARAM_resource"
+      [ -n "$KLISH_PARAM_alarm_type" ] &amp;&amp; set -- "$@" -t "$KLISH_PARAM_alarm_type"
+      [ -n "$KLISH_PARAM_qual" ] &amp;&amp; set -- "$@" -q "$KLISH_PARAM_qual"
+      [ -n "$KLISH_PARAM_note" ] &amp;&amp; set -- "$@" -m "$KLISH_PARAM_note"
+      /usr/libexec/infix/alarm-state "$@"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="clear" help="Clear an external alarm raised by a script or an external system">
+    <PARAM name="resource" ptype="/ALARM_EXTERNAL_RESOURCES" help="What the alarm is about, e.g. backup"/>
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="qualifier" help="Qualifier the alarm was raised with">
+        <PARAM name="qual" ptype="/ALARM_QUALIFIERS" help="Qualifier"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script">
+      set -- /infix-alarms:clear-alarm resource "$KLISH_PARAM_resource"
+      [ -n "$KLISH_PARAM_qual" ] &amp;&amp; set -- "$@" alarm-type-qualifier "$KLISH_PARAM_qual"
+      doas -u "$KLISH_USER" rpc "$@"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="purge" help="Remove cleared alarms from the list">
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="all" help="Also remove active alarms, they return the next time they change"/>
+    </SWITCH>
+    <ACTION sym="script">
+      status=cleared
+      [ -n "$KLISH_PARAM_all" ] &amp;&amp; status=any
+      doas -u "$KLISH_USER" rpc /ietf-alarms:alarms/alarm-list/purge-alarms alarm-clearance-status $status \
+          | sed -n 's/.*purged-alarms = \(.*\)/Purged \1 alarm(s)/p'
+    </ACTION>
+  </COMMAND>
 </COMMAND>
 
 <COMMAND name="locate" help="Blink LEDs to locate this chassis, default: 60 seconds">
@@ -730,6 +839,20 @@ echo "Public:  $pub"
       show routes $KLISH_PARAM_ip route |pager
       # Deprecated in favor of Cisco likeness
       printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip route' instead.\n"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="alarms" help="Show active and cleared alarms, or one resource in full">
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="shelved" help="Show the alarms hidden by a shelf instead"/>
+      <PARAM name="resource" ptype="/ALARM_RESOURCES" help="Show the alarms on this resource in full">
+        <SWITCH name="optional" min="0" max="1">
+          <COMMAND name="shelved" help="Only the alarms hidden by a shelf"/>
+        </SWITCH>
+      </PARAM>
+    </SWITCH>
+    <ACTION sym="script">
+      show alarms $KLISH_PARAM_resource ${KLISH_PARAM_shelved:+shelved}
     </ACTION>
   </COMMAND>
 

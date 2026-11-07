@@ -13,10 +13,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -234,22 +232,24 @@ type healthItem struct {
 }
 
 // healthItems lists what needs attention: services that are not running,
-// an installed release waiting for a reboot, and a partition left behind.
+// the alarms that are not cleared, an installed release waiting for a
+// reboot, and on a device without alarms a partition left behind.
 // Nothing to report gives one reassuring line.
-func healthItems(services []serviceJSON, sw software) []healthItem {
+func healthItems(services []serviceJSON, sw software, alarms []Alarm) []healthItem {
 	var items []healthItem
 	for _, svc := range services {
 		if serviceStatusClass(svc.Status) == "svc-error" {
 			items = append(items, healthItem{Class: "status-down", Text: svc.Name + " " + svc.Status, Link: "/services"})
 		}
 	}
+	items = append(items, alarmHealthItems(alarms)...)
 	if sw.Update.RebootPending {
 		text := "Reboot to activate the installed release"
 		if sw.Update.Installed != "" {
 			text = "Reboot to activate " + sw.Update.Installed
 		}
 		items = append(items, healthItem{Class: "status-warn", Text: text, Link: "/system-control"})
-	} else if booted := softwareVersion(sw); booted != "" {
+	} else if booted := softwareVersion(sw); booted != "" && alarms == nil {
 		for _, s := range sw.Slot {
 			if s.Class == "rootfs" && s.BootName != sw.Booted && s.Bundle.Version != "" && s.Bundle.Version != booted {
 				items = append(items, healthItem{Class: "status-warn",
@@ -259,7 +259,7 @@ func healthItems(services []serviceJSON, sw software) []healthItem {
 		}
 	}
 	if len(items) == 0 {
-		items = append(items, healthItem{Class: "status-up", Text: "All services running"})
+		items = append(items, healthItem{Class: "status-up", Text: "All services running, no alarms"})
 	}
 	return items
 }
@@ -497,9 +497,6 @@ type dashboardData struct {
 	Ports  []portEntry
 	Health []healthItem
 	// Software-update banner — shown only when an update is available.
-	UpdateAvailable bool
-	UpdateMessage   string // verbatim CLI/login-banner notice
-	UpdateURL       string // release URL extracted from the notice
 	// Software Updates card.
 	Update      *updateEntry
 	UpdateError string // outcome of a Check now that failed
@@ -565,31 +562,6 @@ type diskEntry struct {
 // internetProbe is the address the Connectivity card pings for its Internet
 // reachability row — a well-known, stable anycast resolver.
 const internetProbe = "1.1.1.1"
-
-// updateNoticeFile holds the software-update notice written by
-// /usr/sbin/check-update — the same text the CLI shows at login.
-// A package var so tests can point it elsewhere.
-var updateNoticeFile = "/run/os-update"
-
-var updateURLRe = regexp.MustCompile(`https?://\S+`)
-
-// readUpdateNotice returns the software-update message verbatim (as shown in
-// the CLI login banner) and the release URL extracted from it. Both are empty
-// when no update is pending or the notice file is absent/empty.
-func readUpdateNotice() (msg, url string) {
-	b, err := os.ReadFile(updateNoticeFile)
-	if err != nil {
-		return "", ""
-	}
-	msg = strings.TrimSpace(string(b))
-	if msg == "" {
-		return "", ""
-	}
-	if u := updateURLRe.FindString(msg); u != "" {
-		url = strings.TrimRight(u, ").,;")
-	}
-	return msg, url
-}
 
 // CheckUpdate runs the check-update RPC as the logged-in user and
 // re-renders the Software Updates card with the result.
@@ -669,7 +641,16 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		wg                       sync.WaitGroup
 	)
 
-	wg.Add(8)
+	wg.Add(9)
+	var alarms []Alarm
+	go func() {
+		defer wg.Done()
+		if list, _, err := fetchAlarms(ctx, h.RC); err != nil {
+			log.Printf("restconf alarms: %v", err)
+		} else {
+			alarms = list
+		}
+	}()
 	go func() {
 		defer wg.Done()
 		stateErr = h.RC.Get(ctx, "/data/ietf-system:system-state", &state)
@@ -861,15 +842,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Addresses = ifaceAddresses(ifaces)
 	data.Ports = ports(ifaces, lldp.neighbors())
-	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software)
-
-	// Software-update banner: surfaces the same notice as the CLI login
-	// banner (written by check-update to the notice file).
-	if msg, url := readUpdateNotice(); msg != "" {
-		data.UpdateAvailable = true
-		data.UpdateMessage = msg
-		data.UpdateURL = url
-	}
+	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software, alarms)
 
 	tmplName := "dashboard.html"
 	if r.Header.Get("HX-Request") == "true" {

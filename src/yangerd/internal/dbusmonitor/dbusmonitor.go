@@ -76,6 +76,9 @@ type DBusMonitor struct {
 	// trusted.  Used by the signal loop only.
 	owners map[string]string
 
+	// raucHook sees every RAUC status read, for the boot-fallback alarm.
+	raucHook func(raucData map[string]interface{})
+
 	// software reads the infix-system:software object; overridable in
 	// tests.
 	software func(ctx context.Context) json.RawMessage
@@ -95,12 +98,22 @@ func New(t *tree.Tree, log *slog.Logger) *DBusMonitor {
 	m := &DBusMonitor{
 		tree: t,
 		log:  log,
-		software: func(ctx context.Context) json.RawMessage {
-			return collector.BootSoftware(ctx, collector.ExecRunner{})
-		},
+	}
+	m.software = func(ctx context.Context) json.RawMessage {
+		raucData, err := collector.RaucStatus(ctx, collector.ExecRunner{})
+		if err == nil && m.raucHook != nil {
+			m.raucHook(raucData)
+		}
+		return collector.BootSoftwareFrom(ctx, collector.ExecRunner{}, raucData, err)
 	}
 	t.RegisterProvider(firewallTreeKey, m.addressSetOverlay)
 	return m
+}
+
+// SetRaucHook sets a function called with every RAUC status read, at
+// start and after each completed install.
+func (m *DBusMonitor) SetRaucHook(fn func(raucData map[string]interface{})) {
+	m.raucHook = fn
 }
 
 func (m *DBusMonitor) setConn(conn *dbus.Conn) {

@@ -53,4 +53,6 @@ MODULES=(
 	"infix-ptp@2026-04-07.yang"
 	"ietf-schedule@2026-03-10.yang -e icalendar-recurrence"
 	"infix-schedule@2026-09-07.yang"
+	"ietf-alarms@2019-09-11.yang -e operator-actions -e alarm-shelving -e alarm-summary -e alarm-profile -e severity-assignment"
+	"infix-alarms@2026-11-03.yang"
 )

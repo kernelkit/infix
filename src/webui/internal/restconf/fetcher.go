@@ -17,6 +17,8 @@ type Fetcher interface {
 	GetYANG(ctx context.Context, name, revision string) ([]byte, error)
 	Post(ctx context.Context, path string) error
 	PostJSON(ctx context.Context, path string, body any) error
+	// CallRPC invokes an operation or action and decodes its output.
+	CallRPC(ctx context.Context, path string, input, output any) error
 
 	Put(ctx context.Context, path string, body any) error
 	Patch(ctx context.Context, path string, body any) error

@@ -1,0 +1,5 @@
+[7mLAST CHANGE       SEVERITY  STATE    RESOURCE   TYPE                TEXT                       [0m
+2026-11-03 06:12  [31mcritical[39m  active   backup     external (nightly)  Nightly backup failed
+2026-11-03 15:40  minor     closed   sensor3    external            Humidity sensor unreachable
+2026-11-03 08:30  major     cleared  disk-full  external            Disk 95% full
+1 shelved, see 'show alarms shelved'

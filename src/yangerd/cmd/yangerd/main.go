@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/features"
+	"github.com/kernelkit/infix/src/yangerd/internal/alarm"
+	"github.com/kernelkit/infix/src/yangerd/internal/alarmmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
@@ -35,6 +37,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/qosmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/sysalarm"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -202,6 +205,17 @@ func main() {
 	// inotify says nothing when a /proc/sys/net/*/conf/<if> directory
 	// comes or goes, so follow the interface set from netlink instead.
 	linkSetCh := make(chan struct{}, 1)
+	nlmon.SetLinkAlarm(func(name string, down bool) {
+		var err error
+		if down {
+			err = alarm.Raise("link-down", name, "", alarm.Major, "No link on "+name)
+		} else {
+			err = alarm.Clear("link-down", name, "")
+		}
+		if err != nil {
+			slogLog.Warn("link-down alarm", "ifname", name, "err", err)
+		}
+	})
 	nlmon.SetLinkSetChange(func() {
 		select {
 		case linkSetCh <- struct{}{}:
@@ -293,6 +307,12 @@ func main() {
 	tftpmon := tftpmonitor.New(t, slogLog)
 	spawn("tftpmonitor", tftpmon.Run)
 
+	alarmMon := alarmmonitor.New(t, slogLog)
+	spawn("alarmmonitor", alarmMon.Run)
+	spawn("sysalarm", func(ctx context.Context) error {
+		return sysalarm.RunStartupConfig(ctx, slogLog)
+	})
+
 	ptpmon := ptpmonitor.New(t, slogLog)
 	spawn("ptpmonitor", ptpmon.Run)
 
@@ -308,6 +328,9 @@ func main() {
 	}
 
 	dbusMon := dbusmonitor.New(t, slogLog)
+	dbusMon.SetRaucHook(func(raucData map[string]interface{}) {
+		sysalarm.BootFallback(raucData, slogLog)
+	})
 	spawn("dbusmonitor", dbusMon.Run)
 
 	fsw, err := fswatcher.New(t, slogLog)

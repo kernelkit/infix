@@ -21,6 +21,8 @@ type MockFetcher struct {
 	errors    map[string]error
 	// Patches records every YangPatch sent, for tests to assert on.
 	Patches []*restconf.YangPatch
+	// Posts records the path of every PostJSON, for tests to assert on.
+	Posts []string
 	// Datastores holds the raw JSON GetDatastore returns per datastore name.
 	Datastores map[string]json.RawMessage
 }
@@ -94,10 +96,32 @@ func (m *MockFetcher) PostJSON(_ context.Context, path string, _ any) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.Posts = append(m.Posts, path)
 	if err, ok := m.errors[path]; ok {
 		return err
 	}
 	return nil
+}
+
+// CallRPC records the path like PostJSON and answers with the response
+// set for it, if any.
+func (m *MockFetcher) CallRPC(_ context.Context, path string, _ any, output any) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.Posts = append(m.Posts, path)
+	if err, ok := m.errors[path]; ok {
+		return err
+	}
+	entry, ok := m.responses[path]
+	if !ok || output == nil {
+		return nil
+	}
+	raw, err := json.Marshal(entry.body)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, output)
 }
 
 func (m *MockFetcher) GetYANG(_ context.Context, _, _ string) ([]byte, error) { return nil, nil }
