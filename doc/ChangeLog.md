@@ -97,6 +97,10 @@ All notable changes to the project are documented in this file.
   operational data offline until the service was restarted.  The
   failed read is now retried at its next interval.
   Reported by Dave Seddon
+- A mesh point could start on the channel next to the configured one
+  when it heard another network there, and then never peer with the
+  nodes on the configured channel.  A mesh point now stays on its
+  configured channel
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
