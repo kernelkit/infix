@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -130,24 +131,18 @@ func parseError(resp *http.Response) error {
 	return re
 }
 
-// unwrap strips rousette's framing of a sysrepo error, which quotes the
-// same message twice:
+// srFraming finds the message in rousette's framing of a sysrepo error:
 //
-//	Internal server error due to sysrepo exception: Couldn't send RPC:
-//	SR_ERR_OPERATION_FAILED <msg> (SR_ERR_OPERATION_FAILED) NETCONF:
-//	application: operation-failed: <msg>
-//
-// Only the message after the NETCONF type and tag is of any use to a user.
+//	Internal server error due to sysrepo exception: <where> failed:
+//	SR_ERR_OPERATION_FAILED <msg> (SR_ERR_OPERATION_FAILED) [NETCONF: ...]
+var srFraming = regexp.MustCompile(`(?s)SR_ERR_[A-Z_]+ (.*?) \(SR_ERR_[A-Z_]+\)`)
+
+// unwrap returns the message a user can act on from a sysrepo error.
 func unwrap(msg string) string {
-	i := strings.LastIndex(msg, "NETCONF: ")
-	if i < 0 {
-		return msg
+	if m := srFraming.FindStringSubmatch(msg); m != nil {
+		return m[1]
 	}
-	parts := strings.SplitN(msg[i+len("NETCONF: "):], ": ", 3)
-	if len(parts) < 3 {
-		return msg
-	}
-	return parts[2]
+	return msg
 }
 
 // leafName returns the last node name of a data path, without module
