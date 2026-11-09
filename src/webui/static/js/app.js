@@ -703,8 +703,12 @@
   window.swUpload = function () {
     var fileInput = document.getElementById('sw-file');
     if (!fileInput || !fileInput.files.length) return;
-    if (!confirm('Upload and install this software bundle? The current installation may be overwritten.')) return;
+    openModal('Upload and install this software bundle? The current installation may be overwritten.', function () {
+      swUploadStart(fileInput);
+    });
+  };
 
+  function swUploadStart(fileInput) {
     var file       = fileInput.files[0];
     var autoReboot = !!document.querySelector('#sw-upload-auto-reboot:checked');
     var btn        = document.getElementById('sw-upload-btn');
@@ -754,7 +758,7 @@
     xhr.open('POST', '/software/upload');
     xhr.setRequestHeader('X-CSRF-Token', getCSRFToken());
     xhr.send(formData);
-  };
+  }
 
   // SSE-driven software install progress card.
   // The Go server polls RESTCONF and streams rendered HTML fragments; we just
@@ -1908,14 +1912,16 @@ function openModal(message, onConfirm, opts) {
   function cleanup() {
     ok.removeEventListener('click', handleOK);
     no.removeEventListener('click', handleNo);
+    dlg.removeEventListener('close', cleanup);
     if (opts.alert) { no.hidden = false; ok.textContent = okLabel; }
-    dlg.close();
+    if (dlg.open) dlg.close();
   }
   function handleOK()  { cleanup(); if (onConfirm) onConfirm(); }
   function handleNo()  { cleanup(); }
 
   ok.addEventListener('click', handleOK);
   no.addEventListener('click', handleNo);
+  dlg.addEventListener('close', cleanup);
   dlg.showModal();
 }
 
@@ -2321,15 +2327,14 @@ function renderCfgLog() {
   };
   document.addEventListener('htmx:confirm', function(e) {
     var btn = e.detail.elt;
-    if (!btn) return;
+    if (!btn || !e.detail.question) return;
     var label = null;
     for (var cls in toolbarLabels) {
       if (btn.classList.contains(cls)) { label = toolbarLabels[cls]; break; }
     }
-    if (!label) return;
     e.preventDefault();
     openModal(e.detail.question, function() {
-      cfgLog('ok', label);
+      if (label) cfgLog('ok', label);
       e.detail.issueRequest(true);
     });
   });
