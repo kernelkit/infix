@@ -136,12 +136,9 @@ func csrfMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// nginx passes the browser's Host on, see webui-proxy.conf
 func sameOrigin(r *http.Request) bool {
 	host := r.Host
-	if xf := r.Header.Get("X-Forwarded-Host"); xf != "" {
-		parts := strings.Split(xf, ",")
-		host = strings.TrimSpace(parts[0])
-	}
 	if host == "" {
 		return false
 	}

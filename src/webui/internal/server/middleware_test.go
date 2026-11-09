@@ -100,3 +100,12 @@ func TestWithToken(t *testing.T) {
 		}
 	}
 }
+
+func TestSameOriginIgnoresForwardedHost(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "http://device.local/reboot", nil)
+	r.Header.Set("Origin", "http://evil.example")
+	r.Header.Set("X-Forwarded-Host", "evil.example")
+	if sameOrigin(r) {
+		t.Error("cross-origin request accepted on X-Forwarded-Host")
+	}
+}
