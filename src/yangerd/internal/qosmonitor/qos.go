@@ -86,8 +86,8 @@ func build(p port, mods Modules) map[string]any {
 	if p.Profile != "" {
 		qos["profile"] = p.Profile
 	}
-	if limit := rateLimit(qdiscs); limit != nil {
-		qos["rate-limit"] = limit
+	if shaper := egressShaper(qdiscs); shaper != nil {
+		qos["egress-shaper"] = shaper
 	}
 
 	out := shapers(qdiscs, mods, p.Sched)
@@ -138,7 +138,7 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 			}
 		case "tbf":
 			if q.Root && q.Offloaded {
-				offload = append(offload, "rate-limit")
+				offload = append(offload, "egress-shaper")
 			}
 		case "cbs":
 			var o cbsOpts
@@ -167,9 +167,9 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 	return caps
 }
 
-// rateLimit is the port rate limit in effect, from a tbf root.  tc gives
+// egressShaper is the egress shaper in effect, from a tbf root.  tc gives
 // the rate in bytes per second, the model wants bits.
-func rateLimit(qdiscs []qdisc) map[string]any {
+func egressShaper(qdiscs []qdisc) map[string]any {
 	for _, q := range qdiscs {
 		if q.Kind != "tbf" || !q.Root {
 			continue

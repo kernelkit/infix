@@ -4,7 +4,7 @@ QoS Mixed Selection
 
 Three talkers, marked EF, AF21 and CS1, bridged through the DUT and out
 one egress port that cannot carry them all.  The port is negotiated down
-to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where
+to 100 Mbit/s where its PHY allows, or shaped to 10 Mbit/s where
 it has no PHY.  The ingress port classifies EF to priority 4, AF21 to 3
 and CS1 to 2, classes 4, 3 and 2 in the default table: EF in a strict
 class above the two weighted ones, which share 60 and 30 percent, with
@@ -84,7 +84,7 @@ with infamy.Test() as test:
     with test.step("Slow the egress port so its queues can fill"):
         drain = qos.slow_port(port, until)
         if not drain:
-            print(f"{td1} can neither negotiate down nor be rate limited, skipping")
+            print(f"{td1} can neither negotiate down nor be shaped, skipping")
             test.skip()
         print(f"{td1} drains {drain // 1_000_000} Mbit/s")
 

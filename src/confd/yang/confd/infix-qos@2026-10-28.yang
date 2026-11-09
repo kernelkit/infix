@@ -79,8 +79,8 @@ module infix-qos {
 
            The traffic classes run there too.";
       }
-      enum rate-limit {
-        description "The port rate limit runs in the switch fabric.";
+      enum egress-shaper {
+        description "The egress shaper runs in the switch fabric.";
       }
       enum credit-based-shaper {
         description "The credit-based shaper runs in the switch fabric.";
@@ -467,7 +467,7 @@ module infix-qos {
       description "Named QoS settings that interfaces can share.
 
          A profile holds classification and egress settings, and has
-         no effect until an interface references it.  Rate limits,
+         no effect until an interface references it.  Egress shapers,
          reservations and gate schedules stay per port.";
 
       leaf name {

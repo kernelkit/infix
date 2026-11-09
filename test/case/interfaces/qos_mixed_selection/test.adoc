@@ -6,7 +6,7 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_mixed_selection
 
 Three talkers, marked EF, AF21 and CS1, bridged through the DUT and out
 one egress port that cannot carry them all.  The port is negotiated down
-to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where
+to 100 Mbit/s where its PHY allows, or shaped to 10 Mbit/s where
 it has no PHY.  The ingress port classifies EF to priority 4, AF21 to 3
 and CS1 to 2, classes 4, 3 and 2 in the default table: EF in a strict
 class above the two weighted ones, which share 60 and 30 percent, with

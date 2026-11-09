@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-QoS Rate Limit
+QoS Egress Shaper
 
-One talker, bridged through the DUT and out an egress port with a
-10 Mbit/s rate limit, offering three times that.  What arrives at the
-listener in the middle seconds of the flow must be the limit, within a
-fifth, whatever the priority of the flow: once marked EF, in a strict
-class near the top, once marked CS1, in the lowest class.  Then both at
-once, each offering one and a half times the limit, must still add up
-to the limit.
+One talker, bridged through the DUT and out an egress port shaped to
+10 Mbit/s, offering three times that.  What arrives at the listener in
+the middle seconds of the flow must be the shaped rate, within a fifth,
+whatever the priority of the flow: once marked EF, in a strict class
+near the top, once marked CS1, in the lowest class.  Then both at once,
+each offering one and a half times the rate, must still add up to the
+rate.
 
-A limit that lets more through is not a limit, and a limit that only
+A shaper that lets more through is not a shaper, and one that only
 bites on some queues is a scheduler fault dressed up as one.  The test's
 own iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
 class, so a talker's end-of-test message leaves the port behind its
 last datagram.  Skipped on a switch fabric whose driver does not
-offload the rate limit, where forwarded frames never meet the bucket.
+offload the egress shaper, where forwarded frames never meet the bucket.
 """
 import infamy
 import infamy.qos as qos
@@ -46,7 +46,7 @@ with infamy.Test() as test:
         _, hd1 = env.ltop.xlate("host", "data2")
         port = infamy.capability.Port(target, td1, tgtssh)
 
-    with test.step("Bridge the two ports, trust DSCP on ingress, rate limit the egress port"):
+    with test.step("Bridge the two ports, trust DSCP on ingress, shape the egress port"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
@@ -64,7 +64,7 @@ with infamy.Test() as test:
                         "name": td1,
                         "enabled": True,
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
-                        "infix-interfaces:qos": {"rate-limit": {"rate": LIMIT}}
+                        "infix-interfaces:qos": {"egress-shaper": {"rate": LIMIT}}
                     },
                 ]
             }
@@ -72,7 +72,7 @@ with infamy.Test() as test:
         until(lambda: (qos.root_qdisc(tgtssh, td1) or {}).get("kind") == "tbf")
         qos.show_shaper(port)
 
-        port.require_offload(test, "rate-limit")
+        port.require_offload(test, "egress-shaper")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1:

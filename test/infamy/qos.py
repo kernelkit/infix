@@ -200,7 +200,7 @@ def slow_port(port, until):
 
     A port with a PHY that can do 100BASE-TX is negotiated down to it,
     so the queues fill against a real link.  A port without a PHY, as on
-    a virtual rig, gets a 10 Mbit/s rate limit instead, which is what
+    a virtual rig, is shaped to 10 Mbit/s instead, which is what
     puts its queues under load.  Returns 0 when neither is possible.
     """
     pmd = "ieee802-ethernet-phy-type:pmd-type-100BASE-TX"
@@ -232,7 +232,7 @@ def slow_port(port, until):
             "interfaces": {
                 "interface": [{
                     "name": port.name,
-                    "infix-interfaces:qos": {"rate-limit": {"rate": 10_000_000}}
+                    "infix-interfaces:qos": {"egress-shaper": {"rate": 10_000_000}}
                 }]
             }
         }})
@@ -302,7 +302,7 @@ def show_offload(port, stage="transmission-selection"):
 
 
 def show_shaper(port):
-    """Log what the rate limit became: the root qdisc with its offloaded
+    """Log what the egress shaper became: the root qdisc with its offloaded
     flag, and on a fabric port the port registers, where a shaper the
     driver took shows up as the egress rate control words"""
     print(json.dumps(root_qdisc(port.ssh, port.name)))

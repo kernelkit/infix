@@ -43,7 +43,7 @@ MODULES=(
 	"infix-ethernet-interface@2026-10-31.yang"
 	"infix-factory-default@2023-06-28.yang"
 	"infix-qos@2026-10-28.yang"
-	"infix-interfaces@2026-10-22.yang -e vlan-filtering -e rate-limit"
+	"infix-interfaces@2026-11-11.yang -e vlan-filtering -e egress-shaper"
 	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2026-10-27.yang"
 	"ietf-keystore -e symmetric-keys"

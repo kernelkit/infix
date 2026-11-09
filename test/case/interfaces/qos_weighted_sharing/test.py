@@ -4,7 +4,7 @@ QoS Weighted Sharing
 
 Two talkers, one marked EF and one marked CS1, bridged through the DUT
 and out one egress port that cannot carry both.  The port is negotiated
-down to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s
+down to 100 Mbit/s where its PHY allows, or shaped to 10 Mbit/s
 where it has no PHY.  The ingress port classifies EF to priority 3 and
 CS1 to priority 2, classes 3 and 2 in the default table, both running
 enhanced transmission selection; the two classes below hold five
@@ -91,7 +91,7 @@ with infamy.Test() as test:
     with test.step("Slow the egress port so its queues can fill"):
         drain = qos.slow_port(port, until)
         if not drain:
-            print(f"{td1} can neither negotiate down nor be rate limited, skipping")
+            print(f"{td1} can neither negotiate down nor be shaped, skipping")
             test.skip()
         print(f"{td1} drains {drain // 1_000_000} Mbit/s")
 
