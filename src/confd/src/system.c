@@ -1398,11 +1398,12 @@ static int change_nacm(sr_session_ctx_t *session, struct lyd_node *config, struc
 	for (size_t i = 0; i < user_count; i++) {
 		const char *user = users[i].data.string_val;
 		bool is_admin = is_admin_user(session, user);
-		const char *shell;
+		char *shell;
 
 		shell = sys_find_usable_shell(session, (char *)user);
 		if (set_shell(user, shell))
 			AUDIT("Failed adjusting shell for user \"%s\"", user);
+		free(shell);
 
 		if (is_admin)
 			add_groups(user, admin_groups);

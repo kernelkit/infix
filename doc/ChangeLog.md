@@ -49,6 +49,8 @@ All notable changes to the project are documented in this file.
 - An interface handed to a container could be renamed from inside the
   container to a string that the host then ran as a command.  Such names
   are now rejected.  Reported by Dave Seddon
+- Every change to the access control rules leaked a little memory per
+  user account in the configuration daemon.  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
