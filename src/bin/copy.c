@@ -590,6 +590,7 @@ static int scp_upload(const char *srcpath, const char *uri)
 	src_dup = strdup(srcpath);
 	if (!src_dup)
 		goto out;
+	argv[i++] = "--";
 	argv[i++] = src_dup;
 	argv[i++] = remote;
 
@@ -620,6 +621,7 @@ static int scp_download(const char *uri, const char *dstpath)
 		argv[i++] = port;
 	}
 
+	argv[i++] = "--";
 	argv[i++] = remote;
 	dst_dup = strdup(dstpath);
 	if (!dst_dup)

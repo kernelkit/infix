@@ -73,6 +73,9 @@ All notable changes to the project are documented in this file.
   Reported by Dave Seddon
 - WebUI: MD5 is no longer offered as a hash when setting a password.
   Users with an MD5 hash can still log in.  Reported by Dave Seddon
+- A host name starting with `-` given to `copy` with an `scp://` URL, or
+  to the CLI `ssh` command, was taken as an option to scp or ssh.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
