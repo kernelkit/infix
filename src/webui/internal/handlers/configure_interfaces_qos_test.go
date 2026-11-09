@@ -138,6 +138,8 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		`hx-post="/configure/interfaces/e2/cbs"`, `name="idle_3"`, `hx-post="/configure/interfaces/e2/gates"`,
 		`href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-swap="innerHTML"`,
 		`Cycle <span class="unit">(µs)</span>`, "Time-Aware Shaper",
+		`hx-delete="/configure/leaf?path=/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos/egress-shaper&redirect=/configure/interfaces"`,
+		`hx-delete="/configure/interfaces/e1/cbs/7"`, `hx-delete="/configure/interfaces/e1/gates/max-sdu"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)
@@ -366,6 +368,66 @@ func TestIfaceDetailRendersTSN(t *testing.T) {
 		if want == nil && strings.Contains(out, "Shapers") {
 			t.Errorf("%s: shaper card on a port that runs none", iface.Name)
 		}
+	}
+}
+
+// Resetting a slope on a port with its own settings stops shaping the
+// class too; the other slopes keep theirs.
+func TestResetCBS(t *testing.T) {
+	var got []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = append(got, r.Method+" "+r.URL.EscapedPath())
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/yang-data+json")
+			if strings.HasSuffix(r.URL.Path, "cbsa") {
+				io.WriteString(w, `{"ietf-interfaces:interfaces":{"interface":[{"name":"e1","ieee802-dot1dc-cbsa-if:cbsa":{"cbsa-parameter-table":[{"traffic-class":7,"admin-idle-slope":"20000000"},{"traffic-class":6,"admin-idle-slope":"1000000"}]}}]}}`) //nolint:errcheck
+				return
+			}
+			io.WriteString(w, `{"ietf-interfaces:interfaces":{"interface":[{"name":"e1","infix-interfaces:qos":{"egress":{"traffic-class":[{"id":7,"algorithm":"ieee802-dot1q-types:credit-based-shaper"},{"id":6,"algorithm":"ieee802-dot1q-types:credit-based-shaper"}]}}}]}}`) //nolint:errcheck
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	h := &ConfigureInterfacesHandler{RC: restconf.NewClient(srv.URL, false)}
+	req := httptest.NewRequest(http.MethodDelete, "/configure/interfaces/e1/cbs/7", nil)
+	req.SetPathValue("name", "e1")
+	req.SetPathValue("class", "7")
+	h.ResetCBS(httptest.NewRecorder(), req)
+
+	base := "/ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1"
+	want := []string{
+		"GET " + base + "/ieee802-dot1dc-cbsa-if:cbsa",
+		"DELETE " + base + "/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table=7",
+		"GET " + base + "/infix-interfaces:qos",
+		"DELETE " + base + "/infix-interfaces:qos/egress/traffic-class=7/algorithm",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("requests:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestResetMaxSDU(t *testing.T) {
+	var got []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = append(got, r.Method+" "+r.URL.EscapedPath()+" "+string(body))
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	h := &ConfigureInterfacesHandler{RC: restconf.NewClient(srv.URL, false)}
+	req := httptest.NewRequest(http.MethodDelete, "/configure/interfaces/e1/gates/max-sdu", nil)
+	req.SetPathValue("name", "e1")
+	h.ResetMaxSDU(httptest.NewRecorder(), req)
+
+	// One YANG patch removing every class's entry; remove, unlike
+	// delete, does not fail on an entry that is not there
+	if len(got) != 1 || !strings.HasPrefix(got[0], "PATCH /ds/ietf-datastores:candidate ") ||
+		strings.Count(got[0], `"operation":"remove"`) != qosNumClasses ||
+		!strings.Contains(got[0], "gate-parameter-table/queue-max-sdu-table=5") {
+		t.Errorf("requests %v", got)
 	}
 }
 

@@ -294,6 +294,61 @@ func (h *ConfigureInterfacesHandler) shapeClasses(r *http.Request, slope map[int
 	return h.RC.Patch(ctx, qosPath, body)
 }
 
+// ResetCBS removes one class's idle slope, and on a port with its own
+// settings the class's shaping with it, as clearing its field does.
+// DELETE /configure/interfaces/{name}/cbs/{class}
+func (h *ConfigureInterfacesHandler) ResetCBS(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("class"))
+	if err != nil || id < 0 || id >= qosNumClasses {
+		http.Error(w, "bad traffic class", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	path := ifacePath(r.PathValue("name")) + cbsaNode
+	var wrap interfacesWrapper
+	if err := h.RC.Get(ctx, path, &wrap); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure interfaces %s cbs reset: %v", r.PathValue("name"), err)
+		renderSaveError(w, err)
+		return
+	}
+	slope := map[int]bool{}
+	if ifs := wrap.Interfaces.Interface; len(ifs) > 0 && ifs[0].CBSA != nil {
+		for _, e := range ifs[0].CBSA.Table {
+			if e.TrafficClass != id {
+				slope[e.TrafficClass] = true
+			}
+		}
+	}
+	err = h.RC.Delete(ctx, path+"/cbsa-parameter-table="+strconv.Itoa(id))
+	if err != nil && !restconf.IsNotFound(err) && !restconf.IsDataMissing(err) {
+		log.Printf("configure interfaces %s cbs reset: %v", r.PathValue("name"), err)
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.shapeClasses(r, slope); err != nil {
+		log.Printf("configure interfaces %s cbs reset: %v", r.PathValue("name"), err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+}
+
+// ResetMaxSDU removes the per-class max SDU limits of the gate list.
+// DELETE /configure/interfaces/{name}/gates/max-sdu
+func (h *ConfigureInterfacesHandler) ResetMaxSDU(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	p := restconf.NewYangPatch(candidatePath)
+	for id := 0; id < qosNumClasses; id++ {
+		p.Remove(ifaceTarget(name) + gatesNode + "/queue-max-sdu-table=" + strconv.Itoa(id))
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s max-sdu reset: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+}
+
 // replaceContainer writes a whole container under the interface, or
 // removes it when body is nil.
 func (h *ConfigureInterfacesHandler) replaceContainer(w http.ResponseWriter, r *http.Request, node string, body map[string]any, saved string) {

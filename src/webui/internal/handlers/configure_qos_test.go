@@ -90,7 +90,9 @@ func TestConfigureQoSOverview(t *testing.T) {
 		`value="pcp" title="PCP of tagged frames, then the port default." selected`,
 		`value="ietf" title="RFC 4594`, `value="none" title="Leave DSCP untouched." selected`,
 		`value="` + qosAlgoStrict + `" title="Indicates the strict priority transmission selection algorithm." selected`,
-		`value="` + qosAlgoCBS + `"`, `value="ieee" title="PCP n maps to priority n.`} {
+		`value="` + qosAlgoCBS + `"`, `value="ieee" title="PCP n maps to priority n.`,
+		`path=/ietf-system:system/infix-qos:qos-profile=edge/ingress/trust&redirect=/configure/qos`,
+		`path=/ietf-system:system/infix-qos:qos-profile=edge/egress/traffic-class=1&redirect=/configure/qos`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
 		}

@@ -58,17 +58,20 @@
           <td colspan="5" class="key-detail-cell">
             <div class="key-detail-body">
               <form hx-post="/configure/qos/profiles/{{$p.Name}}" hx-swap="none">
+                {{$pp := printf "/ietf-system:system/infix-qos:qos-profile=%s" $p.Name}}
                 <table class="info-table">
                   <tr>
                     <th>Description</th>
                     <td><input class="cfg-input" type="text" name="description"
                                value="{{$p.Description}}" placeholder="Optional description"></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/description" $pp) "Back" "/configure/qos" "What" "the description")}}
                   </tr>
                   <tr>
                     <th>Trust{{template "field-info" (index $d "trust")}}</th>
                     <td>
                       {{template "schema-select" (dict "Name" "trust" "Options" (index $.Options "trust") "Selected" $p.Trust)}}
                     </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/trust" $pp) "Back" "/configure/qos" "What" "trust")}}
                   </tr>
                   <tr>
                     <th>Default priority{{template "field-info" (index $d "default")}}</th>
@@ -76,24 +79,28 @@
                       <input class="cfg-input cfg-input-sm" type="number" name="default-priority"
                              min="{{$.PriorityLo}}" max="{{$.PriorityHi}}" step="1" value="{{$p.DefaultPri}}" style="width:5rem">
                     </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/default-priority" $pp) "Back" "/configure/qos" "What" "the default priority")}}
                   </tr>
                   <tr>
                     <th>PCP map{{template "field-info" (index $d "pcp-map")}}</th>
                     <td>
                       {{template "schema-select" (dict "Name" "pcp-preset" "Options" (index $.Options "pcp-preset") "Selected" $p.PCPPreset)}}
                     </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/pcp-map" $pp) "Back" "/configure/qos" "What" "the PCP map")}}
                   </tr>
                   <tr>
                     <th>DSCP map{{template "field-info" (index $d "dscp-map")}}</th>
                     <td>
                       {{template "schema-select" (dict "Name" "dscp-preset" "Options" (index $.Options "dscp-preset") "Selected" $p.DSCPPreset)}}
                     </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/dscp-map" $pp) "Back" "/configure/qos" "What" "the DSCP map")}}
                   </tr>
                   <tr>
                     <th>Traffic class table{{template "field-info" (index $d "table")}}</th>
                     <td>
                       {{template "schema-select" (dict "Name" "table-preset" "Options" (index $.Options "table-preset") "Selected" $p.TablePreset)}}
                     </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/traffic-class-table" $pp) "Back" "/configure/qos" "What" "the traffic class table")}}
                   </tr>
                 </table>
 
@@ -103,6 +110,7 @@
                     <th>Class</th>
                     <th>Algorithm{{template "field-info" (index $d "algorithm")}}</th>
                     <th>Share (%){{template "field-info" (index $d "bandwidth")}}</th>
+                    <th></th>
                   </tr>
                   {{range $p.Classes}}
                   <tr>
@@ -113,6 +121,7 @@
                     <td><input class="cfg-input cfg-input-sm" type="number" min="{{$.ShareLo}}" max="{{$.ShareHi}}"
                                name="bandwidth-{{.ID}}" value="{{if .Bandwidth}}{{.Bandwidth}}{{end}}"
                                placeholder="—" style="width:5rem"></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/traffic-class=%d" $pp .ID) "Back" "/configure/qos" "What" (printf "class %d" .ID))}}
                   </tr>
                   {{end}}
                 </table>
@@ -122,10 +131,12 @@
                   <tr>
                     <th>PCP</th>
                     <td>{{template "schema-select" (dict "Name" "remark-pcp" "Options" (index $.Options "remark-pcp") "Selected" $p.RemarkPCP)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/remark/pcp" $pp) "Back" "/configure/qos" "What" "PCP remarking")}}
                   </tr>
                   <tr>
                     <th>DSCP</th>
                     <td>{{template "schema-select" (dict "Name" "remark-dscp" "Options" (index $.Options "remark-dscp") "Selected" $p.RemarkDSCP)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/remark/dscp" $pp) "Back" "/configure/qos" "What" "DSCP remarking")}}
                   </tr>
                 </table>
 

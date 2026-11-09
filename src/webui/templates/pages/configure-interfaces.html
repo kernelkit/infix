@@ -373,6 +373,7 @@
               {{if and $.Capabilities ($.Capabilities.Has "qos") (ne .TypeSlug "loopback")}}
               <div style="margin-top:1rem">
                 <h4 class="cfg-section-head">QoS</h4>
+                {{$qp := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
                 <form hx-post="/configure/interfaces/{{.Name}}/qos" hx-swap="none">
                   <table class="info-table">
                     <tr>
@@ -393,12 +394,14 @@
                            hx-target="#content" hx-swap="innerHTML" hx-push-url="true" style="margin-left:0.5rem">Edit the port's own settings</a>
                         {{end}}
                       </td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/infix-interfaces:qos/profile" $qp) "Back" "/configure/interfaces" "What" "the profile")}}
                     </tr>
                     {{if $.Capabilities.Has "egress-shaper"}}
                     <tr>
                       <th>Egress shaper <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "qos-shaper")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="rate"
                                  value="{{.QoSShaperMbit}}" placeholder="no shaping" style="width:8rem"></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/infix-interfaces:qos/egress-shaper" $qp) "Back" "/configure/interfaces" "What" "the egress shaper")}}
                     </tr>
                     {{end}}
                   </table>
@@ -422,13 +425,20 @@
                     <tr>
                       <th>Class</th>
                       <th>Idle slope <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "tsn-idle")}}</th>
+                      <th></th>
                     </tr>
                     {{$profile := .QoSProfile}}
+                    {{$name := .Name}}
                     {{range .QoSShapers}}
                     <tr>
                       <td>Class {{.ID}}{{if and $profile (not .Shaped)}} <span class="text-muted">(not shaped by the profile)</span>{{end}}</td>
                       <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="idle_{{.ID}}"
                                  value="{{.IdleMbit}}" placeholder="not shaped" aria-label="Idle slope class {{.ID}}" style="width:8rem"></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/interfaces/{{$name}}/cbs/{{.ID}}" hx-swap="none"
+                                hx-confirm="Reset the idle slope of class {{.ID}} to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
                     </tr>
                     {{end}}
                   </table>
@@ -450,11 +460,13 @@
                     <tr>
                       <th>Enabled</th>
                       <td><label class="diag-check"><input type="checkbox" name="gate_enabled" value="on" {{if $g.Enabled}}checked{{end}}> Run the gate control list on this port</label></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/gate-enabled" $qp) "Back" "/configure/interfaces" "What" "gate-enabled")}}
                     </tr>
                     <tr>
                       <th>Cycle <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-cycle")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="cycle"
                                  value="{{$g.CycleUs}}" placeholder="sum of entries" style="width:9rem"></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time" $qp) "Back" "/configure/interfaces" "What" "the cycle")}}
                     </tr>
                     <tr>
                       <th>Base time{{template "field-info" (index $d "tsn-base")}}</th>
@@ -462,6 +474,7 @@
                                  value="{{$g.BaseSeconds}}" aria-label="Base time seconds" style="width:9rem"> <span class="text-muted">s</span>
                         <input class="cfg-input cfg-input-sm" type="number" min="0" max="999999999" step="1" name="base_ns"
                                value="{{$g.BaseNs}}" aria-label="Base time nanoseconds" style="width:9rem;margin-left:0.5rem"> <span class="text-muted">ns</span></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time" $qp) "Back" "/configure/interfaces" "What" "the base time")}}
                     </tr>
                   </table>
                   <div class="cfg-subsection-head" style="margin-top:0.75rem">Gate control list{{template "field-info" (index $d "tsn-list")}}</div>
@@ -487,6 +500,7 @@
                         <th>Cycle time extension <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-extension")}}</th>
                         <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="extension"
                                    value="{{$g.ExtensionUs}}" placeholder="0" style="width:9rem"></td>
+                        {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time-extension" $qp) "Back" "/configure/interfaces" "What" "the cycle time extension")}}
                       </tr>
                       <tr>
                         <th>Max SDU per class <span class="unit">(bytes)</span>{{template "field-info" (index $d "tsn-max-sdu")}}</th>
@@ -495,6 +509,11 @@
                           <label class="diag-check" style="margin-right:0.6rem">{{$c}} <input class="cfg-input cfg-input-sm" type="number" min="1" step="1" name="maxsdu_{{$c}}"
                                  value="{{index $g.MaxSDU $c}}" placeholder="no limit" aria-label="Max SDU class {{$c}}" style="width:5.5rem"></label>
                           {{end}}
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/interfaces/{{.Name}}/gates/max-sdu" hx-swap="none"
+                                  hx-confirm="Reset max SDU per class to its YANG default?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                     </table>
