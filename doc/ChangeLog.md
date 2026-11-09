@@ -123,6 +123,9 @@ All notable changes to the project are documented in this file.
   and lost its configuration on reboot.  The image now has a virtual
   size of 8 GiB, grown into on first boot, without any change to the
   download size
+- WebUI: a value the device rejects is now reported with the name of the
+  field and the reason.  Before, a value failing its pattern only gave
+  "Can't parse data: LY_EVALID"
 
 
 [v26.10.0][] - 2026-10-30

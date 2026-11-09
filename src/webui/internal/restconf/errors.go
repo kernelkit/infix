@@ -112,12 +112,15 @@ func parseError(resp *http.Response) error {
 
 	var parts []string
 	for _, e := range errs {
-		msg := unwrap(e.Message)
+		msg := strings.TrimPrefix(unwrap(e.Message), "Validation failure: ")
 		if msg == "" {
 			msg = e.Tag
 		}
-		if e.Path != "" {
-			msg += " (path: " + e.Path + ")"
+		if node := leafName(e.Path); node != "" {
+			msg = node + ": " + msg
+			if strings.Contains(e.Path, "[") {
+				msg += " (path: " + e.Path + ")"
+			}
 		}
 		parts = append(parts, msg)
 	}
@@ -145,4 +148,31 @@ func unwrap(msg string) string {
 		return msg
 	}
 	return parts[2]
+}
+
+// leafName returns the last node name of a data path, without module
+// prefix or list keys: /ietf-system:system/hostname gives "hostname".
+func leafName(path string) string {
+	var b strings.Builder
+	var quote rune
+	depth := 0
+	for _, r := range path {
+		switch {
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+		case depth > 0 && (r == '\'' || r == '"'):
+			quote = r
+		case r == '[':
+			depth++
+		case r == ']':
+			depth--
+		case depth == 0:
+			b.WriteRune(r)
+		}
+	}
+	name := b.String()
+	name = name[strings.LastIndex(name, "/")+1:]
+	return name[strings.LastIndex(name, ":")+1:]
 }
