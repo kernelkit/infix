@@ -76,6 +76,9 @@ All notable changes to the project are documented in this file.
 - A host name starting with `-` given to `copy` with an `scp://` URL, or
   to the CLI `ssh` command, was taken as an option to scp or ssh.
   Reported by Dave Seddon
+- `copy` to or from an `scp://` URL now refuses a server whose host key
+  has changed.  A server not seen before is still accepted and
+  remembered.  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
