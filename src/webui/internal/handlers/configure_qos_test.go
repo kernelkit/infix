@@ -92,7 +92,8 @@ func TestConfigureQoSOverview(t *testing.T) {
 		`value="` + qosAlgoStrict + `" title="Indicates the strict priority transmission selection algorithm." selected`,
 		`value="` + qosAlgoCBS + `"`, `value="ieee" title="PCP n maps to priority n.`,
 		`path=/ietf-system:system/infix-qos:qos-profile=edge/ingress/trust&redirect=/configure/qos`,
-		`path=/ietf-system:system/infix-qos:qos-profile=edge/egress/traffic-class=1&redirect=/configure/qos`} {
+		`path=/ietf-system:system/infix-qos:qos-profile=edge/egress/traffic-class=1&redirect=/configure/qos`,
+		`<optgroup label="From template">`, `<option value="edge" title="Port facing hosts, classified by DSCP.">Edge</option>`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -203,6 +204,74 @@ func TestQoSProfileKeepsCustomMaps(t *testing.T) {
 	body, _ = qosProfileBody(form, nil)
 	if _, ok := body["ingress"].(map[string]any)["dscp-map"]; ok {
 		t.Errorf("custom marker sent to the device: %v", body)
+	}
+}
+
+// Every value a template sets must be one the model offers for its leaf,
+// so a template cannot drift from the schema unnoticed.
+func TestQoSTemplatesMatchSchema(t *testing.T) {
+	mgr := repoSchema(t, testutil.NewMockFetcher()).Manager()
+	var walk func(path string, v any)
+	walk = func(path string, v any) {
+		switch v := v.(type) {
+		case map[string]any:
+			for k, c := range v {
+				walk(path+"/"+k, c)
+			}
+		case string:
+			for _, o := range schema.OptionsFor(mgr, path) {
+				if o.Value == v || o.Label == v {
+					return
+				}
+			}
+			t.Errorf("%s: %q is not an option of the model", path, v)
+		}
+	}
+	for _, tpl := range qosTemplates {
+		walk(qosProfilesPath+"/ingress", tpl.ingress)
+		walk(qosProfilesPath+"/egress", tpl.egress)
+	}
+}
+
+func TestAddProfileFromTemplate(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&got) //nolint:errcheck
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+	h := &ConfigureQoSHandler{RC: restconf.NewClient(srv.URL, false)}
+
+	post := func(form string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/configure/qos/profiles", strings.NewReader(form))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		h.AddProfile(w, req)
+		return w
+	}
+
+	post("name=wan&template=edge")
+	b, _ := json.Marshal(got)
+	for _, want := range []string{`"name":"wan"`, `"trust":"dscp"`, `"pcp":"from-priority"`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("edge profile %s lacks %s", b, want)
+		}
+	}
+	if w := post("name=x&template=nope"); w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("unknown template: want 422 got %d", w.Code)
+	}
+}
+
+// The QoS guide carries every template as a CLI recipe.
+func TestQoSTemplatesHaveRecipes(t *testing.T) {
+	doc, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "doc", "qos.md"))
+	if err != nil {
+		t.Skip(err)
+	}
+	for _, tpl := range qosTemplates {
+		if !strings.Contains(string(doc), "<b>edit system qos-profile "+tpl.Key+"</b>") {
+			t.Errorf("doc/qos.md has no recipe for template %q", tpl.Key)
+		}
 	}
 }
 

@@ -158,6 +158,12 @@
     <form hx-post="/configure/qos/profiles" hx-swap="none" class="user-add-inline">
       <input class="cfg-input" type="text" name="name" required placeholder="name (e.g. edge)"
              pattern="[A-Za-z0-9_][A-Za-z0-9_.-]*" maxlength="64">
+      <select class="cfg-input" name="template" aria-label="Start from" style="width:auto">
+        <option value="">Empty profile</option>
+        <optgroup label="From template">
+          {{range .Templates}}<option value="{{.Key}}" title="{{.Help}}">{{.Label}}</option>{{end}}
+        </optgroup>
+      </select>
       <button class="btn btn-primary btn-sm" type="submit">Add</button>
     </form>
   </div>

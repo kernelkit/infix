@@ -471,6 +471,45 @@ the `egress-shaper`, the credit-based shaper reservations and the gate
 control list.  The operational datastore shows the profile a port
 runs under `qos profile`.
 
+### Recipes
+
+Three profiles cover the common port roles, each setting only what the
+role changes from the defaults.  The WebUI offers the same three as
+templates when adding a profile; either way the result is an ordinary
+profile, to be changed as the network needs.
+
+A *trunk* port between switches classifies by the PCP of tagged frames and
+uses the IEEE 802.1Q traffic classes, which are the defaults.  The
+profile names the role, so its ports can be changed together later:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile trunk</b>
+admin@example:/config/system/…/trunk/> <b>set description "Port between switches."</b>
+admin@example:/config/system/…/trunk/> <b>leave</b>
+</code></pre>
+
+An *edge* port facing hosts classifies by DSCP, which survives
+routing, and writes the resulting priority into the PCP so the tagged
+links beyond keep it:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile edge</b>
+admin@example:/config/system/…/edge/> <b>set ingress trust dscp</b>
+admin@example:/config/system/…/edge/> <b>set egress remark pcp from-priority</b>
+admin@example:/config/system/…/edge/> <b>leave</b>
+</code></pre>
+
+A *stream reservation* port puts SR classes A and B on the two highest
+traffic classes, the layout of [Stream Reservation
+Layout](#stream-reservation-layout).  The recipe carries the layout
+only.  To shape the SR classes, set their `algorithm` to
+`credit-based-shaper` in the profile, and give every port that uses it
+a reservation per shaped class; a shaped class without one is
+rejected.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile stream-reservation</b>
+admin@example:/config/system/…/stream-reservation/> <b>set egress traffic-class-table preset ieee-sr</b>
+admin@example:/config/system/…/stream-reservation/> <b>leave</b>
+</code></pre>
+
 
 ## Hardware Offload
 

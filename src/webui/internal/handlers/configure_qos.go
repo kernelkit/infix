@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -211,6 +212,24 @@ type cfgQoSPageData struct {
 	ShareLo    string
 	ShareHi    string
 	Desc       map[string]string
+	Templates  []qosTemplate
+}
+
+// qosTemplate is a starting point for a new profile: what the role
+// changes from the model's defaults, nothing more.  doc/qos.md has the
+// same profiles as CLI recipes; keep the two in step.
+type qosTemplate struct {
+	Key, Label, Help string
+	ingress, egress  map[string]any
+}
+
+var qosTemplates = []qosTemplate{
+	{Key: "trunk", Label: "Trunk", Help: "Port between switches."},
+	{Key: "edge", Label: "Edge", Help: "Port facing hosts, classified by DSCP.",
+		ingress: map[string]any{"trust": "dscp"},
+		egress:  map[string]any{"remark": map[string]any{"pcp": "from-priority"}}},
+	{Key: "stream-reservation", Label: "Stream reservation", Help: "Port carrying reserved streams.",
+		egress: map[string]any{"traffic-class-table": map[string]any{"preset": "ieee-sr"}}},
 }
 
 // qosAlgoIs compares two transmission selection identities without
@@ -325,7 +344,7 @@ func qosProfilePorts(ifaces []ifaceJSON) map[string][]string {
 
 // Overview lists the profiles with the ports on each and an editor per row.
 func (h *ConfigureQoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
-	data := cfgQoSPageData{PageData: newPageData(w, r, "configure-qos", "QoS Profiles")}
+	data := cfgQoSPageData{PageData: newPageData(w, r, "configure-qos", "QoS Profiles"), Templates: qosTemplates}
 	mgr := h.Schema.Manager()
 	data.Loading = mgr == nil
 	var def qosDefaults
@@ -456,9 +475,25 @@ func (h *ConfigureQoSHandler) AddProfile(w http.ResponseWriter, r *http.Request)
 		renderSaveError(w, fmt.Errorf("profile name is required"))
 		return
 	}
+	profile := map[string]any{"name": name}
+	if key := r.FormValue("template"); key != "" {
+		i := slices.IndexFunc(qosTemplates, func(t qosTemplate) bool { return t.Key == key })
+		if i < 0 {
+			renderSaveError(w, fmt.Errorf("no profile template %q", key))
+			return
+		}
+		t := qosTemplates[i]
+		profile["description"] = t.Help
+		if t.ingress != nil {
+			profile["ingress"] = t.ingress
+		}
+		if t.egress != nil {
+			profile["egress"] = t.egress
+		}
+	}
 	body := map[string]any{
 		"ietf-system:system": map[string]any{
-			"infix-qos:qos-profile": []any{map[string]any{"name": name}},
+			"infix-qos:qos-profile": []any{profile},
 		},
 	}
 	if err := h.RC.Patch(r.Context(), candidatePath+"/ietf-system:system", body); err != nil {
