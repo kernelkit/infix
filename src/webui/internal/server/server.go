@@ -286,7 +286,7 @@ func New(
 
 	// Authenticated routes.
 	mux.HandleFunc("GET /{$}", dash.Index)
-	mux.HandleFunc("GET /dashboard/reachability", dash.Reachability)
+	mux.HandleFunc("GET /dashboard/reachability", withToken(dash.Reachability))
 	mux.HandleFunc("POST /dashboard/check-update", dash.CheckUpdate)
 	mux.HandleFunc("GET /interfaces", iface.Overview)
 	mux.HandleFunc("GET /interfaces/{name}", iface.Detail)
@@ -305,8 +305,8 @@ func New(
 	mux.HandleFunc("GET /maintenance/logs/{name}/tail",        adminOnly(logs.Tail))
 	mux.HandleFunc("GET /maintenance/logs/{name}/download",    adminOnly(logs.Download))
 	mux.HandleFunc("GET /maintenance/diagnostics",             adminOnly(diag.Overview))
-	mux.HandleFunc("GET /maintenance/diagnostics/run",         adminOnly(diag.Run))
-	mux.HandleFunc("GET /maintenance/diagnostics/resolve",     adminOnly(diag.Resolve))
+	mux.HandleFunc("GET /maintenance/diagnostics/run",         adminOnly(withToken(diag.Run)))
+	mux.HandleFunc("GET /maintenance/diagnostics/resolve",     adminOnly(withToken(diag.Resolve)))
 	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
 	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
 	mux.HandleFunc("POST /maintenance/support-bundle",         sys.SupportBundle)

@@ -2745,6 +2745,11 @@ function renderCfgLog() {
 (function () {
   var diagES = null; // active stream, module-scoped so afterSwap can kill it
 
+  function diagCSRF() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') || '' : '';
+  }
+
   function diagTeardown() {
     if (diagES) {
       diagES.close();
@@ -2895,7 +2900,7 @@ function renderCfgLog() {
 
   function diagBuildURL(card) {
     var tool = card.dataset.active;
-    var q = new URLSearchParams();
+    var q = new URLSearchParams({ csrf: diagCSRF() });
     q.set('tool', tool);
     q.set('target', card.querySelector('.diag-target').value.trim());
     q.set('family', card.querySelector('.diag-family').value);
@@ -2939,7 +2944,8 @@ function renderCfgLog() {
     card.querySelector('.diag-placeholder').hidden = true;
     dns.hidden = false;
     fetch('/maintenance/diagnostics/resolve?name=' + encodeURIComponent(name) +
-          '&family=' + encodeURIComponent(family), { headers: { 'HX-Request': 'true' } })
+          '&family=' + encodeURIComponent(family),
+          { headers: { 'HX-Request': 'true', 'X-CSRF-Token': diagCSRF() } })
       .then(function (r) { return r.text(); })
       .then(function (html) { dns.innerHTML = html; diagSetStatus(card, '', ''); diagFocusTarget(card); })
       .catch(function () { diagSetStatus(card, 'lookup failed', 'err'); });

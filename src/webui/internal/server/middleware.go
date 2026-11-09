@@ -86,6 +86,20 @@ func adminOnly(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// withToken checks the CSRF token on a GET that runs something, which
+// csrfMiddleware lets through.  Diagnostics stream over EventSource and
+// the dashboard probes are htmx polls, both GET only.
+func withToken(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !validCSRF(r, security.TokenFromContext(r.Context())) {
+			log.Printf("csrf: refused %s %s: token mismatch", r.Method, r.URL.Path)
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func csrfMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := security.TokenFromContext(r.Context())

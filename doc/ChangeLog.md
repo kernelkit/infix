@@ -62,6 +62,9 @@ All notable changes to the project are documented in this file.
   who may read the access control rules, the same as Users & Groups.
   Before, any user who could log in could read every log file, and run
   ping, traceroute and scans from the device.  Reported by Dave Seddon
+- WebUI: a link on another site could make the device ping, trace or
+  scan a host of the attacker's choice from a logged-in browser.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
