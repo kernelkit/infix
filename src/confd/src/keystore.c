@@ -60,6 +60,7 @@ static int gen_hostkey(const char *name, struct lyd_node *change)
 {
 	const char *private_key, *public_key;
 	int rc = SR_ERR_OK;
+	FILE *pp;
 
 	private_key = lydx_get_cattr(change, "cleartext-private-key");
 	public_key = lydx_get_cattr(change, "public-key");
@@ -74,8 +75,12 @@ static int gen_hostkey(const char *name, struct lyd_node *change)
 	}
 
 	AUDIT("Installing SSH host key \"%s\".", name);
-	if (systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name,
-		    SSH_HOSTKEYS_NEXT, public_key, private_key))
+	pp = popenf("w", "/usr/libexec/infix/mksshkey %s %s %s", name,
+		    SSH_HOSTKEYS_NEXT, public_key);
+	if (!pp)
+		return SR_ERR_INTERNAL;
+	fputs(private_key, pp);
+	if (pclose(pp))
 		rc = SR_ERR_INTERNAL;
 
 	return rc;
