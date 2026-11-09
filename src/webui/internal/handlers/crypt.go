@@ -16,14 +16,14 @@ type CryptMethod struct {
 }
 
 // CryptMethods is the single source of truth for the hashes the UI offers,
-// ordered strongest first.  Only the four the infix-system:crypt-hash YANG type
-// accepts ($y$/$6$/$5$/$1$) are listed — mkpasswd supports more (bcrypt,
+// ordered strongest first.  Only hashes the infix-system:crypt-hash YANG type
+// accepts ($y$/$6$/$5$/$1$) can be listed — mkpasswd supports more (bcrypt,
 // scrypt, …), but the password leaf's pattern would reject those on save.
+// MD5 ($1$) is accepted but not offered, it is too weak for a new password.
 var CryptMethods = []CryptMethod{
 	{"yescrypt", "yescrypt (recommended)", true},
 	{"sha512crypt", "SHA-512", false},
 	{"sha256crypt", "SHA-256", false},
-	{"md5crypt", "MD5", false},
 }
 
 // normalizeCryptMethod returns method if it's one we offer, otherwise the

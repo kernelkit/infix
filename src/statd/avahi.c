@@ -400,14 +400,17 @@ static void ds_schedule_apply(struct mdns_ctx *ctx)
 /*
  * Return an XPath string literal quoting val: single-quoted unless val
  * contains a single quote, in which case double quotes are used instead.
+ * Returns NULL if val holds both, XPath 1.0 has no escape for that.
  * buf must be at least strlen(val)+3 bytes.
  */
 static const char *xpath_str(char *buf, size_t sz, const char *val)
 {
-	if (strchr(val, '\''))
+	if (!strchr(val, '\''))
+		snprintf(buf, sz, "'%s'", val);
+	else if (!strchr(val, '"'))
 		snprintf(buf, sz, "\"%s\"", val);
 	else
-		snprintf(buf, sz, "'%s'", val);
+		return NULL;
 	return buf;
 }
 
@@ -419,63 +422,66 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 			     const char *new_addr)
 {
 	char qname[258]; /* quoted svc->name for safe XPath predicates */
+	char qhost[258];
 	char xpath[640];
 	char val[64];
 	struct avahi_txt *t;
 	char ts[32];
 	int err;
 
-	xpath_str(qname, sizeof(qname), svc->name);
+	if (!xpath_str(qname, sizeof(qname), svc->name) ||
+	    !xpath_str(qhost, sizeof(qhost), svc->hostname))
+		return;
 
 	/* Create neighbor list instance (key embedded in predicate; sysrepo 4.x
 	 * rejects editing list-key leaves directly — set the list entry instead) */
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']", svc->hostname);
+		 XPATH_BASE "/neighbor[hostname=%s]", qhost);
 	err = sr_setstr(ctx->sr_ses, xpath, NULL);
 
 	/* address (only if a new one was added) */
 	if (new_addr) {
 		snprintf(xpath, sizeof(xpath),
-			 XPATH_BASE "/neighbor[hostname='%s']/address", svc->hostname);
+			 XPATH_BASE "/neighbor[hostname=%s]/address", qhost);
 		err = err ?: sr_setstr(ctx->sr_ses, xpath, new_addr);
 	}
 
 	/* last-seen */
 	format_timestamp(time(NULL), ts, sizeof(ts));
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/last-seen", svc->hostname);
+		 XPATH_BASE "/neighbor[hostname=%s]/last-seen", qhost);
 	err = err ?: sr_setstr(ctx->sr_ses, xpath, ts);
 
 	/* Delete and recreate service entry so TXT records are always fresh */
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]",
-		 svc->hostname, qname);
+		 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]",
+		 qhost, qname);
 	sr_delete_item(ctx->sr_ses, xpath, 0);
 
 	/* Create service list instance (same pattern — key in predicate) */
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]",
-		 svc->hostname, qname);
+		 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]",
+		 qhost, qname);
 	err = err ?: sr_setstr(ctx->sr_ses, xpath, NULL);
 
 	/* service/type */
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]/type",
-		 svc->hostname, qname);
+		 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]/type",
+		 qhost, qname);
 	err = err ?: sr_setstr(ctx->sr_ses, xpath, svc->type);
 
 	/* service/port */
 	snprintf(val, sizeof(val), "%u", (unsigned)svc->port);
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]/port",
-		 svc->hostname, qname);
+		 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]/port",
+		 qhost, qname);
 	err = err ?: sr_setstr(ctx->sr_ses, xpath, val);
 
 	/* service/txt (leaf-list) */
 	LIST_FOREACH(t, &svc->txts, link) {
 		snprintf(xpath, sizeof(xpath),
-			 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]/txt",
-			 svc->hostname, qname);
+			 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]/txt",
+			 qhost, qname);
 		err = err ?: sr_setstr(ctx->sr_ses, xpath, t->val);
 	}
 
@@ -491,21 +497,27 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 static void ds_delete_service(struct mdns_ctx *ctx, const char *hostname, const char *name)
 {
 	char qname[258];
+	char qhost[258];
 	char xpath[512];
 
-	xpath_str(qname, sizeof(qname), name);
+	if (!xpath_str(qname, sizeof(qname), name) ||
+	    !xpath_str(qhost, sizeof(qhost), hostname))
+		return;
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']/service[name=%s]",
-		 hostname, qname);
+		 XPATH_BASE "/neighbor[hostname=%s]/service[name=%s]",
+		 qhost, qname);
 	sr_delete_item(ctx->sr_ses, xpath, 0);
 }
 
 static void ds_delete_neighbor(struct mdns_ctx *ctx, const char *hostname)
 {
+	char qhost[258];
 	char xpath[512];
 
+	if (!xpath_str(qhost, sizeof(qhost), hostname))
+		return;
 	snprintf(xpath, sizeof(xpath),
-		 XPATH_BASE "/neighbor[hostname='%s']", hostname);
+		 XPATH_BASE "/neighbor[hostname=%s]", qhost);
 	sr_delete_item(ctx->sr_ses, xpath, 0);
 }
 

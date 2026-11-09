@@ -10,6 +10,9 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"infix/webui/internal/handlers"
+	"infix/webui/internal/security"
 )
 
 func TestSecurityHeadersCacheControl(t *testing.T) {
@@ -64,5 +67,45 @@ func TestIsPolling(t *testing.T) {
 		if got := isPolling(r); got != tc.want {
 			t.Errorf("%s (X-Auto-Refresh %q): polling %v, want %v", tc.path, tc.header, got, tc.want)
 		}
+	}
+}
+
+func TestAdminOnly(t *testing.T) {
+	h := adminOnly(func(w http.ResponseWriter, r *http.Request) {})
+	for nacm, want := range map[bool]int{true: http.StatusOK, false: http.StatusForbidden} {
+		caps := handlers.NewCapabilities(map[string]bool{"nacm": nacm})
+		r := httptest.NewRequest(http.MethodGet, "/maintenance/logs", nil)
+		r = r.WithContext(handlers.ContextWithCapabilities(r.Context(), caps))
+		w := httptest.NewRecorder()
+		h(w, r)
+		if w.Code != want {
+			t.Errorf("nacm %v: status %d, want %d", nacm, w.Code, want)
+		}
+	}
+}
+
+func TestWithToken(t *testing.T) {
+	h := withToken(func(w http.ResponseWriter, r *http.Request) {})
+	for query, want := range map[string]int{
+		"?tool=ping&target=x&csrf=tok":   http.StatusOK,
+		"?tool=ping&target=x&csrf=stale": http.StatusForbidden,
+		"?tool=ping&target=x":            http.StatusForbidden,
+	} {
+		r := httptest.NewRequest(http.MethodGet, "/maintenance/diagnostics/run"+query, nil)
+		r = r.WithContext(security.WithToken(r.Context(), "tok"))
+		w := httptest.NewRecorder()
+		h(w, r)
+		if w.Code != want {
+			t.Errorf("%s: status %d, want %d", query, w.Code, want)
+		}
+	}
+}
+
+func TestSameOriginIgnoresForwardedHost(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "http://device.local/reboot", nil)
+	r.Header.Set("Origin", "http://evil.example")
+	r.Header.Set("X-Forwarded-Host", "evil.example")
+	if sameOrigin(r) {
+		t.Error("cross-origin request accepted on X-Forwarded-Host")
 	}
 }

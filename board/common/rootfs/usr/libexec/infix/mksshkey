@@ -1,12 +1,13 @@
 #!/bin/sh
 # Generate OpenSSH host key pair from same keys as NETCONF
+# The private key is read from stdin, to keep it off the command line
 set -e
 umask 0077
 
 NAME="$1"
 DIR="$2"
 PUBLIC="$3"
-PRIVATE="$4"
+PRIVATE="$(cat)"
 TMP="$(mktemp)"
 
 {

@@ -4,7 +4,9 @@
 #include <srx/common.h>
 #include <srx/lyx.h>
 
+#include <ctype.h>
 #include <grp.h>
+#include <net/if.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -12,6 +14,21 @@
 #include "core.h"
 
 struct confd confd;
+
+/* Same rules as the YANG interface-name type, for names from outside the model */
+bool valid_ifname(const char *name)
+{
+	size_t len = strnlen(name, IFNAMSIZ);
+
+	if (!len || len >= IFNAMSIZ || (!isalnum(*name) && *name != '_'))
+		return false;
+	for (; *name; name++) {
+		if (!isalnum(*name) && !strchr("._:+-", *name))
+			return false;
+	}
+
+	return true;
+}
 
 /*
  * Write str to fp in double quotes, with '"' and '\' escaped, for

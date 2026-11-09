@@ -75,7 +75,12 @@ func checkPath(path string) error {
 			return fmt.Errorf("restconf: invalid path %q", path)
 		}
 	}
-	for _, seg := range strings.Split(path, "/") {
+	// The proxy decodes before it normalises, so "%2e%2e" is a ".." too
+	dec, err := url.PathUnescape(path)
+	if err != nil {
+		return fmt.Errorf("restconf: invalid path %q", path)
+	}
+	for _, seg := range strings.Split(dec, "/") {
 		if seg == ".." || seg == "." {
 			return fmt.Errorf("restconf: invalid path %q", path)
 		}

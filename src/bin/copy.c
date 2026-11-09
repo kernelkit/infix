@@ -572,7 +572,7 @@ static int curl_download(const char *uri, const char *dstpath)
 
 static int scp_upload(const char *srcpath, const char *uri)
 {
-	char *argv[12] = { "scp", "-o", "StrictHostKeyChecking=no", NULL };
+	char *argv[12] = { "scp", "-o", "StrictHostKeyChecking=accept-new", NULL };
 	int i = 3, err = 1;
 	char *remote = NULL, *port = NULL, *src_dup = NULL;
 
@@ -590,6 +590,7 @@ static int scp_upload(const char *srcpath, const char *uri)
 	src_dup = strdup(srcpath);
 	if (!src_dup)
 		goto out;
+	argv[i++] = "--";
 	argv[i++] = src_dup;
 	argv[i++] = remote;
 
@@ -605,7 +606,7 @@ out:
 
 static int scp_download(const char *uri, const char *dstpath)
 {
-	char *argv[12] = { "scp", "-o", "StrictHostKeyChecking=no", NULL };
+	char *argv[12] = { "scp", "-o", "StrictHostKeyChecking=accept-new", NULL };
 	int i = 3, err = 1;
 	char *remote = NULL, *port = NULL, *dst_dup = NULL;
 
@@ -620,6 +621,7 @@ static int scp_download(const char *uri, const char *dstpath)
 		argv[i++] = port;
 	}
 
+	argv[i++] = "--";
 	argv[i++] = remote;
 	dst_dup = strdup(dstpath);
 	if (!dst_dup)

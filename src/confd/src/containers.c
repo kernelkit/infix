@@ -316,7 +316,7 @@ static int add(const char *name, struct lyd_node *cif)
 	fprintf(fp, " create %s %s", name, image);
 
  	if ((string = lydx_get_cattr(cif, "command")))
-		fprintf(fp, " %s", string);
+		fputqw(string, fp);
 
 	fprintf(fp, "\n");
 	fclose(fp);

@@ -1,16 +1,24 @@
-[![License Badge][]][License] [![Release Badge][]][Release] [![GitHub Status][]][GitHub] [![Discord][discord-badge]][discord-url]
+[![License Badge][]][License] [![Release Badge][]][Release] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
 
-<img align="right" src="doc/logo.png" alt="Jacky, a penguin living in an RJ45 jack, next to the Infix logo: Immutable. Friendly. Secure." width=380 padding=10>
+<a href="#our-values"><img align="right" src="doc/logo.png" alt="Jacky, a penguin living in an RJ45 jack, next to the Infix logo: Immutable. Friendly. Secure." width=380 padding=10></a>
 
-Infix turns an ARM or x86 device into a managed network appliance.  The
-same OS runs on a $35 Raspberry Pi and on enterprise switching hardware,
-so you can build a router, an IoT gateway, or an edge device on whatever
-you have on hand.
+Infix turns an ARM, RISC-V, or x86 device into a managed network appliance:
+a router, a switch, an IoT gateway, or the base of your own product.  The
+same OS runs on a Raspberry Pi and on enterprise switching hardware.
 
-More in-depth material is available in our blog and User Guide:
+Getting started:
 
-- <https://www.kernelkit.org/>
-- <https://www.kernelkit.org/infix/>
+- Pick a board from the [supported boards][boards] post, updated as new ports land
+- Get a [pre-built image][5] for your board, or the `x86_64` image for any VM
+- [Build from source and `make run`][build-post] to boot the result in QEMU
+- Run a whole network of Infix nodes in [GNS3][gns3-post]
+- 📖 [User Guide][4] • 📝 [Blog][6] • 💬 [Discord][discord-url]
+
+> [!TIP]
+> The *[Latest Build][]* has everything merged since the last release.
+> Log in with `admin` / `admin` on the virtual and pre-built images.
+> Products built on Infix set their own password, usually unique per
+> device.
 
 ## See it in action
 
@@ -52,17 +60,14 @@ eth0            ethernet   UP          52:54:00:12:34:56
 admin@infix-12-34-56:/> <b>copy running startup</b>
 </code></pre>
 
-<kbd>TAB</kbd> completes available options and <kbd>?</kbd> shows online help
-for each option and argument. `show` displays the current config, and `diff`
-shows exactly what changed before you commit it with `leave`.  See the [CLI
+<kbd>TAB</kbd> completes and <kbd>?</kbd> shows help for every option.
+`diff` shows what changed before `leave` commits it.  See the [CLI
 documentation][3] for more.
 
-## Web interface
-
-If the CLI isn't your style, the same configuration is available through the
-web interface.  Log in from a browser, keep an eye on your device from the
-Status dashboard and use the Configure > Interface setup wizard to create more
-advanced setups, or just fold out an interface to add an IP address.
+The same configuration is available from a browser.  The Status Overview
+dashboard keeps an eye on the device, the interface setup wizard under
+Configure builds the common setups, or fold out an interface and add an
+address.
 
 <p>
   <a href="doc/img/webui-login.png"><img src="doc/img/webui-login.png" alt="Login" align="top" width=220></a>
@@ -70,78 +75,10 @@ advanced setups, or just fold out an interface to add an IP address.
   <a href="doc/img/webui-wizard.png"><img src="doc/img/webui-wizard.png" alt="Setup wizard" width=260></a>
 </p>
 
-The web interface is built on the same concepts as the CLI, so operational
-status and state are kept separate from configuration and commands.
+The web interface follows the CLI: status and configuration are kept
+apart, and both come from the same YANG models.
 
-## Try it in 5 minutes
-
-You don't need hardware to get started:
-
-- **In a virtual lab** — run a full topology in [GNS3][gns3-post] and test
-  networks entirely in software.
-- **From source** — [build it and `make run`][build-post] to boot Infix in
-  QEMU, from `git clone` to pinging the internet.
-- **On real hardware** — grab a [pre-built image][5] for your board, or run
-  the `x86_64` image in any VM.
-
-Log in with `admin` / `admin` on the virtual and pre-built images.  On
-shipped products the factory-reset credentials are customizable — we
-typically provision a unique per-device password stored in EEPROM/VPD.
-
-## Supported hardware
-
-- **Raspberry Pi 2B/3B/4B/CM4** - a good starting point; built-in Wi-Fi and Ethernet
-- **Banana Pi-R64/R3/R3 Mini/R4** - multi-port routers and gateways
-- **NanoPi R2S** - compact dual-port router
-- **x86_64** - VMs and mini PCs, for development or production
-- **Marvell CN9130 CRB, EspressoBIN** - ARM64 development boards
-- **Novarq Tactical-1000** - ARM64 network appliance
-- **Microchip SparX-5i** - enterprise switching
-- **Microchip LAN969x EV23X71A** - TSN-capable switch evaluation board
-- **Microchip SAMA7G54-EK** - ARM Cortex-A7 evaluation kit
-- **NXP i.MX8MP EVK** - ARM64 SoC evaluation kit
-- **StarFive VisionFive2** - RISC-V board
-
-*Why start with Raspberry Pi?* It's cheap, easy to get hold of, has
-built-in Wi-Fi and Ethernet, and runs the same Infix you'd deploy in
-production — so what you learn on it carries straight over.
-
-> [!TIP]
-> 📖 **[Infix User Guide][4]** • 💬 **[Join our Discord][discord-url]**
-
-## Why Infix
-
-**🔒 Immutable**  
-Read-only filesystem with atomic upgrades.  An update either applies
-cleanly or rolls back, so a failed upgrade or a power cut midway through
-won't leave you with a half-broken system.
-
-**🤝 Friendly**  
-The CLI is generated from the YANG models, so every command carries its
-own help — hit <kbd>?</kbd> or <kbd>TAB</kbd> to see what's available.
-The same models are reachable over NETCONF and RESTCONF, with
-[documentation][4] for when you get stuck.
-
-**🛡️ Secure**  
-A small attack surface, separation between system and data, and
-container isolation.  Since the system partition is read-only, a
-compromised service or container can't rewrite the OS underneath it.
-
-## Use cases
-
-1. **Home labs & hobbyists**:  
-   Turn a Raspberry Pi into a router with Wi-Fi  
-1. **IoT & edge**:  
-   Build gateways you can update in the field  
-1. **Small business networks**:  
-   Routing, firewalling, and VLANs on affordable hardware  
-1. **Developers & makers**:  
-   Prototype networking ideas, or build a custom appliance with containers  
-1. **Network professionals**:  
-   The same tooling from lab to production — spin up a digital twin in raw
-   Qemu or [GNS3](https://gns3.com/infix)
-
-## Under the hood
+## Make it your own
 
 <a href="https://bitsign.se">
   <picture>
@@ -151,21 +88,55 @@ compromised service or container can't rewrite the OS underneath it.
   </picture>
 </a>
 
-Built on [Linux][0], [Buildroot][1], and [sysrepo][2]:
+<img src="doc/img/layers.svg" alt="Three layers: Buildroot at the bottom, Infix on top of it, and a product layer on top with its own signing keys" width=720>
 
-- **Immutable OS**: read-only filesystem, atomic updates, rollback on failure
-- **YANG configuration**: standard models with an auto-generated CLI and APIs
-- **Hardware acceleration**: switchdev offload for wire-speed forwarding
-- **Container integration**: Docker, with access to host network and hardware
-- **Memory efficient**: runs on devices with as little as 256 MB RAM
-- **Code signing**: releases are cryptographically signed
+Buildroot supplies the open source base, and Infix follows each patch
+release of its LTS series.  The layer above adds the YANG models, the
+CLI and web interface, [NETCONF][] and [RESTCONF][], container support,
+automated regression tests, and packages not yet in Buildroot.
 
-Because the whole system is modeled in YANG, every setting is reachable
-the same way: from the CLI over console or SSH, or remotely over the
-native NETCONF and RESTCONF APIs.  The same models drive development,
-testing, and day-to-day monitoring.
+A product is built on top of that as a *spin*: a small br2-external
+tree with Infix as a submodule, holding the board files, the vendor's
+own software and branding, and the vendor's own signing keys.  The
+[spin example][spin] is the skeleton the products built on Infix start
+from, and [Branding & Releases][branding] walks through the settings.
 
-> Check the *[Latest Build][]* for bleeding-edge features.
+The public images are the middle layer, built from this tree, and signed
+with a *development key* that is also in this tree.  The signature says
+the image is intact, not who made it.
+
+A spin replaces that key with its own and enables secure boot where
+the hardware supports it, see [Signing Keys][keys].  All products built
+on Infix by [Wires][] are signed through [bitSign][].
+
+## Our values
+
+*Immutable. Friendly. Secure.*  The tagline on the logo is also the
+design brief, and most of what is under the hood follows from it.
+
+**🔒 Immutable**  
+Read-only filesystem with atomic upgrades.  An update either applies
+cleanly or rolls back, so a failed upgrade or a power cut midway through
+won't leave you with a half-broken system.  There are two system
+partitions, and an upgrade only ever writes to the one not running.
+
+**🤝 Friendly**  
+The CLI is generated from the YANG models, so every command carries its
+own help: hit <kbd>?</kbd> or <kbd>TAB</kbd> to see what's available.
+The web interface, NETCONF and RESTCONF come from the same models.  The
+[User Guide][4] ships inside the image, one click away in the web
+interface, so help is there even when the Internet is not.
+
+**🛡️ Secure**  
+A small attack surface, separation between system and data, and
+container isolation.  Since the system partition is read-only, a
+compromised service or container can't rewrite the OS underneath it.
+A spin adds its own signing keys and secure boot, see above.
+
+Built on [Linux][0], [Buildroot][1], and [sysrepo][2].  Switchdev
+offload gives wire-speed forwarding on switch hardware, and all of it
+runs on devices with 512 MB RAM.  The [Inside Infix][inside] post walks
+through how the pieces fit together.
 
 ## Contributing
 
@@ -192,6 +163,7 @@ goes into a patch release?  See [releases & support][releases].
 [3]: https://www.kernelkit.org/infix/latest/cli/introduction/
 [4]: https://www.kernelkit.org/infix/
 [5]: https://github.com/kernelkit/infix/releases/latest
+[6]: https://www.kernelkit.org/
 [inside]:          https://www.kernelkit.org/posts/inside-infix/
 [gns3-post]:       https://www.kernelkit.org/posts/infix-in-gns3/
 [build-post]:      https://www.kernelkit.org/posts/building-infix-from-source/
@@ -201,12 +173,20 @@ goes into a patch release?  See [releases & support][releases].
 [support]:         .github/SUPPORT.md
 [releases]:        doc/releases.md
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
+[boards]:          https://www.kernelkit.org/posts/router-boards/
+[keys]:            doc/boot.md#signing-keys
+[spin]:            https://github.com/kernelkit/infix-spin-example
+[branding]:        doc/branding.md
+[NETCONF]:         https://datatracker.ietf.org/doc/html/rfc6241 "RFC 6241"
+[RESTCONF]:        https://datatracker.ietf.org/doc/html/rfc8040 "RFC 8040"
+[Wires]:           https://wires.se
+[bitSign]:         https://bitsign.se
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [Release]:         https://github.com/kernelkit/infix/releases/latest
 [Release Badge]:   https://img.shields.io/github/v/release/kernelkit/infix 
-[GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
-[GitHub Status]:   https://github.com/kernelkit/infix/actions/workflows/build.yml/badge.svg
+[GitHub]:          https://github.com/kernelkit/infix/actions/workflows/trigger.yml/
+[GitHub Status]:   https://github.com/kernelkit/infix/actions/workflows/trigger.yml/badge.svg
 [Coverity Scan]:   https://scan.coverity.com/projects/29393
 [Coverity Status]: https://scan.coverity.com/projects/29393/badge.svg
 [discord-badge]:   https://img.shields.io/discord/1182652155618918411.svg?logo=discord

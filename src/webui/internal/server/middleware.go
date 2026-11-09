@@ -73,6 +73,33 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Han
 	})
 }
 
+// adminOnly refuses a page to users who cannot read the NACM data, the
+// same test that hides Users & Groups.  Logs and diagnostics run as root,
+// outside NACM, so this is the only check they get.
+func adminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !handlers.CapabilitiesFromContext(r.Context()).Has("nacm") {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// withToken checks the CSRF token on a GET that runs something, which
+// csrfMiddleware lets through.  Diagnostics stream over EventSource and
+// the dashboard probes are htmx polls, both GET only.
+func withToken(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !validCSRF(r, security.TokenFromContext(r.Context())) {
+			log.Printf("csrf: refused %s %s: token mismatch", r.Method, r.URL.Path)
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func csrfMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := security.TokenFromContext(r.Context())
@@ -109,12 +136,9 @@ func csrfMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// nginx passes the browser's Host on, see webui-proxy.conf
 func sameOrigin(r *http.Request) bool {
 	host := r.Host
-	if xf := r.Header.Get("X-Forwarded-Host"); xf != "" {
-		parts := strings.Split(xf, ",")
-		host = strings.TrimSpace(parts[0])
-	}
 	if host == "" {
 		return false
 	}

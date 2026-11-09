@@ -684,7 +684,7 @@ int infix_ssh_connect(kcontext_t *ctx)
 	const char *host, *ruser, *port, *user;
 	struct passwd *pw;
 	kparg_t *parg;
-	char *argv[8];
+	char *argv[10];
 	int i = 0;
 
 	host  = kparg_value(kpargv_find(pargv, "host"));
@@ -708,6 +708,7 @@ int infix_ssh_connect(kcontext_t *ctx)
 	argv[i++] = "ssh";
 	if (ruser) { argv[i++] = "-l"; argv[i++] = (char *)ruser; }
 	if (port)  { argv[i++] = "-p"; argv[i++] = (char *)port;  }
+	argv[i++] = "--";
 	argv[i++] = (char *)host;
 	argv[i]   = NULL;
 
@@ -792,7 +793,7 @@ int infix_ssh_add_known_host(kcontext_t *ctx)
 	if (!pid) {
 		FILE *f;
 
-		if (setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
 			fprintf(stderr, "Aborting, failed dropping privileges: %s\n",
 				strerror(errno));
 			_exit(1);

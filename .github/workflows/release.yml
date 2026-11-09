@@ -86,6 +86,11 @@ jobs:
       - name: Extract ChangeLog entry ...
         run: |
           ./utils/extract-changelog.sh < doc/ChangeLog.md > release.md
+          cat <<EOF >> release.md
+
+          > [!NOTE]
+          > These images are signed with, and trust, the development key published in the repository, so anyone can build an upgrade bundle they accept.  Products built on Infix use their own keys, see [Signing Keys](https://github.com/kernelkit/infix/blob/${{ github.ref_name }}/doc/boot.md#signing-keys).
+          EOF
           cat release.md
 
       - uses: ncipollo/release-action@v1

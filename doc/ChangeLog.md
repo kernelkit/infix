@@ -43,6 +43,54 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- A container `command` containing `$(...)` or `$VAR` was
+  expanded on the host before the container started.  The command now
+  reaches the container exactly as configured.  Reported by Dave Seddon
+- An interface handed to a container could be renamed from inside the
+  container to a string that the host then ran as a command.  Such names
+  are now rejected.  Reported by Dave Seddon
+- Every change to the access control rules leaked a little memory per
+  user account in the configuration daemon.  Reported by Dave Seddon
+- A device on the LAN announcing an mDNS host name with a quote in it
+  stopped that neighbor from showing up in the mDNS neighbor list.
+  Reported by Dave Seddon
+- An interface description with a `#`, a quote or a line break in it
+  stopped the rest of that interface's setup, and could add `ip`
+  commands to it.  The description is now set exactly as written.
+  Reported by Dave Seddon
+- WebUI: the Logs and Diagnostics pages are now only offered to users
+  who may read the access control rules, the same as Users & Groups.
+  Before, any user who could log in could read every log file, and run
+  ping, traceroute and scans from the device.  Reported by Dave Seddon
+- WebUI: a link on another site could make the device ping, trace or
+  scan a host of the attacker's choice from a logged-in browser.
+  Reported by Dave Seddon
+- WebUI: the check against requests from other sites no longer trusts
+  an `X-Forwarded-Host` header sent by the browser.
+  Reported by Dave Seddon
+- WebUI: a percent-encoded `..` in a request path was not caught by the
+  check that keeps requests inside the RESTCONF tree.
+  Reported by Dave Seddon
+- WebUI: MD5 is no longer offered as a hash when setting a password.
+  Users with an MD5 hash can still log in.  Reported by Dave Seddon
+- A host name starting with `-` given to `copy` with an `scp://` URL, or
+  to the CLI `ssh` command, was taken as an option to scp or ssh.
+  Reported by Dave Seddon
+- `copy` to or from an `scp://` URL now refuses a server whose host key
+  has changed.  A server not seen before is still accepted and
+  remembered.  Reported by Dave Seddon
+- The CLI command that adds a host to a user's known SSH hosts kept the
+  CLI's supplementary groups while writing the file.
+  Reported by Dave Seddon
+- The SSH host private key was visible in the process list for a moment
+  while it was installed.  Reported by Dave Seddon
+- The network browser at network.local now drops slow and idle
+  connections instead of keeping them open forever.
+  Reported by Dave Seddon
+- A fault while reading one kind of operational data took all
+  operational data offline until the service was restarted.  The
+  failed read is now retried at its next interval.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh

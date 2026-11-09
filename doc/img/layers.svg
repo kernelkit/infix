@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="400" viewBox="0 0 900 400"
+     font-family="Lato, 'Source Sans 3', Helvetica, Arial, sans-serif">
+  <style>
+    .label { fill: #2a2a2a; font-size: 18px; font-weight: 700; text-anchor: middle; }
+    .sub   { fill: #4b5058; font-size: 12px; text-anchor: middle; }
+    .ann   { fill: #5c6370; font-size: 13px; }
+    .tick  { stroke: #8a8f98; stroke-width: 1.2; fill: none; }
+    @media (prefers-color-scheme: dark) {
+      .ann  { fill: #9aa0a8; }
+      .tick { stroke: #6b7078; }
+    }
+  </style>
+
+  <!-- product layer -->
+  <polygon points="300,30 382.5,140 217.5,140" fill="#fff1c2" stroke="#e0b94a" stroke-width="1.5"/>
+  <!-- infix layer -->
+  <polygon points="217.5,140 382.5,140 461.25,245 138.75,245" fill="#ffe0b8" stroke="#e8933a" stroke-width="1.5"/>
+  <!-- buildroot layer -->
+  <polygon points="138.75,245 461.25,245 540,350 60,350" fill="#e9d8f0" stroke="#a97bc4" stroke-width="1.5"/>
+
+  <!-- padlock -->
+  <g transform="translate(300,66)" fill="none" stroke="#2a2a2a" stroke-width="1.6">
+    <rect x="-7" y="-2" width="14" height="11" rx="1.5" fill="#2a2a2a" stroke="none"/>
+    <path d="M -4.5 -2 V -6 a 4.5 4.5 0 0 1 9 0 V -2"/>
+  </g>
+  <text x="300" y="104" class="label">Product</text>
+  <text x="300" y="122" class="sub">your layer</text>
+
+  <text x="300" y="191" class="label">Infix</text>
+  <text x="300" y="209" class="sub">integration layer</text>
+
+  <text x="300" y="296" class="label">Buildroot</text>
+  <text x="300" y="314" class="sub">LTS series</text>
+
+  <!-- annotations -->
+  <path d="M 585 40 V 130 M 585 40 H 592 M 585 130 H 592" class="tick"/>
+  <text x="604" y="76" class="ann">Board files, own software, branding,</text>
+  <text x="604" y="96" class="ann">and the product's own signing keys</text>
+
+  <path d="M 585 150 V 235 M 585 150 H 592 M 585 235 H 592" class="tick"/>
+  <text x="604" y="176" class="ann">YANG models, CLI, WebUI, NETCONF and</text>
+  <text x="604" y="196" class="ann">RESTCONF, containers, tests, and packages</text>
+  <text x="604" y="216" class="ann">not yet in Buildroot</text>
+
+  <path d="M 585 255 V 340 M 585 255 H 592 M 585 340 H 592" class="tick"/>
+  <text x="604" y="286" class="ann">Most of the open source components,</text>
+  <text x="604" y="306" class="ann">followed patch release by patch release</text>
+</svg>
