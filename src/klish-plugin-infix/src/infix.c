@@ -793,7 +793,7 @@ int infix_ssh_add_known_host(kcontext_t *ctx)
 	if (!pid) {
 		FILE *f;
 
-		if (setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
 			fprintf(stderr, "Aborting, failed dropping privileges: %s\n",
 				strerror(errno));
 			_exit(1);
