@@ -96,8 +96,13 @@
     });
     document.addEventListener('htmx:sendError', show);
     document.addEventListener('htmx:timeout',   show);
+    // A gateway error from the WebUI itself is an answer, about the
+    // device behind it; only one the proxy gave for a WebUI that is down
+    // means we lost the box.  Our answers carry X-WebUI, nginx's do not.
     document.addEventListener('htmx:responseError', function (evt) {
-      var s = evt.detail && evt.detail.xhr && evt.detail.xhr.status;
+      var xhr = evt.detail && evt.detail.xhr;
+      if (!xhr || xhr.getResponseHeader('X-WebUI')) return;
+      var s = xhr.status;
       if (s === 502 || s === 503 || s === 504) show();
     });
     document.addEventListener('htmx:afterRequest', function (evt) {
@@ -1570,18 +1575,18 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
-    // NACM refused the candidate copy: the page is of no use, say so instead.
-    var configureDenied = false;
+    // The candidate copy failed: the page is of no use, say why instead.
+    var configureFailed = false;
     document.addEventListener('htmx:responseError', function(evt) {
       var d = evt.detail;
-      if (!d || !d.xhr || d.xhr.status !== 403 ||
-          !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
-      configureDenied = true;
+      if (!d || !d.xhr || !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
+      configureFailed = true;
       var content = document.getElementById('content');
-      if (content) {
-        content.innerHTML = '<div class="alert alert-error">' +
-          'You do not have permission to change the configuration.</div>';
-      }
+      if (!content) return;
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-error';
+      alert.textContent = d.xhr.responseText || 'Could not start editing the configuration.';
+      content.replaceChildren(alert);
     });
 
     // The Configure accordion is open on page load only on a configure
@@ -1594,7 +1599,7 @@ function markActiveOpt(cls, attr, value) {
       if (content) content.classList.add('cfg-entering');
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
         .then(function() {
-          if (configureDenied) return;
+          if (configureFailed) return;
           return htmx.ajax('GET', window.location.pathname + window.location.search,
                            {target: '#content', swap: 'innerHTML'});
         })
