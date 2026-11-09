@@ -82,6 +82,36 @@
     {{end}}
   </section>
 
+  {{with .TSN}}
+  <section class="info-card">
+    <div class="card-header">Shapers</div>
+    {{if .Shapers}}
+    <h3>Credit-Based Shaper{{template "field-info" (index $.Desc "tsn-oper-idle")}}</h3>
+    <table class="info-table">
+      {{range .Shapers}}
+      <tr><th>Class {{.Class}}</th><td>{{.IdleMbit}} Mbit/s</td></tr>
+      {{end}}
+    </table>
+    {{end}}
+    {{if or .Gates .Pending}}
+    <h3>Time-Aware Shaper{{template "field-info" (index $.Desc "tsn-gates")}}</h3>
+    <table class="info-table">
+      {{if .CycleUs}}<tr><th>Cycle{{template "field-info" (index $.Desc "tsn-oper-cycle")}}</th><td>{{.CycleUs}} µs</td></tr>{{end}}
+      {{if .Base}}<tr><th>Base time{{template "field-info" (index $.Desc "tsn-oper-base")}}</th><td>{{.Base}}</td></tr>{{end}}
+      {{if .Pending}}<tr><th>Change pending{{template "field-info" (index $.Desc "tsn-pending")}}</th><td>yes</td></tr>{{end}}
+    </table>
+    {{if .Gates}}
+    <table class="info-table">
+      <thead><tr><th>Entry</th><th>Open gates, classes</th><th>Interval</th></tr></thead>
+      {{range .Gates}}
+      <tr><td>{{.Index}}</td><td>{{if .Open}}{{.Open}}{{else}}none{{end}}</td><td>{{.IntervalUs}} µs</td></tr>
+      {{end}}
+    </table>
+    {{end}}
+    {{end}}
+  </section>
+  {{end}}
+
   {{template "iface-counters" .}}
 </div>
 

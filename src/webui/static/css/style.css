@@ -2764,6 +2764,8 @@ select.cfg-input {
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
 .cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
 .cfg-subsection-head { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0.5rem 0 0.25rem; }
+/* A unit keeps its case inside an uppercased header: µs, not MS */
+.unit { text-transform: none; }
 .cfg-fold { margin: 0.5rem 0 0; }
 .cfg-fold > summary { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.4rem; user-select: none; }
 .cfg-fold > summary::-webkit-details-marker { display: none; }

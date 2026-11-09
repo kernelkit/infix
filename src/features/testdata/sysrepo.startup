@@ -50,8 +50,17 @@
           "vlan-filtering",
           "containers",
           "ppp",
-          "wifi"
+          "wifi",
+          "egress-shaper"
         ]
+      },
+      {
+        "name": "infix-qos",
+        "revision": "2026-10-28"
+      },
+      {
+        "name": "infix-tsn",
+        "revision": "2026-10-22"
       },
       {
         "name": "infix-containers",
