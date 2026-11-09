@@ -126,6 +126,8 @@ All notable changes to the project are documented in this file.
 - WebUI: a value the device rejects is now reported with the name of the
   field and the reason.  Before, a value failing its pattern only gave
   "Can't parse data: LY_EVALID"
+- A rejected host name is now explained in words instead of quoting the
+  pattern it failed
 - WebUI: every confirmation now uses the same in-page dialog.  Before,
   all but Apply and Abort used the browser's own box, and one dismissed
   with Esc could run along with the next confirmed action

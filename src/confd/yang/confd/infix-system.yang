@@ -38,6 +38,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-11-09 {
+    description "Explain a rejected hostname in words instead of the pattern.";
+    reference "internal";
+  }
+
   revision 2026-10-01 {
     description "Add the check-update RPC (see submodule).";
     reference "internal";
@@ -319,7 +324,9 @@ module infix-system {
         + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?'
         + '|%[him]'
         + ')'
-        + '([a-zA-Z0-9\-_\.]|%[him])*';
+        + '([a-zA-Z0-9\-_\.]|%[him])*' {
+        error-message "Only letters, digits, '-', '_', '.' and the format specifiers %h, %i and %m are allowed, and the name cannot begin with '-' or '.'.";
+      }
       length "1..128";
     }
     description "Linux have the same restrictions as IETF, only shorter.

@@ -37,7 +37,7 @@ MODULES=(
 	"infix-firewall-icmp-types@2025-04-26.yang"
 	"infix-meta@2025-12-10.yang"
 	"infix-services@2026-10-27.yang"
-	"infix-system@2026-10-01.yang"
+	"infix-system@2026-11-09.yang"
 	"ieee802-ethernet-interface@2025-09-10.yang"
 	"ieee802-ethernet-phy-type@2025-09-10.yang"
 	"infix-ethernet-interface@2026-10-31.yang"
