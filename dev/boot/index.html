@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -1758,6 +1758,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signing-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signing Keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signing Keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-your-own-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Your Own Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#image-formats" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2952,6 +2980,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signing-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signing Keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signing Keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-your-own-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Your Own Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#image-formats" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3486,6 +3542,74 @@ successful upgrade is completed, you can reboot your system, which
 will then boot from the newly installed image.  Since the image from
 which you were originally running is now inactive, running the same
 upgrade command again will bring both images into sync.</p>
+<h2 id="signing-keys">Signing Keys<a class="headerlink" href="#signing-keys" title="Permanent link">¶</a></h2>
+<p>The boot image and every upgrade bundle are signed, and a trust store
+in the image decides which signatures the running system accepts:</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Build setting</th>
+<th>Checked by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kernel, boot image</td>
+<td><code>IX_KERNEL_SIGN_KEY</code>, <code>IX_IMAGE_*_KEY</code></td>
+<td>the bootloader, with secure boot</td>
+</tr>
+<tr>
+<td>RAUC upgrade bundle</td>
+<td><code>IX_IMAGE_*_RAUC_KEY</code></td>
+<td>RAUC, against the trust store</td>
+</tr>
+<tr>
+<td>Trust store</td>
+<td><code>IX_TRUSTED_KEYS_*</code></td>
+<td>installed as <code>/etc/rauc/keys</code></td>
+</tr>
+</tbody>
+</table>
+<p>All of them default to the <em>development key</em> in
+<code>board/common/signing-keys/development/</code>, which is part of the public
+repository, and every defconfig in <code>configs/</code> trusts it.  The public
+images are therefore signed with a key anyone has: the signature on an
+upgrade bundle proves it arrived intact, not where it came from, and
+anyone building from the tree can produce a bundle the public images
+accept.</p>
+<p>This is deliberate.  The public images are a base for products, and
+they must stay upgradable by anyone who builds from source.  Proof of
+origin belongs to the product built on top: its own key pair, a trust
+store holding only its own certificate, and secure boot on hardware
+that supports it.  Nothing in the public tree provides that on its
+own.</p>
+<h3 id="using-your-own-keys">Using Your Own Keys<a class="headerlink" href="#using-your-own-keys" title="Permanent link">¶</a></h3>
+<p>Generate a key pair, or use one held in an HSM; the RAUC settings also
+accept a PKCS#11 URI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$ openssl req -x509 -newkey rsa:4096 -nodes -days 7300 \
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>      -subj "/O=Example/CN=Example Signing Key" \
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>      -keyout example.key -out example.crt
+</code></pre></div>
+<p>Then, in <code>make menuconfig</code> under <em>External options</em>, point the signing
+settings of the image types the board uses at the new key, drop the
+development key from the trust store and add your certificate instead:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>IX_KERNEL_SIGN_KEY="/path/to/example.key"
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>IX_KERNEL_SIGN_CERT="/path/to/example.crt"
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>IX_IMAGE_ITB_RAUC_KEY="/path/to/example.key"
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>IX_IMAGE_ITB_RAUC_CERT="/path/to/example.crt"
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a># IX_TRUSTED_KEYS_DEVELOPMENT is not set
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>IX_TRUSTED_KEYS_EXTRA_PATH="/path/to/example.crt"
+</code></pre></div>
+<p>An image built this way no longer accepts the public upgrade bundles,
+which is the point.  The trust store can hold more than one
+certificate, so to roll keys, ship an image trusting both the old and
+the new certificate before signing with the new key.</p>
+<p>A bundle fetched over plain HTTP or FTP can be swapped by anyone on
+the path.  With your own key the signature check catches that.  With
+the development key it does not, since the attacker can sign too, so a
+system that still trusts the development key should only install
+bundles from HTTPS or local media.</p>
 <h2 id="image-formats">Image Formats<a class="headerlink" href="#image-formats" title="Permanent link">¶</a></h2>
 <p>Infix is built in one of two families of image formats, depending on
 the bootloader used by the target:</p>
@@ -3562,19 +3686,19 @@ to use.</p>
 <p>A full system image, used to provision a new system, either by writing
 <code>.disk</code> to its block device or by using <code>.qcow2</code> as the disk of a
 virtual machine.  The disk uses the GPT partitioning scheme:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>.--------------.
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>|  GPT Table   |
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>:--------------:
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>|     esp      |
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>:--------------:
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>|  esp-backup  |
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>:--------------:
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>| barebox-state|
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>:--------------:
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>|              |
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>|   internal   |
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>|              |
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>'--------------'
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>.--------------.
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>|  GPT Table   |
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>:--------------:
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>|     esp      |
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>:--------------:
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>|  esp-backup  |
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>:--------------:
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>| barebox-state|
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>:--------------:
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>|              |
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>|   internal   |
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>|              |
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>'--------------'
 </code></pre></div>
 <h5 id="esp-esp-backup-efi-system-partitions"><code>esp</code>, <code>esp-backup</code> - EFI System Partitions<a class="headerlink" href="#esp-esp-backup-efi-system-partitions" title="Permanent link">¶</a></h5>
 <table>
@@ -3747,27 +3871,27 @@ to use.</p>
 <p>Infix runs from a block device (e.g. eMMC or virtio disk) with the
 following layout. The disk is expected to use the GPT partitioning
 scheme. Partitions marked with an asterisk are optional.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>.-----------.
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>| GPT Table |
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>:-----------:
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>|    boot*  |
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>:-----------:
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>|    aux    |
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>:-----------:
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>|           |
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>|  primary  |
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>|           |
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>:-----------:
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>|           |
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>| secondary |
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>|           |
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>:-----------:
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>|    cfg    |
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>:-----------:
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>|           |
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>|    var*   |
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>|           |
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>'-----------'
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>.-----------.
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>| GPT Table |
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>:-----------:
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>|    boot*  |
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>:-----------:
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>|    aux    |
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>:-----------:
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>|           |
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>|  primary  |
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>|           |
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>:-----------:
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>|           |
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>| secondary |
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>|           |
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>:-----------:
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>|    cfg    |
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>:-----------:
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>|           |
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>|    var*   |
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>|           |
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>'-----------'
 </code></pre></div>
 <h5 id="boot-bootloader"><code>boot</code> - Bootloader<a class="headerlink" href="#boot-bootloader" title="Permanent link">¶</a></h5>
 <table>
@@ -3821,10 +3945,10 @@ in a separate storage device, e.g. a serial FLASH.</p>
 such as image signatures required to validate the chain of trust,
 bootloader configuration etc.</p>
 <p>Typical layout when using U-Boot bootloader:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├ primary.itbh
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├ secondary.itbh
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>└ uboot.env
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├ primary.itbh
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>├ secondary.itbh
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>└ uboot.env
 </code></pre></div>
 <p>During boot, an ITB header along with the corresponding root
 filesystem image are concatenated in memory, by U-Boot, to form a
@@ -3848,7 +3972,7 @@ required to configure the boot order.</p>
 </tr>
 <tr>
 <td>Size</td>
-<td>&gt;= 256 MiB</td>
+<td>&gt;= 512 MiB</td>
 </tr>
 <tr>
 <td>Format</td>
@@ -3991,7 +4115,7 @@ between previously isolated VLANs.&nbsp;<a class="footnote-backref" href="#fnref
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
         <script src="../print-keep.js"></script>
       
