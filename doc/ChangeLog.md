@@ -51,6 +51,9 @@ All notable changes to the project are documented in this file.
   are now rejected.  Reported by Dave Seddon
 - Every change to the access control rules leaked a little memory per
   user account in the configuration daemon.  Reported by Dave Seddon
+- A device on the LAN announcing an mDNS host name with a quote in it
+  stopped that neighbor from showing up in the mDNS neighbor list.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
