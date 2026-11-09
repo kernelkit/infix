@@ -117,7 +117,7 @@ Configured under `qos ingress`:
 
 | Setting            | Description                                    |
 |--------------------|------------------------------------------------|
-| `trust`            | Trusted fields in order, default `pcp`         |
+| `trust`            | Fields to classify by, in order, default `pcp` |
 | `default-priority` | Priority when no trusted field matches         |
 | `pcp-map`          | PCP to priority, preset or custom table        |
 | `dscp-map`         | DSCP to priority, preset or custom table       |
@@ -150,7 +150,7 @@ behind them keeps the default and carries the edge's decision through.
 
 A custom `pcp-map` is keyed by PCP and DEI.  A custom `dscp-map` is keyed
 by DSCP with a `trusted` flag per entry, so individual codepoints can be
-believed while the rest fall through to the default priority.
+trusted while the rest fall through to the default priority.
 
 ### Presets
 
@@ -192,7 +192,7 @@ admin@example:/config/interface/…/ingress/> <b>set pcp-map preset ieee</b>
 admin@example:/config/interface/…/ingress/> <b>leave</b>
 </code></pre>
 
-An access port that believes only EF (46) and AF31 (26) and gives
+An access port that trusts only EF (46) and AF31 (26) and gives
 everything else the port default:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e2 qos ingress</b>
