@@ -399,7 +399,7 @@
                     {{if $.Capabilities.Has "egress-shaper"}}
                     <tr>
                       <th>Egress shaper <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "qos-shaper")}}</th>
-                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="rate"
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="{{$.QoSBounds.RateLo}}" max="{{$.QoSBounds.RateHi}}" step="any" name="rate"
                                  value="{{.QoSShaperMbit}}" placeholder="no shaping" style="width:8rem"></td>
                       {{template "reset-cell" (dict "Path" (printf "%s/infix-interfaces:qos/egress-shaper" $qp) "Back" "/configure/interfaces" "What" "the egress shaper")}}
                     </tr>
@@ -432,7 +432,7 @@
                     {{range .QoSShapers}}
                     <tr>
                       <td>Class {{.ID}}{{if and $profile (not .Shaped)}} <span class="text-muted">(not shaped by the profile)</span>{{end}}</td>
-                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="idle_{{.ID}}"
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{$.QoSBounds.SlopeHi}}" step="any" name="idle_{{.ID}}"
                                  value="{{.IdleMbit}}" placeholder="not shaped" aria-label="Idle slope class {{.ID}}" style="width:8rem"></td>
                       <td class="cfg-reset-col">
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
@@ -484,12 +484,12 @@
                     </thead>
                     <tbody id="gate-entries-{{.Name}}">
                       {{range $g.Entries}}
-                      {{template "gate-entry" (dict "N" .Index "Classes" $g.Classes "Open" .Open "Interval" .IntervalUs)}}
+                      {{template "gate-entry" (dict "N" .Index "Classes" $g.Classes "Open" .Open "Interval" .IntervalUs "Max" $.QoSBounds.IntervalHi)}}
                       {{end}}
                     </tbody>
                   </table>
                   <template id="gate-entry-tpl-{{.Name}}">
-                    {{template "gate-entry" (dict "N" "__N__" "Classes" $g.Classes "Open" $g.AllOpen "Interval" "")}}
+                    {{template "gate-entry" (dict "N" "__N__" "Classes" $g.Classes "Open" $g.AllOpen "Interval" "" "Max" $.QoSBounds.IntervalHi)}}
                   </template>
                   <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}">+ Add entry</button>
 
@@ -498,7 +498,7 @@
                     <table class="info-table">
                       <tr>
                         <th>Cycle time extension <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-extension")}}</th>
-                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="extension"
+                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" max="{{$.QoSBounds.ExtensionHi}}" step="any" name="extension"
                                    value="{{$g.ExtensionUs}}" placeholder="0" style="width:9rem"></td>
                         {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time-extension" $qp) "Back" "/configure/interfaces" "What" "the cycle time extension")}}
                       </tr>
@@ -506,7 +506,7 @@
                         <th>Max SDU per class <span class="unit">(bytes)</span>{{template "field-info" (index $d "tsn-max-sdu")}}</th>
                         <td>
                           {{range $c := $g.Classes}}
-                          <label class="diag-check" style="margin-right:0.6rem">{{$c}} <input class="cfg-input cfg-input-sm" type="number" min="1" step="1" name="maxsdu_{{$c}}"
+                          <label class="diag-check" style="margin-right:0.6rem">{{$c}} <input class="cfg-input cfg-input-sm" type="number" min="{{$.QoSBounds.MaxSDULo}}" max="{{$.QoSBounds.MaxSDUHi}}" step="1" name="maxsdu_{{$c}}"
                                  value="{{index $g.MaxSDU $c}}" placeholder="no limit" aria-label="Max SDU class {{$c}}" style="width:5.5rem"></label>
                           {{end}}
                         </td>
@@ -2160,7 +2160,7 @@
     <label class="diag-check"><input type="checkbox" name="entry_open_{{$.N}}" value="{{$c}}" {{if index $open $c}}checked{{end}}>{{$c}}</label>
     {{end}}
   </td>
-  <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="entry_interval_{{.N}}"
+  <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{.Max}}" step="any" name="entry_interval_{{.N}}"
              value="{{.Interval}}" aria-label="Entry {{.N}} interval" style="width:6rem"></td>
   <td><button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">{{template "icon-trash"}}</button></td>
 </tr>

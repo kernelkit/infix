@@ -9,10 +9,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 	"infix/webui/internal/testutil"
 )
 
@@ -118,6 +121,7 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		Interfaces:  rows,
 		Desc:        map[string]string{},
 		QoSProfiles: []string{"tsn-ring"},
+		QoSBounds:   qosBounds{RateLo: "0.000008", SlopeHi: "18446744073709.55", IntervalHi: "4294967.295", MaxSDULo: "0"},
 	}
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "content", data); err != nil {
@@ -140,6 +144,8 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		`Cycle <span class="unit">(µs)</span>`, "Time-Aware Shaper",
 		`hx-delete="/configure/leaf?path=/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos/egress-shaper&redirect=/configure/interfaces"`,
 		`hx-delete="/configure/interfaces/e1/cbs/7"`, `hx-delete="/configure/interfaces/e1/gates/max-sdu"`,
+		`min="0.000008"`, `max="18446744073709.55" step="any" name="idle_7"`,
+		`max="4294967.295" step="any" name="entry_interval_0"`, `min="0" max="" step="1" name="maxsdu_5"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)
@@ -428,6 +434,53 @@ func TestResetMaxSDU(t *testing.T) {
 		strings.Count(got[0], `"operation":"remove"`) != qosNumClasses ||
 		!strings.Contains(got[0], "gate-parameter-table/queue-max-sdu-table=5") {
 		t.Errorf("requests %v", got)
+	}
+}
+
+// The form's bounds are the model's, in the form's units.
+func TestScaledBounds(t *testing.T) {
+	dir := t.TempDir()
+	mod := `module t { namespace "urn:t"; prefix t;
+  container c {
+    leaf rate { type uint64 { range "8..max"; } }
+    leaf ns { type uint32; }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(dir, "t.yang"), []byte(mod), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := schema.NewCache(nil, dir, "")
+	if err := c.LoadFromCache(); err != nil || c.Manager() == nil {
+		t.Fatalf("load: %v", err)
+	}
+	if lo, hi := scaledBounds(c.Manager(), "/t:c/rate", 1e6); lo != "0.000008" || hi != "18446744073709.55" {
+		t.Errorf("rate in Mbit/s: %s..%s", lo, hi)
+	}
+	if lo, hi := scaledBounds(c.Manager(), "/t:c/ns", 1e3); lo != "0" || hi != "4294967.295" {
+		t.Errorf("ns in µs: %s..%s", lo, hi)
+	}
+	if lo, hi := scaledBounds(c.Manager(), "/t:c/none", 1); lo != "" || hi != "" {
+		t.Errorf("missing leaf: %q..%q", lo, hi)
+	}
+}
+
+// The parsers keep a value within its integer width, nothing more: the
+// model's range is the device's to check.
+func TestFieldParsersBounds(t *testing.T) {
+	if _, err := mbitField("2000000", "rate"); err != nil {
+		t.Errorf("2 Tbit/s refused: %v", err)
+	}
+	if _, err := mbitField("2e13", "rate"); err == nil {
+		t.Error("a rate beyond uint64 accepted")
+	}
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("a=4294967.295&b=4294968"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.ParseForm()
+	if _, ok, err := usField(req, "a", "a"); !ok || err != nil {
+		t.Errorf("uint32 max refused: %v", err)
+	}
+	if _, _, err := usField(req, "b", "b"); err == nil {
+		t.Error("an interval beyond uint32 accepted")
 	}
 }
 

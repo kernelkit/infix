@@ -181,7 +181,8 @@ type cfgIfacePageData struct {
 	// the Add Interface row so users don't have to remember the name.
 	UnconfiguredPhysical []string
 	Desc                 map[string]string
-	QoSProfiles          []string // names, for the per-port profile select
+	QoSProfiles          []string  // names, for the per-port profile select
+	QoSBounds            qosBounds // input bounds of the QoS and TSN fields
 
 	// Add Interface modal — pre-computed once per page render so the
 	// dialog has no per-tile-click latency. WizardTypes feeds the type
@@ -253,6 +254,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		lPath := "/infix-interfaces:lag"
 		ip4 := "/ietf-ip:ipv4"
 		ip6 := "/ietf-ip:ipv6"
+		data.QoSBounds = qosBoundsOf(mgr)
 		data.Desc = map[string]string{
 			"name":            descOr(mgr, ifPath+"/name", "The unique name for this interface. Pick one not already in use."),
 			"description":     schema.DescriptionOf(mgr, ifPath+"/description"),

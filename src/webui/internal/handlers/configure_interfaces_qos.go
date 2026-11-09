@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 // SaveQoS sets the port's profile reference and egress shaper.  An empty
@@ -142,13 +143,45 @@ func mbitText(bits int64) string {
 }
 
 // mbitField parses a Mbit/s form value into bits per second, as the
-// string the uint64 leaves take.
+// string the uint64 leaves take.  The model's own range is checked by
+// the device; this only keeps the value a uint64.
 func mbitField(v, what string) (string, error) {
 	mbit, err := strconv.ParseFloat(v, 64)
-	if err != nil || mbit <= 0 || mbit > 1e6 {
+	if err != nil || mbit <= 0 || mbit*1e6 >= math.MaxUint64 {
 		return "", fmt.Errorf("%s must be a number of Mbit/s above zero", what)
 	}
-	return strconv.FormatInt(int64(math.Round(mbit*1e6)), 10), nil
+	return strconv.FormatUint(uint64(math.Round(mbit*1e6)), 10), nil
+}
+
+// qosBounds are the min and max of the QoS and TSN form fields, in the
+// units the form shows, from the model.
+type qosBounds struct {
+	RateLo, RateHi, SlopeHi, IntervalHi, ExtensionHi, MaxSDULo, MaxSDUHi string
+}
+
+// scaledBounds is the range of the leaf at path divided by unit.
+func scaledBounds(mgr *schema.Manager, path string, unit float64) (lo, hi string) {
+	scale := func(v string) string {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return ""
+		}
+		return strconv.FormatFloat(f/unit, 'f', -1, 64)
+	}
+	lo, hi = schema.RangeBounds(schemaRange(mgr, path))
+	return scale(lo), scale(hi)
+}
+
+func qosBoundsOf(mgr *schema.Manager) qosBounds {
+	ifp := "/ietf-interfaces:interfaces/interface"
+	sched := ifp + "/ieee802-dot1dc-sched-if:gate-parameter-table"
+	var b qosBounds
+	b.RateLo, b.RateHi = scaledBounds(mgr, ifp+"/infix-interfaces:qos/egress-shaper/rate", 1e6)
+	_, b.SlopeHi = scaledBounds(mgr, ifp+"/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table/admin-idle-slope", 1e6)
+	_, b.IntervalHi = scaledBounds(mgr, sched+"/admin-control-list/gate-control-entry/time-interval-value", 1e3)
+	_, b.ExtensionHi = scaledBounds(mgr, sched+"/admin-cycle-time-extension", 1e3)
+	b.MaxSDULo, b.MaxSDUHi = scaledBounds(mgr, sched+"/queue-max-sdu-table/queue-max-sdu", 1)
+	return b
 }
 
 // qosEgressOf returns the egress settings a port runs: its profile's, or
@@ -415,7 +448,7 @@ func usField(r *http.Request, field, what string) (int64, bool, error) {
 		return 0, false, nil
 	}
 	us, err := strconv.ParseFloat(v, 64)
-	if err != nil || us < 0 || us > 4e6 {
+	if err != nil || us < 0 || us*1e3 > math.MaxUint32 {
 		return 0, false, fmt.Errorf("%s must be a number of microseconds", what)
 	}
 	return int64(math.Round(us * 1e3)), true, nil
