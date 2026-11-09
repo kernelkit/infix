@@ -14,9 +14,9 @@ import (
 	"infix/webui/internal/restconf"
 )
 
-// SaveQoS sets the port's profile reference and rate limit.  An empty
+// SaveQoS sets the port's profile reference and egress shaper.  An empty
 // profile leaves the port on its own settings or the defaults, an empty
-// rate removes the limit.
+// rate removes the shaper.
 // POST /configure/interfaces/{name}/qos
 func (h *ConfigureInterfacesHandler) SaveQoS(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {

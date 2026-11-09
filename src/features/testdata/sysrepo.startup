@@ -51,7 +51,7 @@
           "containers",
           "ppp",
           "wifi",
-          "rate-limit"
+          "egress-shaper"
         ]
       },
       {

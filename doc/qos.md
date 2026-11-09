@@ -256,10 +256,10 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 </code></pre>
 
 
-### Rate Limit
+### Egress Shaper
 
 A port can be held below its link speed with one token bucket on the
-whole port, configured under `qos rate-limit`.  `rate` is the
+whole port, configured under `qos egress-shaper`.  `rate` is the
 sustained rate in bits per second, here 10M for 10000000, and `burst` how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
@@ -268,14 +268,14 @@ port sends in total, and transmission selection decides which class
 gets the bounded rate.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos</b>
-admin@example:/config/interface/…/qos/> <b>set rate-limit rate 10M</b>
+admin@example:/config/interface/…/qos/> <b>set egress-shaper rate 10M</b>
 admin@example:/config/interface/…/qos/> <b>leave</b>
 </code></pre>
 
-On a port without offload the limit applies to the frames the CPU
+On a port without offload the shaper applies to the frames the CPU
 sends.  Where the driver takes the bucket it applies to the frames the
 fabric forwards as well, and `offload` under `capabilities` then lists
-`rate-limit`.
+`egress-shaper`.
 
 
 ### Credit-Based Shaper
@@ -301,7 +301,7 @@ The class sends at most its reservation on average, and credit earned
 while it waits lets it burst by about one frame.  Shaped classes must
 be the highest-numbered ones, above the strict classes, as IEEE
 802.1Q-2022 34.5 lays a port out, and the reservation may not exceed
-the link rate.  A port with a `rate-limit` cannot shape per class.
+the link rate.  A port with an `egress-shaper` cannot shape per class.
 The reservation in force is reported as `oper-idle-slope`.
 
 
@@ -335,7 +335,7 @@ admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
 
 The list applies at commit.  Gated classes are served strictly, so a
 gated port rejects weighted classes, and the schedule takes the whole
-port, so it rejects a `rate-limit` as well.  A shaped class under gates
+port, so it rejects an `egress-shaper` as well.  A shaped class under gates
 keeps its reservation: credit is earned only while its gate is open,
 and the shaper is set up with the slope raised by the cycle over the
 class's open time, as 802.1Q-2022 8.6.8.2 specifies.  A shaped class
@@ -467,7 +467,7 @@ applied to, so a class table that reaches beyond a port's traffic
 classes is rejected with the port and the profile named.
 
 What stays on the port is what follows the link rather than the role:
-the `rate-limit`, the credit-based shaper reservations and the gate
+the `egress-shaper`, the credit-based shaper reservations and the gate
 control list.  The operational datastore shows the profile a port
 runs under `qos profile`.
 
@@ -507,7 +507,7 @@ hardware depends on the driver implementing the matching hook:
 | Trust order            | `dcb apptrust` | `dcbnl_setapptrust`     | Rule order, software  |
 | Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`         | DSCP only, software   |
 | Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS`    | software              |
-| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF`    | software              |
+| Port egress shaper     | `tc tbf`       | `TC_SETUP_QDISC_TBF`    | software              |
 | Credit-based shaper    | `tc cbs`       | `TC_SETUP_QDISC_CBS`    | software              |
 | Time-aware shaper      | `tc taprio`    | `TC_SETUP_QDISC_TAPRIO` | software              |
 /// table-caption
@@ -569,7 +569,7 @@ The `traffic-class-table` and the `traffic-class` list apply to hardware
 forwarded frames as well: each priority is queued in its traffic class,
 the strict classes are served first, and the weighted classes share the
 rest by Weighted Round Robin (WRR)[^11] with the `bandwidth` shares as
-weights.  The `rate-limit` is the port's own egress shaper.  Four
+weights.  The `egress-shaper` is the port's own shaper.  Four
 hardware details show through:
 
 - A frame's output queue is chosen where it enters the switch, by the
@@ -611,7 +611,7 @@ runs in the fabric, the credit-based and time-aware shapers included.
 | `remark dscp`           | One table for the chip, defined the same way by the ports that remark DSCP |
 | Traffic classes         | Eight per port, each port's own `traffic-class-table`   |
 | Transmission selection  | Strict priority and Deficit Weighted Round Robin (DWRR) with the `bandwidth` shares as weights, in 31 steps relative to the smallest share |
-| `rate-limit`            | The port's own shaper, rate in steps of 40 kbit/s, burst in steps of 4 KiB up to 508 KiB |
+| `egress-shaper`         | The port's own shaper, rate in steps of 40 kbit/s, burst in steps of 4 KiB up to 508 KiB |
 | Credit-based shaper     | One per queue, idle slope in steps of 4 kbit/s.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
 | Time-aware shaper       | One gate control list per port, limits in the next table |
 /// table-caption
@@ -630,7 +630,7 @@ DSCP one `remark dscp` setting, since the chip holds one table of each.
 | Cycle time extension  | Not supported                                            |
 | Base time             | From the switch clock; one in the past is moved forward by whole cycles |
 | Gate closing          | A frame that cannot finish before its gate closes waits for the next opening |
-| Classes under gates   | Served strictly; weighted classes and a `rate-limit` are refused |
+| Classes under gates   | Served strictly; weighted classes and an `egress-shaper` are refused |
 /// table-caption
 Time-aware shaper limits on LAN969x.  Each port reports them under
 `gate-parameter-table` as `supported-list-max`, `supported-cycle-max`,

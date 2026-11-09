@@ -49,7 +49,7 @@ func TestYangLibraryMinimal(t *testing.T) {
 
 func TestYangLibraryFull(t *testing.T) {
 	s, err := ParseYangLibrary([]byte(`{"ietf-yang-library:yang-library":{"module-set":[{"name":"complete","module":[
-		{"name":"infix-interfaces","feature":["wifi","containers","rate-limit"]},
+		{"name":"infix-interfaces","feature":["wifi","containers","egress-shaper"]},
 		{"name":"infix-hardware","feature":["gps","modem"]},
 		{"name":"infix-qos"},
 		{"name":"infix-tsn"},

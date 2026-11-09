@@ -71,10 +71,10 @@ with infamy.Test() as test:
         entries = [(top, 20000), (top | mid, 20000), (rest, 60000)]
         txqs = cap.tx_queues
 
-    with test.step("Reject a gate control list together with a port rate limit"):
+    with test.step("Reject a gate control list together with a port egress shaper"):
         must_reject(target, config(port, gates(port, entries),
-                                   {"rate-limit": {"rate": 10_000_000}}),
-                    "gates with rate-limit", "rate-limit and gate-enabled exclude each other")
+                                   {"egress-shaper": {"rate": 10_000_000}}),
+                    "gates with egress-shaper", "egress-shaper and gate-enabled exclude each other")
 
     with test.step("Reject a gate control list together with a weighted class"):
         must_reject(target, config(port, gates(port, entries),

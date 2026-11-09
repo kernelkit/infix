@@ -64,16 +64,16 @@ type ifaceJSON struct {
 // qosIfaceJSON mirrors infix-interfaces:qos.  In configuration the port
 // holds either a profile reference or the inline ingress and egress
 // containers, a YANG choice; operational data carries the profile the
-// daemon applied, the rate limit in effect and the capabilities.
+// daemon applied, the egress shaper in effect and the capabilities.
 type qosIfaceJSON struct {
-	Profile      string            `json:"profile"`
-	Ingress      *qosIngressJSON   `json:"ingress"`
-	Egress       *qosEgressJSON    `json:"egress"`
-	RateLimit    *qosRateLimitJSON `json:"rate-limit"`
-	Capabilities *qosCapsJSON      `json:"capabilities"`
+	Profile      string          `json:"profile"`
+	Ingress      *qosIngressJSON `json:"ingress"`
+	Egress       *qosEgressJSON  `json:"egress"`
+	Shaper       *qosShaperJSON  `json:"egress-shaper"`
+	Capabilities *qosCapsJSON    `json:"capabilities"`
 }
 
-type qosRateLimitJSON struct {
+type qosShaperJSON struct {
 	Rate  yangInt64 `json:"rate"`
 	Burst int       `json:"burst"`
 }

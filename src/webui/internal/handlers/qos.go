@@ -23,7 +23,7 @@ type qosRow struct {
 	Name           string
 	Profile        string
 	TrafficClasses int
-	RateLimit      string // "100 Mbit/s", empty for none
+	Shaper         string // "100 Mbit/s", empty for none
 	Offload        string // "none", or the stages the fabric runs
 }
 
@@ -35,7 +35,7 @@ type qosPageData struct {
 }
 
 // Overview lists what each port runs: the profile the daemon applied,
-// its traffic classes, the rate limit in effect and the stages the
+// its traffic classes, the egress shaper in effect and the stages the
 // fabric took.  Operational data only.
 func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := qosPageData{PageData: newPageData(w, r, "qos", "QoS")}
@@ -43,10 +43,10 @@ func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		mgr := h.Schema.Manager()
 		qos := "/ietf-interfaces:interfaces/interface/infix-interfaces:qos"
 		data.Desc = map[string]string{
-			"profile":    schema.DescriptionOf(mgr, qos+"/profile"),
-			"classes":    schema.DescriptionOf(mgr, qos+"/capabilities/max-traffic-classes"),
-			"rate-limit": schema.DescriptionOf(mgr, qos+"/rate-limit"),
-			"offload":    schema.DescriptionOf(mgr, qos+"/capabilities/offload"),
+			"profile":       schema.DescriptionOf(mgr, qos+"/profile"),
+			"classes":       schema.DescriptionOf(mgr, qos+"/capabilities/max-traffic-classes"),
+			"egress-shaper": schema.DescriptionOf(mgr, qos+"/egress-shaper"),
+			"offload":       schema.DescriptionOf(mgr, qos+"/capabilities/offload"),
 		}
 	}
 
@@ -63,8 +63,8 @@ func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		if iface.QoS.Capabilities.MaxTrafficClasses > 0 {
 			row.TrafficClasses = iface.QoS.Capabilities.MaxTrafficClasses
 		}
-		if iface.QoS.RateLimit != nil && iface.QoS.RateLimit.Rate > 0 {
-			row.RateLimit = formatBitRate(uint64(iface.QoS.RateLimit.Rate))
+		if iface.QoS.Shaper != nil && iface.QoS.Shaper.Rate > 0 {
+			row.Shaper = formatBitRate(uint64(iface.QoS.Shaper.Rate))
 		}
 		row.Offload = "none"
 		if len(iface.QoS.Capabilities.Offload) > 0 {

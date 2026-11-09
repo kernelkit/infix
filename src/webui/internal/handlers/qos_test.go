@@ -36,11 +36,11 @@ func TestQoSOverview(t *testing.T) {
 		"ietf-interfaces:interfaces": map[string]any{
 			"interface": []map[string]any{
 				{"name": "e1", "type": "infix-if-type:ethernet", "infix-interfaces:qos": map[string]any{
-					"profile":    "tsn-ring",
-					"rate-limit": map[string]any{"rate": "100000000"},
+					"profile":       "tsn-ring",
+					"egress-shaper": map[string]any{"rate": "100000000"},
 					"capabilities": map[string]any{
 						"max-traffic-classes": 4,
-						"offload":             []string{"classification", "remarking", "transmission-selection", "rate-limit"},
+						"offload":             []string{"classification", "remarking", "transmission-selection", "egress-shaper"},
 					},
 				}},
 				{"name": "e2", "type": "infix-if-type:ethernet", "infix-interfaces:qos": map[string]any{
@@ -57,7 +57,7 @@ func TestQoSOverview(t *testing.T) {
 		t.Fatalf("want 200 got %d: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"tsn-ring", "100 Mbit/s", "<td>4</td>", "<td>classification, remarking, transmission-selection, rate-limit</td>", "<td>classification</td>", "<td>8</td>"} {
+	for _, want := range []string{"tsn-ring", "100 Mbit/s", "<td>4</td>", "<td>classification, remarking, transmission-selection, egress-shaper</td>", "<td>classification</td>", "<td>8</td>"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q in:\n%s", want, body)
 		}

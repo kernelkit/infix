@@ -6,7 +6,7 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_strict_priority
 
 Two talkers, one marked EF and one CS1, bridged through the DUT and out
 one egress port that cannot carry both.  The port is negotiated down to
-100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where it
+100 Mbit/s where its PHY allows, or shaped to 10 Mbit/s where it
 has no PHY, and each talker offers 80 percent of what the port drains,
 so the queues fill and the scheduler decides who gets through.
 

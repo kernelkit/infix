@@ -132,12 +132,13 @@ type cfgIfaceRow struct {
 	DHCPv6Enabled bool
 
 	// QoS: the profile the port references, whether it carries its own
-	// settings instead, and the rate limit in Mbit/s as the form shows it.
-	QoSProfile  string
-	QoSCustom   bool
-	QoSRateMbit string
-	QoSShapers  []qosShaperRow
-	QoSGates    qosGatesRow
+	// settings instead, and the egress shaper rate in Mbit/s as the form
+	// shows it.
+	QoSProfile    string
+	QoSCustom     bool
+	QoSShaperMbit string
+	QoSShapers    []qosShaperRow
+	QoSGates      qosGatesRow
 
 	// Page-level bits copied onto each row so the per-interface IPv4/IPv6
 	// blocks can render as standalone fragments — both inline on the full
@@ -289,7 +290,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			// from the YANG description text. Drop the fallback once
 			// the schema layer learns to traverse augments.
 			"qos-profile":        schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/profile"),
-			"qos-rate-limit":     schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/rate-limit"),
+			"qos-shaper":         schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/egress-shaper"),
 			"tsn-cbs":            schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa"),
 			"tsn-idle":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table/admin-idle-slope"),
 			"tsn-list":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-control-list"),
@@ -2301,8 +2302,8 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 		if iface.QoS != nil {
 			row.QoSProfile = iface.QoS.Profile
 			row.QoSCustom = iface.QoS.Custom()
-			if iface.QoS.RateLimit != nil && iface.QoS.RateLimit.Rate > 0 {
-				row.QoSRateMbit = mbitText(int64(iface.QoS.RateLimit.Rate))
+			if iface.QoS.Shaper != nil && iface.QoS.Shaper.Rate > 0 {
+				row.QoSShaperMbit = mbitText(int64(iface.QoS.Shaper.Rate))
 			}
 		}
 		if row.TypeSlug != "loopback" {

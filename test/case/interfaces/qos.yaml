@@ -20,8 +20,8 @@
 - name: QoS Queue Assignment
   case: qos_queue_assignment/test.py
 
-- name: QoS Rate Limit
-  case: qos_rate_limit/test.py
+- name: QoS Egress Shaper
+  case: qos_egress_shaper/test.py
 
 - name: QoS Profiles
   case: qos_profile/test.py

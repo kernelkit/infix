@@ -24,8 +24,8 @@ submodule infix-if-qos {
      Ingress classification to a (priority, drop precedence) pair,
      priority-to-traffic-class binding, per-traffic-class transmission
      selection, and egress remarking, inline on the interface or by
-     reference to a profile under /system/qos-profile, plus a per-port rate
-     limit.  The groupings live in infix-qos.
+     reference to a profile under /system/qos-profile, plus a per-port
+     egress shaper.  The groupings live in infix-qos.
 
      Applies to every interface type, with no dependency on a bridge
      model.  IEEE 802.1Q names and types are used where 802.1Q defines
@@ -37,9 +37,10 @@ submodule infix-if-qos {
 
   revision 2026-10-28 {
     description "Add QoS profiles: the pipeline inline or by reference
-                 to /system/qos-profile, a choice.  rate-limit moves
-                 from egress to qos.  capabilities gain supported-offload,
-                 the stages the fabric can run.";
+                 to /system/qos-profile, a choice.  egress/rate-limit
+                 becomes qos/egress-shaper, and feature rate-limit
+                 becomes egress-shaper.  capabilities gain
+                 supported-offload, the stages the fabric can run.";
     reference "internal";
   }
 
@@ -57,8 +58,8 @@ submodule infix-if-qos {
    * Enabled where tc tbf offloads to the port shaper, or where the CPU is
    * the forwarding path and software tbf is the real thing.
    */
-  feature rate-limit {
-    description "Platform supports a port-level egress rate cap.";
+  feature egress-shaper {
+    description "Platform can shape the transmit rate of a whole port.";
   }
 
   /*
@@ -69,7 +70,7 @@ submodule infix-if-qos {
     description "Per-interface QoS.";
 
     container qos {
-      description "Classification, queueing and rate limit of the port.";
+      description "Classification, queueing and shaping of the port.";
 
       container capabilities {
         config false;
@@ -149,16 +150,16 @@ submodule infix-if-qos {
             description "The QoS profile this port uses.
 
                Classification and traffic classes come from the profile;
-               the rate limit stays on the port.";
+               the egress shaper stays on the port.";
           }
         }
       }
 
       /* Applied as a tc tbf root above the scheduler. */
-      container rate-limit {
-        if-feature "rate-limit";
-        presence "Bounds the transmit rate of the port.";
-        description "Transmit rate limit of the whole port.
+      container egress-shaper {
+        if-feature "egress-shaper";
+        presence "Shapes the transmit rate of the port.";
+        description "Transmit rate shaper of the whole port.
 
            One token bucket above the traffic classes.  It bounds what
            the port sends in total and knows nothing about classes:

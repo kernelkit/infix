@@ -114,7 +114,7 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		"fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
 	rows := tsnRows(t)
 	data := cfgIfacePageData{
-		PageData:    PageData{Capabilities: NewCapabilities(map[string]bool{"qos": true, "tsn": true, "rate-limit": true})},
+		PageData:    PageData{Capabilities: NewCapabilities(map[string]bool{"qos": true, "tsn": true, "egress-shaper": true})},
 		Interfaces:  rows,
 		Desc:        map[string]string{},
 		QoSProfiles: []string{"tsn-ring"},

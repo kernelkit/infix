@@ -37,7 +37,7 @@ func TestBuildSwitchPort(t *testing.T) {
 	p := port{
 		TxQueues:  4,
 		Trust:     []string{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
-		Supported: []string{"classification", "remarking", "transmission-selection", "rate-limit"},
+		Supported: []string{"classification", "remarking", "transmission-selection", "egress-shaper"},
 		App:       true,
 		Qdiscs: json.RawMessage(`[
 			{"kind":"tbf","handle":"8001:","root":true,"offloaded":true,"options":{"rate":12500000,"burst":15000}},
@@ -49,11 +49,11 @@ func TestBuildSwitchPort(t *testing.T) {
 		"capabilities": map[string]any{
 			"max-traffic-classes":   4.0,
 			"supported-trust-order": []any{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
-			"supported-offload":     []any{"classification", "remarking", "transmission-selection", "rate-limit"},
-			"offload":               []any{"classification", "rate-limit", "transmission-selection"},
+			"supported-offload":     []any{"classification", "remarking", "transmission-selection", "egress-shaper"},
+			"offload":               []any{"classification", "egress-shaper", "transmission-selection"},
 		},
-		"profile":    "edge",
-		"rate-limit": map[string]any{"rate": "100000000", "burst": 15000.0},
+		"profile":       "edge",
+		"egress-shaper": map[string]any{"rate": "100000000", "burst": 15000.0},
 	}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got  %v\nwant %v", got, want)

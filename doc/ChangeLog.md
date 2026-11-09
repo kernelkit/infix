@@ -59,6 +59,9 @@ All notable changes to the project are documented in this file.
     table and the credit-based and time-aware shapers to the switch
   - `qos capabilities` lists `supported-offload`, the stages a port's
     switch fabric can run, next to `offload`, those it runs right now
+  - The port's `qos egress rate-limit` is now `qos egress-shaper`, and
+    the offload stage and feature of the same name are renamed with it.
+    Saved configurations are migrated
 
 ### Fixes
 

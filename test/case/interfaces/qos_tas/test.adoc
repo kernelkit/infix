@@ -24,7 +24,7 @@ image::topology.svg[QoS Time-Aware Shaper topology, align=center, scaledwidth=75
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Reject a gate control list together with a port rate limit
+. Reject a gate control list together with a port egress shaper
 . Reject a gate control list together with a weighted class
 . Reject an empty gate control list
 . Reject the schedule on a port with fewer transmit queues than classes

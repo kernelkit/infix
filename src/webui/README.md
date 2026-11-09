@@ -128,7 +128,7 @@ internal/
     firewall.go                    Zone matrix
     qos.go                         QoS status table
     configure_qos.go               QoS profile editor
-    configure_interfaces_qos.go    Per-port profile, rate limit, shaper, gates
+    configure_interfaces_qos.go    Per-port profile, egress shaper, shapers, gates
     keystore.go                    Key display
     system.go                      Firmware, reboot, config download
   server/

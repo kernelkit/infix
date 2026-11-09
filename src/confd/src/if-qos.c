@@ -86,7 +86,7 @@ struct qos_egress {
 	enum tsa algo[MAX_TC];
 	uint8_t  bandwidth[MAX_TC];	/* percent, ETS classes only */
 	uint64_t idle[MAX_TC];		/* bits/s, CBS classes only */
-	uint64_t rate;		/* bits/s, 0 = no rate limit */
+	uint64_t rate;		/* bits/s, 0 = no egress shaper */
 	uint32_t burst;		/* bytes */
 	struct qos_gates gates;
 };
@@ -364,19 +364,19 @@ static int qos_parse_egress(struct lyd_node *egress, const char *ifname, struct 
 	return 0;
 }
 
-static void qos_parse_rate_limit(struct lyd_node *qos, struct qos_egress *eg)
+static void qos_parse_shaper(struct lyd_node *qos, struct qos_egress *eg)
 {
-	struct lyd_node *limit = qos ? lydx_get_child(qos, "rate-limit") : NULL;
+	struct lyd_node *shaper = qos ? lydx_get_child(qos, "egress-shaper") : NULL;
 	const char *val;
 
-	if (!limit)
+	if (!shaper)
 		return;
 
-	val = lydx_get_cattr(limit, "rate");
+	val = lydx_get_cattr(shaper, "rate");
 	eg->rate = val ? strtoull(val, NULL, 10) : 0;
 
 	/* Ten milliseconds at rate, never below one frame */
-	val = lydx_get_cattr(limit, "burst");
+	val = lydx_get_cattr(shaper, "burst");
 	eg->burst = val ? strtoul(val, NULL, 10) : eg->rate / 8 / 100;
 	if (eg->burst < 1518)
 		eg->burst = 1518;
@@ -534,7 +534,7 @@ static int qos_parse(struct lyd_node *cif, struct lyd_node *src, struct lyd_node
 	if (err)
 		return err;
 
-	qos_parse_rate_limit(qos, eg);
+	qos_parse_shaper(qos, eg);
 	qos_parse_cbsa(cif, eg);
 
 	return qos_parse_gates(cif, &eg->gates);
@@ -634,7 +634,7 @@ static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname, c
 			return -EINVAL;
 		}
 		if (eg->algo[i] == TSA_CBS && eg->rate) {
-			sr_session_set_error_message(session, "%s: rate-limit and credit-based "
+			sr_session_set_error_message(session, "%s: egress-shaper and credit-based "
 						     "shaping exclude each other", label);
 			return -EINVAL;
 		}
@@ -696,7 +696,7 @@ static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname, c
 	}
 	max = qos_quirk_int(ifname, "sched-supported-interval-max", UINT64_MAX);
 	if (eg->rate) {
-		sr_session_set_error_message(session, "%s: rate-limit and gate-enabled exclude "
+		sr_session_set_error_message(session, "%s: egress-shaper and gate-enabled exclude "
 					     "each other", label);
 		return -EINVAL;
 	}
@@ -1248,7 +1248,7 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	fputs("tc -force -batch - <<EOF\n", fp);
 
 	/*
-	 * The rate limit is one bucket on the whole port, so it takes
+	 * The egress shaper is one bucket on the whole port, so it takes
 	 * the root and the scheduler hangs below it.
 	 */
 	if (eg->rate) {
@@ -1440,7 +1440,7 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	if (lydx_get_op(dif) == LYDX_OP_CREATE || qos_profile_switched(dqos) ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dsrc), "egress", "traffic-class-table", NULL)) ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dsrc), "egress", "traffic-class", NULL)) ||
-	    qos_has_change(lydx_get_child(dqos, "rate-limit")) ||
+	    qos_has_change(lydx_get_child(dqos, "egress-shaper")) ||
 	    qos_has_change(dcbsa) || qos_has_change(dgates))
 		gen_egress(fp, ifname, &eg);
 	fclose(fp);

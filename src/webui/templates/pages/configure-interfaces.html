@@ -394,11 +394,11 @@
                         {{end}}
                       </td>
                     </tr>
-                    {{if $.Capabilities.Has "rate-limit"}}
+                    {{if $.Capabilities.Has "egress-shaper"}}
                     <tr>
-                      <th>Rate limit <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "qos-rate-limit")}}</th>
+                      <th>Egress shaper <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "qos-shaper")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="rate"
-                                 value="{{.QoSRateMbit}}" placeholder="no limit" style="width:8rem"></td>
+                                 value="{{.QoSShaperMbit}}" placeholder="no shaping" style="width:8rem"></td>
                     </tr>
                     {{end}}
                   </table>

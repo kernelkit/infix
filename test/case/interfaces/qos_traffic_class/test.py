@@ -11,8 +11,8 @@ offloaded.
 
 The port's class count comes from its transmit queues, or eight for a
 single-queue port.  Switching the table to the ieee-sr preset must put
-the SR classes, priorities 2 and 3, on the two highest classes.  A rate
-limit must put a tbf root qdisc above the scheduler, with the same ets
+the SR classes, priorities 2 and 3, on the two highest classes.  An egress
+shaper must put a tbf root qdisc above the scheduler, with the same ets
 table beneath it, and go away with the setting.  Removing the qos
 container must restore the default table, IEEE 802.1Q-2022 Table 8-5,
 and the operational datastore must report whether transmission
@@ -129,30 +129,30 @@ with infamy.Test() as test:
         }}, delete=[qos_xpath(port, "/egress")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
-    with test.step("Add a 10 Mbit/s rate limit and verify the tbf root above the ets table"):
+    with test.step("Add a 10 Mbit/s egress shaper and verify the tbf root above the ets table"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": port,
                     "infix-interfaces:qos": {
-                        "rate-limit": {"rate": 10000000}
+                        "egress-shaper": {"rate": 10000000}
                     }
                 }]
             }
         }})
 
-        def rate_limited():
+        def shaped():
             out = tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout
             qdiscs = json.loads(out or "[]")
             root = [q for q in qdiscs if q.get("root")]
             child = [q for q in qdiscs if q.get("parent") == "1:1"]
             return (root and root[0]["kind"] == "tbf" and root[0]["options"]["rate"] == 1250000
                     and child and qdisc_matches(child[0], num_tc, TABLE_34_1[num_tc], num_tc, []))
-        until(rate_limited)
+        until(shaped)
         print(tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout)
 
-    with test.step("Remove the rate limit and verify the scheduler is the root again"):
-        target.put_config_dicts({}, delete=[qos_xpath(port, "/rate-limit")])
+    with test.step("Remove the egress shaper and verify the scheduler is the root again"):
+        target.put_config_dicts({}, delete=[qos_xpath(port, "/egress-shaper")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
     with test.step("Remove qos configuration and verify the default table is back"):

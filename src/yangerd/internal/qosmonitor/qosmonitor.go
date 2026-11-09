@@ -1,5 +1,5 @@
 // Package qosmonitor keeps the QoS operational state of each port: its
-// capabilities, the profile it runs, the rate limit and the shapers in
+// capabilities, the profile it runs, the egress shaper and the other shapers in
 // effect.  The qdisc tree is read through a long-lived `tc` batch
 // process and the DCB tables over rtnetlink, one query per port, on
 // rtnetlink TC and DCB events, on link events and on changes to
