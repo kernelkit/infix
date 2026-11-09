@@ -1,7 +1,7 @@
 From b3bcfd9ec22d4a50481912fdf4ca4b19cf615078 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <mattias.walstrom@wires.se>
 Date: Sat, 24 Oct 2026 09:40:25 +0200
-Subject: [PATCH 5/6] restconf: YANG Patch delete/remove of a typed leaf
+Subject: [PATCH 5/7] restconf: YANG Patch delete/remove of a typed leaf
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
