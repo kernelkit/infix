@@ -141,8 +141,8 @@ The aging time is set per bridge, default 300 seconds:
 Static entries pin an address to a port.  On a VLAN filtering bridge
 they are set per VLAN, and the port must be a member of that VLAN:
 
-<pre class="cli"><code>admin@example:/config/interface/br0/> <b>set bridge forwarding-database entry 00:11:22:33:44:55 port e2</b>
-admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 forwarding-database entry 00:11:22:33:44:66 port e5</b>
+<pre class="cli"><code>admin@example:/config/interface/br0/> <b>set bridge entry 00:11:22:33:44:55 port e2</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 entry 00:11:22:33:44:66 port e5</b>
 </code></pre>
 
 Use the bridge itself as port for an address that should be delivered
@@ -297,9 +297,9 @@ like this:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface br0</b>
-admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e2</b>
-admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e3</b>
-admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 01:00:5e:01:01:01 ports e2</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filter 224.1.1.1 ports e2</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filter 224.1.1.1 ports e3</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filter 01:00:5e:01:01:01 ports e2</b>
 admin@example:/config/interface/br0/> <b>leave</b>
 admin@example:/> <b>copy running-config startup-config</b>
 </code></pre>
@@ -309,8 +309,8 @@ Receivers on all other ports will not see traffic for that group.
 
 On a VLAN-filtering bridge the filter is scoped per VLAN:
 
-<pre class="cli"><code>admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e5</b>
-admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e6</b>
+<pre class="cli"><code>admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filter 224.2.2.2 ports e5</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filter 224.2.2.2 ports e6</b>
 </code></pre>
 
 To verify the MDB — both statically configured and dynamically learned
