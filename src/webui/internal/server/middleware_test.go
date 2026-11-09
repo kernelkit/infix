@@ -26,6 +26,19 @@ func TestSecurityHeadersCacheControl(t *testing.T) {
 	}
 }
 
+// The connection banner tells a 5xx of ours from the proxy's by this tag,
+// so it must be on every answer, errors included.
+func TestSecurityHeadersTagAnswers(t *testing.T) {
+	h := securityHeadersMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "no", http.StatusBadGateway)
+	}))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/configure/enter", nil))
+	if w.Header().Get("X-WebUI") == "" {
+		t.Error("X-WebUI missing on a 502 of our own")
+	}
+}
+
 // app.js posts FormData (multipart); htmx forms post urlencoded.
 func TestValidCSRFFormBodies(t *testing.T) {
 	for sent, want := range map[string]bool{"tok": true, "stale": false} {
