@@ -68,6 +68,9 @@ All notable changes to the project are documented in this file.
 - WebUI: the check against requests from other sites no longer trusts
   an `X-Forwarded-Host` header sent by the browser.
   Reported by Dave Seddon
+- WebUI: a percent-encoded `..` in a request path was not caught by the
+  check that keeps requests inside the RESTCONF tree.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
