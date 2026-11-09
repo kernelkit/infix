@@ -1265,7 +1265,7 @@ func (h *TreeHandler) DeleteLeaf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.RC.Delete(r.Context(), candidateDS+path); err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		http.Error(w, err.Error(), rcStatus(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1297,7 +1297,7 @@ func (h *TreeHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.deleteNPCContainer(r, mgr, path, parent); err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		http.Error(w, err.Error(), rcStatus(err))
 		return
 	}
 	// No setCfgUnsaved here — this only modifies candidate. The cfg-
@@ -1726,7 +1726,7 @@ func (h *TreeHandler) TogglePresence(w http.ResponseWriter, r *http.Request) {
 	var exists bool
 	if r.Method == http.MethodDelete {
 		if delErr := h.RC.Delete(r.Context(), candidateDS+path); delErr != nil {
-			http.Error(w, delErr.Error(), http.StatusBadGateway)
+			http.Error(w, delErr.Error(), rcStatus(delErr))
 			return
 		}
 		exists = false
@@ -1737,7 +1737,7 @@ func (h *TreeHandler) TogglePresence(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if putErr := h.RC.Put(r.Context(), candidateDS+path, map[string]any{qualName: map[string]any{}}); putErr != nil {
-			http.Error(w, putErr.Error(), http.StatusBadGateway)
+			http.Error(w, putErr.Error(), rcStatus(putErr))
 			return
 		}
 		exists = true
