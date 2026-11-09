@@ -63,3 +63,17 @@ func TestParseErrorKeepsListEntryPath(t *testing.T) {
 		t.Errorf("message %q, want %q", re.Message, want)
 	}
 }
+
+func TestParseErrorUnwrapsDatastoreCopyFraming(t *testing.T) {
+	body := `{"ietf-restconf:errors":{"error":[{"error-type":"application","error-tag":"operation-failed",` +
+		`"error-message":"Internal server error due to sysrepo exception: sr_replace_config failed: ` +
+		`SR_ERR_OPERATION_FAILED e1 (profile sr): scheduled traffic needs a transmit queue per traffic class, ` +
+		`port has 1 (SR_ERR_OPERATION_FAILED)"}]}}`
+	resp := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(body))}
+
+	re := parseError(resp).(*Error)
+	want := "e1 (profile sr): scheduled traffic needs a transmit queue per traffic class, port has 1"
+	if re.Message != want {
+		t.Errorf("message %q, want %q", re.Message, want)
+	}
+}
