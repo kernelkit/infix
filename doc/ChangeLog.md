@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.18.62 (LTS)
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
