@@ -125,7 +125,7 @@ func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request)
 			// stored crypt-hash); describe the offered set, verified against
 			// the infix-system:crypt-hash typedef.
 			"crypt": "Password hashing algorithm. yescrypt (recommended) is the strongest; " +
-				"SHA-512, SHA-256, and MD5 are offered for compatibility.",
+				"SHA-512 and SHA-256 are offered for compatibility.",
 		}
 	}
 	for _, u := range raw.System.Auth.Users {
