@@ -671,6 +671,28 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
+/* Not in the ip batch, it has no escape for '#', newlines or quotes */
+static int netdag_gen_ifalias(struct dagger *net, struct lyd_node *dif,
+			      struct lyd_node *cif, const char *ifname)
+{
+	const char *descr = lydx_get_cattr(cif, "description");
+	FILE *sh;
+
+	if (!lydx_get_child(dif, "description"))
+		return 0;
+
+	sh = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "ifalias.sh");
+	if (!sh)
+		return -EIO;
+
+	fprintf(sh, "exec ip link set dev %s alias ", ifname);
+	fputsq(descr ?: "", sh);
+	fputc('\n', sh);
+	fclose(sh);
+
+	return 0;
+}
+
 /*
  * Both ends of a veth pair can be handed to containers, leaving no
  * host-side interface to create the pair.  Have the primary end create it
@@ -716,7 +738,6 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	const char *iftype = lydx_get_cattr(dif, "type")?:lydx_get_cattr(cif, "type");
 	enum lydx_op op = lydx_get_op(dif);
 	bool pppd_owned;	/* link state and MTU */
-	const char *attr;
 	int err = 0;
 	bool wds;
 	FILE *ip;
@@ -831,8 +852,9 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err_close_ip;
 
 	/* ifAlias, should skip for container-network types */
-	attr = lydx_get_cattr(cif, "description");
-	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
+	err = netdag_gen_ifalias(net, dif, cif, ifname);
+	if (err)
+		goto err_close_ip;
 
 	/* Bring interface back up, if enabled, unless pppd, hostapd or modemd owns it */
 	if (lydx_is_enabled(cif, "enabled") && !pppd_owned && !wds &&

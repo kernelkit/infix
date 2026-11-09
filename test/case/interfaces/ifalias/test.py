@@ -12,7 +12,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        DESC = "Kilroy was here"
+        DESC = "Kilroy's \"lab\" port #3"
 
     with test.step("Set up interface target:data with description"):
         tport = target["data"]

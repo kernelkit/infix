@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/* Unit test of fputqw(), TAP output, run by 'make check' */
+/* Unit test of fputqw() and fputsq(), TAP output, run by 'make check' */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,20 +8,25 @@
 #include "shquote.c"
 
 struct test {
+	void (*fn)(const char *, FILE *);
 	const char *description;
 	const char *input;
 	const char *expected;
 };
 
 static const struct test tests[] = {
-	{ "command with arguments",   "/usr/sbin/httpd -f -v -p 91",
+	{ fputqw, "command with arguments",   "/usr/sbin/httpd -f -v -p 91",
 	  " '/usr/sbin/httpd' '-f' '-v' '-p' '91'" },
-	{ "command substitution",     "$(reboot)",        " '$(reboot)'" },
-	{ "variable reference",       "sh -c echo ${HOME}",
+	{ fputqw, "command substitution",     "$(reboot)",        " '$(reboot)'" },
+	{ fputqw, "variable reference",       "sh -c echo ${HOME}",
 	  " 'sh' '-c' 'echo' '${HOME}'" },
-	{ "single quote",             "it's",             " 'it'\\''s'" },
-	{ "surrounding blanks",       "  two \t spaces ", " 'two' 'spaces'" },
-	{ "empty",                    "",                 "" },
+	{ fputqw, "single quote",             "it's",             " 'it'\\''s'" },
+	{ fputqw, "surrounding blanks",       "  two \t spaces ", " 'two' 'spaces'" },
+	{ fputqw, "empty",                    "",                 "" },
+	{ fputsq, "one word with blanks",     "Uplink to core",   "'Uplink to core'" },
+	{ fputsq, "comment and quotes",       "Port #3 \"lab\" it's", "'Port #3 \"lab\" it'\\''s'" },
+	{ fputsq, "line break",               "a\nreboot",        "'a\nreboot'" },
+	{ fputsq, "empty word",               "",                 "''" },
 };
 
 int main(void)
@@ -37,7 +42,7 @@ int main(void)
 		FILE *fp;
 
 		fp = open_memstream(&out, &len);
-		fputqw(t->input, fp);
+		t->fn(t->input, fp);
 		fclose(fp);
 
 		if (strcmp(out, t->expected)) {
