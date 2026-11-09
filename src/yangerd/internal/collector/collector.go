@@ -4,7 +4,9 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -74,10 +76,21 @@ func RunAll(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, collectors []
 	return p
 }
 
+// collect runs one Collect and turns a panic into an error, so a bad
+// read is retried on the next tick like any other failure.
+func collect(ctx context.Context, t *tree.Tree, c Collector) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v\n%s", r, debug.Stack())
+		}
+	}()
+	return c.Collect(ctx, t)
+}
+
 func runOne(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, c Collector, pokeCh <-chan struct{}) {
 	defer wg.Done()
 
-	if err := c.Collect(ctx, t); err != nil {
+	if err := collect(ctx, t, c); err != nil {
 		log.Printf("collector %s: initial: %v", c.Name(), err)
 	}
 
@@ -89,11 +102,11 @@ func runOne(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, c Collector, 
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := c.Collect(ctx, t); err != nil {
+			if err := collect(ctx, t, c); err != nil {
 				log.Printf("collector %s: %v", c.Name(), err)
 			}
 		case <-pokeCh:
-			if err := c.Collect(ctx, t); err != nil {
+			if err := collect(ctx, t, c); err != nil {
 				log.Printf("collector %s: poke: %v", c.Name(), err)
 			}
 		}

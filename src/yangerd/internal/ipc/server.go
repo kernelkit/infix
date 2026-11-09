@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -100,6 +101,11 @@ func (s *Server) Serve(ctx context.Context) error {
 
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("ipc: panic serving request: %v\n%s", r, debug.Stack())
+		}
+	}()
 	conn.SetDeadline(time.Now().Add(s.timeout))
 
 	req, err := ReadRequest(conn)

@@ -87,6 +87,10 @@ All notable changes to the project are documented in this file.
 - The network browser at network.local now drops slow and idle
   connections instead of keeping them open forever.
   Reported by Dave Seddon
+- A fault while reading one kind of operational data took all
+  operational data offline until the service was restarted.  The
+  failed read is now retried at its next interval.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
