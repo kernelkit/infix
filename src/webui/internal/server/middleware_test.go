@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"infix/webui/internal/handlers"
 )
 
 func TestSecurityHeadersCacheControl(t *testing.T) {
@@ -63,6 +65,20 @@ func TestIsPolling(t *testing.T) {
 		}
 		if got := isPolling(r); got != tc.want {
 			t.Errorf("%s (X-Auto-Refresh %q): polling %v, want %v", tc.path, tc.header, got, tc.want)
+		}
+	}
+}
+
+func TestAdminOnly(t *testing.T) {
+	h := adminOnly(func(w http.ResponseWriter, r *http.Request) {})
+	for nacm, want := range map[bool]int{true: http.StatusOK, false: http.StatusForbidden} {
+		caps := handlers.NewCapabilities(map[string]bool{"nacm": nacm})
+		r := httptest.NewRequest(http.MethodGet, "/maintenance/logs", nil)
+		r = r.WithContext(handlers.ContextWithCapabilities(r.Context(), caps))
+		w := httptest.NewRecorder()
+		h(w, r)
+		if w.Code != want {
+			t.Errorf("nacm %v: status %d, want %d", nacm, w.Code, want)
 		}
 	}
 }

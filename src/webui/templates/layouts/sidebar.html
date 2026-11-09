@@ -316,6 +316,7 @@
             Software
           </a>
         </li>
+        {{if and .Capabilities (.Capabilities.Has "nacm")}}
         <li>
           <a href="/maintenance/logs"
              hx-get="/maintenance/logs"
@@ -336,6 +337,7 @@
             Diagnostics
           </a>
         </li>
+        {{end}}
         <li>
           <a href="/maintenance/backup"
              hx-get="/maintenance/backup"

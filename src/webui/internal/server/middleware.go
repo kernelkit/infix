@@ -73,6 +73,19 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Han
 	})
 }
 
+// adminOnly refuses a page to users who cannot read the NACM data, the
+// same test that hides Users & Groups.  Logs and diagnostics run as root,
+// outside NACM, so this is the only check they get.
+func adminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !handlers.CapabilitiesFromContext(r.Context()).Has("nacm") {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func csrfMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := security.TokenFromContext(r.Context())
