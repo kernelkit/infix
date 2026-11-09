@@ -84,6 +84,9 @@ All notable changes to the project are documented in this file.
   Reported by Dave Seddon
 - The SSH host private key was visible in the process list for a moment
   while it was installed.  Reported by Dave Seddon
+- The network browser at network.local now drops slow and idle
+  connections instead of keeping them open forever.
+  Reported by Dave Seddon
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
