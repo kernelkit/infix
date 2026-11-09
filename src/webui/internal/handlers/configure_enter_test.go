@@ -24,7 +24,7 @@ func TestConfigureEnterAnswers(t *testing.T) {
 	}{
 		{"ok", nil, http.StatusNoContent, ""},
 		{"denied", &restconf.Error{StatusCode: http.StatusForbidden}, http.StatusForbidden, "permission"},
-		{"failed", errors.New(`restconf: invalid path "/ds/x?y"`), http.StatusBadGateway, "invalid path"},
+		{"failed", errors.New(`restconf: invalid path "/ds/x?y"`), http.StatusInternalServerError, "invalid path"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
