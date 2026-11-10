@@ -71,6 +71,13 @@ def traffic_classes(weighted, strict=()):
     return classes
 
 
+def tx_rate(ssh, port, seconds=3):
+    """Bit rate a port transmits at, from its byte counter over @seconds"""
+    stat = f"/sys/class/net/{port}/statistics/tx_bytes"
+    out = ssh.runsh(f"a=$(cat {stat}); sleep {seconds}; echo $(($(cat {stat}) - a))")
+    return int(out.stdout) * 8 / seconds
+
+
 def qdiscs(ssh, port):
     out = ssh.runsh(f"tc -j qdisc show dev {port}").stdout
     return json.loads(out or "[]")
