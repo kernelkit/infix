@@ -58,7 +58,9 @@ All notable changes to the project are documented in this file.
     reservation templates for new profiles, and the QoS guide has the
     same three as CLI recipes
   - Microchip LAN969x (Laguna) switch ports offload the traffic class
-    table and the credit-based and time-aware shapers to the switch
+    table and the credit-based and time-aware shapers to the switch,
+    including the time-aware shaper's `queue-max-sdu`.  A gate closes
+    early enough for a full-size frame to finish before the next window
   - `qos capabilities` lists `supported-offload`, the stages a port's
     switch fabric can run, next to `offload`, those it runs right now
   - The port's `qos egress rate-limit` is now `qos egress-shaper`, and

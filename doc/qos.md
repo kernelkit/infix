@@ -343,6 +343,25 @@ whose gate never opens is rejected.  The list, cycle and base time the
 port runs are reported as `oper-control-list`, `oper-cycle-time` and
 `oper-base-time`.
 
+A frame that cannot finish before its gate closes waits for the next
+opening, as 802.1Q-2022 8.6.8.4 requires, so no window overruns into
+the next.  A switch does this by closing each gate a guard band early,
+long enough for the largest frame.  `queue-max-sdu-table` sets the
+largest frame of a class, in bytes counted like the MTU.  Longer frames
+of the class are dropped, and a switch that sizes its guard bands from
+it leaves more of a short window to a class of small frames.  For
+class 7, carrying 200-byte frames:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>set queue-max-sdu-table 7 queue-max-sdu 200</b>
+admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
+</code></pre>
+
+A schedule meant to hold also on bridges that let a frame overrun its
+window adds a guard band of its own: an entry with all gates closed
+before the protected window, as long as a full-size frame takes on the
+wire, 12.3 µs at 1 Gbit/s.
+
 
 ### Egress Remarking
 
@@ -668,7 +687,8 @@ DSCP one `remark dscp` setting, since the chip holds one table of each.
 | Tick granularity      | 1 ns, reported as 10 tenths of a nanosecond              |
 | Cycle time extension  | Not supported                                            |
 | Base time             | From the switch clock; one in the past is moved forward by whole cycles |
-| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening |
+| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening.  The guard band fits a 1500-byte frame with two VLAN tags: 13.8 µs at 1 Gbit/s |
+| `queue-max-sdu`       | Longer frames are dropped, and the class's guard band is its largest frame rounded down to 64 bytes |
 | Classes under gates   | Served strictly; weighted classes and an `egress-shaper` are refused |
 /// table-caption
 Time-aware shaper limits on LAN969x.  Each port reports them under
