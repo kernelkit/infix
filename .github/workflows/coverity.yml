@@ -8,8 +8,8 @@ on:
 env:
   PROJECT_NAME: Infix
   CONTACT_EMAIL: troglobit@gmail.com
-  LIBYANG_VERSION: 4.2.2
-  SYSREPO_VERSION: 4.2.10
+  LIBYANG_VERSION: 6.4.13
+  SYSREPO_VERSION: 5.2.27
   SYSKLOGD_VERSION: 2.7.2
   WATCHDOGD_VERSION: '4.0'
 
@@ -63,6 +63,7 @@ jobs:
 
       - name: Build dependencies
         run: |
+          shopt -s nullglob
           git clone -b v${LIBYANG_VERSION} --depth 1 https://github.com/CESNET/libyang.git
           for p in patches/libyang/${LIBYANG_VERSION}/*.patch; do
             git -C libyang apply < "$p"
@@ -92,6 +93,7 @@ jobs:
       - name: Build applications for Coverity
         run: |
           export PATH=`pwd`/coverity/bin:$PATH
+          export CFLAGS="-O2 -std=gnu17"
           cov-build --dir cov-int make coverity
 
       - name: Submit results to Coverity Scan
