@@ -260,7 +260,7 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 
 A port can be held below its link speed with one token bucket on the
 whole port, configured under `qos egress rate-limit`.  `rate` is the
-sustained rate in bits per second and `burst` how many bytes may leave
+sustained rate in bits per second, here 10M for 10000000, and `burst` how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
 frame.  The bucket sits above the traffic classes: it bounds what the
@@ -268,7 +268,7 @@ port sends in total, and transmission selection decides which class
 gets the bounded rate.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/> <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/…/egress/> <b>set rate-limit rate 10M</b>
 admin@example:/config/interface/…/egress/> <b>leave</b>
 </code></pre>
 

@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-KLISH_PLUGIN_SYSREPO_VERSION = 6c642b0c43a89c6f09db3274c7ed62a0dc307171
+KLISH_PLUGIN_SYSREPO_VERSION = 6f783b4b3f5a36808fbfc21f9d0e42cc7131a0ea
 KLISH_PLUGIN_SYSREPO_SITE = https://github.com/kernelkit/klish-plugin-sysrepo.git
 KLISH_PLUGIN_SYSREPO_SITE_METHOD = git
 KLISH_PLUGIN_SYSREPO_LICENSE = BSD-3
