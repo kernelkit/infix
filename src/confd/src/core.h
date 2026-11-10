@@ -247,6 +247,9 @@ void fputqw(const char *str, FILE *fp);
 FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
+/* dep.c */
+confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config);
+
 /* interfaces.c */
 int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 int interfaces_cand_init(struct confd *confd);

@@ -42,6 +42,7 @@ confd_plugin_la_SOURCES =			\
 	base64.c		base64.h	\
 	shquote.c				\
 	core.c			core.h		\
+	dep.c					\
 	dagger.c		dagger.h	\
 	interfaces.c interfaces.h		\
 	  ieee802-ethernet-interface.c		\
