@@ -161,6 +161,10 @@ All notable changes to the project are documented in this file.
 - OSPF: after a restart, a device could keep a stale copy of its own
   routes from a neighbor and never refresh them.  Also, routes marked
   never to age could still age out
+- Microchip LAN969x (Laguna), e.g., Tactical 1000: PTP now runs on
+  bridge ports.  A PTP port that was also a bridge port went straight
+  to the `faulty` state, so the switch could not act as a gPTP bridge or
+  a boundary clock on its own ports
 
 
 [v26.10.0][] - 2026-10-30
