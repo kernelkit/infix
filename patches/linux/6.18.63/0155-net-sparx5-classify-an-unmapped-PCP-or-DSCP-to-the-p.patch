@@ -1,0 +1,117 @@
+From 06a9452c7d5b10c8435342b260374aebfd3eb248 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 6 Nov 2026 06:27:41 +0100
+Subject: [PATCH 155/156] net: sparx5: classify an unmapped PCP or DSCP to the
+ port default
+Organization: Wires
+
+A port that trusts DSCP with a table that leaves a code point out
+classifies frames with that code point to priority 0, where the
+operator expects the port's default priority.  A PCP table with a gap
+does the same.
+
+    DSCP 4: got (vid, pcp, dscp) (20, 0, 0), expected (20, 1, 8)
+
+The app table is read with dcb_getapp(), which returns priority 0 for
+a value it has no entry for, so every DSCP ends up mapped and trusted
+and every PCP mapped.
+
+Read the entry mask instead.  A DSCP without an entry is left
+untrusted in the DSCP table, so the frame classifies by PCP or the
+port default, and a PCP without an entry maps to the port default.
+
+Signed-off-by: Joachim Wiberg <joachim.wiberg@wires.se>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_dcb.c    | 21 ++++++++++++++-----
+ .../ethernet/microchip/sparx5/sparx5_port.c   |  9 ++++----
+ .../ethernet/microchip/sparx5/sparx5_port.h   |  1 +
+ 3 files changed, 22 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+index ff0a37f0a553..a0d35e3b2676 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+@@ -135,6 +135,7 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ {
+ 	struct dcb_ieee_app_prio_map dscp_rewr_map = {0};
+ 	struct dcb_rewr_prio_pcp_map pcp_rewr_map = {0};
++	struct dcb_ieee_app_dscp_map dscp_prio_map = {0};
+ 	struct sparx5_port *port = netdev_priv(dev);
+ 	struct sparx5_port_qos_dscp_map *dscp_map;
+ 	struct sparx5_port_qos_pcp_map *pcp_map;
+@@ -153,17 +154,27 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ 		qos.default_prio = fls(qos.default_prio) - 1;
+ 
+ 	/* Get dscp ingress mapping */
+-	for (i = 0; i < ARRAY_SIZE(dscp_map->map); i++) {
+-		app_itr.selector = IEEE_8021QAZ_APP_SEL_DSCP;
+-		app_itr.protocol = i;
+-		dscp_map->map[i] = dcb_getapp(dev, &app_itr);
++	dcb_ieee_getapp_dscp_prio_mask_map(dev, &dscp_prio_map);
++	for (i = 0; i < ARRAY_SIZE(dscp_prio_map.map); i++) {
++		u8 mask = dscp_prio_map.map[i];
++
++		if (!mask)
++			continue;
++		qos.dscp.trust |= BIT_ULL(i);
++		dscp_map->map[i] = fls(mask) - 1;
+ 	}
+ 
+ 	/* Get pcp ingress mapping */
++	memset(pcp_map->map, qos.default_prio, sizeof(pcp_map->map));
+ 	for (i = 0; i < ARRAY_SIZE(pcp_map->map); i++) {
++		u8 mask;
++
+ 		app_itr.selector = DCB_APP_SEL_PCP;
+ 		app_itr.protocol = i;
+-		pcp_map->map[i] = dcb_getapp(dev, &app_itr);
++		mask = dcb_ieee_getapp_mask(dev, &app_itr);
++		if (!mask)
++			continue;
++		pcp_map->map[i] = fls(mask) - 1;
+ 	}
+ 
+ 	/* Get pcp rewrite mapping.
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index 58e545f99e12..d13c8efa31e0 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -1390,9 +1390,10 @@ int sparx5_port_qos_dscp_set(const struct sparx5_port *port,
+ 		 ANA_CL_QOS_CFG_DSCP_KEEP_ENA, sparx5,
+ 		 ANA_CL_QOS_CFG(port->portno));
+ 
+-	/* Map each dscp value to priority and dp, trusted.  The table is
+-	 * one for the chip, so a port that does not classify by DSCP
+-	 * leaves it to the ports that do.
++	/* Map each dscp value to priority and dp, trusted where mapped so
++	 * the rest classify by pcp or the port default.  The table is one
++	 * for the chip, so a port that does not classify by DSCP leaves
++	 * it to the ports that do.
+ 	 */
+ 	if (!qos->qos_enable)
+ 		return 0;
+@@ -1400,7 +1401,7 @@ int sparx5_port_qos_dscp_set(const struct sparx5_port *port,
+ 	for (i = 0; i < ARRAY_SIZE(qos->map.map); i++) {
+ 		spx5_rmw(ANA_CL_DSCP_CFG_DSCP_QOS_VAL_SET(*(dscp + i)) |
+ 			 ANA_CL_DSCP_CFG_DSCP_DP_VAL_SET(0) |
+-			 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA_SET(1),
++			 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA_SET(!!(qos->trust & BIT_ULL(i))),
+ 			 ANA_CL_DSCP_CFG_DSCP_QOS_VAL |
+ 			 ANA_CL_DSCP_CFG_DSCP_DP_VAL |
+ 			 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA, sparx5,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.h b/drivers/net/ethernet/microchip/sparx5/sparx5_port.h
+index c8a37468a3d1..ea433f4c5fce 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.h
+@@ -151,6 +151,7 @@ struct sparx5_port_qos_pcp_rewr {
+ 
+ struct sparx5_port_qos_dscp {
+ 	struct sparx5_port_qos_dscp_map map;
++	u64 trust; /* The dscp values with a map entry */
+ 	bool qos_enable;
+ 	bool dp_enable;
+ };
+-- 
+2.43.0
+

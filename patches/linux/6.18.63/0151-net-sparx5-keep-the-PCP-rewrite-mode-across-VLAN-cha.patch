@@ -1,0 +1,39 @@
+From 61bb7abe1a0b7771331f0f09e86122899616078b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 15:08:35 +0100
+Subject: [PATCH 151/156] net: sparx5: keep the PCP rewrite mode across VLAN
+ changes
+Organization: Wires
+
+sparx5_vlan_port_apply() writes the whole REW_TAG_CTRL register, so a
+port that joins a bridge or changes VLAN membership after
+
+    dcb rewr add dev eth0 prio-pcp 5:5
+
+is back to the classified PCP: frames leave with the PCP they came
+with, not the one of their QoS class.
+
+Write only the tag type and tagging mode, the fields the VLAN code owns.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+index ece42d1ed9d3..ed997da04c78 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_vlan.c
+@@ -297,7 +297,8 @@ void sparx5_vlan_port_apply(struct sparx5 *sparx5,
+ 			 */
+ 			val |= REW_TAG_CTRL_TAG_CFG_SET(2);
+ 	}
+-	spx5_wr(val, sparx5, REW_TAG_CTRL(port->portno));
++	spx5_rmw(val, REW_TAG_CTRL_TAG_TPID_CFG | REW_TAG_CTRL_TAG_CFG, sparx5,
++		 REW_TAG_CTRL(port->portno));
+ 
+ 	/* Egress VID */
+ 	spx5_rmw(REW_PORT_VLAN_CFG_PORT_VID_SET(port->vid),
+-- 
+2.43.0
+

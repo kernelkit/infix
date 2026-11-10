@@ -1,0 +1,107 @@
+From 306df91653b6e0d431bb24d0716c99770e750406 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 15:08:36 +0100
+Subject: [PATCH 153/156] net: sparx5: remark the DSCP of frames sent by the
+ CPU
+Organization: Wires
+
+The rewriter updates the DSCP of a frame when the egress port has
+DSCP_UPDATE_ENA set and the frame header has QOS.UPDATE_DSCP set, with
+the DSCP the analyzer put in QOS.DSCP for the QoS class.  The driver
+set neither for the frames it injects, so on a port with
+
+    dcb rewr add dev eth0 prio-dscp 5:40
+
+forwarded frames were remarked and routed ones were not.
+
+Keep a copy of the class to DSCP table, one per chip like the one in
+the hardware, and fill in both fields on injection, as the analyzer
+does for a classified frame.  The rewriter still acts only on a port
+with the rewrite enabled.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.h   |  4 +++-
+ drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c | 10 +++++++++-
+ drivers/net/ethernet/microchip/sparx5/sparx5_packet.c |  3 +--
+ drivers/net/ethernet/microchip/sparx5/sparx5_port.c   |  4 ++++
+ 4 files changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index ca42af90f58b..47ba0d6ee9b8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -448,6 +448,7 @@ struct sparx5 {
+ 	/* Common root for debugfs */
+ 	struct dentry *debugfs_root;
+ 	const struct sparx5_match_data *data;
++	u8 dscp_rewr[SPX5_PRIOS]; /* the DSCP a class is remarked with, per chip */
+ };
+ 
+ /* sparx5_main.c */
+@@ -575,7 +576,8 @@ static inline int sparx5_dcb_init(struct sparx5 *sparx5)
+ void sparx5_set_port_ifh_timestamp(struct sparx5 *sparx5, void *ifh_hdr,
+ 				   u64 timestamp);
+ void sparx5_set_port_ifh_rew_op(void *ifh_hdr, u32 rew_op);
+-void sparx5_set_port_ifh_qos_class(void *ifh_hdr, u8 qos_class);
++void sparx5_set_port_ifh_qos(void *ifh_hdr, const struct sparx5_port *port,
++			     u32 priority);
+ void sparx5_set_port_ifh_pdu_type(struct sparx5 *sparx5, void *ifh_hdr,
+ 				  u32 pdu_type);
+ void sparx5_set_port_ifh_pdu_w16_offset(struct sparx5 *sparx5, void *ifh_hdr,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+index 28ac2cad207f..7901079f9773 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+@@ -78,10 +78,18 @@ void sparx5_set_port_ifh(struct sparx5 *sparx5, void *ifh_hdr, u16 portno)
+ 	ifh_encode_bitfield(ifh_hdr, 1,        is_sparx5(sparx5) ? 67 : 66, 1);
+ }
+ 
+-void sparx5_set_port_ifh_qos_class(void *ifh_hdr, u8 qos_class)
++void sparx5_set_port_ifh_qos(void *ifh_hdr, const struct sparx5_port *port,
++			     u32 priority)
+ {
++	u8 qos_class = min_t(u32, priority, SPX5_PRIOS - 1);
++
+ 	/* VSTAX.CL_QOS = the priority, queued by the destination port's map */
+ 	ifh_encode_bitfield(ifh_hdr, qos_class, VSTAX + 56, 3);
++	/* QOS.UPDATE_DSCP and QOS.DSCP, as the analyzer sets them for a
++	 * classified frame; the rewriter obeys on a port that updates DSCP
++	 */
++	ifh_encode_bitfield(ifh_hdr, BIT(6) | port->sparx5->dscp_rewr[qos_class],
++			    0, 7);
+ }
+ 
+ void sparx5_set_port_ifh_rew_op(void *ifh_hdr, u32 rew_op)
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+index cd34a774acba..ca5695b737be 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+@@ -278,8 +278,7 @@ netdev_tx_t sparx5_port_xmit_impl(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	memset(ifh, 0, IFH_LEN * 4);
+ 	sparx5_set_port_ifh(sparx5, ifh, port->portno);
+-	sparx5_set_port_ifh_qos_class(ifh, min_t(u32, skb->priority,
+-						 SPX5_PRIOS - 1));
++	sparx5_set_port_ifh_qos(ifh, port, skb->priority);
+ 
+ 	if (sparx5->ptp && skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+ 		if (sparx5_ptp_txtstamp_request(port, skb) < 0)
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index d7b5dcfc2d82..dfe7ecdb8d03 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -1366,6 +1366,10 @@ int sparx5_port_qos_dscp_rewr_set(const struct sparx5_port *port,
+ 			 ANA_CL_QOS_MAP_CFG(i));
+ 	}
+ 
++	/* The CPU fills in the DP 0 row for the frames it sends */
++	for (i = 0; i < SPX5_PRIOS; i++)
++		sparx5->dscp_rewr[i] = qos->map.map[i];
++
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+
