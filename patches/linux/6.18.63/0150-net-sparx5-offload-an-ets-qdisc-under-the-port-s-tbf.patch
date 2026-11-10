@@ -1,0 +1,163 @@
+From 5a8792eead81d2ebae93e20b959c17d1f3ba80b6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 4 Nov 2026 09:56:24 +0100
+Subject: [PATCH 150/156] net: sparx5: offload an ets qdisc under the port's
+ tbf
+Organization: Wires
+
+A port rate limit is a tbf at the root, so the scheduler has to hang
+under it, but the ets offload accepted the root only.  With
+
+    tc qdisc add dev eth0 root handle 1: tbf rate 10mbit burst 10k latency 100ms
+    tc qdisc add dev eth0 parent 1:1 handle 2: ets bands 8 strict 8
+
+the fabric kept its default scheduler and the ets ran in software,
+where the frames the fabric forwards never pass.  Nor did tc ever show
+an ets or tbf on a switch port as offloaded, since the driver refused
+the stats query the kernel marks a qdisc offloaded by, so there was no
+telling which of the two ran it.
+
+Remember the handle of an offloaded root tbf and accept an ets under
+it, as mv88e6xxx does.  The tbf also answers the graft of its child.
+The ets is known by its handle too, since the tbf above it goes first
+on destroy, and its handle with it.  Answer the stats query with no
+counters to add: for tbf when the scheduler element is shaped, for ets
+when the port's weights were taken.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  2 +
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 11 ++++++
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  1 +
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c | 39 ++++++++++++++-----
+ 4 files changed, 43 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 97dcaaff0453..ca42af90f58b 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -242,6 +242,8 @@ struct sparx5_port {
+ 	struct net_device *lag_master;
+ 	enum netdev_lag_hash lag_hash_type;
+ 	bool lag_tx_active;
++	u32 ets_handle; /* the ets qdisc the hardware runs */
++	u32 tbf_handle; /* the root tbf, which an ets may hang under */
+ };
+ 
+ enum sparx5_core_clockfreq {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index a6ae7730bb23..3ba5ce1cb0ae 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -645,6 +645,17 @@ int sparx5_tc_tbf_del(struct sparx5_port *port, u32 layer, u32 idx)
+ 	return sparx5_shaper_del(port, layer, idx);
+ }
+ 
++/* No counters to add, the element is shaped when it is in a leak group */
++int sparx5_tc_tbf_stats(struct sparx5_port *port, u32 layer, u32 idx)
++{
++	u32 group;
++
++	if (sparx5_lg_get_group_by_index(port->sparx5, layer, idx, &group) < 0)
++		return -EOPNOTSUPP;
++
++	return 0;
++}
++
+ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 		      struct tc_ets_qopt_offload_replace_params *params)
+ {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index abc6432facdb..c7f59c0f09f0 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -77,6 +77,7 @@ int sparx5_tc_tbf_add(struct sparx5_port *port,
+ 		      struct tc_tbf_qopt_offload_replace_params *params,
+ 		      u32 layer, u32 idx);
+ int sparx5_tc_tbf_del(struct sparx5_port *port, u32 layer, u32 idx);
++int sparx5_tc_tbf_stats(struct sparx5_port *port, u32 layer, u32 idx);
+ 
+ /* Enhanced Transmission Selection */
+ struct tc_ets_qopt_offload_replace_params;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index 84581c19a1a2..6017a62030ed 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -88,19 +88,29 @@ static int sparx5_tc_setup_qdisc_tbf(struct net_device *ndev,
+ 				     struct tc_tbf_qopt_offload *qopt)
+ {
+ 	struct sparx5_port *port = netdev_priv(ndev);
++	bool root = qopt->parent == TC_H_ROOT;
+ 	u32 layer, se_idx;
++	int err;
+ 
+ 	sparx5_tc_get_layer_and_idx(port->sparx5, qopt->parent, port->portno,
+ 				    &layer, &se_idx);
+ 
+ 	switch (qopt->command) {
+ 	case TC_TBF_REPLACE:
+-		return sparx5_tc_tbf_add(port, &qopt->replace_params, layer,
+-					 se_idx);
++		err = sparx5_tc_tbf_add(port, &qopt->replace_params, layer,
++					se_idx);
++		if (!err && root)
++			port->tbf_handle = qopt->handle;
++		return err;
+ 	case TC_TBF_DESTROY:
++		if (root)
++			port->tbf_handle = 0;
+ 		return sparx5_tc_tbf_del(port, layer, se_idx);
+ 	case TC_TBF_STATS:
+-		return -EOPNOTSUPP;
++		return sparx5_tc_tbf_stats(port, layer, se_idx);
++	case TC_TBF_GRAFT:
++		/* The child brings its own offload */
++		return root && port->tbf_handle ? 0 : -EOPNOTSUPP;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -114,14 +124,14 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 	struct tc_ets_qopt_offload_replace_params *params =
+ 		&qopt->replace_params;
+ 	struct sparx5_port *port = netdev_priv(ndev);
+-	int i;
+-
+-	/* Only allow ets on ports  */
+-	if (qopt->parent != TC_H_ROOT)
+-		return -EOPNOTSUPP;
++	int i, err;
+ 
+ 	switch (qopt->command) {
+ 	case TC_ETS_REPLACE:
++		/* The root of the port, or under its tbf */
++		if (qopt->parent != TC_H_ROOT &&
++		    TC_H_MAJ(qopt->parent) != port->tbf_handle)
++			return -EOPNOTSUPP;
+ 
+ 		/* We support eight priorities */
+ 		if (params->bands != SPX5_PRIOS)
+@@ -137,10 +147,19 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 			}
+ 		}
+ 
+-		return sparx5_tc_ets_add(port, params);
++		err = sparx5_tc_ets_add(port, params);
++		if (!err)
++			port->ets_handle = qopt->handle;
++		return err;
+ 	case TC_ETS_DESTROY:
+-
++		/* By its handle, a tbf above it is destroyed first */
++		if (qopt->handle != port->ets_handle)
++			return -EOPNOTSUPP;
++		port->ets_handle = 0;
+ 		return sparx5_tc_ets_del(port);
++	case TC_ETS_STATS:
++		/* Nothing to report, but this is what marks it offloaded */
++		return qopt->handle == port->ets_handle ? 0 : -EOPNOTSUPP;
+ 	case TC_ETS_GRAFT:
+ 		return -EOPNOTSUPP;
+ 
+-- 
+2.43.0
+
