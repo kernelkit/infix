@@ -1,0 +1,261 @@
+From be9903cb11d48c4119726058d57ce30a6c370eb5 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 22:16:43 +0100
+Subject: [PATCH 140/156] net: sparx5: weight the queues on the element that
+ schedules them
+Organization: Wires
+
+On LAN969x the weights of an ets qdisc had no effect, and the lowest
+strict band was weighted along with the weighted ones.  With
+
+    tc qdisc add dev eth0 root handle 1: ets bands 8 strict 4 \
+        quanta 4500 4500 500 500
+
+two bands of equal weight shared the port strictly, the higher queue
+first, and queue 4 shared the port with queues 0 to 3 instead of
+taking precedence over them.
+
+The driver wrote the weights to a layer picked per chip, layer 2 on
+SparX-5 and layer 1 on LAN969x, at the element with the port's index,
+one DWRR entry per queue, as if the queues fed that element at inputs
+0 to 7.  The chip builds the scheduler hierarchy itself and the driver
+never checked where the queues go.  SE_DWRR_CNT was also written as
+the number of weighted queues, but the register counts from one: "0:
+No inputs uses DWRR, 1: 2 lowest inputs used DWRR, n: (n+1) lowest
+inputs uses DWRR", per the LAN969x register description, and the
+vendor API subtracts one as well.
+
+Read HSCH_L0_CFG of the port's queue elements for the layer, element
+and input each feeds, and write the weights there by input, with the
+count as the highest weighted input, zero for none.  Refuse the
+offload when the queues do not share an element, or a strict queue
+sits below a weighted one, since the element serves its lower inputs
+weighted and the rest strict.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/lan969x/lan969x_regs.c   |  4 ++
+ .../microchip/sparx5/sparx5_main_regs.h       | 31 +++++++++++
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 55 ++++++++++++++-----
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  4 +-
+ .../ethernet/microchip/sparx5/sparx5_regs.c   |  4 ++
+ .../ethernet/microchip/sparx5/sparx5_regs.h   |  4 ++
+ 6 files changed, 86 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+index 231d165a8b23..b5b72834c2f7 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+@@ -90,6 +90,7 @@ const unsigned int lan969x_gaddr[GADDR_LAST] = {
+ 	[GA_EACL_ES2_STICKY] = 29072,
+ 	[GA_EACL_RAM_CTRL] = 29112,
+ 	[GA_GCB_SIO_CTRL] = 560,
++	[GA_HSCH_HSCH_L0_CFG] = 40960,
+ 	[GA_HSCH_HSCH_DWRR] = 36480,
+ 	[GA_HSCH_HSCH_MISC] = 36608,
+ 	[GA_HSCH_HSCH_LEAK_LISTS] = 37256,
+@@ -129,6 +130,7 @@ const unsigned int lan969x_gcnt[GCNT_LAST] = {
+ 	[GC_EACL_ES2_KEY_SELECT_PROFILE] = 68,
+ 	[GC_EACL_CNT_TBL] = 512,
+ 	[GC_GCB_SIO_CTRL] = 1,
++	[GC_HSCH_HSCH_L0_CFG] = 1120,
+ 	[GC_HSCH_HSCH_CFG] = 1120,
+ 	[GC_HSCH_HSCH_DWRR] = 32,
+ 	[GC_HSCH_TAS_PROFILE_CFG] = 30,
+@@ -195,6 +197,8 @@ const unsigned int lan969x_fsize[FSIZE_LAST] = {
+ 	[FW_ANA_L3_VLAN_MASK_CFG_VLAN_PORT_MASK] = 30,
+ 	[FW_FDMA_CH_CFG_CH_DCB_DB_CNT] = 2,
+ 	[FW_GCB_HW_SGPIO_TO_SD_MAP_CFG_SGPIO_TO_SD_SEL] = 7,
++	[FW_HSCH_HSCH_L0_CFG_NEXT_IDX] = 6,
++	[FW_HSCH_HSCH_L0_CFG_NEXT_INP] = 4,
+ 	[FW_HSCH_SE_CFG_SE_DWRR_CNT] = 5,
+ 	[FW_HSCH_SE_CONNECT_SE_LEAK_LINK] = 14,
+ 	[FW_HSCH_SE_DLB_SENSE_SE_DLB_DPORT] = 6,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index 1a3954e5df9a..40eebd7dd1a6 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -5187,6 +5187,37 @@ extern const struct sparx5_regs *regs;
+ #define GCB_SIO_CLOCK_SYS_CLK_PERIOD_GET(x)\
+ 	FIELD_GET(GCB_SIO_CLOCK_SYS_CLK_PERIOD, x)
+ 
++/* HSCH:HSCH_L0_CFG:HSCH_L0_CFG */
++#define HSCH_HSCH_L0_CFG(g)                                                    \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_HSCH_L0_CFG], g,          \
++	      regs->gcnt[GC_HSCH_HSCH_L0_CFG], 4, 0, 0, 1, 4)
++
++#define HSCH_HSCH_L0_CFG_NEXT_LAYER              BIT(21)
++#define HSCH_HSCH_L0_CFG_NEXT_LAYER_SET(x)\
++	FIELD_PREP(HSCH_HSCH_L0_CFG_NEXT_LAYER, x)
++#define HSCH_HSCH_L0_CFG_NEXT_LAYER_GET(x)\
++	FIELD_GET(HSCH_HSCH_L0_CFG_NEXT_LAYER, x)
++
++#define HSCH_HSCH_L0_CFG_NEXT_IDX\
++	GENMASK(regs->fsize[FW_HSCH_HSCH_L0_CFG_NEXT_IDX] + 14 - 1, 14)
++#define HSCH_HSCH_L0_CFG_NEXT_IDX_SET(x)\
++	spx5_field_prep(HSCH_HSCH_L0_CFG_NEXT_IDX, x)
++#define HSCH_HSCH_L0_CFG_NEXT_IDX_GET(x)\
++	spx5_field_get(HSCH_HSCH_L0_CFG_NEXT_IDX, x)
++
++#define HSCH_HSCH_L0_CFG_NEXT_INP\
++	GENMASK(regs->fsize[FW_HSCH_HSCH_L0_CFG_NEXT_INP] + 8 - 1, 8)
++#define HSCH_HSCH_L0_CFG_NEXT_INP_SET(x)\
++	spx5_field_prep(HSCH_HSCH_L0_CFG_NEXT_INP, x)
++#define HSCH_HSCH_L0_CFG_NEXT_INP_GET(x)\
++	spx5_field_get(HSCH_HSCH_L0_CFG_NEXT_INP, x)
++
++#define HSCH_HSCH_L0_CFG_P_QUEUES                GENMASK(7, 0)
++#define HSCH_HSCH_L0_CFG_P_QUEUES_SET(x)\
++	FIELD_PREP(HSCH_HSCH_L0_CFG_P_QUEUES, x)
++#define HSCH_HSCH_L0_CFG_P_QUEUES_GET(x)\
++	FIELD_GET(HSCH_HSCH_L0_CFG_P_QUEUES, x)
++
+ /* HSCH:HSCH_CFG:CIR_CFG */
+ #define HSCH_CIR_CFG(g)                                                        \
+ 	__REG(TARGET_HSCH, 0, 1, 0, g, regs->gcnt[GC_HSCH_HSCH_CFG], 32, 0, 0, \
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 14331f1a0c57..a38c98bdc4e7 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -386,24 +386,51 @@ static u32 sparx5_weight_to_hw_cost(u32 weight_min, u32 weight)
+ static int sparx5_dwrr_conf_set(struct sparx5_port *port,
+ 				struct sparx5_dwrr *dwrr)
+ {
+-	u32 layer = is_sparx5(port->sparx5) ? 2 : 1;
+-	int i;
++	struct sparx5 *sparx5 = port->sparx5;
++	u32 val, first = 0, top = 0, l0, idx;
++	u8 inp[SPX5_PRIOS];
++	int q;
+ 
+-	spx5_rmw(HSCH_HSCH_CFG_CFG_HSCH_LAYER_SET(layer) |
+-		 HSCH_HSCH_CFG_CFG_CFG_SE_IDX_SET(port->portno),
++	/* The chip builds the hierarchy, so read where the queues go: one
++	 * element, which serves its inputs 0 to SE_DWRR_CNT weighted and
++	 * the rest strict, so the strict queues must sit above there too.
++	 */
++	for (q = 0; q < SPX5_PRIOS; q++) {
++		l0 = sparx5_hsch_l0_get_idx(sparx5, port->portno, q);
++		val = spx5_rd(sparx5, HSCH_HSCH_L0_CFG(l0));
++		if (q == 0) {
++			first = val;
++		} else if ((val ^ first) & (HSCH_HSCH_L0_CFG_NEXT_LAYER |
++					    HSCH_HSCH_L0_CFG_NEXT_IDX)) {
++			netdev_warn(port->ndev,
++				    "the queues are not scheduled by one element\n");
++			return -EOPNOTSUPP;
++		}
++		inp[q] = HSCH_HSCH_L0_CFG_NEXT_INP_GET(val);
++		if (q < dwrr->count) {
++			top = max_t(u32, top, inp[q]);
++		} else if (dwrr->count && inp[q] <= top) {
++			netdev_warn(port->ndev,
++				    "queue %d is scheduled below a weighted one\n",
++				    q);
++			return -EOPNOTSUPP;
++		}
++	}
++	idx = HSCH_HSCH_L0_CFG_NEXT_IDX_GET(first);
++
++	spx5_rmw(HSCH_HSCH_CFG_CFG_HSCH_LAYER_SET(
++			 HSCH_HSCH_L0_CFG_NEXT_LAYER_GET(first) ? 2 : 1) |
++		 HSCH_HSCH_CFG_CFG_CFG_SE_IDX_SET(idx),
+ 		 HSCH_HSCH_CFG_CFG_HSCH_LAYER | HSCH_HSCH_CFG_CFG_CFG_SE_IDX,
+-		 port->sparx5, HSCH_HSCH_CFG_CFG);
++		 sparx5, HSCH_HSCH_CFG_CFG);
+ 
+-	/* Number of *lower* indexes that are arbitrated dwrr */
+-	spx5_rmw(HSCH_SE_CFG_SE_DWRR_CNT_SET(dwrr->count),
+-		 HSCH_SE_CFG_SE_DWRR_CNT, port->sparx5,
+-		 HSCH_SE_CFG(port->portno));
++	spx5_rmw(HSCH_SE_CFG_SE_DWRR_CNT_SET(top), HSCH_SE_CFG_SE_DWRR_CNT,
++		 sparx5, HSCH_SE_CFG(idx));
+ 
+-	for (i = 0; i < dwrr->count; i++) {
+-		spx5_rmw(HSCH_DWRR_ENTRY_DWRR_COST_SET(dwrr->cost[i]),
+-			 HSCH_DWRR_ENTRY_DWRR_COST, port->sparx5,
+-			 HSCH_DWRR_ENTRY(i));
+-	}
++	for (q = 0; q < dwrr->count; q++)
++		spx5_rmw(HSCH_DWRR_ENTRY_DWRR_COST_SET(dwrr->cost[q]),
++			 HSCH_DWRR_ENTRY_DWRR_COST, sparx5,
++			 HSCH_DWRR_ENTRY(inp[q]));
+ 
+ 	return 0;
+ }
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index 2aae77d23d11..0f47b4ac1560 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -55,8 +55,8 @@ struct sparx5_layer {
+ };
+ 
+ struct sparx5_dwrr {
+-	u32 count; /* Number of inputs running dwrr */
+-	u8 cost[SPX5_PRIOS];
++	u32 count; /* Queues 0 to count - 1 are weighted, the rest strict */
++	u8 cost[SPX5_PRIOS]; /* Per queue */
+ };
+ 
+ int sparx5_qos_init(struct sparx5 *sparx5);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+index 66a3e56ce9a2..08af6a843ab8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+@@ -90,6 +90,7 @@ const unsigned int sparx5_gaddr[GADDR_LAST] = {
+ 	[GA_EACL_ES2_STICKY] = 118696,
+ 	[GA_EACL_RAM_CTRL] = 118736,
+ 	[GA_GCB_SIO_CTRL] = 876,
++	[GA_HSCH_HSCH_L0_CFG] = 163840,
+ 	[GA_HSCH_HSCH_DWRR] = 162816,
+ 	[GA_HSCH_HSCH_MISC] = 163104,
+ 	[GA_HSCH_HSCH_LEAK_LISTS] = 161664,
+@@ -129,6 +130,7 @@ const unsigned int sparx5_gcnt[GCNT_LAST] = {
+ 	[GC_EACL_ES2_KEY_SELECT_PROFILE] = 138,
+ 	[GC_EACL_CNT_TBL] = 2048,
+ 	[GC_GCB_SIO_CTRL] = 3,
++	[GC_HSCH_HSCH_L0_CFG] = 5040,
+ 	[GC_HSCH_HSCH_CFG] = 5040,
+ 	[GC_HSCH_HSCH_DWRR] = 72,
+ 	[GC_HSCH_TAS_PROFILE_CFG] = 100,
+@@ -195,6 +197,8 @@ const unsigned int sparx5_fsize[FSIZE_LAST] = {
+ 	[FW_ANA_L3_VLAN_MASK_CFG_VLAN_PORT_MASK] = 32,
+ 	[FW_FDMA_CH_CFG_CH_DCB_DB_CNT] = 4,
+ 	[FW_GCB_HW_SGPIO_TO_SD_MAP_CFG_SGPIO_TO_SD_SEL] = 9,
++	[FW_HSCH_HSCH_L0_CFG_NEXT_IDX] = 7,
++	[FW_HSCH_HSCH_L0_CFG_NEXT_INP] = 6,
+ 	[FW_HSCH_SE_CFG_SE_DWRR_CNT] = 7,
+ 	[FW_HSCH_SE_CONNECT_SE_LEAK_LINK] = 16,
+ 	[FW_HSCH_SE_DLB_SENSE_SE_DLB_DPORT] = 7,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+index a33dc11958ce..3efcf41d678e 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+@@ -99,6 +99,7 @@ enum sparx5_gaddr_enum {
+ 	GA_EACL_ES2_STICKY,
+ 	GA_EACL_RAM_CTRL,
+ 	GA_GCB_SIO_CTRL,
++	GA_HSCH_HSCH_L0_CFG,
+ 	GA_HSCH_HSCH_DWRR,
+ 	GA_HSCH_HSCH_MISC,
+ 	GA_HSCH_HSCH_LEAK_LISTS,
+@@ -139,6 +140,7 @@ enum sparx5_gcnt_enum {
+ 	GC_EACL_ES2_KEY_SELECT_PROFILE,
+ 	GC_EACL_CNT_TBL,
+ 	GC_GCB_SIO_CTRL,
++	GC_HSCH_HSCH_L0_CFG,
+ 	GC_HSCH_HSCH_CFG,
+ 	GC_HSCH_HSCH_DWRR,
+ 	GC_HSCH_TAS_PROFILE_CFG,
+@@ -208,6 +210,8 @@ enum sparx5_fsize_enum {
+ 	FW_ANA_L3_VLAN_MASK_CFG_VLAN_PORT_MASK,
+ 	FW_FDMA_CH_CFG_CH_DCB_DB_CNT,
+ 	FW_GCB_HW_SGPIO_TO_SD_MAP_CFG_SGPIO_TO_SD_SEL,
++	FW_HSCH_HSCH_L0_CFG_NEXT_IDX,
++	FW_HSCH_HSCH_L0_CFG_NEXT_INP,
+ 	FW_HSCH_SE_CFG_SE_DWRR_CNT,
+ 	FW_HSCH_SE_CONNECT_SE_LEAK_LINK,
+ 	FW_HSCH_SE_DLB_SENSE_SE_DLB_DPORT,
+-- 
+2.43.0
+
