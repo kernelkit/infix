@@ -28,6 +28,7 @@
 #define ASYMKEY  "/ietf-keystore:keystore/asymmetric-keys/asymmetric-key"
 #define COMP     "/ietf-hardware:hardware/component"
 #define HOSTNAME "/ietf-system:system/hostname"
+#define COUNTRY  "/ietf-hardware:hardware/infix-hardware:wifi/country-code"
 
 struct dep_ref {
 	const char *changed;	/* Nodes in the diff */
@@ -81,6 +82,8 @@ static const struct dep_ref dep_refs[] = {
 
 	{ COMP,     is_wifi_radio,          WIFI "[radio='%s']" },
 	{ COMP,     is_wifi_radio,          WIFI "/radio[.='%s']" },
+
+	{ COUNTRY,  NULL,                   COMP "[class='infix-hardware:wifi']/infix-hardware:wifi-radio" },
 
 	{ IFACE,    is_changed_bridge_port, VLAN "/tagged[.='%s']" },
 	{ IFACE,    is_changed_bridge_port, VLAN "/untagged[.='%s']" },
