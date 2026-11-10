@@ -4,3 +4,6 @@
 
 - name: OSPF Container
   case: ospf_container/test.py
+
+- name: TSN Schedule
+  case: tsn_schedule/test.py

@@ -38,6 +38,8 @@ STRICT = "ieee802-dot1q-types:strict-priority"
 ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 
 ETS_QUANTUM_UNIT = 1514        # one frame per percent of bandwidth, as configured
+WIRE_OVERHEAD = 20             # preamble, SFD and interframe gap
+WIRE_MAX = 1522 + WIRE_OVERHEAD   # tagged 1500-byte frame on the wire
 
 
 def xpath(port, path=""):
@@ -72,6 +74,13 @@ def traffic_classes(weighted, strict=()):
 def qdiscs(ssh, port):
     out = ssh.runsh(f"tc -j qdisc show dev {port}").stdout
     return json.loads(out or "[]")
+
+
+def guard_band(speed):
+    """Nanoseconds a maximum-size frame takes at @speed bit/s: how long a
+    gate control list keeps all gates closed before a protected window,
+    so no frame started before it can overrun into it"""
+    return -(-WIRE_MAX * 8 * 1_000_000_000 // speed)
 
 
 def root_qdisc(ssh, port):
