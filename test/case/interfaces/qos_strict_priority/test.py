@@ -22,8 +22,10 @@ default.  Three measurements, in this order:
  - starve: EF raised to 120 percent of the port on its own leaves CS1
    below 5 percent of the served datagrams
 
-The low flow must be held back by more than a tenth of what it offers in
-every measurement, which shows the port was full.  Shares
+In every measurement the port must hold back more than a tenth of what
+is offered, which shows it was full: of both flows together in the
+baseline, where tail drop may favour either one, and of the low flow
+after that.  Shares
 come from the middle seconds of the flows, and the test's own iperf3
 control traffic, DSCP 0, rides with CS1 in the lowest loaded class, so a
 talker's end-of-test message leaves the port behind its last datagram.
@@ -113,17 +115,19 @@ with infamy.Test() as test:
             total = qos.run_flows(ns0, ns1, "192.168.20.2", flows)
             high, low = flows
             print(f"shares: EF {high.share(total):.1f}%, CS1 {low.share(total):.1f}%")
-            low.require_backlog()
             return high, low, total
 
         with test.step("Baseline: both flows at one priority, 80 percent each, expect neither starved"):
             apply(LOW, LOW)
             high, low, total = measure(0.8)
+            assert total < 0.9 * (high.rate + low.rate), \
+                f"{total / 1e6:.2f} Mbit/s through, the port was never full"
             assert low.share(total) >= 10, f"CS1 got {low.share(total):.1f}% with no priority in play"
 
         with test.step("Split: EF strict above CS1, 80 percent each, expect EF without loss"):
             apply(HIGH, LOW)
             high, low, total = measure(0.8)
+            low.require_backlog()
             # EF offers less than the port drains, so it passes intact; a
             # stray datagram at the iperf3 startup edge is not congestion
             assert high.result["lost_percent"] < 1, \
@@ -131,6 +135,7 @@ with infamy.Test() as test:
 
         with test.step("Starve: EF at 120 percent of the port, expect CS1 below 5 percent"):
             high, low, total = measure(1.2)
+            low.require_backlog()
             assert low.share(total) < 5, f"CS1 got {low.share(total):.1f}% of the port"
 
     test.succeed()
