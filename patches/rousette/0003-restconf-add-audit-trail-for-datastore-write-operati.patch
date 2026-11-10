@@ -1,7 +1,7 @@
 From ca34c1a4adac35eca3a950abf4ae6fa62e614fe6 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 19 Mar 2026 17:21:25 +0100
-Subject: [PATCH 3/6] restconf: add audit trail for datastore write operations
+Subject: [PATCH 3/7] restconf: add audit trail for datastore write operations
 Organization: Wires
 
 Log an info message before and after committing changes to sysrepo,

@@ -1,0 +1,40 @@
+From 070f95df623400c5c36304f5b4e09b137fabcad6 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Mon, 9 Nov 2026 09:24:58 +0100
+Subject: [PATCH 7/7] restconf: name the failing node on validation errors
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+A value rejected while parsing the request, e.g. a pattern mismatch,
+was reported as "Can't parse data: LY_EVALID", which neither names
+the node nor the reason.  Use the libyang error, as RPC input
+validation already does.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index dc1281d..19b82a2 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -354,7 +354,15 @@ constexpr auto withRestconfExceptions(T func, U rejectWithError)
+             rejectWithError(requestCtx->sess.getContext(), requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, e.code, e.errorType, e.errorTag, e.errorMessage, e.errorPath, e.errorInfo);
+         } catch (const libyang::ErrorWithCode& e) {
+             if (e.code() == libyang::ErrorCode::ValidationFailure) {
+-                rejectWithError(requestCtx->sess.getContext(), requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, 400, "protocol", "invalid-value", "Validation failure: "s + e.what(), std::nullopt, std::nullopt);
++                auto ctx = requestCtx->sess.getContext();
++                auto errors = ctx.getErrors();
++                ctx.cleanAllErrors();
++                std::erase_if(errors, [](const auto& err) { return err.level != libyang::LogLevel::Error; });
++                if (!errors.empty()) {
++                    rejectWithError(ctx, requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, 400, "protocol", "invalid-value", "Validation failure: "s + errors.back().message, errors.back().dataPath, std::nullopt);
++                } else {
++                    rejectWithError(ctx, requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, 400, "protocol", "invalid-value", "Validation failure: "s + e.what(), std::nullopt, std::nullopt);
++                }
+             } else {
+                 rejectWithError(requestCtx->sess.getContext(), requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, 500, "application", "operation-failed", "Internal server error due to libyang exception: "s + e.what(), std::nullopt, std::nullopt);
+             }

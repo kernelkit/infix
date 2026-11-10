@@ -1,7 +1,7 @@
 From ad38833e880f9aff486de4dba8918268c9cd7831 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 3 Nov 2026 23:24:17 +0100
-Subject: [PATCH 6/6] auth: name the sysrepo session after the authenticated
+Subject: [PATCH 6/7] auth: name the sysrepo session after the authenticated
  user
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

@@ -1,7 +1,7 @@
 From 1850bb1c0e7ed7fe4599a69e9b383521a0cc900a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 19 Mar 2026 17:54:11 +0100
-Subject: [PATCH 4/6] restconf: strip redundant fields from syslog/journald log
+Subject: [PATCH 4/7] restconf: strip redundant fields from syslog/journald log
  messages
 Organization: Wires
 

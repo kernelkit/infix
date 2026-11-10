@@ -37,3 +37,29 @@ func TestParseErrorKeepsPlainMessage(t *testing.T) {
 		t.Errorf("message %q", re.Message)
 	}
 }
+
+func TestParseErrorNamesTheNode(t *testing.T) {
+	body := `{"ietf-restconf:errors":{"error":[{"error-type":"protocol","error-tag":"invalid-value",` +
+		`"error-message":"Validation failure: Unsatisfied pattern - \"bad host!\" does not match \"[a-z]+\".",` +
+		`"error-path":"/ietf-system:system/hostname"}]}}`
+	resp := &http.Response{StatusCode: http.StatusBadRequest, Body: io.NopCloser(strings.NewReader(body))}
+
+	re := parseError(resp).(*Error)
+	want := `hostname: Unsatisfied pattern - "bad host!" does not match "[a-z]+".`
+	if re.Message != want {
+		t.Errorf("message %q, want %q", re.Message, want)
+	}
+}
+
+func TestParseErrorKeepsListEntryPath(t *testing.T) {
+	body := `{"ietf-restconf:errors":{"error":[{"error-type":"protocol","error-tag":"invalid-value",` +
+		`"error-message":"Value \"70000\" is out of range.",` +
+		`"error-path":"/ietf-interfaces:interfaces/interface[name='a/b]']/ietf-ip:ipv4/mtu"}]}}`
+	resp := &http.Response{StatusCode: http.StatusBadRequest, Body: io.NopCloser(strings.NewReader(body))}
+
+	re := parseError(resp).(*Error)
+	want := `mtu: Value "70000" is out of range. (path: /ietf-interfaces:interfaces/interface[name='a/b]']/ietf-ip:ipv4/mtu)`
+	if re.Message != want {
+		t.Errorf("message %q, want %q", re.Message, want)
+	}
+}
