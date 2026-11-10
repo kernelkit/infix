@@ -15,15 +15,15 @@ DSCP map on the ingress port and the class table is left at its
 default.  Three measurements, in this order:
 
  - baseline: both markings classified to the same priority share one
-   queue, and the low flow keeps at least a tenth of it; one FIFO under
-   tail drop is not fair, but it favours nobody by marking
+   queue, and the low flow keeps at least a tenth of it, since one
+   FIFO under tail drop favours neither marking
  - split: EF classified to priority 5, strict above CS1 at priority 2,
    arrives without loss and CS1 takes what is left
  - starve: EF raised to 120 percent of the port on its own leaves CS1
    below 5 percent of the served datagrams
 
 The low flow must be held back by more than a tenth of what it offers in
-every measurement; a port that was never full proves nothing.  Shares
+every measurement, which shows the port was full.  Shares
 come from the middle seconds of the flows, and the test's own iperf3
 control traffic, DSCP 0, rides with CS1 in the lowest loaded class, so a
 talker's end-of-test message leaves the port behind its last datagram.

@@ -10,8 +10,7 @@ near the top, once marked CS1, in the lowest class.  Then both at once,
 each offering one and a half times the rate, must still add up to the
 rate.
 
-A shaper that lets more through is not a shaper, and one that only bites
-on some queues is a scheduler fault dressed up as one.  The test's own
+The shaper must hold every class to the rate.  The test's own
 iperf3 control traffic, DSCP 0, rides with CS1 in the lowest loaded
 class, so a talker's end-of-test message leaves the port behind its last
 datagram.

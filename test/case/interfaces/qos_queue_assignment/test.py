@@ -3,9 +3,8 @@
 QoS Queue Assignment
 
 Verify that a frame is queued in the traffic class its priority maps to,
-for the ieee preset, the ieee-sr preset and a custom table.  The
-existing tests check the tables as tc arguments; this one
-checks the queue a frame actually reached.
+for the ieee preset, the ieee-sr preset and a custom table, by reading
+the queue each frame reached.
 
 Frames enter tagged on a VLAN interface whose ingress-qos takes the
 priority straight from the PCP, so classification contributes nothing
@@ -18,7 +17,7 @@ switched off: the system announces its services for some ten seconds
 after the egress port gets its address, over a hundred frames at
 priority 0.  What remains of its own chatter, neighbour discovery and
 LLDP at priority 0 and control frames at priority 7, is a handful of
-frames.  No load, no congestion.
+frames.  The rate is low, so no queue fills.
 """
 import infamy
 import infamy.qos as qos

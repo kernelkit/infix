@@ -23,7 +23,7 @@ Two measurements:
 Each flow's share of what the port delivers in the middle seconds of the
 flows must land within five points of its configured share of the two,
 and both flows must be held back by more than a tenth of what they offer
-in both measurements; a port that was never full proves nothing.  The
+in both measurements, which shows the port was full.  The
 test's own iperf3 control traffic, DSCP 0, rides with CS1 in the lowest
 loaded class, so a talker's end-of-test message leaves the port behind
 its last datagram.
