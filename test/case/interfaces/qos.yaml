@@ -40,3 +40,6 @@
 
 - name: QoS Time-Aware Shaper
   case: qos_tas/test.py
+
+- name: QoS Maximum SDU
+  case: qos_max_sdu/test.py
