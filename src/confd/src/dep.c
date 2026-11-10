@@ -81,8 +81,6 @@ static const struct dep_ref dep_refs[] = {
 
 	{ COMP,     is_wifi_radio,          WIFI "[radio='%s']" },
 	{ COMP,     is_wifi_radio,          WIFI "/radio[.='%s']" },
-	{ COMP,     is_wifi_radio,          WIFI "[radio='%s']/station" },
-	{ COMP,     is_wifi_radio,          WIFI "[radio='%s']/access-point" },
 
 	{ IFACE,    is_changed_bridge_port, VLAN "/tagged[.='%s']" },
 	{ IFACE,    is_changed_bridge_port, VLAN "/untagged[.='%s']" },
