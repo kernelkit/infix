@@ -15,6 +15,11 @@
 #define CRONTAB_FILE  CRONTAB_DIR "/admin"
 #define CRONTAB_NEXT  CRONTAB_DIR "/admin.next"
 
+struct cron_consumer {
+	const char *path;
+	const char *command;
+};
+
 /*
  * Every feature that can run on a schedule.  A feature owns a container that
  * uses the infix-schedule scheduled-feature grouping; this is what the
@@ -33,14 +38,6 @@ static const struct cron_consumer consumers[] = {
 		.command = "/usr/sbin/reboot",
 	},
 };
-
-const struct cron_consumer *schedule_consumer(size_t i)
-{
-	if (i >= NELEMS(consumers))
-		return NULL;
-
-	return &consumers[i];
-}
 
 /*
  * Convert ietf-schedule recurrence to a 5-field cron expression.
@@ -316,4 +313,31 @@ int schedule_change(sr_session_ctx_t *session, struct lyd_node *config,
 	}
 
 	return SR_ERR_OK;
+}
+
+/* A changed consumer regenerates the schedule it names */
+void schedule_dep(struct dep *d)
+{
+	size_t i;
+
+	for (i = 0; i < NELEMS(consumers); i++) {
+		const struct cron_consumer *consumer = &consumers[i];
+		struct lyd_node *node;
+		const char *name;
+
+		node = lydx_get_xpathf(*d->diff, "%s", consumer->path);
+		if (!node)
+			continue;
+
+		/* A diff that only toggles 'enabled' keeps the ref in config. */
+		name = lydx_get_cattr(node, "schedule");
+		if (!name) {
+			node = lydx_get_xpathf(d->config, "%s", consumer->path);
+			name = node ? lydx_get_cattr(node, "schedule") : NULL;
+		}
+		if (!name)
+			continue;
+
+		dep_add(d, NULL, "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
+	}
 }

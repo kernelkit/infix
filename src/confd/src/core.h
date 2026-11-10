@@ -242,7 +242,17 @@ FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 /* dep.c */
-int dep_resolve(struct lyd_node **diff, struct lyd_node *config);
+struct dep {
+	struct lyd_node **diff;
+	struct lyd_node  *config;
+	int               added;
+	int               err;
+};
+int  dep_resolve(struct lyd_node **diff, struct lyd_node *config);
+void dep_add(struct dep *d, const char *value, const char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
+void dep_add_node(struct dep *d, struct lyd_node *node);
+void wifi_dep(struct dep *d);
+void schedule_dep(struct dep *d);
 
 /* interfaces.c */
 int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
@@ -258,11 +268,6 @@ int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t
 int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* schedule.c */
-struct cron_consumer {
-	const char *path;
-	const char *command;
-};
-const struct cron_consumer *schedule_consumer(size_t i);
 int schedule_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* containers.c */
