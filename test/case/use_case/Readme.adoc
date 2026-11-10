@@ -8,8 +8,10 @@ together:
  - Combined static and DHCP-provided DNS and NTP servers
  - A gPTP grandmaster, gate control list and credit-based shaper on one port
  - A gate control list checked frame by frame from a neighboring talker and listener
+ - Guard bands that keep a full-size frame from delaying the next window
 
 include::dhcp_ntp_dns/Readme.adoc[]
 include::ospf_container/Readme.adoc[]
 include::tsn_schedule/Readme.adoc[]
 include::tsn_gate_timing/Readme.adoc[]
+include::tsn_guard_band/Readme.adoc[]
