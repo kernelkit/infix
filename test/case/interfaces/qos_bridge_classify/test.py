@@ -19,9 +19,7 @@ egress port reveal the priority the ingress port assigned:
 With remarking on, the egress port writes the class selector of the
 priority as DSCP and, where the driver offloads remarking, the priority
 as PCP; PCP remarking has no software path, so on other ports only the
-DSCP is checked.  The test is skipped on a switch whose driver cannot
-offload classification, since frames the fabric forwards never see the
-kernel's rules.
+DSCP is checked.
 """
 import re
 import infamy
