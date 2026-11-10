@@ -1,0 +1,126 @@
+From f39495d721ed8a9ed0125acefb1049847ec4296a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 13:30:28 +0100
+Subject: [PATCH 147/156] net: sparx5: offload the cbs qdisc
+Organization: Wires
+
+A credit-based shaper on a switch port shapes only what the CPU
+sends; the chip forwards everything else past the qdisc.
+
+The driver offloads mqprio, tbf and ets, but not cbs.
+
+Offload cbs to the shaper of the queue's layer 0 scheduler element,
+in AVB mode.  The idle slope is the rate, and the burst is the credit
+span scaled from the send slope to the link rate, as the vendor BSP[1]
+and the lan966x driver compute it.  The product of link rate and
+credits overflows 32 bits at 1 Gbit/s already, so it is computed in
+64.
+
+[1] https://github.com/microchip-ung/linux/tree/bsp-6.18-2026
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 36 +++++++++++++++++++
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  6 ++++
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c | 14 ++++++++
+ 3 files changed, 56 insertions(+)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index 0d6c1a65d30d..f55bd0e451a8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -665,6 +665,42 @@ int sparx5_tc_ets_del(struct sparx5_port *port)
+ 	return sparx5_dwrr_conf_set(port, &dwrr);
+ }
+ 
++int sparx5_tc_cbs_add(struct sparx5_port *port,
++		      struct tc_cbs_qopt_offload *qopt, u32 idx)
++{
++	u64 burst;
++	int err;
++
++	if (qopt->idleslope <= 0 || qopt->sendslope >= 0 ||
++	    qopt->locredit >= qopt->hicredit)
++		return -EINVAL;
++
++	/* The burst is the credit span scaled from the send slope to the
++	 * link rate: the bytes the class sends at once on a full credit.
++	 */
++	burst = (u64)(qopt->idleslope - qopt->sendslope) *
++		(qopt->hicredit - qopt->locredit);
++	burst = div_u64(burst, -qopt->sendslope);
++
++	err = sparx5_shaper_add(port, 0, idx, qopt->idleslope, burst);
++	if (err)
++		return err;
++
++	/* Run the element as a credit-based shaper */
++	spx5_rmw(HSCH_SE_CFG_SE_AVB_ENA_SET(1), HSCH_SE_CFG_SE_AVB_ENA,
++		 port->sparx5, HSCH_SE_CFG(idx));
++
++	return 0;
++}
++
++int sparx5_tc_cbs_del(struct sparx5_port *port, u32 idx)
++{
++	spx5_rmw(HSCH_SE_CFG_SE_AVB_ENA_SET(0), HSCH_SE_CFG_SE_AVB_ENA,
++		 port->sparx5, HSCH_SE_CFG(idx));
++
++	return sparx5_shaper_del(port, 0, idx);
++}
++
+ void sparx5_tas_speed(struct sparx5_port *port, int speed)
+ {
+ 	struct sparx5 *sparx5 = port->sparx5;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index 466a4b8b85ef..82729cae518a 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -80,6 +80,12 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 
+ int sparx5_tc_ets_del(struct sparx5_port *port);
+ 
++/* Credit-Based Shaper */
++struct tc_cbs_qopt_offload;
++int sparx5_tc_cbs_add(struct sparx5_port *port,
++		      struct tc_cbs_qopt_offload *qopt, u32 idx);
++int sparx5_tc_cbs_del(struct sparx5_port *port, u32 idx);
++
+ u32 sparx5_get_hsch_max_group_rate(int grp);
+ 
+ #endif	/* __SPARX5_QOS_H__ */
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index 07fab81c720a..133594884174 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -154,6 +154,18 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 	return -EOPNOTSUPP;
+ }
+ 
++static int sparx5_tc_setup_qdisc_cbs(struct net_device *ndev,
++				     struct tc_cbs_qopt_offload *qopt)
++{
++	struct sparx5_port *port = netdev_priv(ndev);
++	u32 idx;
++
++	idx = sparx5_hsch_l0_get_idx(port->sparx5, port->portno, qopt->queue);
++
++	return qopt->enable ? sparx5_tc_cbs_add(port, qopt, idx) :
++			      sparx5_tc_cbs_del(port, idx);
++}
++
+ int sparx5_port_setup_tc(struct net_device *ndev, enum tc_setup_type type,
+ 			 void *type_data)
+ {
+@@ -166,6 +178,8 @@ int sparx5_port_setup_tc(struct net_device *ndev, enum tc_setup_type type,
+ 		return sparx5_tc_setup_qdisc_tbf(ndev, type_data);
+ 	case TC_SETUP_QDISC_ETS:
+ 		return sparx5_tc_setup_qdisc_ets(ndev, type_data);
++	case TC_SETUP_QDISC_CBS:
++		return sparx5_tc_setup_qdisc_cbs(ndev, type_data);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+-- 
+2.43.0
+

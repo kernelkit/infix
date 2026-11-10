@@ -1,0 +1,494 @@
+From e18726ce9d6affbc478a073b293a49a4ea134b7c Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 3 Nov 2026 13:25:48 +0100
+Subject: [PATCH 144/156] net: sparx5: add the TAS list, gate control list and
+ gate state registers
+Organization: Wires
+
+The time-aware shaper of SparX-5 and LAN969x is driven through the
+TAS_LIST_CFG, TAS_GCL_CFG and HSCH_TAS_STATE register groups.  The
+driver only knows TAS_CONFIG and TAS_PROFILE_CFG, enough to set the
+link speed of a port.
+
+Add the remaining TAS registers, with the field widths that differ
+between the two chips, from the vendor BSP kernel[1].
+
+[1] https://github.com/microchip-ung/linux/tree/bsp-6.18-2026
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/lan969x/lan969x_regs.c   |  10 +
+ .../microchip/sparx5/sparx5_main_regs.h       | 334 +++++++++++++++++-
+ .../ethernet/microchip/sparx5/sparx5_regs.c   |  10 +
+ .../ethernet/microchip/sparx5/sparx5_regs.h   |  10 +
+ 4 files changed, 361 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+index b5b72834c2f7..3dfa44b6876e 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+@@ -98,6 +98,9 @@ const unsigned int lan969x_gaddr[GADDR_LAST] = {
+ 	[GA_HSCH_MMGT] = 36260,
+ 	[GA_HSCH_TAS_CONFIG] = 37696,
+ 	[GA_HSCH_TAS_PROFILE_CFG] = 37712,
++	[GA_HSCH_TAS_LIST_CFG] = 36288,
++	[GA_HSCH_TAS_GCL_CFG] = 36240,
++	[GA_HSCH_HSCH_TAS_STATE] = 36256,
+ 	[GA_PTP_PTP_CFG] = 512,
+ 	[GA_PTP_PTP_TOD_DOMAINS] = 528,
+ 	[GA_PTP_PHASE_DETECTOR_CTRL] = 628,
+@@ -150,6 +153,7 @@ const unsigned int lan969x_gsize[GSIZE_LAST] = {
+ 	[GW_GCB_CHIP_REGS] = 180,
+ 	[GW_HSCH_TAS_CONFIG] = 16,
+ 	[GW_HSCH_TAS_PROFILE_CFG] = 68,
++	[GW_HSCH_TAS_GCL_CFG] = 16,
+ 	[GW_PTP_PHASE_DETECTOR_CTRL] = 12,
+ 	[GW_QSYS_PAUSE_CFG] = 988,
+ };
+@@ -206,6 +210,12 @@ const unsigned int lan969x_fsize[FSIZE_LAST] = {
+ 	[FW_HSCH_HSCH_LEAK_CFG_LEAK_FIRST] = 14,
+ 	[FW_HSCH_FLUSH_CTRL_FLUSH_PORT] = 6,
+ 	[FW_HSCH_FLUSH_CTRL_FLUSH_HIER] = 14,
++	[FW_HSCH_TAS_CFG_CTRL_LIST_NUM_MAX] = 6,
++	[FW_HSCH_TAS_CFG_CTRL_LIST_NUM] = 6,
++	[FW_HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM] = 12,
++	[FW_HSCH_TAS_GATE_STATE_CTRL_HSCH_POS] = 11,
++	[FW_HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX] = 6,
++	[FW_HSCH_TAS_LIST_CFG_LIST_BASE_ADDR] = 12,
+ 	[FW_LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_DIRECT_ROW] = 13,
+ 	[FW_LRN_MAC_ACCESS_CFG_3_MAC_ENTRY_ISDX_LIMIT_IDX] = 8,
+ 	[FW_LRN_AUTOAGE_CFG_2_NEXT_ROW] = 13,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index 40eebd7dd1a6..a854fbbb27a6 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -5524,6 +5524,50 @@ extern const struct sparx5_regs *regs;
+ #define HSCH_RESET_CFG_CORE_ENA_GET(x)\
+ 	FIELD_GET(HSCH_RESET_CFG_CORE_ENA, x)
+ 
++/* HSCH:TAS_CONFIG:TAS_CFG_CTRL */
++#define HSCH_TAS_CFG_CTRL                                                      \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_CONFIG], 0, 1,              \
++	      regs->gsize[GW_HSCH_TAS_CONFIG], 0, 0, 1, 4)
++
++#define HSCH_TAS_CFG_CTRL_LIST_NUM_MAX\
++	GENMASK(regs->fsize[FW_HSCH_TAS_CFG_CTRL_LIST_NUM_MAX] + 22 - 1, 22)
++#define HSCH_TAS_CFG_CTRL_LIST_NUM_MAX_SET(x)\
++	spx5_field_prep(HSCH_TAS_CFG_CTRL_LIST_NUM_MAX, x)
++#define HSCH_TAS_CFG_CTRL_LIST_NUM_MAX_GET(x)\
++	spx5_field_get(HSCH_TAS_CFG_CTRL_LIST_NUM_MAX, x)
++
++#define HSCH_TAS_CFG_CTRL_LIST_NUM\
++	GENMASK(regs->fsize[FW_HSCH_TAS_CFG_CTRL_LIST_NUM] + 15 - 1, 15)
++#define HSCH_TAS_CFG_CTRL_LIST_NUM_SET(x)\
++	spx5_field_prep(HSCH_TAS_CFG_CTRL_LIST_NUM, x)
++#define HSCH_TAS_CFG_CTRL_LIST_NUM_GET(x)\
++	spx5_field_get(HSCH_TAS_CFG_CTRL_LIST_NUM, x)
++
++#define HSCH_TAS_CFG_CTRL_ALWAYS_GUARD_BAND_SCH_Q BIT(14)
++#define HSCH_TAS_CFG_CTRL_ALWAYS_GUARD_BAND_SCH_Q_SET(x)\
++	FIELD_PREP(HSCH_TAS_CFG_CTRL_ALWAYS_GUARD_BAND_SCH_Q, x)
++#define HSCH_TAS_CFG_CTRL_ALWAYS_GUARD_BAND_SCH_Q_GET(x)\
++	FIELD_GET(HSCH_TAS_CFG_CTRL_ALWAYS_GUARD_BAND_SCH_Q, x)
++
++#define HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM\
++	GENMASK(regs->fsize[FW_HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM] + 0 - 1, 0)
++#define HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM_SET(x)\
++	spx5_field_prep(HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM, x)
++#define HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM_GET(x)\
++	spx5_field_get(HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM, x)
++
++/* HSCH:TAS_CONFIG:TAS_GATE_STATE_CTRL */
++#define HSCH_TAS_GATE_STATE_CTRL                                               \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_CONFIG], 0, 1,              \
++	      regs->gsize[GW_HSCH_TAS_CONFIG], 4, 0, 1, 4)
++
++#define HSCH_TAS_GATE_STATE_CTRL_HSCH_POS\
++	GENMASK(regs->fsize[FW_HSCH_TAS_GATE_STATE_CTRL_HSCH_POS] + 0 - 1, 0)
++#define HSCH_TAS_GATE_STATE_CTRL_HSCH_POS_SET(x)\
++	spx5_field_prep(HSCH_TAS_GATE_STATE_CTRL_HSCH_POS, x)
++#define HSCH_TAS_GATE_STATE_CTRL_HSCH_POS_GET(x)\
++	spx5_field_get(HSCH_TAS_GATE_STATE_CTRL_HSCH_POS, x)
++
+ /* HSCH:TAS_CONFIG:TAS_STATEMACHINE_CFG */
+ #define HSCH_TAS_STATEMACHINE_CFG                                              \
+ 	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_CONFIG], 0, 1,        \
+@@ -5535,11 +5579,44 @@ extern const struct sparx5_regs *regs;
+ #define HSCH_TAS_STATEMACHINE_CFG_REVISIT_DLY_GET(x)\
+ 	FIELD_GET(HSCH_TAS_STATEMACHINE_CFG_REVISIT_DLY, x)
+ 
++/* LAN969X ONLY */
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_CBSHP_ADJ  GENMASK(29, 18)
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_CBSHP_ADJ_SET(x)\
++	FIELD_PREP(HSCH_TAS_STATEMACHINE_CFG_TAS_CBSHP_ADJ, x)
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_CBSHP_ADJ_GET(x)\
++	FIELD_GET(HSCH_TAS_STATEMACHINE_CFG_TAS_CBSHP_ADJ, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_PIPE_DLY_NS GENMASK(17, 8)
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_PIPE_DLY_NS_SET(x)\
++	FIELD_PREP(HSCH_TAS_STATEMACHINE_CFG_TAS_PIPE_DLY_NS, x)
++#define HSCH_TAS_STATEMACHINE_CFG_TAS_PIPE_DLY_NS_GET(x)\
++	FIELD_GET(HSCH_TAS_STATEMACHINE_CFG_TAS_PIPE_DLY_NS, x)
++
++/* LAN969X ONLY */
++/* HSCH:TAS_CONFIG:TAS_CFG_CTRL2 */
++#define HSCH_TAS_CFG_CTRL2                                                     \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_CONFIG], 0, 1,              \
++	      regs->gsize[GW_HSCH_TAS_CONFIG], 12, 0, 1, 4)
++
++#define HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL        GENMASK(4, 0)
++#define HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL_SET(x)\
++	FIELD_PREP(HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL, x)
++#define HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL_GET(x)\
++	FIELD_GET(HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL, x)
++
+ /* HSCH:TAS_PROFILE_CFG:TAS_PROFILE_CONFIG */
+ #define HSCH_TAS_PROFILE_CONFIG(g)                                             \
+-	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_PROFILE_CFG], g,       \
+-	      regs->gcnt[GC_HSCH_TAS_PROFILE_CFG],                              \
+-	      regs->gsize[GW_HSCH_TAS_PROFILE_CFG], 32, 0, 1, 4)
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_PROFILE_CFG], g,            \
++	      regs->gcnt[GC_HSCH_TAS_PROFILE_CFG], regs->gsize[GW_HSCH_TAS_PROFILE_CFG],   \
++	      32, 0, 1, 4)
++
++/* SPARX5 ONLY */
++#define HSCH_TAS_PROFILE_CONFIG_PORT_NUM         GENMASK(17, 11)
++#define HSCH_TAS_PROFILE_CONFIG_PORT_NUM_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_PORT_NUM, x)
++#define HSCH_TAS_PROFILE_CONFIG_PORT_NUM_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_PORT_NUM, x)
+ 
+ #define HSCH_TAS_PROFILE_CONFIG_LINK_SPEED       GENMASK(10, 8)
+ #define HSCH_TAS_PROFILE_CONFIG_LINK_SPEED_SET(x)\
+@@ -5547,6 +5624,257 @@ extern const struct sparx5_regs *regs;
+ #define HSCH_TAS_PROFILE_CONFIG_LINK_SPEED_GET(x)\
+ 	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_LINK_SPEED, x)
+ 
++#define HSCH_TAS_PROFILE_CONFIG_SCH_TRAFFIC_QUEUES GENMASK(7, 0)
++#define HSCH_TAS_PROFILE_CONFIG_SCH_TRAFFIC_QUEUES_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_SCH_TRAFFIC_QUEUES, x)
++#define HSCH_TAS_PROFILE_CONFIG_SCH_TRAFFIC_QUEUES_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_SCH_TRAFFIC_QUEUES, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_PROFILE_CONFIG_HOLDADVANCE      GENMASK(26, 19)
++#define HSCH_TAS_PROFILE_CONFIG_HOLDADVANCE_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_HOLDADVANCE, x)
++#define HSCH_TAS_PROFILE_CONFIG_HOLDADVANCE_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_HOLDADVANCE, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_PROFILE_CONFIG_TAS_PORT_DLY     GENMASK(18, 16)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_PORT_DLY_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_TAS_PORT_DLY, x)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_PORT_DLY_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_TAS_PORT_DLY, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CLOSE_DLY    GENMASK(15, 13)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CLOSE_DLY_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_TAS_CLOSE_DLY, x)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CLOSE_DLY_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_TAS_CLOSE_DLY, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA    GENMASK(12, 11)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA_SET(x)\
++	FIELD_PREP(HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA, x)
++#define HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA_GET(x)\
++	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_BASE_TIME_NSEC */
++#define HSCH_TAS_BASE_TIME_NSEC                                                \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 0, 0,  \
++	      1, 4)
++
++#define HSCH_TAS_BASE_TIME_NSEC_BASE_TIME_NSEC   GENMASK(29, 0)
++#define HSCH_TAS_BASE_TIME_NSEC_BASE_TIME_NSEC_SET(x)\
++	FIELD_PREP(HSCH_TAS_BASE_TIME_NSEC_BASE_TIME_NSEC, x)
++#define HSCH_TAS_BASE_TIME_NSEC_BASE_TIME_NSEC_GET(x)\
++	FIELD_GET(HSCH_TAS_BASE_TIME_NSEC_BASE_TIME_NSEC, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_BASE_TIME_SEC_LSB */
++#define HSCH_TAS_BASE_TIME_SEC_LSB                                             \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 4, 0,  \
++	      1, 4)
++
++/* HSCH:TAS_LIST_CFG:TAS_BASE_TIME_SEC_MSB */
++#define HSCH_TAS_BASE_TIME_SEC_MSB                                             \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 8, 0,  \
++	      1, 4)
++
++#define HSCH_TAS_BASE_TIME_SEC_MSB_BASE_TIME_SEC_MSB GENMASK(15, 0)
++#define HSCH_TAS_BASE_TIME_SEC_MSB_BASE_TIME_SEC_MSB_SET(x)\
++	FIELD_PREP(HSCH_TAS_BASE_TIME_SEC_MSB_BASE_TIME_SEC_MSB, x)
++#define HSCH_TAS_BASE_TIME_SEC_MSB_BASE_TIME_SEC_MSB_GET(x)\
++	FIELD_GET(HSCH_TAS_BASE_TIME_SEC_MSB_BASE_TIME_SEC_MSB, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_NEXT_OPER_TIME_NSEC */
++#define HSCH_TAS_NEXT_OPER_TIME_NSEC                                           \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 12, 0, \
++	      1, 4)
++
++#define HSCH_TAS_NEXT_OPER_TIME_NSEC_NEXT_OPER_TIME_NSEC GENMASK(29, 0)
++#define HSCH_TAS_NEXT_OPER_TIME_NSEC_NEXT_OPER_TIME_NSEC_SET(x)\
++	FIELD_PREP(HSCH_TAS_NEXT_OPER_TIME_NSEC_NEXT_OPER_TIME_NSEC, x)
++#define HSCH_TAS_NEXT_OPER_TIME_NSEC_NEXT_OPER_TIME_NSEC_GET(x)\
++	FIELD_GET(HSCH_TAS_NEXT_OPER_TIME_NSEC_NEXT_OPER_TIME_NSEC, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_NEXT_OPER_TIME_SEC_LSB */
++#define HSCH_TAS_NEXT_OPER_TIME_SEC_LSB                                        \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 16, 0, \
++	      1, 4)
++
++/* HSCH:TAS_LIST_CFG:TAS_NEXT_OPER_TIME_SEC_MSB */
++#define HSCH_TAS_NEXT_OPER_TIME_SEC_MSB                                        \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 20, 0, \
++	      1, 4)
++
++#define HSCH_TAS_NEXT_OPER_TIME_SEC_MSB_NEXT_OPER_TIME_SEC_MSB GENMASK(15, 0)
++#define HSCH_TAS_NEXT_OPER_TIME_SEC_MSB_NEXT_OPER_TIME_SEC_MSB_SET(x)\
++	FIELD_PREP(HSCH_TAS_NEXT_OPER_TIME_SEC_MSB_NEXT_OPER_TIME_SEC_MSB, x)
++#define HSCH_TAS_NEXT_OPER_TIME_SEC_MSB_NEXT_OPER_TIME_SEC_MSB_GET(x)\
++	FIELD_GET(HSCH_TAS_NEXT_OPER_TIME_SEC_MSB_NEXT_OPER_TIME_SEC_MSB, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_CYCLE_TIME_CFG */
++#define HSCH_TAS_CYCLE_TIME_CFG                                                \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 24, 0, \
++	      1, 4)
++
++/* HSCH:TAS_LIST_CFG:TAS_STARTUP_CFG */
++#define HSCH_TAS_STARTUP_CFG                                                   \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 28, 0, \
++	      1, 4)
++
++#define HSCH_TAS_STARTUP_CFG_STARTUP_TIME        GENMASK(21, 0)
++#define HSCH_TAS_STARTUP_CFG_STARTUP_TIME_SET(x)\
++	FIELD_PREP(HSCH_TAS_STARTUP_CFG_STARTUP_TIME, x)
++#define HSCH_TAS_STARTUP_CFG_STARTUP_TIME_GET(x)\
++	FIELD_GET(HSCH_TAS_STARTUP_CFG_STARTUP_TIME, x)
++
++#define HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX\
++	GENMASK(regs->fsize[FW_HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX] + 23 - 1, 23)
++#define HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX_SET(x)\
++	spx5_field_prep(HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX, x)
++#define HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX_GET(x)\
++	spx5_field_get(HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX, x)
++
++#define HSCH_TAS_STARTUP_CFG_STARTUP_ERROR       BIT(22)
++#define HSCH_TAS_STARTUP_CFG_STARTUP_ERROR_SET(x)\
++	FIELD_PREP(HSCH_TAS_STARTUP_CFG_STARTUP_ERROR, x)
++#define HSCH_TAS_STARTUP_CFG_STARTUP_ERROR_GET(x)\
++	FIELD_GET(HSCH_TAS_STARTUP_CFG_STARTUP_ERROR, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_LIST_CFG */
++#define HSCH_TAS_LIST_CFG                                                      \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 32, 0, \
++	      1, 4)
++
++#define HSCH_TAS_LIST_CFG_LIST_BASE_ADDR\
++	GENMASK(regs->fsize[FW_HSCH_TAS_LIST_CFG_LIST_BASE_ADDR] + 0 - 1, 0)
++#define HSCH_TAS_LIST_CFG_LIST_BASE_ADDR_SET(x)\
++	spx5_field_prep(HSCH_TAS_LIST_CFG_LIST_BASE_ADDR, x)
++#define HSCH_TAS_LIST_CFG_LIST_BASE_ADDR_GET(x)\
++	spx5_field_get(HSCH_TAS_LIST_CFG_LIST_BASE_ADDR, x)
++
++/* SPARX5 ONLY */
++#define HSCH_TAS_LIST_CFG_LIST_LENGTH            GENMASK(29, 16)
++#define HSCH_TAS_LIST_CFG_LIST_LENGTH_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_CFG_LIST_LENGTH, x)
++#define HSCH_TAS_LIST_CFG_LIST_LENGTH_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_CFG_LIST_LENGTH, x)
++
++#define HSCH_TAS_LIST_CFG_LIST_TOD_DOM           GENMASK(15, 14)
++#define HSCH_TAS_LIST_CFG_LIST_TOD_DOM_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_CFG_LIST_TOD_DOM, x)
++#define HSCH_TAS_LIST_CFG_LIST_TOD_DOM_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_CFG_LIST_TOD_DOM, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_LIST_CFG_LIST_HSCH_POS          GENMASK(31, 21)
++#define HSCH_TAS_LIST_CFG_LIST_HSCH_POS_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_CFG_LIST_HSCH_POS, x)
++#define HSCH_TAS_LIST_CFG_LIST_HSCH_POS_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_CFG_LIST_HSCH_POS, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_LIST_CFG_LIST_PORT_NUM          GENMASK(20, 16)
++#define HSCH_TAS_LIST_CFG_LIST_PORT_NUM_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_CFG_LIST_PORT_NUM, x)
++#define HSCH_TAS_LIST_CFG_LIST_PORT_NUM_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_CFG_LIST_PORT_NUM, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_LIST_STATE */
++#define HSCH_TAS_LIST_STATE                                                    \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 36, 0, \
++	      1, 4)
++
++/* SPARX5 ONLY */
++#define HSCH_TAS_LIST_STATE_CUR_PTR              GENMASK(16, 3)
++#define HSCH_TAS_LIST_STATE_CUR_PTR_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_STATE_CUR_PTR, x)
++#define HSCH_TAS_LIST_STATE_CUR_PTR_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_STATE_CUR_PTR, x)
++
++#define HSCH_TAS_LIST_STATE_LIST_STATE           GENMASK(2, 0)
++#define HSCH_TAS_LIST_STATE_LIST_STATE_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_STATE_LIST_STATE, x)
++#define HSCH_TAS_LIST_STATE_LIST_STATE_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_STATE_LIST_STATE, x)
++
++/* HSCH:TAS_LIST_CFG:TAS_LIST_STATE_INT */
++#define HSCH_TAS_LIST_STATE_INT                                                \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 40, 0, \
++	      1, 4)
++
++/* LAN969X ONLY */
++/* HSCH:TAS_LIST_CFG:TAS_LIST_PTR_STATE */
++#define HSCH_TAS_LIST_PTR_STATE                                                \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 44, 0, \
++	      1, 4)
++
++#define HSCH_TAS_LIST_PTR_STATE_CUR_PTR          GENMASK(11, 0)
++#define HSCH_TAS_LIST_PTR_STATE_CUR_PTR_SET(x)\
++	FIELD_PREP(HSCH_TAS_LIST_PTR_STATE_CUR_PTR, x)
++#define HSCH_TAS_LIST_PTR_STATE_CUR_PTR_GET(x)\
++	FIELD_GET(HSCH_TAS_LIST_PTR_STATE_CUR_PTR, x)
++
++/* HSCH:TAS_GCL_CFG:TAS_GCL_CTRL_CFG */
++#define HSCH_TAS_GCL_CTRL_CFG                                                  \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_GCL_CFG], 0, 1,             \
++	      regs->gsize[GW_HSCH_TAS_GCL_CFG], 0, 0, 1, 4)
++
++#define HSCH_TAS_GCL_CTRL_CFG_GATE_STATE         GENMASK(27, 20)
++#define HSCH_TAS_GCL_CTRL_CFG_GATE_STATE_SET(x)\
++	FIELD_PREP(HSCH_TAS_GCL_CTRL_CFG_GATE_STATE, x)
++#define HSCH_TAS_GCL_CTRL_CFG_GATE_STATE_GET(x)\
++	FIELD_GET(HSCH_TAS_GCL_CTRL_CFG_GATE_STATE, x)
++
++/* SPARX5 ONLY */
++#define HSCH_TAS_GCL_CTRL_CFG_PORT_PROFILE       GENMASK(19, 13)
++#define HSCH_TAS_GCL_CTRL_CFG_PORT_PROFILE_SET(x)\
++	FIELD_PREP(HSCH_TAS_GCL_CTRL_CFG_PORT_PROFILE, x)
++#define HSCH_TAS_GCL_CTRL_CFG_PORT_PROFILE_GET(x)\
++	FIELD_GET(HSCH_TAS_GCL_CTRL_CFG_PORT_PROFILE, x)
++
++/* SPARX5 ONLY */
++#define HSCH_TAS_GCL_CTRL_CFG_HSCH_POS           GENMASK(12, 0)
++#define HSCH_TAS_GCL_CTRL_CFG_HSCH_POS_SET(x)\
++	FIELD_PREP(HSCH_TAS_GCL_CTRL_CFG_HSCH_POS, x)
++#define HSCH_TAS_GCL_CTRL_CFG_HSCH_POS_GET(x)\
++	FIELD_GET(HSCH_TAS_GCL_CTRL_CFG_HSCH_POS, x)
++
++/* LAN969X ONLY */
++#define HSCH_TAS_GCL_CTRL_CFG_OP_TYPE            GENMASK(1, 0)
++#define HSCH_TAS_GCL_CTRL_CFG_OP_TYPE_SET(x)\
++	FIELD_PREP(HSCH_TAS_GCL_CTRL_CFG_OP_TYPE, x)
++#define HSCH_TAS_GCL_CTRL_CFG_OP_TYPE_GET(x)\
++	FIELD_GET(HSCH_TAS_GCL_CTRL_CFG_OP_TYPE, x)
++
++/* HSCH:TAS_GCL_CFG:TAS_GCL_TIME_CFG */
++#define HSCH_TAS_GCL_TIME_CFG                                                  \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_GCL_CFG], 0, 1,             \
++	      regs->gsize[GW_HSCH_TAS_GCL_CFG], 4, 0, 1, 4)
++
++/* LAN969X ONLY */
++/* HSCH:TAS_GCL_CFG:TAS_GCL_CTRL_CFG2 */
++#define HSCH_TAS_GCL_CTRL_CFG2                                                 \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_GCL_CFG], 0, 1,             \
++	      regs->gsize[GW_HSCH_TAS_GCL_CFG], 8, 0, 1, 4)
++
++#define HSCH_TAS_GCL_CTRL_CFG2_NEXT_GCL          GENMASK(11, 0)
++#define HSCH_TAS_GCL_CTRL_CFG2_NEXT_GCL_SET(x)\
++	FIELD_PREP(HSCH_TAS_GCL_CTRL_CFG2_NEXT_GCL, x)
++#define HSCH_TAS_GCL_CTRL_CFG2_NEXT_GCL_GET(x)\
++	FIELD_GET(HSCH_TAS_GCL_CTRL_CFG2_NEXT_GCL, x)
++
++/* HSCH:HSCH_TAS_STATE:TAS_GATE_STATE */
++#define HSCH_TAS_GATE_STATE                                                    \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_HSCH_TAS_STATE], 0, 1, 4, 0, 0, \
++	      1, 4)
++
++#define HSCH_TAS_GATE_STATE_TAS_GATE_STATE       GENMASK(7, 0)
++#define HSCH_TAS_GATE_STATE_TAS_GATE_STATE_SET(x)\
++	FIELD_PREP(HSCH_TAS_GATE_STATE_TAS_GATE_STATE, x)
++#define HSCH_TAS_GATE_STATE_TAS_GATE_STATE_GET(x)\
++	FIELD_GET(HSCH_TAS_GATE_STATE_TAS_GATE_STATE, x)
++
+ /* LAN969X ONLY */
+ /* HSIOWRAP:XMII_CFG:XMII_CFG */
+ #define HSIO_WRAP_XMII_CFG(g)                                                  \
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+index 08af6a843ab8..d1e9148a35ab 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+@@ -98,6 +98,9 @@ const unsigned int sparx5_gaddr[GADDR_LAST] = {
+ 	[GA_HSCH_MMGT] = 162368,
+ 	[GA_HSCH_TAS_CONFIG] = 162384,
+ 	[GA_HSCH_TAS_PROFILE_CFG] = 188416,
++	[GA_HSCH_TAS_LIST_CFG] = 161600,
++	[GA_HSCH_TAS_GCL_CFG] = 161584,
++	[GA_HSCH_HSCH_TAS_STATE] = 161580,
+ 	[GA_PTP_PTP_CFG] = 320,
+ 	[GA_PTP_PTP_TOD_DOMAINS] = 336,
+ 	[GA_PTP_PHASE_DETECTOR_CTRL] = 420,
+@@ -150,6 +153,7 @@ const unsigned int sparx5_gsize[GSIZE_LAST] = {
+ 	[GW_GCB_CHIP_REGS] = 424,
+ 	[GW_HSCH_TAS_CONFIG] = 12,
+ 	[GW_HSCH_TAS_PROFILE_CFG] = 64,
++	[GW_HSCH_TAS_GCL_CFG] = 8,
+ 	[GW_PTP_PHASE_DETECTOR_CTRL] = 8,
+ 	[GW_QSYS_PAUSE_CFG] = 1128,
+ };
+@@ -206,6 +210,12 @@ const unsigned int sparx5_fsize[FSIZE_LAST] = {
+ 	[FW_HSCH_HSCH_LEAK_CFG_LEAK_FIRST] = 16,
+ 	[FW_HSCH_FLUSH_CTRL_FLUSH_PORT] = 7,
+ 	[FW_HSCH_FLUSH_CTRL_FLUSH_HIER] = 16,
++	[FW_HSCH_TAS_CFG_CTRL_LIST_NUM_MAX] = 7,
++	[FW_HSCH_TAS_CFG_CTRL_LIST_NUM] = 7,
++	[FW_HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM] = 14,
++	[FW_HSCH_TAS_GATE_STATE_CTRL_HSCH_POS] = 13,
++	[FW_HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX] = 7,
++	[FW_HSCH_TAS_LIST_CFG_LIST_BASE_ADDR] = 14,
+ 	[FW_LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_DIRECT_ROW] = 14,
+ 	[FW_LRN_MAC_ACCESS_CFG_3_MAC_ENTRY_ISDX_LIMIT_IDX] = 11,
+ 	[FW_LRN_AUTOAGE_CFG_2_NEXT_ROW] = 14,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+index 3efcf41d678e..db520791c39f 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+@@ -107,6 +107,9 @@ enum sparx5_gaddr_enum {
+ 	GA_HSCH_MMGT,
+ 	GA_HSCH_TAS_CONFIG,
+ 	GA_HSCH_TAS_PROFILE_CFG,
++	GA_HSCH_TAS_LIST_CFG,
++	GA_HSCH_TAS_GCL_CFG,
++	GA_HSCH_HSCH_TAS_STATE,
+ 	GA_PTP_PTP_CFG,
+ 	GA_PTP_PTP_TOD_DOMAINS,
+ 	GA_PTP_PHASE_DETECTOR_CTRL,
+@@ -161,6 +164,7 @@ enum sparx5_gsize_enum {
+ 	GW_GCB_CHIP_REGS,
+ 	GW_HSCH_TAS_CONFIG,
+ 	GW_HSCH_TAS_PROFILE_CFG,
++	GW_HSCH_TAS_GCL_CFG,
+ 	GW_PTP_PHASE_DETECTOR_CTRL,
+ 	GW_QSYS_PAUSE_CFG,
+ 	GSIZE_LAST,
+@@ -219,6 +223,12 @@ enum sparx5_fsize_enum {
+ 	FW_HSCH_HSCH_LEAK_CFG_LEAK_FIRST,
+ 	FW_HSCH_FLUSH_CTRL_FLUSH_PORT,
+ 	FW_HSCH_FLUSH_CTRL_FLUSH_HIER,
++	FW_HSCH_TAS_CFG_CTRL_LIST_NUM_MAX,
++	FW_HSCH_TAS_CFG_CTRL_LIST_NUM,
++	FW_HSCH_TAS_CFG_CTRL_GCL_ENTRY_NUM,
++	FW_HSCH_TAS_GATE_STATE_CTRL_HSCH_POS,
++	FW_HSCH_TAS_STARTUP_CFG_OBSOLETE_IDX,
++	FW_HSCH_TAS_LIST_CFG_LIST_BASE_ADDR,
+ 	FW_LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_DIRECT_ROW,
+ 	FW_LRN_MAC_ACCESS_CFG_3_MAC_ENTRY_ISDX_LIMIT_IDX,
+ 	FW_LRN_AUTOAGE_CFG_2_NEXT_ROW,
+-- 
+2.43.0
+
