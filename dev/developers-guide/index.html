@@ -1504,6 +1504,8 @@
       
         
       
+        
+      
     
     
     
@@ -1559,6 +1561,34 @@
     
   
     Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../alarms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alarms
   
 
     
@@ -3217,6 +3247,10 @@ package is selected.  If MkDocs is missing the build still succeeds,
 but the image ships without the on-device guide.  Minimal images and
 any build without the <code>webui</code> package skip this step entirely.</p>
 </div>
+<p>A new page in <code>doc/</code> is listed in two places, the index in
+<code>doc/README.md</code> and the <code>nav</code> in <code>mkdocs.yml</code>, or it is missing from the
+online guide.  The manual does not use the product name, write "the
+device" or "the system" instead.</p>
 <p>Preview with:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$ cd ~/src/infix/
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>$ mkdocs serve
@@ -3259,6 +3293,9 @@ therefore only picked up by <code>make foo-dirclean foo</code>, not by
 and named after it with a <code>-kkit</code> suffix, e.g. <code>v4.4-kkit</code> in
 <code>kernelkit/linuxptp</code>.  Forks of projects we already track, the kernel,
 Buildroot and FRR, have their own naming, see below.</p>
+<p>The package recipe always pins the upstream site and version, never a
+commit on the fork.  The fork only hosts the branch; a release that
+pins a fork commit stops building the day that branch is rebased.</p>
 <p>To add or change a patch:</p>
 <ol>
 <li>

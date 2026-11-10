@@ -1506,6 +1506,8 @@
       
         
       
+        
+      
     
     
     
@@ -1561,6 +1563,34 @@
     
   
     Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../alarms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alarms
   
 
     
@@ -3056,7 +3086,11 @@ Software updates
 </code></pre>
 
 <p>The same data is available under <code>/system-state/software/update</code> in the
-operational datastore, and on the WebUI dashboard.</p>
+operational datastore, and on the WebUI dashboard.  The outcome is also
+an alarm, see <a href="../alarms/">Alarms</a>: a release waiting to be installed, an
+update source that could not be read, and an unattended install that
+failed each raise one, so <code>show alarms</code> and a monitoring system see
+them without reading this page.</p>
 <p>To check right away, run <code>upgrade</code> without a bundle.  It reads the feed
 at <code>update-url</code> for the latest release and, when there is a newer one,
 offers to install it and to reboot:</p>
