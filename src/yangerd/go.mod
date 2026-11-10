@@ -9,7 +9,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 )
 
 require (
