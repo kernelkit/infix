@@ -45,8 +45,12 @@ static int yangerd_connect(void)
 		return -1;
 	}
 
-	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) ||
+	    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
+		ERROR("yangerd: setsockopt(): %s", strerror(errno));
+		close(fd);
+		return -1;
+	}
 
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		int err = errno;

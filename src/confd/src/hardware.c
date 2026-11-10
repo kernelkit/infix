@@ -2032,9 +2032,10 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		case SR_EV_DONE:
 			gps_gen_rules(config);
 			if (fexist(GPSD_CONF_NEXT)) {
-				unlink(GPSD_CONF);
-				rename(GPSD_CONF_NEXT, GPSD_CONF);
-				finit_enable("gpsd");
+				if (rename(GPSD_CONF_NEXT, GPSD_CONF))
+					ERRNO("Failed switching to new %s", GPSD_CONF);
+				else
+					finit_enable("gpsd");
 			} else {
 				unlink(GPSD_CONF);
 				finit_disable("gpsd");

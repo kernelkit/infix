@@ -103,10 +103,10 @@ static int check(int clear)
 {
 	struct stat st;
 
-	if (!stat(RESETME, &st) && ((st.st_mode & S_IFMT) == S_IFREG)) {
-		if (clear)
-			unlink(RESETME);
-
+	if (clear) {
+		if (!unlink(RESETME))
+			return 0;
+	} else if (!stat(RESETME, &st) && S_ISREG(st.st_mode)) {
 		return 0;
 	}
 
