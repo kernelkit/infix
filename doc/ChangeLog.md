@@ -35,6 +35,9 @@ All notable changes to the project are documented in this file.
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
 - Banana Pi BPI-R2 Pro: the CPU now runs at up to 2 GHz, it was stuck
   at its boot clock
+- CLI: numeric settings accept unit suffixes, `k`, `M`, `G` and up for
+  powers of 1000, `Ki`, `Mi`, `Gi` and up for powers of 1024, e.g.
+  `set rate 200M`, see [CLI Configure Context][cli-numbers]
 - CLI commands and `copy` start faster, the YANG models are now loaded
   once at boot instead of by every command
 - The CPU model, number of cores and current clock frequency are now in
@@ -326,6 +329,7 @@ All notable changes to the project are documented in this file.
 [ospfv3]: https://www.kernelkit.org/infix/latest/routing/#ospfv3-routing
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
 [qos]: https://www.kernelkit.org/infix/latest/qos/
+[cli-numbers]: https://www.kernelkit.org/infix/latest/cli/configure/#large-numbers
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 [roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming

@@ -71,6 +71,22 @@ interfaces {
 }
 ```
 
+## Large Numbers
+
+A numeric setting, e.g. a rate in bits per second, can be given with a
+unit suffix instead of all its digits.  The suffixes `k` (or `K`), `M`,
+`G`, `T`, `P` and `E` multiply by powers of 1000, and `Ki`, `Mi`, `Gi`,
+`Ti`, `Pi` and `Ei` by powers of 1024:
+
+```
+admin@host:/config/interface/eth0/> set qos egress rate-limit rate 200M
+admin@host:/config/interface/eth0/> set qos egress rate-limit burst 64Ki
+```
+
+These are stored as 200000000 and 65536, which is also how `show` and
+`diff` list them.  A fraction is allowed when the result is a whole
+number, e.g. `1.5G`, or for a setting with decimals.
+
 ## Saving Changes
 
 Apply the changes (from candidate to `running-config`):
