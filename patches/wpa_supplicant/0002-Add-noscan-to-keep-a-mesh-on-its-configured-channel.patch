@@ -1,0 +1,90 @@
+From 2cfb1ac4e08641ad77269341080eb60ea456d3ac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Sun, 8 Nov 2026 08:35:03 +0100
+Subject: [PATCH] Add noscan to keep a mesh on its configured channel
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Before joining a mesh, wpa_supplicant scans and swaps the primary and
+secondary channel when it hears a BSS on the secondary one only.  Nodes
+that hear different neighbours then start on different primary channels
+and never peer, although all were configured for the same channel.
+noscan=1 in the network block skips that scan for a mesh network.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ wpa_supplicant/config.c            |  1 +
+ wpa_supplicant/config_ssid.h       | 10 ++++++++++
+ wpa_supplicant/wpa_supplicant.c    |  3 +++
+ wpa_supplicant/wpa_supplicant.conf |  6 ++++++
+ 4 files changed, 20 insertions(+)
+
+diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
+index e7fc3f4..db6e3d1 100644
+--- a/wpa_supplicant/config.c
++++ b/wpa_supplicant/config.c
+@@ -2823,6 +2823,7 @@ static const struct parse_data ssid_fields[] = {
+ 	{ INT_RANGE(mode, 0, 5) },
+ 	{ INT_RANGE(no_auto_peer, 0, 1) },
+ 	{ INT_RANGE(mesh_fwding, 0, 1) },
++	{ INT_RANGE(noscan, 0, 1) },
+ 	{ INT_RANGE(mesh_rssi_threshold, -255, 1) },
+ #else /* CONFIG_MESH */
+ 	{ INT_RANGE(mode, 0, 4) },
+diff --git a/wpa_supplicant/config_ssid.h b/wpa_supplicant/config_ssid.h
+index 7c60d4e..cafe5c6 100644
+--- a/wpa_supplicant/config_ssid.h
++++ b/wpa_supplicant/config_ssid.h
+@@ -600,6 +600,16 @@ struct wpa_ssid {
+ 	 */
+ 	int mesh_fwding;
+ 
++	/**
++	 * noscan - Start the mesh on the configured channel without a scan
++	 *
++	 * The scan before joining can move the primary channel to the
++	 * secondary one when another BSS is heard there, which splits a
++	 * mesh whose nodes are all configured for the same channel.
++	 * 1 = skip the scan and keep the configured primary channel.
++	 */
++	int noscan;
++
+ 	int ht;
+ 	int ht40;
+ 
+diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
+index 96a8462..67e09e6 100644
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -3596,6 +3596,9 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
+ 		}
+ 	}
+ 
++	if (ssid->mode == WPAS_MODE_MESH && ssid->noscan)
++		obss_scan = 0;
++
+ 	hw_mode = ieee80211_freq_to_chan(freq->freq, &channel);
+ 	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes,
+ 			hw_mode, is_6ghz_freq(ssid->frequency));
+diff --git a/wpa_supplicant/wpa_supplicant.conf b/wpa_supplicant/wpa_supplicant.conf
+index 56533cb..62fc92b 100644
+--- a/wpa_supplicant/wpa_supplicant.conf
++++ b/wpa_supplicant/wpa_supplicant.conf
+@@ -1014,6 +1014,12 @@ fast_reauth=1
+ # proto=WPA, key_mgmt=WPA-NONE, pairwise=NONE, group=TKIP (or CCMP, but not
+ # both), and psk must also be set.
+ #
++# noscan: Start a mesh on the configured channel without scanning first
++# 0 = scan and let a BSS heard on the secondary channel move the primary
++#     channel (default)
++# 1 = keep the configured primary channel, so every node of a mesh that is
++#     configured for the same channel ends up on it
++#
+ # frequency: Channel frequency in megahertz (MHz) for IBSS, e.g.,
+ # 2412 = IEEE 802.11b/g channel 1. This value is used to configure the initial
+ # channel for IBSS (adhoc) networks. It is ignored in the infrastructure mode.
+-- 
+2.43.0
+

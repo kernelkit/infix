@@ -9,6 +9,11 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.62 (LTS)
+- New alarm list, RFC 8632 `ietf-alarms`, with alarms for failed
+  startup configuration, boot fallback, software partition and update
+  state, ports without link, and alarms raised by scripts.  Alarms can
+  be acknowledged, closed, shelved and purged from the CLI, the WebUI
+  and the management protocols, see [Alarms][alarms]
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
@@ -92,6 +97,10 @@ All notable changes to the project are documented in this file.
   operational data offline until the service was restarted.  The
   failed read is now retried at its next interval.
   Reported by Dave Seddon
+- A mesh point could start on the channel next to the configured one
+  when it heard another network there, and then never peer with the
+  nodes on the configured channel.  A mesh point now stays on its
+  configured channel
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
@@ -299,6 +308,7 @@ All notable changes to the project are documented in this file.
 [lan969x]: https://github.com/kernelkit/infix/blob/main/board/aarch64/microchip-lan969x/README.md
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [modem]: https://www.kernelkit.org/infix/latest/modem/
+[alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port

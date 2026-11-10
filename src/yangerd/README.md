@@ -126,6 +126,7 @@ build vendors them from `go.sum`.
 | `infix-firewall:firewall` | zones, policies, services | event | firewalld D-Bus signals |
 | | address-set entries | on demand | nft, only sets with timeouts |
 | `infix-services:tftp` | files served | event | inotify on the root, mount table changes |
+| `ietf-alarms:alarms` | alarm list, shelved alarms, summary, inventory | event | inotify on the `/run/alarm` markers, see *Alarms* |
 
 A SIGHUP pokes the routing, NTP and hardware collectors once.  confd
 sends it after a commit, best effort, so polled data catches up with
@@ -136,6 +137,44 @@ and WireGuard polls run on their timer only.
 The bridge FDB is not collected.  A switch learns addresses without
 telling anyone, so it could only be polled; the `get-forwarding-database`
 action in confd reads it when asked.
+
+
+## Alarms
+
+An alarm is a file.  `/run/alarm` is the bus between whoever notices a
+condition and the ietf-alarms tree, and nothing else holds alarm state:
+
+```
+/run/alarm/
+  active/<type>/<name>   raised: exists, removed: cleared
+  entry/<type>/<name>    what yangerd knows: created, raised, changed,
+                         cleared, shelf; removed by confd to purge
+  state/<type>/<name>    operator history, appended by confd
+  config.json            the running /ietf-alarms:alarms, rendered by confd
+```
+
+`<type>` is the identity name in `infix-alarms`, `<name>` is the
+resource, with `@<qualifier>` when there is one; both are one word, see
+`alarm.ValidResource`.  A marker may be empty, the type's first
+severity level and its description then apply, or hold
+`{"severity": ..., "text": ...}`.  Producers in yangerd call
+`alarm.Raise()` and `alarm.Clear()` in `internal/alarm`, which write a
+temp file and rename it; a script uses `touch` and `rm`.
+
+`internal/alarmmonitor` watches the tree with inotify, rebuilds the
+whole subtree after a settled burst, keeps `entry/` so the list survives
+a restart, logs each raise and clear to syslog, and keeps the iitod
+`fault-ok`, `fault-err` and `fault-crit` markers in `/run/led` in step
+with the summary.  The inventory of alarm types is the table in
+`internal/alarmmonitor/inventory.go`; a type must be there, and an
+identity in `infix-alarms.yang`, before a producer may raise it.
+
+confd handles the operations on the same files: `set-operator-state`
+appends to `state/`, the purge actions remove `entry/` files (and the
+marker for a not-cleared alarm), `raise-alarm` and `clear-alarm` own
+`active/external/`.  statd subscribes to the container with
+`SR_SUBSCR_OPER_MERGE`, since the shelves and profiles are configuration
+under the same container.
 
 
 ## IPC

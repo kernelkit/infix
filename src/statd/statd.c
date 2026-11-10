@@ -40,6 +40,7 @@
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 #define XPATH_TFTP_FILES "/infix-services:tftp/files"
+#define XPATH_ALARMS_BASE "/ietf-alarms:alarms"
 #define XPATH_LLDP_BASE "/ieee802-dot1ab-lldp:lldp"
 #define XPATH_FIREWALL_BASE "/infix-firewall:firewall"
 #define XPATH_NTP_BASE "/ietf-ntp:ntp"
@@ -437,6 +438,12 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "ietf-ntp", XPATH_NTP_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ieee1588-ptp-tt", XPATH_PTP_BASE, sr_generic_cb))
+		return SR_ERR_INTERNAL;
+	/*
+	 * Merged: the shelves and the profile are configuration under the
+	 * same container as the alarm list.
+	 */
+	if (subscribe_opts(statd, "ietf-alarms", XPATH_ALARMS_BASE, SR_SUBSCR_OPER_MERGE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 
 	INFO("Successfully subscribed to all models");

@@ -311,6 +311,10 @@ int support_rpc_init(struct confd *confd);
 /* locate.c */
 int locate_rpc_init(struct confd *confd);
 
+/* alarm.c */
+int alarm_rpc_init(struct confd *confd);
+int alarm_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+
 /* services.c */
 int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 

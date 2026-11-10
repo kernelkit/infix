@@ -49,8 +49,9 @@ Each is explained in the doc named above; these are the ones that come back in r
 - Discuss YANG changes with the core team first. At most one new revision per release
   cycle. Description first line is a short complete sentence, then a blank line.
 - A package patch is a commit on the `<version>-kkit` branch of a `kernelkit/` fork of
-  the project, `patches/<pkg>/` is only its `git format-patch` export. Never hand-edit a
-  patch file; fix the commit, regenerate the series, push the branch. A new or changed
+  the project, `patches/<pkg>/` is only its `git format-patch` export. The recipe pins
+  the upstream site and version, never a fork commit. Never hand-edit a patch file; fix
+  the commit, regenerate the series, push the branch. A new or changed
   file in `patches/` needs `<pkg>-dirclean`, `-rebuild` misses it.
 - Tests are the specification: one action or check per step, concrete values, literal
   strings. A failing test that encodes the real use case beats a green one bent to pass.
@@ -63,7 +64,10 @@ Each is explained in the doc named above; these are the ones that come back in r
   to a developer branch is fine. The same applies to the `-kkit` branch behind a patch
   series.
 - Manual and ChangeLog are for operators: what to configure and expect, no daemon or
-  kernel internals. A ChangeLog entry describes the change for the user, not the code.
+  kernel internals. A ChangeLog entry is a few lines that say what changed for the user
+  and link to the manual page, not a tour of the feature. A new manual page is listed
+  in `doc/README.md` and in the `nav` of `mkdocs.yml`. The manual never uses the
+  product name, write "the device" or "the system".
 
 ## Notes for agents
 

@@ -138,6 +138,11 @@ install all the tooling.
 > but the image ships without the on-device guide.  Minimal images and
 > any build without the `webui` package skip this step entirely.
 
+A new page in `doc/` is listed in two places, the index in
+`doc/README.md` and the `nav` in `mkdocs.yml`, or it is missing from the
+online guide.  The manual does not use the product name, write "the
+device" or "the system" instead.
+
 Preview with:
 
 ```
@@ -195,6 +200,10 @@ Every patch series is maintained as commits on a branch in a Kernelkit
 and named after it with a `-kkit` suffix, e.g. `v4.4-kkit` in
 `kernelkit/linuxptp`.  Forks of projects we already track, the kernel,
 Buildroot and FRR, have their own naming, see below.
+
+The package recipe always pins the upstream site and version, never a
+commit on the fork.  The fork only hosts the branch; a release that
+pins a fork commit stops building the day that branch is rebased.
 
 To add or change a patch:
 

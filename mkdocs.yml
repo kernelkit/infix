@@ -57,6 +57,7 @@ nav:
       - TFTP Server: tftp.md
   - System:
       - Access Control (NACM): nacm.md
+      - Alarms: alarms.md
       - Boot Procedure: boot.md
       - Configuration: system.md
       - Hardware Info & Status: hardware.md

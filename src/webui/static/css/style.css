@@ -156,6 +156,20 @@
 .light .badge-drop { background: var(--slate-100); color: var(--slate-600); }
 .light .badge-continue { background: #dbeafe; color: #1e40af; }
 
+/* Alarm severities, ITU-T X.733 colours; cleared alarms fade */
+.badge-critical { background: #fef2f2; color: #991b1b; }
+.badge-major { background: #ffedd5; color: #9a3412; }
+.badge-minor { background: #fef9c3; color: #854d0e; }
+.badge-warning { background: #dbeafe; color: #1e40af; }
+.badge-indeterminate { background: var(--slate-100); color: var(--slate-600); }
+.badge-count { background: #fef2f2; color: #991b1b; margin-left: 0.5rem; }
+.badge-muted { opacity: 0.5; }
+.alarm-cleared td { color: var(--slate-500); }
+.alarm-history td { padding-top: 0; font-size: 0.8rem; }
+.alarm-table td.alarm-text { white-space: normal; min-width: 18rem; max-width: 40rem; overflow-wrap: anywhere; }
+.alarm-actions { white-space: nowrap; }
+.alarm-actions .btn { margin-right: 0.25rem; }
+
 /* ==========================================================================
    Reset & Base
    ========================================================================== */

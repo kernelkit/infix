@@ -1,10 +1,9 @@
 #!/bin/sh
-# Check for available software updates and notify on login if one exists.
+# Check for available software updates, the outcome is an alarm.
 # Called by the scheduler, and by the check-update RPC with -s, which
 # makes a skipped check exit with its reason: 2 feed unreachable, 3 no
 # update-url.  The scheduler gets 0 for both.
 
-NOTIFY_FILE=/run/os-update
 TAG=os-update
 
 . /usr/libexec/infix/update-common
@@ -29,11 +28,7 @@ if [ $rc -eq 3 ]; then
 fi
 
 if [ "$UPDATE_AVAILABLE" = true ]; then
-    RELEASE_URL=$(update_release_url)
-    MSG="Software update available: ${LATEST_TAG}, running ${VERSION} (see ${RELEASE_URL})"
-    logger -t "$TAG" "$MSG"
-    printf '%s\n' "$MSG" > "$NOTIFY_FILE"
+    logger -t "$TAG" "Software update available: ${LATEST_TAG}, running ${VERSION} (see $(update_release_url))"
 else
     logger -p daemon.debug -t "$TAG" "No update available (current: $VERSION, latest: $LATEST_TAG)"
-    printf '' > "$NOTIFY_FILE"
 fi

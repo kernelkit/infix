@@ -538,13 +538,15 @@ class Device(Transport):
 
         # RFC 8040 wraps action input as {"<action-module>:input": {...}}.
         # The action's module is the prefix of the closest namespaced
-        # xpath segment; for "/a:foo/b:bar/baz" that's "b".
+        # xpath segment; for "/a:foo/b:bar/baz" that's "b".  A key value
+        # in a predicate may hold a colon too, so look at the node name.
         body = None
         if input_data:
             module = None
-            for seg in xpath.split("/"):
-                if ":" in seg:
-                    module = seg.split(":", 1)[0]
+            for seg in re.split(r"/(?=(?:[^'\"]|'[^']*'|\"[^\"]*\")*$)", xpath):
+                name = seg.split("[", 1)[0]
+                if ":" in name:
+                    module = name.split(":", 1)[0]
             if not module:
                 raise ValueError(f"cannot determine action module from {xpath}")
             body = {f"{module}:input": input_data}

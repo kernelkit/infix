@@ -13,6 +13,7 @@ untouched.
 | File              | Lucide source         |
 |-------------------|-----------------------|
 | advanced.svg      | folder-git-2          |
+| alarms.svg        | bell                  |
 | backup.svg        | archive-restore       |
 | console.svg       | square-terminal       |
 | containers.svg    | container             |

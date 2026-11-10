@@ -21,6 +21,8 @@ define YANGERD_INSTALL_EXTRA
 	ln -sf ../available/yangerd.conf $(FINIT_D)/enabled/yangerd.conf
 	$(INSTALL) -D -m 0644 $(YANGERD_PKGDIR)/yangerd.default \
 		$(TARGET_DIR)/etc/default/yangerd
+	$(INSTALL) -D -m 0644 $(YANGERD_PKGDIR)/tmpfiles.conf \
+		$(TARGET_DIR)/etc/tmpfiles.d/yangerd.conf
 endef
 YANGERD_POST_INSTALL_TARGET_HOOKS += YANGERD_INSTALL_EXTRA
 

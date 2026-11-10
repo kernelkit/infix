@@ -1,0 +1,95 @@
+{
+  "ietf-alarms:alarms": {
+    "alarm-inventory": {
+      "alarm-type": [
+        {
+          "alarm-type-id": "infix-alarms:external",
+          "alarm-type-qualifier": "",
+          "will-clear": true,
+          "severity-level": ["indeterminate", "warning", "minor", "major", "critical"],
+          "description": "An alarm raised by a script or an external system."
+        },
+        {
+          "alarm-type-id": "infix-alarms:link-down",
+          "alarm-type-qualifier": "",
+          "will-clear": true,
+          "severity-level": ["major"],
+          "description": "An enabled interface has no link."
+        }
+      ]
+    },
+    "summary": {
+      "alarm-summary": [
+        {"severity": "indeterminate", "total": 0, "not-cleared": 0, "cleared": 0, "cleared-not-closed": 0, "cleared-closed": 0, "not-cleared-closed": 0, "not-cleared-not-closed": 0},
+        {"severity": "warning", "total": 0, "not-cleared": 0, "cleared": 0, "cleared-not-closed": 0, "cleared-closed": 0, "not-cleared-closed": 0, "not-cleared-not-closed": 0},
+        {"severity": "minor", "total": 1, "not-cleared": 1, "cleared": 0, "cleared-not-closed": 0, "cleared-closed": 0, "not-cleared-closed": 1, "not-cleared-not-closed": 0},
+        {"severity": "major", "total": 1, "not-cleared": 0, "cleared": 1, "cleared-not-closed": 1, "cleared-closed": 0, "not-cleared-closed": 0, "not-cleared-not-closed": 0},
+        {"severity": "critical", "total": 1, "not-cleared": 1, "cleared": 0, "cleared-not-closed": 0, "cleared-closed": 0, "not-cleared-closed": 0, "not-cleared-not-closed": 1}
+      ],
+      "shelves-active": [null]
+    },
+    "alarm-list": {
+      "number-of-alarms": 3,
+      "last-changed": "2026-11-03T15:45:12+00:00",
+      "alarm": [
+        {
+          "resource": "backup",
+          "alarm-type-id": "infix-alarms:external",
+          "alarm-type-qualifier": "nightly",
+          "time-created": "2026-11-03T06:12:40+00:00",
+          "is-cleared": false,
+          "last-raised": "2026-11-03T06:12:40+00:00",
+          "last-changed": "2026-11-03T06:12:40+00:00",
+          "perceived-severity": "critical",
+          "alarm-text": "Nightly backup failed"
+        },
+        {
+          "resource": "disk-full",
+          "alarm-type-id": "infix-alarms:external",
+          "alarm-type-qualifier": "",
+          "time-created": "2026-11-02T22:03:01+00:00",
+          "is-cleared": true,
+          "last-raised": "2026-11-02T22:03:01+00:00",
+          "last-changed": "2026-11-03T08:30:00+00:00",
+          "perceived-severity": "major",
+          "alarm-text": "Disk 95% full",
+          "operator-state-change": [
+            {"time": "2026-11-03T07:00:00+00:00", "operator": "admin", "state": "ack", "text": "Cleaning up"}
+          ]
+        },
+        {
+          "resource": "sensor3",
+          "alarm-type-id": "infix-alarms:external",
+          "alarm-type-qualifier": "",
+          "time-created": "2026-11-03T15:40:00+00:00",
+          "is-cleared": false,
+          "last-raised": "2026-11-03T15:40:00+00:00",
+          "last-changed": "2026-11-03T15:40:00+00:00",
+          "perceived-severity": "minor",
+          "alarm-text": "Humidity sensor unreachable",
+          "operator-state-change": [
+            {"time": "2026-11-03T15:42:00+00:00", "operator": "admin", "state": "ack"},
+            {"time": "2026-11-03T15:45:12+00:00", "operator": "admin", "state": "closed", "text": "Sensor replaced"}
+          ]
+        }
+      ]
+    },
+    "shelved-alarms": {
+      "number-of-shelved-alarms": 1,
+      "shelved-alarms-last-changed": "2026-11-03T05:00:00+00:00",
+      "shelved-alarm": [
+        {
+          "resource": "/ietf-interfaces:interfaces/interface[name='eth7']",
+          "alarm-type-id": "infix-alarms:link-down",
+          "alarm-type-qualifier": "",
+          "shelf-name": "spare-ports",
+          "is-cleared": false,
+          "last-raised": "2026-11-03T05:00:00+00:00",
+          "last-changed": "2026-11-03T05:00:00+00:00",
+          "perceived-severity": "major",
+          "alarm-text": "An enabled interface has no link."
+        }
+      ]
+    }
+  }
+}

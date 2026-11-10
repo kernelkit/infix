@@ -51,6 +51,9 @@
 - name: "SNMP"
   suite: snmp/all.yaml
 
+- name: "Alarms"
+  suite: alarms/all.yaml
+
 - name: "Use Case Tests"
   suite: use_case/all.yaml
 

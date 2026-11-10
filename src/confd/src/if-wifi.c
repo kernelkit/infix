@@ -500,6 +500,8 @@ int wifi_gen_mesh(struct lyd_node *cif)
 	fprintf(wpa_supplicant, "  mode=5\n");
 	fprintf(wpa_supplicant, "  ssid=\"%s\"\n", mesh_id);
 	fprintf(wpa_supplicant, "  frequency=%d\n", freq);
+	/* No pre-join scan, it can swap the primary and secondary channel */
+	fprintf(wpa_supplicant, "  noscan=1\n");
 
 	if (band && !strcmp(band, "6GHz") && (!width || !strcmp(width, "auto"))) {
 		int center = wifi_center_chan_80(channel);
