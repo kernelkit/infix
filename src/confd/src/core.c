@@ -278,10 +278,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	static sr_event_t last_event = -1;
 	struct confd *confd = _confd;
 	static uint32_t last_request = 0;
-	confd_dependency_t result;
 	sr_data_t *cfg = NULL;
 	int rc = SR_ERR_OK;
-	int max_dep = 10;
 
 	if (request_id == last_request && last_event == event)
 		return SR_ERR_OK;
@@ -299,16 +297,9 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			goto free_diff;
 
 		config = cfg->tree;
-		while ((result = handle_dependencies(&diff, config)) != CONFD_DEP_DONE) {
-			if (max_dep == 0) {
-				ERROR("Max dependency depth reached");
-				return SR_ERR_INTERNAL;
-			}
-			if (result == CONFD_DEP_ERROR) {
-				ERROR("Failed to add dependencies");
-				return SR_ERR_INTERNAL;
-			}
-			max_dep--;
+		if (dep_resolve(&diff, config)) {
+			rc = SR_ERR_INTERNAL;
+			goto free_diff;
 		}
 	}
 
@@ -411,26 +402,31 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		(client || server) ? finit_enable("chronyd") : finit_disable("chronyd");
 	}
 
-	if (cfg)
+	if (cfg) {
 		sr_release_data(cfg);
+		cfg = NULL;
+	}
 
 	if (event == SR_EV_DONE) {
 		/* skip reload in bootstrap, implicit reload in runlevel change */
 		if (systemf("runlevel >/dev/null 2>&1"))
-			return SR_ERR_OK;
+			goto free_diff;
 
 		/* Polled operational data catches up with the new config */
 		finit_reload("yangerd");
 
 		if (systemf("initctl -b reload")) {
 			EMERG("initctl reload: failed applying new configuration!");
-			return SR_ERR_SYS;
+			rc = SR_ERR_SYS;
+			goto free_diff;
 		}
 
 		AUDIT("The new configuration has been applied.");
 	}
 
 free_diff:
+	if (cfg)
+		sr_release_data(cfg);
 	lyd_free_tree(diff);
 	return rc;
 }

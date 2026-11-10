@@ -111,12 +111,6 @@ static inline char *xpath_base(const char *xpath)
 
 	return path;
 }
-typedef enum {
-	CONFD_DEP_DONE = 0,
-	CONFD_DEP_ADDED = 1,
-	CONFD_DEP_ERROR = 2
-} confd_dependency_t;
-
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
 		goto fail
@@ -248,7 +242,7 @@ FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 /* dep.c */
-confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config);
+int dep_resolve(struct lyd_node **diff, struct lyd_node *config);
 
 /* interfaces.c */
 int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
