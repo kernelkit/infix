@@ -82,7 +82,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, port = env.ltop.xlate("target", "data")
+        port = target["data"]
         cap = infamy.capability.Port(target, port, tgtssh)
         dcb = bool(cap.trust_orders)
         print(f"{port}: DCB {'supported' if dcb else 'not supported'}")

@@ -73,7 +73,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, port = env.ltop.xlate("target", "data")
+        port = target["data"]
 
         cap = infamy.capability.Port(target, port, tgtssh)
         num_tc = cap.traffic_classes
