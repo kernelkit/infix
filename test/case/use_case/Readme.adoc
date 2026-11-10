@@ -7,7 +7,9 @@ together:
  - OSPF routing with containerized applications and network segmentation
  - Combined static and DHCP-provided DNS and NTP servers
  - A gPTP grandmaster, gate control list and credit-based shaper on one port
+ - A gate control list checked frame by frame from a neighboring talker and listener
 
 include::dhcp_ntp_dns/Readme.adoc[]
 include::ospf_container/Readme.adoc[]
 include::tsn_schedule/Readme.adoc[]
+include::tsn_gate_timing/Readme.adoc[]
