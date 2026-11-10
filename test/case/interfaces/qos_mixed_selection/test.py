@@ -14,12 +14,10 @@ EF offers 40 percent of what the port drains, the two weighted talkers
 60 percent each, so the port is oversubscribed and both weighted classes
 always have a backlog.  EF must arrive intact, and the two weighted
 flows must divide what EF leaves 2:1, within five points, both of them
-held back by more than a tenth of what they offer.  Shares come from
-the middle seconds of the flows, and the test's own iperf3 control
-traffic, DSCP 0, rides with CS1 in the lowest loaded class, so a
-talker's end-of-test message leaves the port behind its last datagram.
-Skipped on a switch fabric whose scheduler is not offloaded, where
-forwarded frames never meet the configured algorithm.
+held back by more than a tenth of what they offer.  Shares come from the
+middle seconds of the flows, and the test's own iperf3 control traffic,
+DSCP 0, rides with CS1 in the lowest loaded class, so a talker's
+end-of-test message leaves the port behind its last datagram.
 """
 import infamy
 import infamy.qos as qos
