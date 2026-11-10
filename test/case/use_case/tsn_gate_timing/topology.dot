@@ -1,0 +1,42 @@
+graph "tsn-gate-timing" {
+	layout="neato";
+	overlap="false";
+	esep="+22";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="{ <mgmt1> mgmt1 | <host> \n\nhost\n\n | <mgmt2> mgmt2 | <mgmt3> mgmt3 }",
+	    pos="0,15!",
+	    requires="controller",
+	];
+
+	talker [
+	    label="{ <mgmt> mgmt | <data> data } | { talker\n192.168.20.1 }",
+	    pos="2,15.5!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	dut [
+	    label="{ <uplink> uplink | <mgmt> mgmt | <dnlink> dnlink } | { dut\n(br0) }",
+	    pos="2,15!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	listener [
+	    label="{ <data> data | <mgmt> mgmt } | { listener\n192.168.20.2 }",
+	    pos="2,14.5!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	host:mgmt1 -- talker:mgmt   [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- dut:mgmt      [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- listener:mgmt [requires="mgmt", color="lightgray"]
+
+	talker:data -- dut:uplink
+	dut:dnlink  -- listener:data
+}

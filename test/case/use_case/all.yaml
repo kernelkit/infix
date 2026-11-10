@@ -7,3 +7,6 @@
 
 - name: TSN Schedule
   case: tsn_schedule/test.py
+
+- name: TSN Gate Timing
+  case: tsn_gate_timing/test.py
