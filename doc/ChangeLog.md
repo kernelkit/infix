@@ -64,6 +64,9 @@ All notable changes to the project are documented in this file.
   - The port's `qos egress rate-limit` is now `qos egress-shaper`, and
     the offload stage and feature of the same name are renamed with it.
     Saved configurations are migrated
+  - New shell tool `ptping`, which measures one-way latency with
+    hardware-timestamped PTP probes and can tell where in a gate
+    control list's cycle each probe left and arrived
 
 ### Fixes
 

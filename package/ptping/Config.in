@@ -1,0 +1,10 @@
+config BR2_PACKAGE_PTPING
+	bool "ptping"
+	help
+	  Measure one-way latency across a network with PTP Sync
+	  messages as probes, timestamped in hardware at both ends.
+	  Probes can be sent within a window of a cyclic schedule, or
+	  tagged by where in the cycle they left, to check an IEEE
+	  802.1Qbv gate control list from a neighboring station.
+
+	  https://github.com/wkz/ptping
