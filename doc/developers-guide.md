@@ -138,6 +138,11 @@ install all the tooling.
 > but the image ships without the on-device guide.  Minimal images and
 > any build without the `webui` package skip this step entirely.
 
+A new page in `doc/` is listed in two places, the index in
+`doc/README.md` and the `nav` in `mkdocs.yml`, or it is missing from the
+online guide.  The manual does not use the product name, write "the
+device" or "the system" instead.
+
 Preview with:
 
 ```
