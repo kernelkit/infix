@@ -1,0 +1,31 @@
+=== QoS Maximum SDU
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_max_sdu]
+
+==== Description
+
+Set a queueMaxSDU on every traffic class of a bridge port with a gate
+control list, and check that the port drops the frames longer than it
+and forwards the rest, as IEEE 802.1Q-2022 8.6.8.4 specifies.
+
+The DUT bridges two ports.  The port toward the listener runs a gate
+control list with all gates open and a `queue-max-sdu` of 1000 bytes on
+every class, counted like the MTU.  The talker pings the listener with
+the don't-fragment bit set: a 928-byte IP packet must get through and a
+1128-byte one must be dropped.
+
+==== Topology
+
+image::topology.svg[QoS Maximum SDU topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Bridge the two ports
+. Set up the talker and listener namespaces
+. Verify 928- and 1128-byte packets reach the listener without a max SDU
+. Open all gates toward the listener, max SDU 1000 on every class
+. Verify a 928-byte packet still reaches the listener
+. Verify a 1128-byte packet is dropped
+
+
