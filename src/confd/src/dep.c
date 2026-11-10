@@ -68,7 +68,9 @@ static bool is_changed_bridge_port(struct dep *d, struct lyd_node *iface)
 }
 
 static const struct dep_ref dep_refs[] = {
-	{ SYMKEY,   NULL,                   WIFI "/secret[.='%s']" },
+	{ SYMKEY,   NULL,                   WIFI "/station/security/secret[.='%s']" },
+	{ SYMKEY,   NULL,                   WIFI "/access-point/security/secret[.='%s']" },
+	{ SYMKEY,   NULL,                   WIFI "/mesh-point/security/secret[.='%s']" },
 	{ SYMKEY,   NULL,                   WG "[peers/preshared-key='%s']" },
 	{ SYMKEY,   NULL,                   WG "[peers/peer/preshared-key='%s']" },
 	{ SYMKEY,   NULL,                   IFACE "/infix-interfaces:ppp/secret[.='%s']" },
