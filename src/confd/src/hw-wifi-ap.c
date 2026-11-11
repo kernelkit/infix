@@ -166,7 +166,6 @@ static const char *wifi_find_higher_band_twin(struct lyd_node *config,
 	return NULL;
 }
 
-/* Emit the 4-address WDS ports (wds-link interfaces) of an AP */
 /*
  * The 802.11r key holder list of a BSS, read by hostapd at start and on
  * RELOAD_RXKHS.  wifi-neighbors.py rewrites it with the other nodes'
@@ -189,6 +188,7 @@ static int wifi_write_rxkh(const char *ifname, const char *ft_key)
 	return fclose(fp);
 }
 
+/* Emit the 4-address WDS ports (wds-link interfaces) of an AP */
 static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const char *ap_ifname)
 {
 	struct lyd_node *cifs, *cif;
