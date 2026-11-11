@@ -143,16 +143,6 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	bool gps = false;
 	int rc;
 
-	if (!lydx_find_xpathf(diff, XPATH_BASE_)) {
-		/* The generated udev rule embeds the bound interface
-		 * name; regenerate rules (but leave services alone) when
-		 * a wwan interface changes. */
-		if (!modem_wwan_diff(diff))
-			return SR_ERR_OK;
-
-		return modem_change(config, event, false);
-	}
-
 	wifi_country_change(config, diff, event);
 
 	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
@@ -187,8 +177,10 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			return rc;
 	}
 
-	if (modem)
-		return modem_change(config, event, true);
+	/* The modem udev rules name the wwan interface, a change to one
+	 * regenerates the rules but leaves the services alone. */
+	if (modem || modem_wwan_diff(diff))
+		return modem_change(config, event, modem);
 
 	return SR_ERR_OK;
 }
