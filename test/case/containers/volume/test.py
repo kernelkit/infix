@@ -51,14 +51,14 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME), attempts=60)
 
     with test.step("Modify container volume content"):
-        cmd = f"sudo container shell {NAME} 'echo {MESG} >/var/www/index.html'"
+        cmd = f"sudo ixcont shell {NAME} 'echo {MESG} >/var/www/index.html'"
         tgtssh.runsh(cmd)
 
     with test.step("Verify container volume content"):
         until(lambda: MESG in curl(URL), attempts=10)
 
     with test.step("Upgrade container"):
-        out = tgtssh.runsh(f"sudo container upgrade {NAME}")
+        out = tgtssh.runsh(f"sudo ixcont upgrade {NAME}")
         if f">> Container {NAME} upgraded successfully." not in out.stdout:
             msg = f"Failed upgrading container {NAME}:\n" \
                 f"STDOUT:\n{out.stdout}\n" \

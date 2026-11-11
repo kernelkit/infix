@@ -90,7 +90,7 @@ with infamy.Test() as test:
         until(lambda: c.running(RIGHT), attempts=60)
 
     with test.step(f"Verify {LEFT} reaches {RIGHT} over the internal VETH pair"):
-        pid = tgtssh.runsh(f"sudo podman inspect --format '{{{{.State.Pid}}}}' {LEFT}").stdout.strip()
+        pid = tgtssh.runsh(f"sudo ixcont pid {LEFT}").stdout.strip()
         assert pid.isdigit(), f"failed to get pid for container {LEFT}: {pid!r}"
 
         def reachable():
