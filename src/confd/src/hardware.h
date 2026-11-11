@@ -6,6 +6,7 @@
 #include "core.h"
 
 #define XPATH_BASE_              "/ietf-hardware:hardware"
+#define GPSD_MAX_DEVICES         4
 
 /* hw-usb.c */
 bool usb_authorize(struct json_t *root, const char *name, int enabled);
@@ -29,5 +30,8 @@ int modem_rule_port(const char *path, char *buf, size_t len);
 void modem_trigger_port(const char *port);
 int modem_port_find(char (*ports)[64], int num, const char *port);
 int modem_gen_rules(struct lyd_node *config);
+
+/* hw-gps.c */
+void gps_gen_rules(struct lyd_node *config);
 
 #endif /* CONFD_HARDWARE_H_ */

@@ -85,7 +85,8 @@ confd_plugin_la_SOURCES =			\
 	  hw-usb.c				\
 	  hw-wifi-ap.c				\
 	  hw-wifi.c				\
-	  hw-modem.c
+	  hw-modem.c				\
+	  hw-gps.c
 
 if CONTAINERS
 confd_plugin_la_SOURCES += containers.c cni.c cni.h
