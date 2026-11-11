@@ -304,7 +304,7 @@ class's `algorithm` under `qos egress`, and the reservation as
 `admin-idle-slope`, in bits per second, in `cbsa-parameter-table` beside
 `qos` on the interface.  One without the other is rejected.
 
-Reserve 20 Mbit/s for class 7 on a port:
+Reserve 20 Mbps for class 7 on a port:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e1</b>
 admin@example:/config/interface/e1/> <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
@@ -382,7 +382,7 @@ admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
 A schedule meant to hold also on bridges that let a frame overrun its
 window adds a guard band of its own: an entry with all gates closed
 before the protected window, as long as a full-size frame takes on the
-wire, 12.3 µs at 1 Gbit/s.
+wire, 12.3 µs at 1 Gbps.
 
 
 ### Egress Remarking
@@ -691,8 +691,8 @@ runs in the fabric, the credit-based and time-aware shapers included.
 | `remark dscp`           | One table for the chip, defined the same way by the ports that remark DSCP |
 | Traffic classes         | Eight per port, each port's own `traffic-class-table`   |
 | Transmission selection  | Strict priority and Deficit Weighted Round Robin (DWRR) with the `bandwidth` shares as weights, in 31 steps relative to the smallest share |
-| `egress-shaper`         | The port's own shaper, rate in steps of 40 kbit/s, burst in steps of 4 KiB up to 508 KiB |
-| Credit-based shaper     | One per queue, idle slope in steps of 4 kbit/s.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
+| `egress-shaper`         | The port's own shaper, rate in steps of 40 kbps, burst in steps of 4 KiB up to 508 KiB |
+| Credit-based shaper     | One per queue, idle slope in steps of 4 kbps.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
 | Time-aware shaper       | One gate control list per port, limits in the next table |
 /// table-caption
 QoS offload on LAN969x.
@@ -709,7 +709,7 @@ DSCP one `remark dscp` setting, since the chip holds one table of each.
 | Tick granularity      | 1 ns, reported as 10 tenths of a nanosecond              |
 | Cycle time extension  | Not supported                                            |
 | Base time             | From the switch clock; one in the past is moved forward by whole cycles |
-| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening.  The guard band fits a 1500-byte frame with two VLAN tags: 13.8 µs at 1 Gbit/s |
+| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening.  The guard band fits a 1500-byte frame with two VLAN tags: 13.8 µs at 1 Gbps |
 | `queue-max-sdu`       | Longer frames are dropped, and the class's guard band is its largest frame rounded down to 64 bytes |
 | Classes under gates   | Served strictly; weighted classes and an `egress-shaper` are refused |
 /// table-caption
