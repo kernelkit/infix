@@ -84,7 +84,7 @@ confd_plugin_la_SOURCES =			\
 	hardware.c
 
 if CONTAINERS
-confd_plugin_la_SOURCES += containers.c cni.c cni.h
+confd_plugin_la_SOURCES += containers.c ctrnet.c ctrnet.h
 endif
 
 if SNMP

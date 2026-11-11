@@ -53,7 +53,7 @@ static bool iface_is_phys(const char *ifname)
 	json_t *link;
 	FILE *proc;
 
-	proc = cni_popen("ip -d -j link show dev %s 2>/dev/null", ifname);
+	proc = ctrnet_popen("ip -d -j link show dev %s 2>/dev/null", ifname);
 	if (!proc)
 		goto out;
 
@@ -118,8 +118,6 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("dummy+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:dummy";
-	else if (!fnmatch("podman+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:lag";
 	else if (!fnmatch("veth+([0-9a-z_-])", ifname, FNM_EXTMATCH))
@@ -198,7 +196,7 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		if (err)
 			break;
 
-		err = cni_ifchange_cand_infer_type(session, new->xpath);
+		err = ctrnet_ifchange_cand_infer_type(session, new->xpath);
 		if (err)
 			break;
 	}
@@ -580,7 +578,7 @@ static int eth_gen_del(struct lyd_node *dif, FILE *ip)
 
 	fprintf(ip, "link set dev %s down", ifname);
 
-	pp = cni_popen("ip -d -j link show dev %s | jq -rM .[].permaddr", ifname);
+	pp = ctrnet_popen("ip -d -j link show dev %s | jq -rM .[].permaddr", ifname);
 	if (pp) {
 		if (fgets(mac, sizeof(mac), pp) && !strstr(mac, "null"))
 			fprintf(ip, " address %s", mac);
@@ -607,7 +605,7 @@ static int veth_gen_del(struct lyd_node *dif, FILE *sh)
 	/* When the primary end is itself a container interface it currently
 	 * lives in the container's namespace, so a host-namespace delete here
 	 * would fail and abort the teardown.  Its removal is handled after the
-	 * container is gone, see cni_netdag_gen_iface().
+	 * container is gone, see ctrnet_netdag_gen_iface().
 	 */
 	if (lydx_get_child(dif, "container-network"))
 		return 0;
@@ -697,7 +695,7 @@ static int netdag_gen_ifalias(struct dagger *net, struct lyd_node *dif,
  * Both ends of a veth pair can be handed to containers, leaving no
  * host-side interface to create the pair.  Have the primary end create it
  * in the host namespace early (NETDAG_INIT_PHYS, before the container is
- * (re)started); CNI host-device then moves each end into its container.
+ * (re)started); ixcont then moves each end into its container.
  */
 static int veth_gen_host(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif)
 {
@@ -746,8 +744,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	if (err)
 		goto err;
 
-	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
-		/* error or managed by CNI/podman */
+	if ((err = ctrnet_netdag_gen_iface(net, ifname, dif, cif))) {
+		/* error */
 		if (err > 0) {
 			err = 0; /* done, nothing more to do here */
 
