@@ -2,7 +2,7 @@
 """
 QoS Credit-Based Shaper
 
-Reserve 10 Mbit/s for the top traffic class with the IEEE 802.1Qav
+Reserve 10 Mbps for the top traffic class with the IEEE 802.1Qav
 credit-based shaper and offer three times that through it: what
 arrives at the listener in the middle seconds of the flow must be the
 reservation, within a fifth, since the shaper bounds the class to its
@@ -19,7 +19,7 @@ import infamy
 import infamy.qos as qos
 from infamy.util import until
 
-RESERVE = 10_000_000           # bit/s, the idle slope
+RESERVE = 10_000_000           # bps, the idle slope
 EF = 46 << 2                   # TOS byte of the flow
 SIZE = 1000                    # UDP payload, 1042 bytes on the wire
 TOLERANCE = 0.2
@@ -95,7 +95,7 @@ with infamy.Test() as test:
                     "admin-idle-slope on a strict class",
                     "algorithm is not credit-based-shaper")
 
-    with test.step("Bridge the two ports, reserve 10 Mbit/s for the top class on the egress port"):
+    with test.step("Bridge the two ports, reserve 10 Mbps for the top class on the egress port"):
         target.put_config_dicts(config(
             td0, td1, top,
             {"traffic-class": [{"id": top, "algorithm": CBS}]},
@@ -118,10 +118,10 @@ with infamy.Test() as test:
             flow = qos.Flow("EF", 5201, EF, 3 * RESERVE, size=SIZE)
             qos.run_flows(ns0, ns1, "192.168.20.2", [flow])
             expect = RESERVE * SIZE / (SIZE + 42)
-            print(f"EF: {flow.throughput() / 1e6:.2f} Mbit/s through, "
+            print(f"EF: {flow.throughput() / 1e6:.2f} Mbps through, "
                   f"reservation lets {expect / 1e6:.2f}")
             assert abs(flow.throughput() - expect) <= TOLERANCE * expect, \
-                f"EF: {flow.throughput() / 1e6:.2f} Mbit/s through a " \
-                f"{RESERVE / 1e6:.0f} Mbit/s reservation"
+                f"EF: {flow.throughput() / 1e6:.2f} Mbps through a " \
+                f"{RESERVE / 1e6:.0f} Mbps reservation"
 
     test.succeed()

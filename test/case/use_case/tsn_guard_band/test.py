@@ -21,7 +21,7 @@ remaining 800 µs.  The list has no guard band entry of its own, so
 holding frames back is left to the port.
 
 The talker floods the port with full-size frames of ordinary traffic,
-marked CS1, at 900 Mbit/s.  That is more than the 800 µs window
+marked CS1, at 900 Mbps.  That is more than the 800 µs window
 carries, so a frame is always waiting when the window closes.  At the
 same time it sends time-critical `ptping` probes, marked EF and
 timestamped in hardware.  One leaves every 1.003 ms, so the probes
@@ -47,7 +47,7 @@ GAP = "1.003ms"                              # walks a probe through the cycle i
 COUNT = 999
 SLACK = 5_000                                # ns after the gate opens a waiting probe may arrive
 MARGIN = 50_000                              # ns from the window a waiting probe was sent
-FLOOD_MIN = 400_000_000                      # bit/s of CS1 the DUT must be sending
+FLOOD_MIN = 400_000_000                      # bps of CS1 the DUT must be sending
 TALKER, LISTENER = "192.168.20.1", "192.168.20.2"
 SET_GATES = "ieee802-dot1q-sched:set-gate-states"
 PKTGEN = "/proc/net/pktgen"
@@ -91,7 +91,7 @@ def bridge(uplink, dnlink):
 
 
 def flood(port):
-    """Shell command that starts 900 Mbit/s of full-size CS1 frames through the DUT"""
+    """Shell command that starts 900 Mbps of full-size CS1 frames through the DUT"""
     params = ["count 0", "pkt_size 1514", "rate 900M", f"dst {LISTENER}", f"dst_mac {FLOOD_MAC}",
               "tos 20", "udp_dst_min 9", "udp_dst_max 9"]
     setup = "; ".join(f"echo {p} > {port}" for p in params)
@@ -171,7 +171,7 @@ with infamy.Test() as test:
             print(out.stdout)
             assert out.returncode == 0, "the listener's sink did not answer a probe"
 
-        with test.step("Flood CS1 at 900 Mbit/s through the DUT"):
+        with test.step("Flood CS1 at 900 Mbps through the DUT"):
             out = talkssh.runsh(flood(talker["data"]))
             assert out.returncode == 0, f"pktgen refused the flood: {out.stdout}"
             until(lambda: qos.tx_rate(dutssh, dnlink) > FLOOD_MIN, attempts=10)
@@ -184,8 +184,8 @@ with infamy.Test() as test:
 
         with test.step("Verify the CS1 flood ran until the last probe"):
             rate = qos.tx_rate(dutssh, dnlink)
-            print(f"{dnlink} sends {rate / 1e6:.0f} Mbit/s")
-            assert rate > FLOOD_MIN, f"the flood fell to {rate / 1e6:.0f} Mbit/s during the probes"
+            print(f"{dnlink} sends {rate / 1e6:.0f} Mbps")
+            assert rate > FLOOD_MIN, f"the flood fell to {rate / 1e6:.0f} Mbps during the probes"
     finally:
         talkssh.runsh(f"sudo sh -c 'echo stop > {PKTGEN}/pgctrl; "
                       f"echo rem_device_all > {PKTGEN}/kpktgend_0'")

@@ -14,7 +14,7 @@ port toward the listener uses the `ieee-sr` traffic class preset and
 runs a 1 ms IEEE 802.1Qbv gate control list, the same as in the TSN
 Schedule test.  Class 3, scheduled traffic, gets 0 to 200 µs and
 class 7, SR class A, 200 to 800 µs.  The remaining classes get the
-rest of the cycle up to a guard band, 12.3 µs at 1 Gbit/s, when all
+rest of the cycle up to a guard band, 12.3 µs at 1 Gbps, when all
 gates are closed.
 
 .The gate control list on the DUT's port toward the listener

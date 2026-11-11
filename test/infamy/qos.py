@@ -84,7 +84,7 @@ def qdiscs(ssh, port):
 
 
 def guard_band(speed):
-    """Nanoseconds a maximum-size frame takes at @speed bit/s: how long a
+    """Nanoseconds a maximum-size frame takes at @speed bps: how long a
     gate control list keeps all gates closed before a protected window,
     so no frame started before it can overrun into it"""
     return -(-WIRE_MAX * 8 * 1_000_000_000 // speed)
@@ -212,11 +212,11 @@ def supported_pmd_types(target, port):
 
 
 def slow_port(port, until):
-    """Make the port the bottleneck, return the rate it drains in bit/s
+    """Make the port the bottleneck, return the rate it drains in bps
 
     A port with a PHY that can do 100BASE-TX is negotiated down to it,
     so the queues fill against a real link.  A port without a PHY, as on
-    a virtual rig, is shaped to 10 Mbit/s instead, which is what
+    a virtual rig, is shaped to 10 Mbps instead, which is what
     puts its queues under load.  Returns 0 when neither is possible.
     """
     pmd = "ieee802-ethernet-phy-type:pmd-type-100BASE-TX"
@@ -348,7 +348,7 @@ class Flow:
         never full proves nothing"""
         assert self.shortfall() > share, \
             f"{self.name} got {self.throughput() / 1e6:.2f} of the " \
-            f"{self.rate / 1e6:.2f} Mbit/s it offered, the port was never full"
+            f"{self.rate / 1e6:.2f} Mbps it offered, the port was never full"
 
     def share(self, total):
         """Percent of total, the steady-state bit rate of a set of flows"""
@@ -457,7 +457,7 @@ def run_flows(talker, listener, dst, flows):
         total += f.throughput()
         print(f"{f.name}: {f.result['packets']}/{sent} datagrams through, "
               f"{lost} lost ({f.result['lost_percent']:.1f}%), "
-              f"{f.throughput() / 1e6:.2f} Mbit/s in the steady state")
+              f"{f.throughput() / 1e6:.2f} Mbps in the steady state")
 
     return total
 

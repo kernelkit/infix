@@ -23,7 +23,7 @@ remaining 800 µs.  The list has no guard band entry of its own, so
 holding frames back is left to the port.
 
 The talker floods the port with full-size frames of ordinary traffic,
-marked CS1, at 900 Mbit/s.  That is more than the 800 µs window
+marked CS1, at 900 Mbps.  That is more than the 800 µs window
 carries, so a frame is always waiting when the window closes.  At the
 same time it sends time-critical `ptping` probes, marked EF and
 timestamped in hardware.  One leaves every 1.003 ms, so the probes
@@ -45,7 +45,7 @@ image::topology.svg[TSN Guard Band topology, align=center, scaledwidth=75%]
 . Verify the DUT is grandmaster and the talker and listener follow it
 . Run the gate control list on the DUT's port toward the listener
 . Start a ptping sink on the listener
-. Flood CS1 at 900 Mbit/s through the DUT
+. Flood CS1 at 900 Mbps through the DUT
 . Send EF probes through the DUT at every point of the cycle
 . Verify the CS1 flood ran until the last probe
 . Verify EF probes that waited for their gate left as it opened

@@ -11,7 +11,7 @@ run on its clock.  Its traffic classes follow the IEEE 802.1Q-2022
 recommendations for a port carrying reserved streams.  The `ieee-sr`
 preset, Table 34-1, puts SR class A, priority 3, in class 7, the
 highest class.  Class 7 runs an IEEE 802.1Qav credit-based shaper
-reserving 50 Mbit/s, the other classes are strict priority.
+reserving 50 Mbps, the other classes are strict priority.
 
 The IEEE 802.1Qbv gate control list repeats every 1 ms.  It opens a
 protected window for class 3, scheduled traffic at priority 5, then a
@@ -26,21 +26,21 @@ image::schedule.svg[align=center, scaledwidth=90%]
 The ingress port classifies three flows by DSCP with the default
 `ietf` map, RFC 4594:
 
-* EF, priority 5, to class 3, at 100 Mbit/s.  It fits in its window
+* EF, priority 5, to class 3, at 100 Mbps.  It fits in its window
   and must arrive intact.
-* AF31, priority 3, to class 7, at 40 Mbit/s, below its reservation.
+* AF31, priority 3, to class 7, at 40 Mbps, below its reservation.
   It must also arrive intact.  The shaper earns credit only while the
   gate is open, so this holds only if the reservation is scaled up to
   make up for the time the gate is closed.
-* CS1, priority 1, to class 0, at 400 Mbit/s, more than its window
+* CS1, priority 1, to class 0, at 400 Mbps, more than its window
   can carry.  It must be held to what fits in the window.  The test's
   own iperf3 control traffic, CS0, goes to class 1 in the same window.
 
-Last, EF runs alone at 300 Mbit/s and must also be held to its
+Last, EF runs alone at 300 Mbps and must also be held to its
 window.  Without the gates, strict priority would let it through at
 line rate.  What a window carries is the number of whole frames that
-fit in it at the port's speed, within 10 percent: about 184 Mbit/s for
-a 200 µs window at 1 Gbit/s.
+fit in it at the port's speed, within 10 percent: about 184 Mbps for
+a 200 µs window at 1 Gbps.
 """
 import infamy
 import infamy.ptp as ptp
@@ -51,7 +51,7 @@ EF, AF31, CS1 = 46 << 2, 26 << 2, 8 << 2     # TOS bytes of the three markings
 SCHED, VIDEO = (qos.TABLE_34_1[8][prio] for prio in (5, 3))
 SCHED_NS, VIDEO_NS = 200_000, 600_000        # gate intervals
 CYCLE = 1_000_000
-RESERVE = 50_000_000                         # bit/s, idle slope of the video class
+RESERVE = 50_000_000                         # bps, idle slope of the video class
 SIZE = 1000                                  # UDP payload
 OVERHEAD = 46 + qos.WIRE_OVERHEAD             # UDP, IP, Ethernet and FCS, then the wire
 TOLERANCE = 0.1
@@ -126,9 +126,9 @@ def window_rate(interval, speed):
 def capped(flow, rate):
     flow.require_backlog()
     got = flow.throughput()
-    print(f"{flow.name}: {got / 1e6:.2f} Mbit/s through, its window carries {rate / 1e6:.2f}")
+    print(f"{flow.name}: {got / 1e6:.2f} Mbps through, its window carries {rate / 1e6:.2f}")
     assert abs(got - rate) <= TOLERANCE * rate, \
-        f"{flow.name}: {got / 1e6:.2f} Mbit/s through a window that carries {rate / 1e6:.2f}"
+        f"{flow.name}: {got / 1e6:.2f} Mbps through a window that carries {rate / 1e6:.2f}"
 
 
 def intact(flow):
@@ -165,7 +165,7 @@ with infamy.Test() as test:
     with test.step("Verify the DUT is its own grandmaster and the port transmits time"):
         until(lambda: ptp.is_own_gm(target) and ptp.is_time_transmitter(target), attempts=60)
 
-    with test.step("Run the gate control list on the egress port, reserve 50 Mbit/s for class 7"):
+    with test.step("Run the gate control list on the egress port, reserve 50 Mbps for class 7"):
         speed = int(target.get_iface(td1)["speed"])
         wins = windows(speed)
         target.put_config_dicts(schedule(td1, wins))
@@ -183,7 +183,7 @@ with infamy.Test() as test:
             ns1.runsh("set -ex; ip link set iface up; ip addr add 192.168.20.2/24 dev iface")
             ns0.must_reach("192.168.20.2")
 
-        with test.step("EF at 100 Mbit/s, AF31 at 40 Mbit/s and CS1 at 400 Mbit/s"):
+        with test.step("EF at 100 Mbps, AF31 at 40 Mbps and CS1 at 400 Mbps"):
             ef, af31, cs1 = flows = [qos.Flow("EF", 5201, EF, 100_000_000, size=SIZE),
                                      qos.Flow("AF31", 5202, AF31, 40_000_000, size=SIZE),
                                      qos.Flow("CS1", 5203, CS1, 400_000_000, size=SIZE)]
@@ -196,7 +196,7 @@ with infamy.Test() as test:
         with test.step("Verify CS1 was held to what its window carries"):
             capped(cs1, bulk)
 
-        with test.step("EF alone at 300 Mbit/s"):
+        with test.step("EF alone at 300 Mbps"):
             ef = qos.Flow("EF", 5201, EF, 300_000_000, size=SIZE)
             qos.run_flows(ns0, ns1, "192.168.20.2", [ef])
 

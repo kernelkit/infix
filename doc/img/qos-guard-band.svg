@@ -2,9 +2,9 @@
   <rect width="680" height="330" fill="#ffffff"/>
 
   <!-- the last 40 µs of one cycle and the first 40 µs of the next, 7 px per µs, gate change at x=340 -->
-  <!-- a full-size frame takes 12.3 µs at 1 Gbit/s, 86.1 px; a probe 0.9 µs, 6.3 px -->
+  <!-- a full-size frame takes 12.3 µs at 1 Gbps, 86.1 px; a probe 0.9 µs, 6.3 px -->
 
-  <text x="60" y="20" fill="#333333">Where one cycle ends and the next begins, at 1 Gbit/s</text>
+  <text x="60" y="20" fill="#333333">Where one cycle ends and the next begins, at 1 Gbps</text>
 
   <!-- with the guard band -->
   <text x="60" y="52" fill="#333333" font-weight="bold">With the guard band</text>
