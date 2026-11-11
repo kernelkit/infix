@@ -9,6 +9,9 @@ DSCP with the ietf preset, and route them out over a VLAN interface whose
 egress PCP is derived from the internal priority.  The PCP on the wire
 then reveals the priority the classifier assigned:
 
+.A packet marked EF on its way through the DUT
+image::pipeline.svg[align=center, scaledwidth=90%]
+
     DSCP  0 (CS0)  -> priority 0
     DSCP  8 (CS1)  -> priority 1
     DSCP 18 (AF21) -> priority 2

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="190" viewBox="0 0 680 190" font-family="DejaVu Sans, Arial, sans-serif" font-size="13">
+  <rect width="680" height="190" fill="#ffffff"/>
+  <text x="20" y="20" fill="#333333">One packet through the DUT, marked EF by the sender</text>
+
+  <!-- DUT -->
+  <rect x="170" y="45" width="340" height="110" fill="#f3f3f3" stroke="#333333"/>
+  <text x="340" y="38" text-anchor="middle" fill="#333333" font-weight="bold">DUT</text>
+  <g stroke="#333333" stroke-width="1">
+    <rect x="185" y="70" width="100" height="60" fill="#4c86c6"/>
+    <rect x="395" y="70" width="100" height="60" fill="#4f8a3c"/>
+  </g>
+  <g fill="#ffffff" text-anchor="middle">
+    <text x="235" y="96" font-weight="bold">ingress port</text>
+    <text x="235" y="116">trust DSCP</text>
+    <text x="445" y="96" font-weight="bold">egress port</text>
+    <text x="445" y="116">remark</text>
+  </g>
+  <text x="340" y="92" text-anchor="middle" fill="#333333">priority 5</text>
+
+  <!-- arrows -->
+  <g stroke="#333333" stroke-width="1.5" fill="none">
+    <line x1="40"  y1="100" x2="179" y2="100"/>
+    <line x1="285" y1="100" x2="389" y2="100"/>
+    <line x1="495" y1="100" x2="634" y2="100"/>
+  </g>
+  <g fill="#333333">
+    <polygon points="185,100 177,96 177,104"/>
+    <polygon points="395,100 387,96 387,104"/>
+    <polygon points="640,100 632,96 632,104"/>
+  </g>
+  <g fill="#333333" text-anchor="middle">
+    <text x="105" y="90">DSCP 46, EF</text>
+    <text x="570" y="82">PCP 5</text>
+    <text x="570" y="118">DSCP 40, CS5</text>
+    <text x="570" y="140" fill="#555555">once remarking is on</text>
+  </g>
+  <text x="105" y="175" text-anchor="middle" fill="#555555">sender</text>
+  <text x="570" y="175" text-anchor="middle" fill="#555555">receiver</text>
+</svg>
