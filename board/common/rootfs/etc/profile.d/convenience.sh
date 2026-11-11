@@ -23,4 +23,3 @@ alias bridge='bridge --color=auto'
 
 alias llping='ping -L ff02::1 -I'
 
-alias docker=podman
