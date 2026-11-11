@@ -14,6 +14,18 @@ All notable changes to the project are documented in this file.
   state, ports without link, and alarms raised by scripts.  Alarms can
   be acknowledged, closed, shelved and purged from the CLI, the WebUI
   and the management protocols, see [Alarms][alarms]
+- Containers are now run directly by the `crun` OCI runtime, supervised
+  by the system's service manager, instead of podman.  Images embedded
+  in the Infix image, `oci:/lib/oci/NAME`, run straight from the
+  read-only system image without being unpacked at boot, so a container
+  with a large image no longer slows down booting, and a container
+  removed from the configuration leaves nothing behind on disk except
+  its named volumes.  Container networking is set up by Infix: the
+  container bridge is a regular bridge, IP forwarding is enabled on it
+  only, and published ports are nftables rules.  Images are pulled from
+  registries with skopeo.  The `container` admin-exec commands are
+  unchanged, the `ixcont` tool replaces `podman` in the shell, see
+  [Containers][containers]
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
@@ -320,6 +332,7 @@ All notable changes to the project are documented in this file.
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [alarms]: https://www.kernelkit.org/infix/latest/alarms/
+[containers]: https://www.kernelkit.org/infix/latest/container/
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port

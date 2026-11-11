@@ -159,7 +159,7 @@ The support archive includes:
 - System logs (`/var/log` directory and live tail of messages log)
 - Network configuration and state (interfaces, routes, neighbors, bridges)
 - FRRouting information (OSPF, BFD status)
-- Container information (podman containers and their configuration)
+- Container information (containers, their state and configuration)
 - System resource usage (CPU, memory, disk, processes)
 - Hardware information (PCI, USB devices, network interfaces)
 
