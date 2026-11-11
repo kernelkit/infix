@@ -58,7 +58,7 @@ with infamy.Test() as test:
         infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
         num_tc = port.traffic_classes
         print(f"{td1}: {num_tc} traffic classes")
-        port.require_classes(test, 3)
+        port.require_classes(test, 7)
         port.require_offload(test, "transmission-selection")
 
     with test.step("Bridge the two ports, classify by DSCP on ingress, EF and CS1 in two weighted classes"):
