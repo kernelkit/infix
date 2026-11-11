@@ -22,4 +22,12 @@ int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 			  struct lyd_node *radio_node, struct lyd_node *config,
 			  struct confd *confd);
 
+/* hw-modem.c */
+const char *modem_usb_port(struct lyd_node *cif, char *buf, size_t len);
+int modem_wwan_diff(struct lyd_node *diff);
+int modem_rule_port(const char *path, char *buf, size_t len);
+void modem_trigger_port(const char *port);
+int modem_port_find(char (*ports)[64], int num, const char *port);
+int modem_gen_rules(struct lyd_node *config);
+
 #endif /* CONFD_HARDWARE_H_ */
