@@ -241,6 +241,8 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 				free(wifi_iface_list);
 				wifi_iface_list = NULL;
 				wifi_iface_count = 0;
+				if (rc)
+					goto err;
 			}
 		} else if (!strcmp(class, "infix-hardware:gps")) {
 			gps_changed = 1;
