@@ -57,6 +57,11 @@ image::internal-network.svg[Internal networks]
    To distinguish between the different container B's, each container
    will have a unique hostname derived from the chassis MAC address
 
+All DUTs then save their configuration to startup-config and reboot, to
+verify the routers, containers, and firewall come back from a cold
+start.  Container A on R1 is given new content after the reboot to
+verify the container is still managed by the configuration.
+
 ==== Topology
 
 image::topology.svg[OSPF Container topology, align=center, scaledwidth=75%]
@@ -69,5 +74,12 @@ image::topology.svg[OSPF Container topology, align=center, scaledwidth=75%]
 . Verify ABR:data can access container A on R1 (10.1.1.101)
 . Verify ABR:data can access container A on R2 (10.1.2.101)
 . Verify ABR:data can access container A on R3 (10.1.3.101)
+. Save configuration to startup-config and reboot all DUTs
+. Wait for all routers to peer after reboot
+. Verify ABR:data can access container A on R1 (10.1.1.101) after reboot
+. Verify ABR:data can access container A on R2 (10.1.2.101) after reboot
+. Verify ABR:data can access container A on R3 (10.1.3.101) after reboot
+. Change content served by container A on R1
+. Verify ABR:data gets the new content from container A on R1 (10.1.1.101)
 
 

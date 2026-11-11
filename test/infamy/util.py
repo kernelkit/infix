@@ -112,6 +112,21 @@ def wait_boot(target, env):
     return True
 
 
+def reboot_to_startup(target, env, port="mgmt"):
+    """Save running to startup-config, reboot onto it, and reattach.
+
+    startup_override() makes the next boot load startup-config instead
+    of the test-config.  Returns a new device attached with
+    test_reset=False, so the saved config is kept.
+    """
+    target.startup_override()
+    target.copy("running", "startup")
+    target.reboot()
+    if not wait_boot(target, env):
+        raise Exception(f"{target} did not come back after reboot")
+    return env.attach(target.name, port, test_reset=False)
+
+
 def warn(msg):
     """Print a warning message in yellow to stderr."""
     YELLOW = "\033[93m"

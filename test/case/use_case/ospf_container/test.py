@@ -54,12 +54,18 @@ image::internal-network.svg[Internal networks]
    To distinguish between the different container B's, each container
    will have a unique hostname derived from the chassis MAC address
 
+All DUTs then save their configuration to startup-config and reboot, to
+verify the routers, containers, and firewall come back from a cold
+start.  Container A on R1 is given new content after the reboot to
+verify the container is still managed by the configuration.
+
 """
 import infamy
 import infamy.util as util
 import infamy.route as route
 
 BODY  = "<html><body><p>Router responding</p></body></html>"
+BODY2 = "<html><body><p>Router R1 reconfigured</p></body></html>"
 
 def create_vlan_bridge(ns):
     return ns.runsh("""
@@ -74,7 +80,17 @@ def create_vlan_bridge(ns):
     """)
 
 
+def wait_peering(R1, R2, R3, ABR):
+    util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1['ring1']}.8", "10.1.2.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1['ring2']}.8", "10.1.3.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2['ring1']}.8", "10.1.3.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2['ring2']}.8", "10.1.1.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3['ring1']}.8", "10.1.1.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3['ring2']}.8", "10.1.2.1"), attempts=200)
 
+    util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABR["link1"], "10.1.1.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABR["link2"], "10.1.2.1"), attempts=200)
+    util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABR["link3"], "10.1.3.1"), attempts=200)
 
 
 def config_generic(target, router, ring1, ring2, link):
@@ -628,16 +644,7 @@ with infamy.Test() as test:
         hport0 = env["host"]["data4"]
 
         with test.step("Wait for all routers to peer"):
-            util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1ring1}.8", "10.1.2.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1ring2}.8", "10.1.3.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2ring1}.8", "10.1.3.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2ring2}.8", "10.1.1.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3ring1}.8", "10.1.1.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3ring2}.8", "10.1.2.1"), attempts=200)
-
-            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink1, "10.1.1.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink2, "10.1.2.1"), attempts=200)
-            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink3, "10.1.3.1"), attempts=200)
+            wait_peering(R1, R2, R3, ABR)
 
         with infamy.IsolatedMacVlan(hport0) as ns:
             ns.addip("192.168.100.2")
@@ -652,5 +659,44 @@ with infamy.Test() as test:
             with test.step("Verify ABR:data can access container A on R3 (10.1.3.101)"):
                 URL = "http://10.1.3.101:8080"
                 util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
+
+            with test.step("Save configuration to startup-config and reboot all DUTs"):
+                R1, R2, R3, ABR = util.parallel(lambda: util.reboot_to_startup(R1, env),
+                                                lambda: util.reboot_to_startup(R2, env),
+                                                lambda: util.reboot_to_startup(R3, env),
+                                                lambda: util.reboot_to_startup(ABR, env))
+
+            with test.step("Wait for all routers to peer after reboot"):
+                wait_peering(R1, R2, R3, ABR)
+
+            with test.step("Verify ABR:data can access container A on R1 (10.1.1.101) after reboot"):
+                URL = "http://10.1.1.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
+            with test.step("Verify ABR:data can access container A on R2 (10.1.2.101) after reboot"):
+                URL = "http://10.1.2.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
+            with test.step("Verify ABR:data can access container A on R3 (10.1.3.101) after reboot"):
+                URL = "http://10.1.3.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
+
+            with test.step("Change content served by container A on R1"):
+                R1.put_config_dicts({
+                    "infix-containers": {
+                        "containers": {
+                            "container": [{
+                                "name": "container-A",
+                                "mount": [{
+                                    "name": "index.html",
+                                    "content": util.to_binary(BODY2),
+                                    "target": "/var/www/index.html"
+                                }]
+                            }]
+                        }
+                    }
+                })
+
+            with test.step("Verify ABR:data gets the new content from container A on R1 (10.1.1.101)"):
+                URL = "http://10.1.1.101:8080"
+                util.until(lambda: BODY2 in ns.call(lambda: util.curl(URL)), attempts=60)
 
     test.succeed()

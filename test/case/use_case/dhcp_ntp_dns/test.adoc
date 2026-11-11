@@ -7,6 +7,10 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/use_case/dhcp_ntp_dns]
 Verify statically configured DNS and NTP servers are not lost when receiving
 servers from a DHCP server.
 
+Both DUTs then save their configuration to startup-config and reboot, to
+verify the setup comes back from a cold start.  A static DNS server is
+added after the reboot to verify the client still accepts changes.
+
 ==== Topology
 
 image::topology.svg[DHCP NTP DNS topology, align=center, scaledwidth=75%]
@@ -17,5 +21,10 @@ image::topology.svg[DHCP NTP DNS topology, align=center, scaledwidth=75%]
 . Configure static DNS and NTP on client and verify
 . Set up DHCP server with NTP and DNS options
 . Configure client to use DHCP and verify combined servers
+. Save configuration to startup-config and reboot both DUTs
+. Verify client gets a DHCP address after reboot
+. Verify combined DNS and NTP servers after reboot
+. Add static DNS server 9.9.9.9 on client
+. Verify DNS servers 1.1.1.1, 9.9.9.9 and 192.168.3.1 are in use
 
 
