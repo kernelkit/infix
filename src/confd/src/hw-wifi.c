@@ -256,11 +256,10 @@ static void wifi_cap_flags(char *out, size_t sz, const struct wifi_cap *caps, si
 }
 
 /* hostapd ht_capab string, led by ht40_dir when 40MHz or wider is configured */
-static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap,
-				const char *ht40_dir, int want_ht40)
+static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap, const char *ht40_dir)
 {
 	out[0] = '\0';
-	if (want_ht40 && ht40_dir)
+	if (ht40_dir)
 		strlcpy(out, ht40_dir, sz);
 
 	wifi_cap_flags(out, sz, wifi_ht_caps, NELEMS(wifi_ht_caps), ht_cap, false);
@@ -289,14 +288,101 @@ static const char *wifi_country_code(struct lyd_node *config)
 	return lydx_get_cattr(wifi, "country-code");
 }
 
+struct wifi_width {
+	const char *name;
+	int         chwidth;	/* hostapd oper_chwidth: 0=20/40, 1=80, 2=160 */
+	int         op_class;	/* 6GHz operating class */
+	bool        ht40;
+	int       (*center)(int ch);
+	int       (*center_6ghz)(int ch);
+};
+
+static const struct wifi_width wifi_widths[] = {
+	{ "20MHz",  0, 131, false, NULL,                 NULL                      },
+	{ "40MHz",  0, 132, true,  NULL,                 NULL                      },
+	{ "80MHz",  1, 133, true,  wifi_center_chan_80,  wifi_6ghz_center_chan_80  },
+	{ "160MHz", 2, 134, true,  wifi_center_chan_160, wifi_6ghz_center_chan_160 },
+};
+
+/* NULL for "auto" or no width */
+static const struct wifi_width *wifi_width(const char *name)
+{
+	size_t i;
+
+	for (i = 0; name && i < NELEMS(wifi_widths); i++) {
+		if (!strcmp(name, wifi_widths[i].name))
+			return &wifi_widths[i];
+	}
+
+	return NULL;
+}
+
+/*
+ * Channel width + HT/VHT capability configuration.
+ *
+ * hostapd requires explicit ht_capab and vht_capab strings
+ * that match hardware capabilities.  Without vht_capab, 160MHz
+ * support is not advertised in beacons, causing clients to
+ * connect at 80MHz.  Read capabilities from hardware via iw.py
+ * and build the capability strings from the bitmasks.
+ */
+static void wifi_gen_width(FILE *hostapd, const char *band, const char *width, int ch,
+			   unsigned int ht_cap, unsigned int vht_cap, bool he)
+{
+	const struct wifi_width *w = wifi_width(width);
+	char ht_capab[512], vht_capab[512];
+	const char *ht40_dir = NULL;
+	int center;
+
+	if (!strcmp(band, "6GHz")) {
+		/* HE only, 80MHz unless another width is set */
+		if (!w)
+			w = wifi_width("80MHz");
+
+		fprintf(hostapd, "op_class=%d\n", w->op_class);
+		if (ch && w->center_6ghz)
+			fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", w->center_6ghz(ch));
+		return;
+	}
+
+	if (!w || (w->center && !ch))
+		return;
+
+	if (w->ht40)
+		ht40_dir = ch ? wifi_ht40_dir(ch) : "[HT40+]";
+	wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, ht40_dir);
+	fprintf(hostapd, "ht_capab=%s\n", ht_capab);
+
+	if (!w->center) {
+		if (strcmp(band, "2.4GHz")) {
+			if (vht_cap)
+				fprintf(hostapd, "vht_oper_chwidth=0\n");
+			if (he)
+				fprintf(hostapd, "he_oper_chwidth=0\n");
+		}
+		return;
+	}
+
+	wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, w->chwidth);
+	fprintf(hostapd, "vht_capab=%s\n", vht_capab);
+	fprintf(hostapd, "vht_oper_chwidth=%d\n", w->chwidth);
+	if (he)
+		fprintf(hostapd, "he_oper_chwidth=%d\n", w->chwidth);
+
+	center = w->center(ch);
+	if (center) {
+		fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
+		if (he)
+			fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+	}
+}
+
 /* Helper: Write radio-specific configuration */
 static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 				  struct lyd_node *radio_node, struct lyd_node *config)
 {
 	const char *country, *channel, *band, *width;
 	unsigned int ht_cap = 0, vht_cap = 0;
-	char ht_capab[512], vht_capab[512];
-	int chwidth = 0; /* 0=20/40, 1=80, 2=160 */
 	int ch = 0;
 	bool legacy_rates, he = false;
 
@@ -420,93 +506,7 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 			fprintf(hostapd, "he_6ghz_reg_pwr_type=0\n"); /* Indoor AP */
 		}
 
-		/*
-		 * Channel width + HT/VHT capability configuration.
-		 *
-		 * hostapd requires explicit ht_capab and vht_capab strings
-		 * that match hardware capabilities.  Without vht_capab, 160MHz
-		 * support is not advertised in beacons, causing clients to
-		 * connect at 80MHz.  Read capabilities from hardware via iw.py
-		 * and build the capability strings from the bitmasks.
-		 */
-		if (!strcmp(band, "6GHz")) {
-			int op_class = 133; /* default 80MHz for 6GHz */
-
-			if (width && strcmp(width, "auto")) {
-				if (!strcmp(width, "20MHz"))
-					op_class = 131;
-				else if (!strcmp(width, "40MHz"))
-					op_class = 132;
-				else if (!strcmp(width, "80MHz"))
-					op_class = 133;
-				else if (!strcmp(width, "160MHz"))
-					op_class = 134;
-			}
-			fprintf(hostapd, "op_class=%d\n", op_class);
-
-			if (ch && op_class >= 133) {
-				int center = (op_class == 134)
-					? wifi_6ghz_center_chan_160(ch)
-					: wifi_6ghz_center_chan_80(ch);
-
-				fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
-			}
-		} else if (width && strcmp(width, "auto")) {
-			if (!strcmp(width, "20MHz")) {
-				chwidth = 0;
-				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, NULL, 0);
-				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
-				if (strcmp(band, "2.4GHz")) {
-					if (vht_cap)
-						fprintf(hostapd, "vht_oper_chwidth=0\n");
-					if (he)
-						fprintf(hostapd, "he_oper_chwidth=0\n");
-				}
-			} else if (!strcmp(width, "40MHz")) {
-				chwidth = 0;
-				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap,
-						    ch ? wifi_ht40_dir(ch) : "[HT40+]", 1);
-				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
-				if (strcmp(band, "2.4GHz")) {
-					if (vht_cap)
-						fprintf(hostapd, "vht_oper_chwidth=0\n");
-					if (he)
-						fprintf(hostapd, "he_oper_chwidth=0\n");
-				}
-			} else if (!strcmp(width, "80MHz") && ch) {
-				int center = wifi_center_chan_80(ch);
-
-				chwidth = 1;
-				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
-				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
-				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
-				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
-				fprintf(hostapd, "vht_oper_chwidth=1\n");
-				if (he)
-					fprintf(hostapd, "he_oper_chwidth=1\n");
-				if (center) {
-					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
-					if (he)
-						fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
-				}
-			} else if (!strcmp(width, "160MHz") && ch) {
-				int center = wifi_center_chan_160(ch);
-
-				chwidth = 2;
-				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
-				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
-				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
-				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
-				fprintf(hostapd, "vht_oper_chwidth=2\n");
-				if (he)
-					fprintf(hostapd, "he_oper_chwidth=2\n");
-				if (center) {
-					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
-					if (he)
-						fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
-				}
-			}
-		}
+		wifi_gen_width(hostapd, band, width, ch, ht_cap, vht_cap, he);
 
 		if (he) {
 			fprintf(hostapd, "he_su_beamformer=1\n");
