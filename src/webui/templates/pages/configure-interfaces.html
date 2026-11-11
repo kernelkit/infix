@@ -398,7 +398,7 @@
                     </tr>
                     {{if $.Capabilities.Has "egress-shaper"}}
                     <tr>
-                      <th>Egress shaper <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "qos-shaper")}}</th>
+                      <th>Egress shaper <span class="unit">(Mbps)</span>{{template "field-info" (index $d "qos-shaper")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="number" min="{{$.QoSBounds.RateLo}}" max="{{$.QoSBounds.RateHi}}" step="any" name="rate"
                                  value="{{.QoSShaperMbit}}" placeholder="no shaping" style="width:8rem"></td>
                       {{template "reset-cell" (dict "Path" (printf "%s/infix-interfaces:qos/egress-shaper" $qp) "Back" "/configure/interfaces" "What" "the egress shaper")}}
@@ -424,7 +424,7 @@
                   <table class="info-table" style="max-width:34rem">
                     <tr>
                       <th>Class</th>
-                      <th>Idle slope <span class="unit">(Mbit/s)</span>{{template "field-info" (index $d "tsn-idle")}}</th>
+                      <th>Idle slope <span class="unit">(Mbps)</span>{{template "field-info" (index $d "tsn-idle")}}</th>
                       <th></th>
                     </tr>
                     {{$profile := .QoSProfile}}

@@ -101,7 +101,7 @@ func TestBuildCBSUnderMqprio(t *testing.T) {
 }
 
 func TestScale(t *testing.T) {
-	// A 10 Gbit/s slope over a cycle of a second overflows 64 bits
+	// A 10 Gbps slope over a cycle of a second overflows 64 bits
 	if got := scale(10_000_000_000, 999_999_999, 999_999_999); got != 10_000_000_000 {
 		t.Fatalf("got %d", got)
 	}

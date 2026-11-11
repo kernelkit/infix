@@ -132,7 +132,7 @@ type cfgIfaceRow struct {
 	DHCPv6Enabled bool
 
 	// QoS: the profile the port references, whether it carries its own
-	// settings instead, and the egress shaper rate in Mbit/s as the form
+	// settings instead, and the egress shaper rate in Mbps as the form
 	// shows it.
 	QoSProfile    string
 	QoSCustom     bool

@@ -63,7 +63,7 @@ static bool emit_profile_globals(FILE *fp, const char *profile)
  * 802.1AS gate: a port whose measured link delay exceeds the threshold
  * never becomes asCapable and stays in LISTENING.  A switch core time
  * stamps behind the PHY, so the delay it sees includes the PHY latency,
- * 1.5 us on a LAN8814 at 1 Gbit/s and more at 100 Mbit/s, which the
+ * 1.5 us on a LAN8814 at 1 Gbps and more at 100 Mbps, which the
  * 800 ns of the automotive profile leaves no room for.  Software time
  * stamps are slower still, they get ptp4l's own default of 20 ms.
  */
