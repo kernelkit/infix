@@ -2,29 +2,34 @@
 """
 TSN Guard Band
 
-Check that a bridge port's gate control list holds back a frame that
-cannot finish before its gate closes, as IEEE 802.1Q-2022 8.6.8.4
-specifies, so a full-size frame from one window never delays the
-frames waiting for the next.
+A scheduled port gives time-critical traffic a window of its own in
+every cycle.  That only helps if the window starts on time: a large
+frame of ordinary traffic that starts just before the window is still
+on the wire when it opens.  The guard band prevents this.  The port
+holds back a frame that cannot finish before its gate closes, as IEEE
+802.1Q-2022 8.6.8.4 specifies.  This test checks that it does, with
+the port fully loaded.
+
+.The end of a cycle, with and without the guard band
+image::guard-band.svg[align=center, scaledwidth=90%]
 
 The DUT bridges a talker and a listener and is the IEEE 802.1AS (gPTP)
 grandmaster on both ports, so all three clocks share its time.  The
-port toward the listener runs a 1 ms gate control list with no guard
-band entry of its own: class 5 from 0 to 200 µs and every other class
-from 200 µs to the end of the cycle.
+port toward the listener runs a 1 ms gate control list: time-critical
+traffic, class 5, for the first 200 µs and every other class for the
+remaining 800 µs.  The list has no guard band entry of its own, so
+holding frames back is left to the port.
 
-The talker floods CS1, class 0, at 900 Mbit/s in full-size frames, more
-than its 800 µs window carries, so a full-size frame is always ready
-when the window closes.  The flood goes to a MAC address nobody has, so
-the DUT forwards it out the port toward the listener and the listener
-discards it on arrival.  Meanwhile the talker sends `ptping` probes
-marked EF, class 5, one every 1.003 ms.  A probe that reaches the DUT
-during the CS1 window waits at the closed gate and must leave when its
-gate opens: it must arrive at the listener within 5 µs of the start of
-the cycle.  Where several probes wait at one opening they leave one
-after the other, so the first is the one checked.  Without the guard
-band, a CS1 frame started too late holds a third of the probes back
-for up to 16 µs at 1 Gbit/s.
+The talker floods the port with full-size frames of ordinary traffic,
+marked CS1, at 900 Mbit/s.  That is more than the 800 µs window
+carries, so a frame is always waiting when the window closes.  At the
+same time it sends time-critical `ptping` probes, marked EF and
+timestamped in hardware.  One leaves every 1.003 ms, so the probes
+reach the DUT at every point of the cycle in turn.
+
+A probe that reaches the DUT during the CS1 window waits for its gate,
+and must arrive at the listener within 5 µs of the gate opening.
+Without the guard band a third of them arrive up to 16 µs late.
 """
 import csv
 import io
@@ -193,6 +198,7 @@ with infamy.Test() as test:
         waited = [r for r in rows
                   if SCHED_NS + MARGIN <= int(r["tx_phase_ns"]) <= CYCLE - MARGIN]
         assert waited, "no probe waited for its gate"
+        # Probes waiting at one opening leave back to back: check the first
         first = {}
         for r in waited:
             opening = (int(r["rx_ns"]) + CYCLE // 2) // CYCLE
