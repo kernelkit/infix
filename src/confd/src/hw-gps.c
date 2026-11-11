@@ -1,6 +1,4 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-#include <glob.h>
-
 #include <srx/common.h>
 #include <srx/lyx.h>
 
@@ -20,23 +18,10 @@
  */
 static void gps_gen_rules(struct lyd_node *config)
 {
-	char trig[GPSD_MAX_DEVICES * 2][64];
-	char used[GPSD_MAX_DEVICES][64];
-	int num_trig = 0, num_used = 0;
+	struct usb_ports trig = { 0 }, used = { 0 };
 	struct lyd_node *cifs, *comp;
-	glob_t gl = { 0 };
-	size_t i;
-	int p;
 
-	if (glob(GPS_RULES_GLOB, 0, NULL, &gl) == 0) {
-		for (i = 0; i < gl.gl_pathc; i++) {
-			if (num_trig < GPSD_MAX_DEVICES &&
-			    !modem_rule_port(gl.gl_pathv[i], trig[num_trig], sizeof(trig[0])))
-				num_trig++;
-			unlink(gl.gl_pathv[i]);
-		}
-	}
-	globfree(&gl);
+	usb_rules_purge(GPS_RULES_GLOB, &trig);
 
 	cifs = lydx_get_descendant(config, "hardware", "component", NULL);
 	LYX_LIST_FOR_EACH(cifs, comp, "component") {
@@ -47,19 +32,16 @@ static void gps_gen_rules(struct lyd_node *config)
 
 		if (!cls || strcmp(cls, "infix-hardware:gps"))
 			continue;
-		if (!modem_usb_port(comp, port, sizeof(port)))
+		if (!usb_uri_port(comp, port, sizeof(port)))
 			continue;
 
 		name = lydx_get_cattr(comp, "name");
-		if (modem_port_find(used, num_used, port) >= 0) {
+		if (usb_ports_has(&used, port)) {
 			ERROR("GPS %s: USB port %s already claimed, ignoring", name, port);
 			continue;
 		}
-		if (num_used < GPSD_MAX_DEVICES)
-			strlcpy(used[num_used++], port, sizeof(used[0]));
-		if (num_trig < GPSD_MAX_DEVICES * 2 &&
-		    modem_port_find(trig, num_trig, port) < 0)
-			strlcpy(trig[num_trig++], port, sizeof(trig[0]));
+		usb_ports_add(&used, port);
+		usb_ports_add(&trig, port);
 
 		if (!fexistf("/sys/bus/usb/devices/%s", port))
 			NOTE("GPS %s: no device at USB port %s (yet)", name, port);
@@ -76,8 +58,7 @@ static void gps_gen_rules(struct lyd_node *config)
 		fclose(fp);
 	}
 
-	for (p = 0; p < num_trig; p++)
-		modem_trigger_port(trig[p]);
+	usb_ports_trigger(&trig);
 }
 
 /* The gpsd service and the udev rules, from every GPS component in config */
