@@ -4,33 +4,34 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_strict_priority
 
 ==== Description
 
-Two talkers, one marked EF and one CS1, bridged through the DUT and out
-one egress port that cannot carry both.  The port is negotiated down to
-100 Mbit/s where its PHY allows, or shaped to 10 Mbit/s where it
-has no PHY, and each talker offers 80 percent of what the port drains,
-so the queues fill and the scheduler decides who gets through.
+When a port has more to send than it can carry, strict priority decides
+who goes first: a higher traffic class is always served before a lower
+one.  This test fills a port with two flows and checks that the
+important one gets through untouched, also when that leaves nothing
+for the other.
 
-Classification at the ingress port decides the priority, and with it
-the queue, all the way to the listener: on one chip, across a cascade,
-or through a network of switches.  So the flows are steered with the
-DSCP map on the ingress port and the class table is left at its
-default.  Three measurements, in this order:
+.What the two talkers offer and what the port must deliver
+image::expected.svg[align=center, scaledwidth=90%]
 
- - baseline: both markings classified to the same priority share one
-   queue, and the low flow keeps at least a tenth of it, since one
-   FIFO under tail drop favours neither marking
- - split: EF classified to priority 5, strict above CS1 at priority 2,
-   arrives without loss and CS1 takes what is left
- - starve: EF raised to 120 percent of the port on its own leaves CS1
-   below 5 percent of the served datagrams
+Two talkers, one marked EF and one marked CS1, send through the DUT's
+bridge and out one port.  That port is slowed down so the test's
+traffic can fill it: negotiated down to 100 Mbit/s, or shaped to
+10 Mbit/s where it has no PHY.  The port where the traffic enters
+decides the priority of each flow from its DSCP marking.
+
+Three measurements:
+
+ - baseline: both markings get the same priority and each talker offers
+   80 percent of what the port can send.  They share one queue and
+   CS1 must keep at least a tenth of the port, so whatever the next
+   two measurements show comes from the priorities
+ - split: EF gets the higher priority, 80 percent each.  EF must
+   arrive without loss and CS1 gets what is left
+ - starve: EF offers 120 percent of the port.  CS1 must get less than
+   5 percent
 
 In every measurement the port must hold back more than a tenth of what
-is offered, which shows it was full: of both flows together in the
-baseline, where tail drop may favour either one, and of the low flow
-after that.  Shares
-come from the middle seconds of the flows, and the test's own iperf3
-control traffic, DSCP 0, rides with CS1 in the lowest loaded class, so a
-talker's end-of-test message leaves the port behind its last datagram.
+is offered, which shows it was full.
 
 ==== Topology
 
