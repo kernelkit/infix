@@ -1,0 +1,13 @@
+config BR2_PACKAGE_SKOPEO_TARGET
+	bool "skopeo (target)"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	depends on BR2_PACKAGE_HOST_GO_TARGET_CGO_LINKING_SUPPORTS
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_CA_CERTIFICATES # registry TLS
+	help
+	  Copies container images between registries, archives and OCI
+	  layouts.  Buildroot's skopeo package is host-only and Buildroot
+	  does not allow a target variant added after it, hence the name.
+	  Infix needs it on the target to pull images from registries.
+
+	  https://github.com/containers/skopeo
