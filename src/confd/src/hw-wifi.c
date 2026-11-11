@@ -14,8 +14,8 @@
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
 #define HOSTAPD_SERVICE          "/etc/finit.d/available/hostapd.conf"
 
-int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
-				  struct lyd_node ***iface_list, int *count)
+static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
+					  struct lyd_node ***iface_list, int *count)
 {
 	struct lyd_node *iface, *wifi;
 	const char *radio;
@@ -419,7 +419,7 @@ static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int
 }
 
 /* The box-wide WiFi country code, NULL when none is configured */
-const char *wifi_country_code(struct lyd_node *config)
+static const char *wifi_country_code(struct lyd_node *config)
 {
 	struct lyd_node *wifi;
 
@@ -655,9 +655,9 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 }
 
 /* Generate hostapd config for all APs on a radio (multi-SSID support) */
-int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
-			  struct lyd_node *radio_node, struct lyd_node *config,
-			  struct confd *confd)
+static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
+				  struct lyd_node *radio_node, struct lyd_node *config,
+				  struct confd *confd)
 {
 	struct lyd_node *primary_cif, *cif;
 	const char *primary_ifname;
@@ -790,6 +790,41 @@ static void wifi_gen_helpers(FILE *fp, glob_t *gl)
 	for (i = 0; i < gl->gl_pathc; i++)
 		fprintf(fp, " %s", gl->gl_pathv[i]);
 	fprintf(fp, " \\\n\t-- Wi-Fi neighbor exchange\n");
+}
+
+/*
+ * The country code is one setting for every radio.  Apply the
+ * regulatory domain here, not from hostapd, so a radio without an
+ * interface is in the right domain too.
+ */
+void wifi_country_change(struct lyd_node *config, struct lyd_node *diff, sr_event_t event)
+{
+	if (event == SR_EV_DONE && lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code"))
+		systemf("iw reg set %s", wifi_country_code(config) ?: "00");
+}
+
+/* Generate AP config (hostapd) for all APs on a radio */
+int wifi_radio_change(struct lyd_node *config, struct lyd_node *cif, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node **list = NULL, *cifs;
+	int rc = SR_ERR_OK;
+	const char *name;
+	int count = 0;
+
+	if (!cif || event != SR_EV_CHANGE)
+		return SR_ERR_OK;
+
+	name = lydx_get_cattr(cif, "name");
+	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	wifi_find_interfaces_on_radio(cifs, name, &list, &count);
+	if (count) {
+		rc = wifi_gen_aps_on_radio(name, cifs, lydx_get_child(cif, "wifi-radio"), config, confd);
+		if (rc)
+			ERROR("Failed to generate AP config for radio %s", name);
+	}
+	free(list);
+
+	return rc;
 }
 
 int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,

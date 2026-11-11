@@ -166,7 +166,7 @@ int modem_port_find(char (*ports)[64], int num, const char *port)
  * so it never touches unconfigured devices.  Unanchored (legacy)
  * configurations keep ModemManager's default probe behavior.
  */
-int modem_gen_rules(struct lyd_node *config)
+static int modem_gen_rules(struct lyd_node *config)
 {
 	char trig[MODEM_MAX * 2][64];
 	char used[MODEM_MAX][64];
@@ -272,4 +272,42 @@ int modem_gen_rules(struct lyd_node *config)
 		modem_trigger_port(trig[p]);
 
 	return unlocked;
+}
+
+/*
+ * Modem components: regenerate udev anchor rules and the
+ * ModemManager environment from the full config, then drive the
+ * services.  modemd owns the bearer lifecycle and cleanly
+ * disconnects before ModemManager goes down, hence both services
+ * are driven together, from the aggregate state of all modems.
+ * On wwan-interface-only changes the rules are refreshed but the
+ * services are left alone; modemd is signaled by the interface
+ * dagger script.
+ */
+int modem_change(struct lyd_node *config, sr_event_t event, bool changed)
+{
+	int unlocked;
+
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	unlocked = modem_gen_rules(config);
+
+	if (changed) {
+		if (unlocked > 0) {
+			NOTE("Modem(s) enabled, starting modemd");
+			finit_enable("modem-manager");
+			finit_enable("modemd");
+			systemf("initctl -bfqn restart modem-manager");
+			systemf("initctl -bfqn restart modemd");
+		} else {
+			NOTE("No enabled modems, disabling modemd");
+			systemf("initctl -bfqn stop modemd");
+			finit_disable("modemd");
+			systemf("initctl -bfqn stop modem-manager");
+			finit_disable("modem-manager");
+		}
+	}
+
+	return SR_ERR_OK;
 }

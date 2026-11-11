@@ -5,6 +5,8 @@
 #include <libgen.h>
 #include <limits.h>
 
+#include <srx/lyx.h>
+
 #include "core.h"
 #include "hardware.h"
 
@@ -100,7 +102,7 @@ static int usb_authorize_bus(const char *path, int enabled)
 	return 0;
 }
 
-bool usb_authorize(struct json_t *root, const char *name, int enabled)
+static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 {
 	json_t *port, *ports, *paths, *path;
 	size_t index, i;
@@ -136,4 +138,19 @@ bool usb_authorize(struct json_t *root, const char *name, int enabled)
 	}
 
 	return 0;
+}
+
+/* A deleted port, one without a config node, is locked */
+int usb_change(struct lyd_node *cif, const char *name, sr_event_t event, struct confd *confd)
+{
+	const char *admin_state;
+
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	admin_state = lydx_get_cattr(lydx_get_child(cif, "state"), "admin-state");
+	if (usb_authorize(confd->root, name, admin_state && !strcmp(admin_state, "unlocked")))
+		return SR_ERR_INTERNAL;
+
+	return SR_ERR_OK;
 }
