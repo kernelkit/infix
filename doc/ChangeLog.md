@@ -1,6 +1,5 @@
 Change Log
-==========
-
+===
 All notable changes to the project are documented in this file.
 
 [v26.11.0][UNRELEASED]
@@ -58,6 +57,27 @@ All notable changes to the project are documented in this file.
   were sent, and a management station could lack a route to them.
   The new `management-interface` setting limits them to the addresses
   of selected interfaces, see [Discovery][lldp-mgmt]
+- QoS changes, see [QoS][qos]:
+  - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
+    products built with the TSN feature, configured and read back with
+    the IEEE 802.1DC interface modules
+  - QoS profiles, the classification and traffic class settings of a
+    port defined once as a `system qos-profile` and shared by any
+    number of ports.  The WebUI offers trunk, edge and stream
+    reservation templates for new profiles, and the QoS guide has the
+    same three as CLI examples
+  - Microchip LAN969x (Laguna) switch ports offload the traffic class
+    table and the credit-based and time-aware shapers to the switch,
+    including the time-aware shaper's `queue-max-sdu`.  A gate closes
+    early enough for a full-size frame to finish before the next window
+  - `qos capabilities` lists `supported-offload`, the stages a port's
+    switch fabric can run, next to `offload`, those it runs right now
+  - The port's `qos egress rate-limit` is now `qos egress-shaper`, and
+    the offload stage and feature of the same name are renamed with it.
+    Saved configurations are migrated
+  - New shell tool `ptping`, which measures one-way latency with
+    hardware-timestamped PTP probes and can tell where in a gate
+    control list's cycle each probe left and arrived
 
 ### Fixes
 
@@ -161,6 +181,10 @@ All notable changes to the project are documented in this file.
 - OSPF: after a restart, a device could keep a stale copy of its own
   routes from a neighbor and never refresh them.  Also, routes marked
   never to age could still age out
+- Microchip LAN969x (Laguna), e.g., Tactical 1000: PTP now runs on
+  bridge ports.  A PTP port that was also a bridge port went straight
+  to the `faulty` state, so the switch could not act as a gPTP bridge or
+  a boundary clock on its own ports
 
 
 [v26.10.0][] - 2026-10-30
@@ -2797,6 +2821,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.10.0...HEAD
+[v26.11.0]:   https://github.com/kernelkit/infix/compare/v26.10.0...v26.11.0
 [v26.10.0]:   https://github.com/kernelkit/infix/compare/v26.09.0...v26.10.0
 [v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
