@@ -93,37 +93,6 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 }
 
 /*
- * Center channel for 80MHz VHT/HE operation.
- * 5GHz 80MHz groups: 36-48(42), 52-64(58), 100-112(106),
- *                    116-128(122), 132-144(138), 149-161(155)
- */
-static int wifi_center_chan_80(int ch)
-{
-	static const int grp[][2] = {
-		{36, 42}, {52, 58}, {100, 106}, {116, 122}, {132, 138}, {149, 155}
-	};
-	int i;
-
-	for (i = 0; i < 6; i++)
-		if (ch >= grp[i][0] && ch < grp[i][0] + 16)
-			return grp[i][1];
-	return 0;
-}
-
-/*
- * Center channel for 160MHz VHT/HE operation.
- * 5GHz 160MHz groups: 36-64(50), 100-128(114)
- */
-static int wifi_center_chan_160(int ch)
-{
-	if (ch >= 36 && ch <= 64)
-		return 50;
-	if (ch >= 100 && ch <= 128)
-		return 114;
-	return 0;
-}
-
-/*
  * 6GHz center channel index for 80MHz HE operation.
  * 6GHz channels are uniformly spaced at 5MHz intervals from 5950MHz.
  * 80MHz groups each span 16 channel numbers: 1-13(7), 17-29(23), etc.

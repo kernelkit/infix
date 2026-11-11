@@ -373,7 +373,7 @@ out:
  *   36-48(42), 52-64(58), 100-112(106),
  *                    116-128(122), 132-144(138), 149-161(155)
  */
-static int wifi_center_chan_80(int ch)
+int wifi_center_chan_80(int ch)
 {
 	static const int grp[][2] = {
 		{36, 42}, {52, 58}, {100, 106}, {116, 122}, {132, 138}, {149, 155}
@@ -390,7 +390,7 @@ static int wifi_center_chan_80(int ch)
  * Center channel for 160MHz VHT/HE operation.
  * 5GHz 160MHz groups: 36-64(50), 100-128(114)
  */
-static int wifi_center_chan_160(int ch)
+int wifi_center_chan_160(int ch)
 {
 	if (ch >= 36 && ch <= 64)
 		return 50;
