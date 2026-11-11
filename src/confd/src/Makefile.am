@@ -82,7 +82,8 @@ confd_plugin_la_SOURCES =			\
 	services.c				\
 	system-software.c 			\
 	hardware.c		hardware.h	\
-	  hw-usb.c
+	  hw-usb.c				\
+	  hw-wifi-ap.c
 
 if CONTAINERS
 confd_plugin_la_SOURCES += containers.c cni.c cni.h
