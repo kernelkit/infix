@@ -191,7 +191,7 @@ type portEntry struct {
 	Neighbor string // LLDP system name, empty when none
 }
 
-// portSpeed formats a link rate in bit/s the way the port label reads.
+// portSpeed formats a link rate in bps the way the port label reads.
 func portSpeed(bps int64) string {
 	switch {
 	case bps <= 0:

@@ -355,7 +355,7 @@ func TestIfaceDetailRendersTSN(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, want := range [][]string{
-		{"Credit-Based Shaper", "Class 7", "20 Mbit/s", "Time-Aware Shaper", "100 µs", "Change pending", "7, 6", "80 µs"},
+		{"Credit-Based Shaper", "Class 7", "20 Mbps", "Time-Aware Shaper", "100 µs", "Change pending", "7, 6", "80 µs"},
 		nil,
 	} {
 		iface := &oper.Interfaces.Interface[i]
@@ -454,7 +454,7 @@ func TestScaledBounds(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 	if lo, hi := scaledBounds(c.Manager(), "/t:c/rate", 1e6); lo != "0.000008" || hi != "18446744073709.55" {
-		t.Errorf("rate in Mbit/s: %s..%s", lo, hi)
+		t.Errorf("rate in Mbps: %s..%s", lo, hi)
 	}
 	if lo, hi := scaledBounds(c.Manager(), "/t:c/ns", 1e3); lo != "0" || hi != "4294967.295" {
 		t.Errorf("ns in µs: %s..%s", lo, hi)
@@ -468,7 +468,7 @@ func TestScaledBounds(t *testing.T) {
 // model's range is the device's to check.
 func TestFieldParsersBounds(t *testing.T) {
 	if _, err := mbitField("2000000", "rate"); err != nil {
-		t.Errorf("2 Tbit/s refused: %v", err)
+		t.Errorf("2 Tbps refused: %v", err)
 	}
 	if _, err := mbitField("2e13", "rate"); err == nil {
 		t.Error("a rate beyond uint64 accepted")

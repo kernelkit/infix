@@ -18,7 +18,7 @@ below, the switch would by default auto-negotiate speed 1 Gbps on port eth1
 and 100 Mbps on port eth4, as those are the highest speeds supported by H1 and
 H2 respectively.
 
-![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts](img/ethernet-autoneg.svg)
+![4-port Gbps switch connected to Gbit and Fast Ethernet Hosts](img/ethernet-autoneg.svg)
 
 A quick at-a-glance view of the physical link is available in the summary
 listing.  When a port is up, a physical-layer row appears above the ethernet
@@ -39,7 +39,7 @@ eth4            100baseTX     UP          duplex: full
 </code></pre>
 
 The detail view spells everything out, including auto-negotiation
-state and the speed in Mbit/s.
+state and the speed in Mbps.
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
 name               : eth1
@@ -94,7 +94,7 @@ Each entry in `auto-negotiation/advertised-pmd-types` is an IEEE PMD-type
 identity (`ieee802-ethernet-phy-type:pmd-type-*`).  The separate `duplex`
 leaf controls half vs full duplex.
 
-The example below pins port `eth3` to 100 Mbit/s half-duplex.
+The example below pins port `eth3` to 100 Mbps half-duplex.
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface eth3 ethernet</b>

@@ -17,7 +17,7 @@ Checked in turn:
    sharing 67:33 and the rest strict priority
  - the `ieee-sr` preset, which puts the stream reservation classes,
    priorities 2 and 3, on the two highest classes
- - a 10 Mbit/s egress shaper on top of the classes, and its removal
+ - a 10 Mbps egress shaper on top of the classes, and its removal
  - removing all QoS settings, which brings back the default table,
    IEEE 802.1Q-2022 Table 8-5
 
@@ -42,7 +42,7 @@ image::topology.svg[QoS Traffic Classes and Transmission Selection topology, ali
 . Verify the root qdisc carries the custom map and shares
 . Verify the offload capability matches the qdisc
 . Switch to the ieee-sr preset and verify SR classes on top
-. Add a 10 Mbit/s egress shaper and verify the tbf root above the ets table
+. Add a 10 Mbps egress shaper and verify the tbf root above the ets table
 . Remove the egress shaper and verify the scheduler is the root again
 . Remove qos configuration and verify the default table is back
 

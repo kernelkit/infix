@@ -57,7 +57,7 @@ func TestQoSOverview(t *testing.T) {
 		t.Fatalf("want 200 got %d: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"tsn-ring", "100 Mbit/s", "<td>4</td>", "<td>classification, remarking, transmission-selection, egress-shaper</td>", "<td>classification</td>", "<td>8</td>"} {
+	for _, want := range []string{"tsn-ring", "100 Mbps", "<td>4</td>", "<td>classification, remarking, transmission-selection, egress-shaper</td>", "<td>classification</td>", "<td>8</td>"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q in:\n%s", want, body)
 		}

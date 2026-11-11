@@ -15,7 +15,7 @@ Checked in turn:
    sharing 67:33 and the rest strict priority
  - the `ieee-sr` preset, which puts the stream reservation classes,
    priorities 2 and 3, on the two highest classes
- - a 10 Mbit/s egress shaper on top of the classes, and its removal
+ - a 10 Mbps egress shaper on top of the classes, and its removal
  - removing all QoS settings, which brings back the default table,
    IEEE 802.1Q-2022 Table 8-5
 
@@ -140,7 +140,7 @@ with infamy.Test() as test:
         }}, delete=[qos_xpath(port, "/egress")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
-    with test.step("Add a 10 Mbit/s egress shaper and verify the tbf root above the ets table"):
+    with test.step("Add a 10 Mbps egress shaper and verify the tbf root above the ets table"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{

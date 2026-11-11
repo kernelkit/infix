@@ -248,8 +248,8 @@ admin@example:/config/routing/…/ospf/> set
   the shortest path if they use the same reference bandwidth.  The cost
   of an interface without an explicit `cost` is the reference bandwidth
   divided by the link speed, rounded, with 1 as the lowest cost.  The
-  default is 100000 Mbit/s, which gives a 1 Gbit/s link cost 100.  Use
-  `set auto-cost reference-bandwidth 10000` (Mbit/s) to change it. 
+  default is 100000 Mbps, which gives a 1 Gbps link cost 100.  Use
+  `set auto-cost reference-bandwidth 10000` (Mbps) to change it. 
   Auto-cost can not be disabled, but a cost set manually per interface takes precedence.
 
 `show ip ospf` shows the reference bandwidth in use, and `show ipv6
@@ -257,7 +257,7 @@ ospf` does the same for OSPFv3.
 
 <pre class="cli"><code>admin@example:/> <b>show ip ospf</b>
  OSPF Routing Process, Router ID: 192.168.10.1
- Reference bandwidth: 100000 Mbit/s
+ Reference bandwidth: 100000 Mbps
  Number of areas attached to this router: 1
  ...
 </code></pre>

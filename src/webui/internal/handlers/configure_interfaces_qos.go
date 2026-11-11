@@ -142,13 +142,13 @@ func mbitText(bits int64) string {
 	return strconv.FormatFloat(float64(bits)/1e6, 'f', -1, 64)
 }
 
-// mbitField parses a Mbit/s form value into bits per second, as the
+// mbitField parses a Mbps form value into bits per second, as the
 // string the uint64 leaves take.  The model's own range is checked by
 // the device; this only keeps the value a uint64.
 func mbitField(v, what string) (string, error) {
 	mbit, err := strconv.ParseFloat(v, 64)
 	if err != nil || mbit <= 0 || mbit*1e6 >= math.MaxUint64 {
-		return "", fmt.Errorf("%s must be a number of Mbit/s above zero", what)
+		return "", fmt.Errorf("%s must be a number of Mbps above zero", what)
 	}
 	return strconv.FormatUint(uint64(math.Round(mbit*1e6)), 10), nil
 }
@@ -405,7 +405,7 @@ func (h *ConfigureInterfacesHandler) replaceContainer(w http.ResponseWriter, r *
 }
 
 // SaveCBS replaces the port's shaper table with the idle slopes given, in
-// Mbit/s per class; an empty table removes it.  On a port with its own
+// Mbps per class; an empty table removes it.  On a port with its own
 // settings a slope also shapes its class and a cleared one stops it; with
 // a profile the profile decides which classes are shaped.
 // POST /configure/interfaces/{name}/cbs

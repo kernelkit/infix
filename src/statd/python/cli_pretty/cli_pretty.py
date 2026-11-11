@@ -2969,7 +2969,7 @@ def show_hardware_detail(json, ref):
         ("Hardware Rev",  comp.get("hardware-rev", "")),
         ("USB ID",        _usb_id(ms) or dev.id),
         ("USB Version",   usb.get("usb-version", "")),
-        ("Speed",         f"{usb['speed']} Mbit/s" if usb.get("speed") else ""),
+        ("Speed",         f"{usb['speed']} Mbps" if usb.get("speed") else ""),
         ("Authorized",    dev.authorized),
         ("URI",           ", ".join(comp.get("uri", []))),
         ("Admin State",   state.get("admin-state", "")),
@@ -5865,7 +5865,7 @@ def show_ospf(json_data):
     print(f" OSPF Routing Process, Router ID: {router_id}")
     refbw = ospf.get('auto-cost', {}).get('reference-bandwidth')
     if refbw is not None:
-        print(f" Reference bandwidth: {refbw} Mbit/s")
+        print(f" Reference bandwidth: {refbw} Mbps")
     print(f" Number of areas attached to this router: {len(areas)}")
     print()
 

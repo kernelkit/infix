@@ -3,7 +3,7 @@
 QoS Egress Shaper
 
 One talker, bridged through the DUT and out an egress port shaped to
-10 Mbit/s, offering three times that.  What arrives at the listener in
+10 Mbps, offering three times that.  What arrives at the listener in
 the middle seconds of the flow must be the shaped rate, within a fifth,
 whatever the priority of the flow: once marked EF, in a strict class
 near the top, once marked CS1, in the lowest class.  Then both at once,
@@ -19,18 +19,18 @@ import infamy
 import infamy.qos as qos
 from infamy.util import until
 
-LIMIT = 10_000_000             # bit/s, Layer 2
+LIMIT = 10_000_000             # bps, Layer 2
 EF, CS1 = 46 << 2, 8 << 2      # TOS bytes of the two markings
 SIZE = 1000                    # UDP payload, 1042 bytes on the wire
 TOLERANCE = 0.2
 
 
 def check(what, throughput):
-    """throughput is payload bit/s; the limit counts the 42 header bytes too"""
+    """throughput is payload bps; the limit counts the 42 header bytes too"""
     expect = LIMIT * SIZE / (SIZE + 42)
-    print(f"{what}: {throughput / 1e6:.2f} Mbit/s through, limit lets {expect / 1e6:.2f}")
+    print(f"{what}: {throughput / 1e6:.2f} Mbps through, limit lets {expect / 1e6:.2f}")
     assert abs(throughput - expect) <= TOLERANCE * expect, \
-        f"{what}: {throughput / 1e6:.2f} Mbit/s through a {LIMIT / 1e6:.0f} Mbit/s limit"
+        f"{what}: {throughput / 1e6:.2f} Mbps through a {LIMIT / 1e6:.0f} Mbps limit"
 
 
 with infamy.Test() as test:

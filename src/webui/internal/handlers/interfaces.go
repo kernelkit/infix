@@ -1060,21 +1060,21 @@ func pmdSpeedMbps(name string) int {
 	return int(n)
 }
 
-// formatBitRate renders bits per second as "1 Gbit/s", "100 Mbit/s",
-// "64 kbit/s".
+// formatBitRate renders bits per second as "1 Gbps", "100 Mbps",
+// "64 kbps".
 func formatBitRate(bps uint64) string {
 	switch {
 	case bps >= 1_000_000_000:
-		return strconv.FormatFloat(float64(bps)/1_000_000_000, 'f', -1, 64) + " Gbit/s"
+		return strconv.FormatFloat(float64(bps)/1_000_000_000, 'f', -1, 64) + " Gbps"
 	case bps >= 1_000_000:
-		return strconv.FormatFloat(float64(bps)/1_000_000, 'f', -1, 64) + " Mbit/s"
+		return strconv.FormatFloat(float64(bps)/1_000_000, 'f', -1, 64) + " Mbps"
 	default:
-		return strconv.FormatUint(bps/1_000, 10) + " kbit/s"
+		return strconv.FormatUint(bps/1_000, 10) + " kbps"
 	}
 }
 
 // formatEthernetLink renders the ietf-interfaces:speed (yang:gauge64 bits/s)
-// plus duplex as "1 Gbit/s full"; empty when speed is 0.
+// plus duplex as "1 Gbps full"; empty when speed is 0.
 func formatEthernetLink(bps uint64, duplex string) string {
 	if bps == 0 {
 		return ""

@@ -13,7 +13,7 @@ image::expected.svg[align=center, scaledwidth=90%]
 
 Three talkers, marked EF, AF21 and CS1, send through the DUT's bridge
 and out one port.  That port is slowed down so the test's traffic can
-fill it: negotiated down to 100 Mbit/s, or shaped to 10 Mbit/s where
+fill it: negotiated down to 100 Mbps, or shaped to 10 Mbps where
 it has no PHY.  The port where the traffic enters puts EF in a strict
 class above AF21 and CS1, which share the rest 2:1.
 
@@ -92,7 +92,7 @@ with infamy.Test() as test:
         if not drain:
             print(f"{td1} can neither negotiate down nor be shaped, skipping")
             test.skip()
-        print(f"{td1} drains {drain // 1_000_000} Mbit/s")
+        print(f"{td1} drains {drain // 1_000_000} Mbps")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1:

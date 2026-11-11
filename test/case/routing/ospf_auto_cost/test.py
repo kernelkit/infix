@@ -7,13 +7,13 @@ routers in an OSPF domain, so it is changed on both R1 and R2.
 
 The cost of an interface is the reference bandwidth divided by the link
 speed, with 1 as the lowest cost.  A link of unknown speed, e.g., a virtual
-link, counts as 10000 Mbit/s.  On a 1 Gbit/s link the cost is:
+link, counts as 10000 Mbps.  On a 1 Gbps link the cost is:
 
 |===
 | Reference bandwidth      | Cost
-| 100000 Mbit/s (default)  | 100
-| 10000 Mbit/s             | 10
-| 1000 Mbit/s              | 1
+| 100000 Mbps (default)  | 100
+| 10000 Mbps             | 10
+| 1000 Mbps              | 1
 |===
 
 The test reads the link speed on each router to calculate the expected
@@ -49,7 +49,7 @@ PARAM = {
 
 ROUTER_ID = {"R1": "1.1.1.1", "R2": "2.2.2.2"}
 
-# Frr uses this link speed (Mbit/s) when the speed is unknown
+# Frr uses this link speed (Mbps) when the speed is unknown
 UNKNOWN_SPEED = 10000
 
 
@@ -120,7 +120,7 @@ def set_reference_bandwidth(target, refbw, proto):
 
 
 def link_speed(target, link):
-    """Link speed in Mbit/s, as used by Frr to calculate the cost"""
+    """Link speed in Mbps, as used by Frr to calculate the cost"""
     speed = target.get_iface(link).get("speed")
     if not speed:
         return UNKNOWN_SPEED
@@ -141,8 +141,8 @@ def wait_adjacency(target, link, neighbor, proto):
 def verify(target, link, refbw, proto):
     speed = link_speed(target, link)
     cost = expected_cost(refbw, speed)
-    print(f"Expecting reference bandwidth {refbw} Mbit/s and cost {cost} "
-          f"on {link} ({speed} Mbit/s)")
+    print(f"Expecting reference bandwidth {refbw} Mbps and cost {cost} "
+          f"on {link} ({speed} Mbps)")
 
     until(lambda: route.ospf_get_reference_bandwidth(target, proto) == refbw and
           route.ospf_get_interface_cost(target, "0.0.0.0", link, proto) == cost)
@@ -178,19 +178,19 @@ with infamy.Test() as test:
         parallel(lambda: wait_adjacency(R1, R1link, "R2", proto),
                  lambda: wait_adjacency(R2, R2link, "R1", proto))
 
-    with test.step("Verify default reference bandwidth 100000 Mbit/s and link cost"):
+    with test.step("Verify default reference bandwidth 100000 Mbps and link cost"):
         verify_both(100000)
 
-    with test.step("Set reference bandwidth 10000 Mbit/s on R1 and R2"):
+    with test.step("Set reference bandwidth 10000 Mbps on R1 and R2"):
         set_both(10000)
 
-    with test.step("Verify reference bandwidth 10000 Mbit/s and link cost"):
+    with test.step("Verify reference bandwidth 10000 Mbps and link cost"):
         verify_both(10000)
 
-    with test.step("Set reference bandwidth 1000 Mbit/s on R1 and R2"):
+    with test.step("Set reference bandwidth 1000 Mbps on R1 and R2"):
         set_both(1000)
 
-    with test.step("Verify reference bandwidth 1000 Mbit/s and link cost"):
+    with test.step("Verify reference bandwidth 1000 Mbps and link cost"):
         verify_both(1000)
 
     test.succeed()

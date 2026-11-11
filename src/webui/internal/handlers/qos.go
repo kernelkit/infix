@@ -23,7 +23,7 @@ type qosRow struct {
 	Name           string
 	Profile        string
 	TrafficClasses int
-	Shaper         string // "100 Mbit/s", empty for none
+	Shaper         string // "100 Mbps", empty for none
 	Offload        string // "none", or the stages the fabric runs
 }
 

@@ -345,7 +345,7 @@ func number(raw json.RawMessage) uint64 {
 	return n
 }
 
-// scale is a * b / c; the product of a 10 Gbit/s slope and a cycle in
+// scale is a * b / c; the product of a 10 Gbps slope and a cycle in
 // nanoseconds does not fit in 64 bits.
 func scale(a, b, c int64) int64 {
 	r := new(big.Int).Mul(big.NewInt(a), big.NewInt(b))

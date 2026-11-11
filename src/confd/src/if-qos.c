@@ -557,7 +557,7 @@ static long qos_sysfs_long(const char *ifname, const char *attr, long dflt)
 	return val;
 }
 
-/* Highest rate the port can link at in Mbit/s, 0 when it names no link modes. */
+/* Highest rate the port can link at in Mbps, 0 when it names no link modes. */
 static long qos_max_speed(const char *ifname)
 {
 	long speed, max = 0;
@@ -1115,7 +1115,7 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
  * One cbs child per shaped class, on its band.  The operator gives the
  * idle slope; the send slope and the credits follow IEEE 802.1Q-2022
  * Annex L from it and the link rate, with one maximum frame as the
- * interfering burst.  tc takes the slopes in kbit/s.  The shaper is
+ * interfering burst.  tc takes the slopes in kbps.  The shaper is
  * offloaded where the fabric runs it, and is the real thing in software
  * elsewhere.
  */
