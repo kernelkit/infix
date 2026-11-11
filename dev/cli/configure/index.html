@@ -464,6 +464,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#large-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large Numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#saving-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2608,6 +2619,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#large-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large Numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#saving-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2798,26 +2820,37 @@ made by typing <code>diff</code>:</p>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>  }
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>}
 </code></pre></div>
+<h2 id="large-numbers">Large Numbers<a class="headerlink" href="#large-numbers" title="Permanent link">¶</a></h2>
+<p>A numeric setting, e.g. a rate in bits per second, can be given with a
+unit suffix instead of all its digits.  The suffixes <code>k</code> (or <code>K</code>), <code>M</code>,
+<code>G</code>, <code>T</code>, <code>P</code> and <code>E</code> multiply by powers of 1000, and <code>Ki</code>, <code>Mi</code>, <code>Gi</code>,
+<code>Ti</code>, <code>Pi</code> and <code>Ei</code> by powers of 1024:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:/config/interface/eth0/&gt; set qos egress rate-limit rate 200M
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host:/config/interface/eth0/&gt; set qos egress rate-limit burst 64Ki
+</code></pre></div>
+<p>These are stored as 200000000 and 65536, which is also how <code>show</code> and
+<code>diff</code> list them.  A fraction is allowed when the result is a whole
+number, e.g. <code>1.5G</code>, or for a setting with decimals.</p>
 <h2 id="saving-changes">Saving Changes<a class="headerlink" href="#saving-changes" title="Permanent link">¶</a></h2>
 <p>Apply the changes (from candidate to <code>running-config</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:/config/interface/eth0/&gt; leave
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host:/&gt; show running-config
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>...
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>interfaces {
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  interface eth0 {
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    type ethernetCsmacd;
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    ipv4 {
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>      address 192.168.2.200 {
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        prefix-length 24;
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>      }
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    }
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>  }
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@host:/config/interface/eth0/&gt; leave
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@host:/&gt; show running-config
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>...
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>interfaces {
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  interface eth0 {
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    type ethernetCsmacd;
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    ipv4 {
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>      address 192.168.2.200 {
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        prefix-length 24;
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>      }
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    }
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  }
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>...
 </code></pre></div>
 <p>Since we did not get any warnings we can save the running (RAM only)
 configuration to startup, so the changes are made persistent across
 reboots:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@host:/&gt; copy running-config startup-config
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@host:/&gt; copy running-config startup-config
 </code></pre></div>
 <p>The <code>startup-config</code> can also be inspected with the <code>show</code> command to
 verify the changes are saved.</p>
@@ -2829,10 +2862,10 @@ CLI.  Use the <code>TAB</code> key to make your life easier.</p>
 <h2 id="changing-hostname">Changing Hostname<a class="headerlink" href="#changing-hostname" title="Permanent link">¶</a></h2>
 <p>Settings like hostname are located in the <code>ietf-system.yang</code> model.
 Here is how it can be set.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@host:/config/&gt; edit system
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@host:/config/system/&gt; set hostname example
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@host:/config/system/&gt; leave
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/&gt; 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@host:/config/&gt; edit system
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/system/&gt; set hostname example
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@host:/config/system/&gt; leave
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/&gt; 
 </code></pre></div>
 <p>Notice how the hostname in the prompt does not change until the change
 is committed.</p>
@@ -2843,11 +2876,11 @@ the hostname, are restarted when the hostname is changed.</p>
 </blockquote>
 <h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
 <p>User management, including passwords, is also a part of <code>ietf-system</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@host:/config/&gt; edit system authentication user admin
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit password
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>New password:
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Retype password:
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@host:/config/system/authentication/user/admin/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@host:/config/&gt; edit system authentication user admin
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit password
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>New password:
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Retype password:
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>admin@host:/config/system/authentication/user/admin/&gt; leave
 </code></pre></div>
 <p>The <code>edit password</code> command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
@@ -2869,14 +2902,14 @@ user.  Here we add the authorized key to the admin user, multiple keys
 are supported.</p>
 <p>With SSH keys in place it is possible to disable password login, just
 remember to verify SSH login and network connectivity before doing so.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@host:/config/&gt; edit system authentication user admin 
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit authorized-key example@host
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set algorithm ssh-rsa
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; show
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>algorithm ssh-rsa;
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@host:/config/&gt; edit system authentication user admin 
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit authorized-key example@host
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set algorithm ssh-rsa
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; show
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>algorithm ssh-rsa;
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; leave
 </code></pre></div>
 <blockquote>
 <p><strong>Note</strong></p>
@@ -2888,31 +2921,31 @@ so there is no need to use the <code>edit</code> command, <code>set</code> does 
 <p>The following example creates a <code>veth0a &lt;--&gt; veth0b</code> virtual Ethernet
 pair which is useful for connecting, e.g., a container to the physical
 world.  Here we also add an IPv4 address to one end of the pair.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@host:/config/&gt; edit interface veth0a
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>admin@host:/config/interface/veth0a/&gt; set veth peer veth0b
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>admin@host:/config/interface/veth0a/&gt; set ipv4 address 192.168.0.1 prefix-length 24
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>admin@host:/config/interface/veth0a/&gt; up
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>admin@host:/config/&gt; diff
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>interfaces {
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>+  interface veth0a {
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>+    type veth;
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>+    ipv4 {
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>+      address 192.168.0.1 {
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>+        prefix-length 24;
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>+      }
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>+    }
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>+    veth {
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>+      peer veth0b;
-<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>+    }
-<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>+  }
-<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>+  interface veth0b {
-<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>+    type veth;
-<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>+    veth {
-<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>+      peer veth0a;
-<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>+    }
-<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>+  }
-<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>}
-<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>admin@host:/config/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@host:/config/&gt; edit interface veth0a
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@host:/config/interface/veth0a/&gt; set veth peer veth0b
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@host:/config/interface/veth0a/&gt; set ipv4 address 192.168.0.1 prefix-length 24
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>admin@host:/config/interface/veth0a/&gt; up
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>admin@host:/config/&gt; diff
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>interfaces {
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>+  interface veth0a {
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>+    type veth;
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>+    ipv4 {
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>+      address 192.168.0.1 {
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>+        prefix-length 24;
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>+      }
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>+    }
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>+    veth {
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>+      peer veth0b;
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>+    }
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>+  }
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>+  interface veth0b {
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>+    type veth;
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>+    veth {
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>+      peer veth0a;
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>+    }
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>+  }
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>}
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>admin@host:/config/&gt; leave
 </code></pre></div>
 <p>See the bridging example below for more.</p>
 <blockquote>
@@ -2926,46 +2959,46 @@ configuration.</p>
 <p>Building on the previous example, we now create a non-VLAN filtering
 bridge (<code>br0</code>) that forwards any, normally link-local, LLDP traffic
 between both its bridge ports: <code>eth0</code> and <code>vet0b</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@host:/&gt; configure
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@host:/config/&gt; edit interface br0
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@host:/config/interface/br0/&gt; set bridge ieee-group-forward lldp
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>admin@host:/config/interface/br0/&gt; up
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>admin@host:/config/&gt; set interface eth0 bridge-port bridge br0
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>admin@host:/config/&gt; set interface veth0b bridge-port bridge br0
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>admin@host:/config/&gt; diff
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>interfaces {
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>+  interface br0 {
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>+    type bridge;
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>+    bridge {
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>+      ieee-group-forward lldp;
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>+    }
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>+  }
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>  interface eth0 {
-<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>+    bridge-port {
-<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>+      bridge br0;
-<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>+    }
-<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>  }
-<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>+  interface veth0a {
-<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>+    type veth;
-<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>+    ipv4 {
-<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>+      address 192.168.0.1 {
-<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>+        prefix-length 24;
-<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>+      }
-<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>+    }
-<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>+    veth {
-<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>+      peer veth0b;
-<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>+    }
-<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>+  }
-<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>+  interface veth0b {
-<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>+    type veth;
-<a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a>+    veth {
-<a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a>+      peer veth0a;
-<a id="__codelineno-11-35" name="__codelineno-11-35" href="#__codelineno-11-35"></a>+    }
-<a id="__codelineno-11-36" name="__codelineno-11-36" href="#__codelineno-11-36"></a>+    bridge-port {
-<a id="__codelineno-11-37" name="__codelineno-11-37" href="#__codelineno-11-37"></a>+      bridge br0;
-<a id="__codelineno-11-38" name="__codelineno-11-38" href="#__codelineno-11-38"></a>+    }
-<a id="__codelineno-11-39" name="__codelineno-11-39" href="#__codelineno-11-39"></a>+  }
-<a id="__codelineno-11-40" name="__codelineno-11-40" href="#__codelineno-11-40"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@host:/&gt; configure
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>admin@host:/config/&gt; edit interface br0
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>admin@host:/config/interface/br0/&gt; set bridge ieee-group-forward lldp
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>admin@host:/config/interface/br0/&gt; up
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>admin@host:/config/&gt; set interface eth0 bridge-port bridge br0
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>admin@host:/config/&gt; set interface veth0b bridge-port bridge br0
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>admin@host:/config/&gt; diff
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>interfaces {
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>+  interface br0 {
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>+    type bridge;
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>+    bridge {
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>+      ieee-group-forward lldp;
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>+    }
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>+  }
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>  interface eth0 {
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>+    bridge-port {
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>+      bridge br0;
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>+    }
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>  }
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>+  interface veth0a {
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>+    type veth;
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>+    ipv4 {
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>+      address 192.168.0.1 {
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>+        prefix-length 24;
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>+      }
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>+    }
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>+    veth {
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>+      peer veth0b;
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>+    }
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>+  }
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>+  interface veth0b {
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>+    type veth;
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>+    veth {
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>+      peer veth0a;
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>+    }
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>+    bridge-port {
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>+      bridge br0;
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>+    }
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>+  }
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>}
 </code></pre></div>
 <p>Both a physical port <code>eth0</code> and a virtual port <code>veth0b</code> (bridge side of
 the VETH pair from the previous example) are now bridged.  Any traffic

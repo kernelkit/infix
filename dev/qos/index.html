@@ -3365,14 +3365,14 @@ admin@example:/config/interface/…/egress/&gt; <b>leave</b>
 <h3 id="rate-limit">Rate Limit<a class="headerlink" href="#rate-limit" title="Permanent link">¶</a></h3>
 <p>A port can be held below its link speed with one token bucket on the
 whole port, configured under <code>qos egress rate-limit</code>.  <code>rate</code> is the
-sustained rate in bits per second and <code>burst</code> how many bytes may leave
+sustained rate in bits per second, here 10M for 10000000, and <code>burst</code> how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
 frame.  The bucket sits above the traffic classes: it bounds what the
 port sends in total, and transmission selection decides which class
 gets the bounded rate.</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/&gt; <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/…/egress/&gt; <b>set rate-limit rate 10M</b>
 admin@example:/config/interface/…/egress/&gt; <b>leave</b>
 </code></pre>
 
