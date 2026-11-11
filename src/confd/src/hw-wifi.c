@@ -740,6 +740,73 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	return rc;
 }
 
+struct wifi_leaf {
+	const char *json;
+	const char *yang;
+};
+
+/*
+ * Run an iw.py command on the radio an action was invoked on.  On
+ * success *root is the JSON array it printed, which the caller frees.
+ */
+static int wifi_iw_json(sr_session_ctx_t *session, const struct lyd_node *input, const char *what,
+			const char *cmd, const char *arg, json_t **root)
+{
+	struct lyd_node *component;
+	const char *radio;
+	json_error_t jerr;
+	char msg[256];
+	json_t *err;
+	FILE *pp;
+
+	component = lyd_parent(lyd_parent(input));
+	radio = component ? lydx_get_cattr(component, "name") : NULL;
+	if (!radio) {
+		snprintf(msg, sizeof(msg), "%s failed: unknown radio", what);
+		return rpc_failed(session, msg);
+	}
+
+	pp = popenf("r", "/usr/libexec/infix/iw.py %s %s %s", cmd, radio, arg);
+	if (!pp) {
+		snprintf(msg, sizeof(msg), "%s failed to start", what);
+		return rpc_failed(session, msg);
+	}
+
+	*root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!*root) {
+		snprintf(msg, sizeof(msg), "%s returned no data", what);
+		return rpc_failed(session, msg);
+	}
+
+	if (json_is_array(*root))
+		return SR_ERR_OK;
+
+	err = json_object_get(*root, "error");
+	snprintf(msg, sizeof(msg), "%s failed: %s", what,
+		 json_is_string(err) ? json_string_value(err) : "unknown error");
+	json_decref(*root);
+
+	return rpc_failed(session, msg);
+}
+
+/* Copy the integer members of a JSON object to leaves of an output node */
+static void wifi_set_ints(struct lyd_node *node, json_t *entry, const struct wifi_leaf *leaves, size_t num)
+{
+	char val[32];
+	size_t i;
+
+	for (i = 0; i < num; i++) {
+		json_t *v = json_object_get(entry, leaves[i].json);
+
+		if (!json_is_integer(v))
+			continue;
+
+		snprintf(val, sizeof(val), "%lld", json_integer_value(v));
+		lyd_new_term(node, NULL, leaves[i].yang, val, LYD_NEW_VAL_OUTPUT, NULL);
+	}
+}
+
 /*
  * Scan all channels on a radio and report how busy each one is, the
  * channel-survey action in infix-hardware.yang.  The scan takes the
@@ -751,48 +818,27 @@ static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const
 			       const struct lyd_node *input, sr_event_t event, uint32_t request_id,
 			       struct lyd_node *output, void *priv)
 {
-	static const struct { const char *json, *yang; } times[] = {
+	static const struct wifi_leaf times[] = {
 		{ "noise",         "noise"         },
 		{ "active_time",   "active-time"   },
 		{ "busy_time",     "busy-time"     },
 		{ "receive_time",  "receive-time"  },
 		{ "transmit_time", "transmit-time" },
 	};
-	struct lyd_node *component, *chan;
-	const char *radio, *passive;
-	json_error_t jerr;
 	json_t *root, *entry;
+	struct lyd_node *chan;
+	const char *passive;
 	size_t index;
-	FILE *pp;
+	int rc;
 
 	if (event != SR_EV_RPC)
 		return SR_ERR_OK;
 
-	component = lyd_parent(lyd_parent(input));
-	radio = component ? lydx_get_cattr(component, "name") : NULL;
-	if (!radio)
-		return rpc_failed(session, "Cannot tell which radio to survey");
-
 	passive = lydx_get_cattr((struct lyd_node *)input, "passive");
-	pp = popenf("r", "/usr/libexec/infix/iw.py survey-scan %s %s", radio,
-		    passive && !strcmp(passive, "true") ? "passive" : "");
-	if (!pp)
-		return rpc_failed(session, "Failed starting channel survey");
-
-	root = json_loadf(pp, 0, &jerr);
-	pclose(pp);
-	if (!root)
-		return rpc_failed(session, "Channel survey returned no data");
-
-	if (!json_is_array(root)) {
-		json_t *err = json_object_get(root, "error");
-		char msg[256];
-
-		snprintf(msg, sizeof(msg), "Channel survey failed: %s",
-			 json_is_string(err) ? json_string_value(err) : "unknown error");
-		json_decref(root);
-		return rpc_failed(session, msg);
-	}
+	rc = wifi_iw_json(session, input, "Channel survey", "survey-scan",
+			  passive && !strcmp(passive, "true") ? "passive" : "", &root);
+	if (rc)
+		return rc;
 
 	json_array_foreach(root, index, entry) {
 		json_t *freq = json_object_get(entry, "frequency");
@@ -809,17 +855,8 @@ static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const
 
 		lyd_new_term(chan, NULL, "in-use",
 			     json_is_true(json_object_get(entry, "in_use")) ? "true" : "false",
-			     0, NULL);
-
-		for (size_t i = 0; i < NELEMS(times); i++) {
-			json_t *v = json_object_get(entry, times[i].json);
-
-			if (!json_is_integer(v))
-				continue;
-
-			snprintf(val, sizeof(val), "%lld", json_integer_value(v));
-			lyd_new_term(chan, NULL, times[i].yang, val, 0, NULL);
-		}
+			     LYD_NEW_VAL_OUTPUT, NULL);
+		wifi_set_ints(chan, entry, times, NELEMS(times));
 	}
 	json_decref(root);
 
@@ -830,49 +867,26 @@ static int wifi_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *op_
 		     const struct lyd_node *input, sr_event_t event, uint32_t request_id,
 		     struct lyd_node *output, void *priv)
 {
-	static const struct { const char *json, *yang; } nums[] = {
+	static const struct wifi_leaf nums[] = {
 		{ "frequency", "frequency"       },
 		{ "channel",   "channel"         },
 		{ "signal",    "signal-strength" },
 	};
-	struct lyd_node *component, *net;
 	json_t *root, *entry;
-	const char *radio;
-	json_error_t jerr;
+	struct lyd_node *net;
 	size_t index;
-	FILE *pp;
+	int rc;
 
 	if (event != SR_EV_RPC)
 		return SR_ERR_OK;
 
-	component = lyd_parent(lyd_parent(input));
-	radio = component ? lydx_get_cattr(component, "name") : NULL;
-	if (!radio)
-		return rpc_failed(session, "Cannot tell which radio to scan");
-
-	pp = popenf("r", "/usr/libexec/infix/iw.py scan %s", radio);
-	if (!pp)
-		return rpc_failed(session, "Failed starting scan");
-
-	root = json_loadf(pp, 0, &jerr);
-	pclose(pp);
-	if (!root)
-		return rpc_failed(session, "Scan returned no data");
-
-	if (!json_is_array(root)) {
-		json_t *err = json_object_get(root, "error");
-		char msg[256];
-
-		snprintf(msg, sizeof(msg), "Scan failed: %s",
-			 json_is_string(err) ? json_string_value(err) : "unknown error");
-		json_decref(root);
-		return rpc_failed(session, msg);
-	}
+	rc = wifi_iw_json(session, input, "Scan", "scan", "", &root);
+	if (rc)
+		return rc;
 
 	json_array_foreach(root, index, entry) {
 		json_t *bssid = json_object_get(entry, "bssid");
 		json_t *val, *enc;
-		char buf[32];
 		size_t i;
 
 		if (!json_is_string(bssid))
@@ -889,14 +903,7 @@ static int wifi_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *op_
 			lyd_new_term(net, NULL, "ssid", json_string_value(val),
 				     LYD_NEW_VAL_OUTPUT, NULL);
 
-		for (i = 0; i < NELEMS(nums); i++) {
-			val = json_object_get(entry, nums[i].json);
-			if (!json_is_integer(val))
-				continue;
-
-			snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
-			lyd_new_term(net, NULL, nums[i].yang, buf, LYD_NEW_VAL_OUTPUT, NULL);
-		}
+		wifi_set_ints(net, entry, nums, NELEMS(nums));
 
 		enc = json_object_get(entry, "encryption");
 		json_array_foreach(enc, i, val) {
