@@ -241,6 +241,21 @@ share to the others.
 Strict-priority classes must be the highest-numbered ones, with the
 weighted classes below them; other layouts are rejected.
 
+The algorithms only make a difference when a port has more to send than
+it can carry:
+
+- Strict-priority classes are served highest first.  A class with
+  enough traffic takes the whole port and starves every class below
+  it, so strict priority suits traffic of bounded volume, e.g. network
+  control and voice.
+- Weighted classes divide what the strict classes leave.  With shares
+  of 67 and 33 percent and both classes loaded, one gets two thirds and
+  the other one third, however much either offers.
+- Frames of one class share one queue and leave in the order they
+  came.  When the queue is full the port drops what arrives, whichever
+  flow it belongs to, so flows that must not crowd each other out need
+  classes of their own.
+
 A port with four queues, the top two classes strict, the bottom two
 sharing what is left in a 2:1 ratio.  No map is set, so the `ieee`
 preset supplies Table 8-5's four-class column, `0 0 1 1 2 2 3 3`:
@@ -346,7 +361,14 @@ port runs are reported as `oper-control-list`, `oper-cycle-time` and
 A frame that cannot finish before its gate closes waits for the next
 opening, as 802.1Q-2022 8.6.8.4 requires, so no window overruns into
 the next.  A switch does this by closing each gate a guard band early,
-long enough for the largest frame.  `queue-max-sdu-table` sets the
+long enough for the largest frame.
+
+![The end of a cycle with and without a guard band](img/qos-guard-band.svg){ width=560 }
+/// figure-caption
+A full-size frame at the end of a window, with and without the guard band.
+///
+
+`queue-max-sdu-table` sets the
 largest frame of a class, in bytes counted like the MTU.  Longer frames
 of the class are dropped, and a switch that sizes its guard bands from
 it leaves more of a short window to a class of small frames.  For

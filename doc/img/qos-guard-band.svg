@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="330" viewBox="0 0 680 330" font-family="DejaVu Sans, Arial, sans-serif" font-size="13">
+  <rect width="680" height="330" fill="#ffffff"/>
+
+  <!-- the last 40 µs of one cycle and the first 40 µs of the next, 7 px per µs, gate change at x=340 -->
+  <!-- a full-size frame takes 12.3 µs at 1 Gbit/s, 86.1 px; a probe 0.9 µs, 6.3 px -->
+
+  <text x="60" y="20" fill="#333333">Where one cycle ends and the next begins, at 1 Gbit/s</text>
+
+  <!-- with the guard band -->
+  <text x="60" y="52" fill="#333333" font-weight="bold">With the guard band</text>
+  <rect x="60"  y="62" width="280" height="50" fill="#4f8a3c" fill-opacity="0.12"/>
+  <rect x="340" y="62" width="280" height="50" fill="#e4572e" fill-opacity="0.12"/>
+  <g stroke="#333333" stroke-width="1" fill="#4f8a3c">
+    <rect x="60"    y="68" width="58.8" height="38"/>
+    <rect x="118.8" y="68" width="86.1" height="38"/>
+    <rect x="204.9" y="68" width="86.1" height="38"/>
+  </g>
+  <rect x="340" y="68" width="6.3" height="38" fill="#e4572e" stroke="#333333"/>
+  <g fill="#ffffff" text-anchor="middle">
+    <text x="161.8" y="92">frame</text>
+    <text x="247.9" y="92">frame</text>
+  </g>
+  <line x1="315.5" y1="87" x2="315.5" y2="127" stroke="#333333"/>
+  <text x="60" y="140" fill="#333333">the next frame cannot finish in time, so it waits</text>
+  <line x1="352" y1="87" x2="372" y2="87" stroke="#333333"/>
+  <text x="376" y="92" fill="#333333">time-critical frame leaves on time</text>
+
+  <!-- without the guard band -->
+  <text x="60" y="182" fill="#333333" font-weight="bold">Without it</text>
+  <rect x="60"  y="192" width="280" height="50" fill="#4f8a3c" fill-opacity="0.12"/>
+  <rect x="340" y="192" width="280" height="50" fill="#e4572e" fill-opacity="0.12"/>
+  <g stroke="#333333" stroke-width="1" fill="#4f8a3c">
+    <rect x="60"    y="198" width="77"   height="38"/>
+    <rect x="137"   y="198" width="86.1" height="38"/>
+    <rect x="223.1" y="198" width="86.1" height="38"/>
+    <rect x="309.2" y="198" width="86.1" height="38" fill="#2f5d22"/>
+  </g>
+  <rect x="395.3" y="198" width="6.3" height="38" fill="#e4572e" stroke="#333333"/>
+  <g fill="#ffffff" text-anchor="middle">
+    <text x="180"   y="222">frame</text>
+    <text x="266.1" y="222">frame</text>
+    <text x="352.2" y="222">frame</text>
+  </g>
+  <line x1="407" y1="217" x2="427" y2="217" stroke="#333333"/>
+  <text x="431" y="222" fill="#333333">time-critical frame is late</text>
+
+  <!-- gate change -->
+  <line x1="340" y1="56" x2="340" y2="262" stroke="#333333" stroke-dasharray="4 3"/>
+
+  <!-- time axis -->
+  <g stroke="#333333" stroke-width="1">
+    <line x1="60" y1="262" x2="620" y2="262"/>
+    <line x1="60"  y1="258" x2="60"  y2="266"/>
+    <line x1="200" y1="258" x2="200" y2="266"/>
+    <line x1="340" y1="258" x2="340" y2="266"/>
+    <line x1="480" y1="258" x2="480" y2="266"/>
+    <line x1="620" y1="258" x2="620" y2="266"/>
+  </g>
+  <g fill="#333333" text-anchor="middle">
+    <text x="60"  y="282">960 µs</text>
+    <text x="200" y="282">980 µs</text>
+    <text x="340" y="282">0</text>
+    <text x="480" y="282">20 µs</text>
+    <text x="620" y="282">40 µs</text>
+  </g>
+  <g fill="#333333" text-anchor="middle">
+    <text x="200" y="312">window for ordinary traffic, CS1</text>
+    <text x="480" y="312">window for time-critical traffic, EF</text>
+  </g>
+</svg>
