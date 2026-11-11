@@ -14,66 +14,48 @@
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
 #define HOSTAPD_SERVICE          "/etc/finit.d/available/hostapd.conf"
 
-static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
-					  struct lyd_node ***iface_list, int *count)
+/*
+ * An enabled access point on the radio.  hostapd brings every BSS it is
+ * given up, a disabled one must not be in its config at all.
+ */
+static bool wifi_is_radio_ap(struct lyd_node *cif, const char *radio_name)
 {
-	struct lyd_node *iface, *wifi;
-	const char *radio;
-	struct lyd_node **list = NULL;
+	struct lyd_node *wifi = lydx_get_child(cif, "wifi");
+	const char *radio = lydx_get_cattr(wifi, "radio");
+
+	if (!radio || strcmp(radio, radio_name))
+		return false;
+
+	return lydx_get_child(wifi, "access-point") && lydx_is_enabled(cif, "enabled");
+}
+
+static int wifi_radio_ap_count(struct lyd_node *cifs, const char *radio_name)
+{
+	struct lyd_node *cif;
 	int n = 0;
 
-	if (!ifs)
-		return 0;
-
-	LYX_LIST_FOR_EACH(ifs, iface, "interface") {
-		wifi = lydx_get_child(iface, "wifi");
-		if (!wifi)
-			continue;
-
-		radio = lydx_get_cattr(wifi, "radio");
-		if (!radio || strcmp(radio, radio_name))
-			continue;
-
-		if (lydx_get_op(iface) == LYDX_OP_DELETE)
-			continue;
-		list = realloc(list, sizeof(struct lyd_node *) * (n + 1));
-		list[n++] = iface;
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		if (wifi_is_radio_ap(cif, radio_name))
+			n++;
 	}
 
-	*iface_list = list;
-	*count = n;
-	return 0;
+	return n;
 }
 
 /* Helper: Find all AP interfaces on a specific radio */
 static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 				char ***ap_list, int *count)
 {
-	struct lyd_node *cif, *wifi, *ap;
-	const char *ifname, *radio;
+	struct lyd_node *cif;
 	char **list = NULL;
 	int n = 0;
 
 	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
-		wifi = lydx_get_child(cif, "wifi");
-		if (!wifi)
+		if (!wifi_is_radio_ap(cif, radio_name))
 			continue;
 
-		radio = lydx_get_cattr(wifi, "radio");
-		if (!radio || strcmp(radio, radio_name))
-			continue;
-
-		ap = lydx_get_child(wifi, "access-point");
-		if (!ap)
-			continue;
-		/* hostapd brings every BSS it is given up, a disabled one
-		 * must not be in its config at all. */
-		if (!lydx_is_enabled(cif, "enabled"))
-			continue;
 		list = realloc(list, sizeof(char *) * (n + 1));
-
-		ifname = lydx_get_cattr(cif, "name");
-		list[n++] = strdup(ifname);
+		list[n++] = strdup(lydx_get_cattr(cif, "name"));
 	}
 
 	/* Sort alphabetically for consistent primary selection */
@@ -637,23 +619,17 @@ void wifi_country_change(struct lyd_node *config, struct lyd_node *diff, sr_even
 /* Generate AP config (hostapd) for all APs on a radio */
 int wifi_radio_change(struct lyd_node *config, struct lyd_node *cif, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node **list = NULL, *cifs;
-	int rc = SR_ERR_OK;
-	const char *name;
-	int count = 0;
+	const char *name = lydx_get_cattr(cif, "name");
+	struct lyd_node *cifs;
+	int rc;
 
 	if (!cif || event != SR_EV_CHANGE)
 		return SR_ERR_OK;
 
-	name = lydx_get_cattr(cif, "name");
 	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
-	wifi_find_interfaces_on_radio(cifs, name, &list, &count);
-	if (count) {
-		rc = wifi_gen_aps_on_radio(name, cifs, lydx_get_child(cif, "wifi-radio"), config, confd);
-		if (rc)
-			ERROR("Failed to generate AP config for radio %s", name);
-	}
-	free(list);
+	rc = wifi_gen_aps_on_radio(name, cifs, lydx_get_child(cif, "wifi-radio"), config, confd);
+	if (rc)
+		ERROR("Failed to generate AP config for radio %s", name);
 
 	return rc;
 }
@@ -675,8 +651,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		const char *name = lydx_get_cattr(dif, "name");
-		char src[40], dst[40], **ap_list = NULL;
-		int ap_interfaces = 0, i;
+		char src[40], dst[40];
 
 		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
 		if (!cif || strcmp(lydx_get_cattr(cif, "class"), "infix-hardware:wifi"))
@@ -685,13 +660,7 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		/* The changed interface need not be an AP, a wds-link or
 		 * station on the radio also lands here, so judge by the
 		 * APs left in config. */
-		wifi_find_radio_aps(lydx_get_descendant(config, "interfaces", "interface", NULL),
-				    name, &ap_list, &ap_interfaces);
-		for (i = 0; i < ap_interfaces; i++)
-			free(ap_list[i]);
-		free(ap_list);
-
-		if (ap_interfaces) {
+		if (wifi_radio_ap_count(lydx_get_descendant(config, "interfaces", "interface", NULL), name)) {
 			snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
 			snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
 
@@ -722,16 +691,11 @@ int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
 		if (glob("/etc/hostapd-*.conf", 0, NULL, &gl) == 0) {
 			for (i = 0; i < gl.gl_pathc; i++) {
-				char radio[64], **aps = NULL;
-				int n = 0, j;
+				char radio[64];
 
 				if (sscanf(gl.gl_pathv[i], "/etc/hostapd-%63[^.].conf", radio) != 1)
 					continue;
-				wifi_find_radio_aps(cifs, radio, &aps, &n);
-				for (j = 0; j < n; j++)
-					free(aps[j]);
-				free(aps);
-				if (!n) {
+				if (!wifi_radio_ap_count(cifs, radio)) {
 					unlink(gl.gl_pathv[i]);
 					erasef(HOSTAPD_CONF_NEXT, radio);
 				} else if (iface_has_quirk(radio, "lar-needs-scan")) {
