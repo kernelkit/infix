@@ -199,223 +199,85 @@ static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap,
 	return 0;
 }
 
-/*
- * Build hostapd ht_capab string from HT capability bitmask.
- * IEEE 802.11-2016 Table 9-153 — HT Capabilities Info field
- *
- * The ht40_dir string ("[HT40+]" or "[HT40-]") is prepended when
- * the configured channel width is 40MHz or wider.
- */
-static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap,
-				const char *ht40_dir, int want_ht40)
+/* A hostapd capability flag, set when the masked bits equal val */
+struct wifi_cap {
+	unsigned int mask;
+	unsigned int val;
+	const char  *flag;
+	bool         wide;	/* Only when configured for 160MHz */
+};
+
+/* IEEE 802.11-2016 Table 9-153, HT Capabilities Info field */
+static const struct wifi_cap wifi_ht_caps[] = {
+	{ 0x0001, 0x0001, "[LDPC]",           false },
+	{ 0x0020, 0x0020, "[SHORT-GI-20]",    false },
+	{ 0x0040, 0x0040, "[SHORT-GI-40]",    false },
+	{ 0x0080, 0x0080, "[TX-STBC]",        false },
+	{ 0x0300, 0x0100, "[RX-STBC1]",       false },
+	{ 0x0300, 0x0200, "[RX-STBC12]",      false },
+	{ 0x0300, 0x0300, "[RX-STBC123]",     false },
+	{ 0x0800, 0x0800, "[MAX-AMSDU-7935]", false },
+};
+
+/* IEEE 802.11-2016 Table 9-250, VHT Capabilities Info field */
+static const struct wifi_cap wifi_vht_caps[] = {
+	{ 0x000003, 0x000001, "[MAX-MPDU-7991]",    false },
+	{ 0x000003, 0x000002, "[MAX-MPDU-11454]",   false },
+	{ 0x00000c, 0x000004, "[VHT160]",           true  },
+	{ 0x00000c, 0x000008, "[VHT160-80PLUS80]",  true  },
+	{ 0x000010, 0x000010, "[RXLDPC]",           false },
+	{ 0x000020, 0x000020, "[SHORT-GI-80]",      false },
+	{ 0x000040, 0x000040, "[SHORT-GI-160]",     true  },
+	{ 0x000080, 0x000080, "[TX-STBC-2BY1]",     false },
+	{ 0x000700, 0x000100, "[RX-STBC-1]",        false },
+	{ 0x000700, 0x000200, "[RX-STBC-12]",       false },
+	{ 0x000700, 0x000300, "[RX-STBC-123]",      false },
+	{ 0x000700, 0x000400, "[RX-STBC-1234]",     false },
+	{ 0x000800, 0x000800, "[SU-BEAMFORMER]",    false },
+	{ 0x001000, 0x001000, "[SU-BEAMFORMEE]",    false },
+	{ 0x080000, 0x080000, "[MU-BEAMFORMER]",    false },
+	{ 0x100000, 0x100000, "[MU-BEAMFORMEE]",    false },
+	{ 0x200000, 0x200000, "[VHT-TXOP-PS]",      false },
+	{ 0x400000, 0x400000, "[HTC-VHT]",          false },
+};
+
+static void wifi_cap_flags(char *out, size_t sz, const struct wifi_cap *caps, size_t num,
+			   unsigned int cap, bool wide)
 {
-	char *p = out;
-	size_t rem = sz;
-	int n;
+	size_t i;
 
-	*p = '\0';
-
-	if (want_ht40 && ht40_dir) {
-		n = snprintf(p, rem, "%s", ht40_dir);
-		p += n;
-		rem -= n;
-	}
-
-	if (ht_cap & 0x0001) {
-		n = snprintf(p, rem, "[LDPC]");
-		p += n;
-		rem -= n;
-	}
-	if (ht_cap & 0x0020) {
-		n = snprintf(p, rem, "[SHORT-GI-20]");
-		p += n;
-		rem -= n;
-	}
-	if (ht_cap & 0x0040) {
-		n = snprintf(p, rem, "[SHORT-GI-40]");
-		p += n;
-		rem -= n;
-	}
-	if (ht_cap & 0x0080) {
-		n = snprintf(p, rem, "[TX-STBC]");
-		p += n;
-		rem -= n;
-	}
-
-	/* RX-STBC: bits 8-9 */
-	switch ((ht_cap >> 8) & 0x3) {
-	case 1:
-		n = snprintf(p, rem, "[RX-STBC1]");
-		p += n;
-		rem -= n;
-		break;
-	case 2:
-		n = snprintf(p, rem, "[RX-STBC12]");
-		p += n;
-		rem -= n;
-		break;
-	case 3:
-		n = snprintf(p, rem, "[RX-STBC123]");
-		p += n;
-		rem -= n;
-		break;
-	}
-
-	/* Max A-MSDU Length: bit 11 */
-	if (ht_cap & 0x0800) {
-		n = snprintf(p, rem, "[MAX-AMSDU-7935]");
-		p += n;
-		rem -= n;
+	for (i = 0; i < num; i++) {
+		if ((cap & caps[i].mask) != caps[i].val)
+			continue;
+		if (caps[i].wide && !wide)
+			continue;
+		strlcat(out, caps[i].flag, sz);
 	}
 }
 
-/*
- * Build hostapd vht_capab string from VHT capability bitmask.
- * IEEE 802.11-2016 Table 9-250 — VHT Capabilities Info field
- *
- * When the configured width is less than 160MHz, the VHT160 and
- * SHORT-GI-160 flags are masked out to prevent hostapd from
- * advertising capabilities the configuration does not use.
- */
+/* hostapd ht_capab string, led by ht40_dir when 40MHz or wider is configured */
+static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap,
+				const char *ht40_dir, int want_ht40)
+{
+	out[0] = '\0';
+	if (want_ht40 && ht40_dir)
+		strlcpy(out, ht40_dir, sz);
+
+	wifi_cap_flags(out, sz, wifi_ht_caps, NELEMS(wifi_ht_caps), ht_cap, false);
+}
+
+/* hostapd vht_capab string, without the 160MHz flags below that width */
 static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int chwidth)
 {
-	char *p = out;
-	size_t rem = sz;
-	int n;
+	int exp = (vht_cap >> 23) & 0x7;
+	size_t len;
 
-	*p = '\0';
+	out[0] = '\0';
+	wifi_cap_flags(out, sz, wifi_vht_caps, NELEMS(wifi_vht_caps), vht_cap, chwidth >= 2);
 
-	/* Max MPDU Length: bits 0-1 */
-	switch (vht_cap & 0x3) {
-	case 1:
-		n = snprintf(p, rem, "[MAX-MPDU-7991]");
-		p += n;
-		rem -= n;
-		break;
-	case 2:
-		n = snprintf(p, rem, "[MAX-MPDU-11454]");
-		p += n;
-		rem -= n;
-		break;
-	}
-
-	/* Supported Channel Width: bits 2-3 */
-	if (chwidth >= 2) {
-		switch ((vht_cap >> 2) & 0x3) {
-		case 1:
-			n = snprintf(p, rem, "[VHT160]");
-			p += n;
-			rem -= n;
-			break;
-		case 2:
-			n = snprintf(p, rem, "[VHT160-80PLUS80]");
-			p += n;
-			rem -= n;
-			break;
-		}
-	}
-
-	/* RXLDPC: bit 4 */
-	if (vht_cap & 0x10) {
-		n = snprintf(p, rem, "[RXLDPC]");
-		p += n;
-		rem -= n;
-	}
-
-	/* Short GI for 80MHz: bit 5 */
-	if (vht_cap & 0x20) {
-		n = snprintf(p, rem, "[SHORT-GI-80]");
-		p += n;
-		rem -= n;
-	}
-
-	/* Short GI for 160MHz: bit 6 — only when configured for 160MHz */
-	if (chwidth >= 2 && (vht_cap & 0x40)) {
-		n = snprintf(p, rem, "[SHORT-GI-160]");
-		p += n;
-		rem -= n;
-	}
-
-	/* TX STBC: bit 7 */
-	if (vht_cap & 0x80) {
-		n = snprintf(p, rem, "[TX-STBC-2BY1]");
-		p += n;
-		rem -= n;
-	}
-
-	/* RX STBC: bits 8-10 */
-	switch ((vht_cap >> 8) & 0x7) {
-	case 1:
-		n = snprintf(p, rem, "[RX-STBC-1]");
-		p += n;
-		rem -= n;
-		break;
-	case 2:
-		n = snprintf(p, rem, "[RX-STBC-12]");
-		p += n;
-		rem -= n;
-		break;
-	case 3:
-		n = snprintf(p, rem, "[RX-STBC-123]");
-		p += n;
-		rem -= n;
-		break;
-	case 4:
-		n = snprintf(p, rem, "[RX-STBC-1234]");
-		p += n;
-		rem -= n;
-		break;
-	}
-
-	/* SU Beamformer: bit 11 */
-	if (vht_cap & 0x800) {
-		n = snprintf(p, rem, "[SU-BEAMFORMER]");
-		p += n;
-		rem -= n;
-	}
-
-	/* SU Beamformee: bit 12 */
-	if (vht_cap & 0x1000) {
-		n = snprintf(p, rem, "[SU-BEAMFORMEE]");
-		p += n;
-		rem -= n;
-	}
-
-	/* MU Beamformer: bit 19 */
-	if (vht_cap & 0x80000) {
-		n = snprintf(p, rem, "[MU-BEAMFORMER]");
-		p += n;
-		rem -= n;
-	}
-
-	/* MU Beamformee: bit 20 */
-	if (vht_cap & 0x100000) {
-		n = snprintf(p, rem, "[MU-BEAMFORMEE]");
-		p += n;
-		rem -= n;
-	}
-
-	/* VHT TXOP PS: bit 21 */
-	if (vht_cap & 0x200000) {
-		n = snprintf(p, rem, "[VHT-TXOP-PS]");
-		p += n;
-		rem -= n;
-	}
-
-	/* HTC-VHT: bit 22 */
-	if (vht_cap & 0x400000) {
-		n = snprintf(p, rem, "[HTC-VHT]");
-		p += n;
-		rem -= n;
-	}
-
-	/* Max A-MPDU Length Exponent: bits 23-25 */
-	n = (vht_cap >> 23) & 0x7;
-	if (n) {
-		int wrote = snprintf(p, rem, "[MAX-A-MPDU-LEN-EXP%d]", n);
-		p += wrote;
-		rem -= wrote;
-	}
+	len = strlen(out);
+	if (exp)
+		snprintf(out + len, sz - len, "[MAX-A-MPDU-LEN-EXP%d]", exp);
 }
 
 /* The box-wide WiFi country code, NULL when none is configured */
