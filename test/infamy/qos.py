@@ -243,7 +243,7 @@ def slow_port(port, until):
         print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
         return 100_000_000
 
-    if not pmds:
+    if not pmds and not (port.switched and "egress-shaper" not in port.supported):
         port.target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{

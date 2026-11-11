@@ -49,6 +49,7 @@ with infamy.Test() as test:
         hd1 = env["host"]["data2"]
 
         port = infamy.capability.Port(target, td1, tgtssh)
+        infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
         print(f"{td1}: {port.traffic_classes} traffic classes, "
               f"EF at priority {HIGH}, CS1 at priority {LOW}")
         port.require_offload(test, "transmission-selection")
