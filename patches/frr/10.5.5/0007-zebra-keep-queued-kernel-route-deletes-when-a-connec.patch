@@ -1,7 +1,7 @@
 From db200521906d929aada9f9c6151507eba5e1bdea Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 12 Nov 2026 07:43:38 +0100
-Subject: [PATCH 7/7] zebra: keep queued kernel route deletes when a connected
+Subject: [PATCH 7/9] zebra: keep queued kernel route deletes when a connected
  route comes up
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

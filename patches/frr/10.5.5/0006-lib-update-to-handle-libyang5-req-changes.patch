@@ -1,7 +1,7 @@
 From 46f705e53c5cacfb18a4c36bbc7bb71d62a0aece Mon Sep 17 00:00:00 2001
 From: Christian Hopps <chopps@labn.net>
 Date: Wed, 18 Feb 2026 18:03:29 +0000
-Subject: [PATCH 6/7] lib: update to handle libyang5 req changes
+Subject: [PATCH 6/9] lib: update to handle libyang5 req changes
 Organization: Wires
 
 Signed-off-by: Christian Hopps <chopps@labn.net>
