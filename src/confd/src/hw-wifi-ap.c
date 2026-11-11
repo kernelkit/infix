@@ -14,9 +14,9 @@
 #define WIFI_RXKH_FILE           WIFI_RXKH_DIR "/%s.rxkh"
 
 /* Resolve mobility domain - if "hash", derive from SSID using MD5 (OpenWrt-compatible) */
-static const char *resolve_mobility_domain(const char *mobility_domain, const char *ssid)
+static const char *resolve_mobility_domain(const char *mobility_domain, const char *ssid,
+					   char *hash, size_t len)
 {
-	static char hash_result[5]; /* 4 hex chars + null */
 	unsigned char md5_digest[EVP_MAX_MD_SIZE];
 	unsigned int md5_len;
 	EVP_MD_CTX *ctx;
@@ -47,10 +47,10 @@ static const char *resolve_mobility_domain(const char *mobility_domain, const ch
 	EVP_MD_CTX_free(ctx);
 
 	/* Extract first 4 hex characters (first 2 bytes) */
-	snprintf(hash_result, sizeof(hash_result), "%02x%02x", md5_digest[0], md5_digest[1]);
+	snprintf(hash, len, "%02x%02x", md5_digest[0], md5_digest[1]);
 
-	DEBUG("Derived mobility domain '%s' from SSID '%s'", hash_result, ssid);
-	return hash_result;
+	DEBUG("Derived mobility domain '%s' from SSID '%s'", hash, ssid);
+	return hash;
 }
 
 /*
@@ -248,6 +248,7 @@ void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *
 	const char *ifname;
 	char nas_identifier_default[300];
 	char hostname[64] = "localhost";
+	char md_hash[5];
 	char bssid[18];
 
 	ifname = lydx_get_cattr(cif, "name");
@@ -288,7 +289,8 @@ void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *
 
 	if (enable_80211r) {
 		mobility_domain_raw = lydx_get_cattr(dot11r, "mobility-domain");
-		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
+		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid,
+							  md_hash, sizeof(md_hash));
 		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
 		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
 			wifi_nas_hostname(confd, config, hostname, sizeof(hostname));
