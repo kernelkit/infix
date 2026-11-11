@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="284" viewBox="0 0 680 284" font-family="DejaVu Sans, Arial, sans-serif" font-size="13">
+  <rect width="680" height="284" fill="#ffffff"/>
+  <text x="20" y="20" fill="#333333">Weighted sharing on a full port</text>
+  <text x="437" y="44" text-anchor="middle" fill="#333333">all the port can send</text>
+  <text x="20" y="79" fill="#333333" font-weight="bold">Equal weights</text>
+  <text x="202" y="79" text-anchor="end" fill="#555555">offered</text>
+  <rect x="212" y="62" width="180" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="302" y="79" text-anchor="middle" fill="#ffffff">EF 80</text>
+  <rect x="392" y="62" width="180" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="482" y="79" text-anchor="middle" fill="#ffffff">CS1 80</text>
+  <text x="202" y="111" text-anchor="end" fill="#555555">delivered</text>
+  <rect x="212" y="94" width="112.5" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="268.25" y="111" text-anchor="middle" fill="#ffffff">EF 50</text>
+  <rect x="324.5" y="94" width="112.5" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="380.75" y="111" text-anchor="middle" fill="#ffffff">CS1 50</text>
+  <text x="20" y="111" fill="#333333">1:1</text>
+  <text x="20" y="171" fill="#333333" font-weight="bold">Weights 2:1</text>
+  <text x="202" y="171" text-anchor="end" fill="#555555">offered</text>
+  <rect x="212" y="154" width="180" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="302" y="171" text-anchor="middle" fill="#ffffff">EF 80</text>
+  <rect x="392" y="154" width="180" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="482" y="171" text-anchor="middle" fill="#ffffff">CS1 80</text>
+  <text x="202" y="203" text-anchor="end" fill="#555555">delivered</text>
+  <rect x="212" y="186" width="150.75" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="287.375" y="203" text-anchor="middle" fill="#ffffff">EF 67</text>
+  <rect x="362.75" y="186" width="74.25" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="399.875" y="203" text-anchor="middle" fill="#ffffff">CS1 33</text>
+  <text x="20" y="203" fill="#333333">2:1</text>
+  <line x1="437" y1="50" x2="437" y2="222" stroke="#333333" stroke-dasharray="4 3"/>
+  <text x="212" y="246" fill="#555555">percent of what the port can send</text>
+</svg>
