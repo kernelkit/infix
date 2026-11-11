@@ -2,22 +2,22 @@
 """
 QoS Queue Assignment
 
-Verify that a frame is queued in the traffic class its priority maps to,
-for the ieee preset, the ieee-sr preset and a custom table, by reading
-the queue each frame reached.
+Every frame has a priority, and a port's traffic class table says
+which queue each priority uses.  This test checks that frames end up
+in the queue the table names, for the `ieee` preset, the `ieee-sr`
+preset and a custom table.
 
-Frames enter tagged on a VLAN interface whose ingress-qos takes the
-priority straight from the PCP, so classification contributes nothing
-and the traffic class table on the egress port is all that is under
-test.  A hundred datagrams are sent at each priority, routed through the
-DUT to the listener, and the per-class counters of the egress scheduler
-are read before and after: the class the table names must grow by at
-least that many, and no other class by anywhere near it.  mDNS is
-switched off: the system announces its services for some ten seconds
-after the egress port gets its address, over a hundred frames at
-priority 0.  What remains of its own chatter, neighbour discovery and
-LLDP at priority 0 and control frames at priority 7, is a handful of
-frames.  The rate is low, so no queue fills.
+A hundred datagrams are sent at each priority, routed through the DUT
+to the listener, and the egress port's per-class counters are read
+before and after.  The class the table names must grow by at least a
+hundred, and no other class by anywhere near it.
+
+Frames enter tagged, on a VLAN interface that takes the priority
+straight from the PCP, so the table on the egress port is all that is
+under test.  The rate is low, so no queue fills.  mDNS is switched off
+on the DUT, since its announcements would add over a hundred frames at
+priority 0.  What remains of the system's own traffic is a handful of
+frames.
 """
 import infamy
 import infamy.qos as qos

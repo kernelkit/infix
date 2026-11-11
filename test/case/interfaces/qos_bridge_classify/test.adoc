@@ -10,7 +10,7 @@ tables can classify and remark it.  The DSCP and PCP on the wire at the
 egress port reveal the priority the ingress port assigned:
 
  - trust dscp: untagged IP frames on VLAN 20, DSCP 46 (EF) to priority 5,
-   DSCP 4 unknown to the preset to the default priority 1
+   DSCP 4, which the preset does not map, to the default priority 1
  - trust pcp with a custom map: tagged frames on VLAN 10, PCP 3 to
    priority 6, PCP 0 to priority 4, PCP 7 unmapped to the default
    priority 2
