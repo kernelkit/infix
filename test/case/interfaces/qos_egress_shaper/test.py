@@ -43,6 +43,7 @@ with infamy.Test() as test:
         hd0 = env["host"]["data1"]
         hd1 = env["host"]["data2"]
         port = infamy.capability.Port(target, td1, tgtssh)
+        infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
 
     with test.step("Bridge the two ports, trust DSCP on ingress, shape the egress port"):
         target.put_config_dicts({"ietf-interfaces": {
