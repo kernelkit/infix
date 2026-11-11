@@ -301,14 +301,15 @@ hardware has one, see [Hardware Offload](#hardware-offload); elsewhere
 the kernel runs it for the traffic it forwards itself.  Turning it on
 takes two settings in two places, as the standard splits them: the
 class's `algorithm` under `qos egress`, and the reservation as
-`admin-idle-slope`, in bits per second, in `cbsa-parameter-table` beside
+`admin-idle-slope`, in bits per second, here 20M for 20000000, in
+`cbsa-parameter-table` beside
 `qos` on the interface.  One without the other is rejected.
 
 Reserve 20 Mbps for class 7 on a port:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e1</b>
 admin@example:/config/interface/e1/> <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
-admin@example:/config/interface/e1/> <b>set cbsa-parameter-table 7 admin-idle-slope 20000000</b>
+admin@example:/config/interface/e1/> <b>set cbsa-parameter-table 7 admin-idle-slope 20M</b>
 admin@example:/config/interface/e1/> <b>leave</b>
 </code></pre>
 
