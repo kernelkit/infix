@@ -3,7 +3,8 @@ Docker Container Support
 
 ![Docker whale](img/docker.webp){ align=right width="360" }
 
-Infix comes with native support for Docker containers using [podman][].
+Infix comes with native support for OCI (Docker) containers, run with
+the [crun][] runtime and supervised by the system's service manager.
 The [YANG model][1] describes the current level of support, complete
 enough to run both system and application containers.
 
@@ -12,14 +13,15 @@ assign switch ports directly to containers, not just bridged VETH pairs.
 This is a rare and in many cases *unique* feature of Infix.
 
 All network specific settings are done using the IETF interfaces YANG
-model, with augments for containers to ensure smooth integration with
-container networking in podman.
+model, with augments for containers.  Infix sets up container networking
+itself: there is no container network manager, no global IP forwarding
+is enabled behind your back, and masquerading and port forwarding are
+plain nftables rules.
 
 > [!IMPORTANT]
-> Even though the `podman` command can be used directly from a shell
-> prompt, we strongly recommend using the CLI commands instead.  They
-> employ the services of a wrapper `container` script which handles the
-> integration of Docker containers in the system.
+> Containers are managed with the CLI commands, or the `ixcont` tool
+> from a shell prompt.  Calling `crun` directly bypasses the system's
+> bookkeeping.
 
 
 Caution
@@ -60,10 +62,10 @@ In the CLI, containers can be run in one of two ways:
  2. enter `configure` context, then `edit container NAME`
 
 The first is useful mostly for testing, or running single commands in
-an image.  It is a wrapper for `podman run -it --rm ...`.
+an image.  Nothing of it persists.
 
 The second creates a read-only container that by default automatically
-start at every boot.   It basically wraps `podman create ...`.
+starts at every boot.
 
 When non-volatile storage is needed two complementary options exist:
 
@@ -74,9 +76,8 @@ When non-volatile storage is needed two complementary options exist:
   mounted into the container is kept along with the container
   configuration in the device's `startup-config`
 
-Podman ensures (using tmpfs) all containers have writable directories
-for certain critical file system paths: `/dev`, `/dev/shm`, `/run`,
-`/tmp`, and `/var/tmp`.  Meaning, what you most often need is writable
+All containers get writable `tmpfs` directories for certain critical
+file system paths: `/dev`, `/dev/shm`, `/run`, `/tmp`, and `/var/tmp`.  Meaning, what you most often need is writable
 volumes for `/var/lib` and `/etc`, or only file mounts for a few files
 in `/etc`.  The [actual requirements](#container-requirements) depend on
 your container image and application to run.
@@ -107,9 +108,9 @@ This message shows that your installation appears to be working correctly.
 
 ### Example: Web Server
 
-A web server with [nginx][], using standard docker bridge.  Podman will
-automatically create a VETH pair for us, connecting the container to the
-`docker0` bridge:
+A web server with [nginx][], using a standard docker bridge.  Infix
+automatically creates a VETH pair for us, connecting the container to
+the `docker0` bridge:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface docker0</b>
@@ -138,10 +139,12 @@ your container at runtime.
 Container Images
 ----------------
 
-The underlying `podman` project supports importing and fetching images in
-a variety of ways, the most common ones are also supported by Infix.  In
-this section we present how to use them and in the next section we show
-how to upgrade to a newer base image.
+Images are OCI image archives, as produced by `docker save` or the
+Docker [OCI exporter][5].  Infix unpacks an archive once into a flat
+root file system and runs containers straight from it, read-only.  In
+this section we present where images can come from and in the next
+section we show how to upgrade to a newer base image.
+
 
 The CLI help shows:
 
@@ -176,25 +179,27 @@ The CLI help shows:
 > The built-in help system in the CLI is generated from the YANG model,
 > so the same information is also available for remote NETCONF users.
 
-The two most common variants are `docker://` and `oci-archive:/`.
+The three most common variants are `oci:/lib/oci/NAME`, an image embedded
+in the Infix image, `docker://` for an image pulled from a registry, and
+`https://` for an archive fetched at first start.
 
-The former requires a working Docker registry and the latter operates on
-a plain OCI archive.  Infix does not come with a built-in registry, so
-the `docker://` option is best used with external services, which in
-turn require [networking][0] to be up.  In a deployment phase the
-easiest may be to set up a single interface on your host system with
-DHCP client.
+The `docker://` option requires a registry reachable over the network,
+which in turn requires [networking][0] to be up.  In a deployment phase
+the easiest may be to set up a single interface on your host system
+with DHCP client.  The default method is `docker://`, so when setting
+the `image` for your container, you can omit the `docker://` prefix.  A
+name without a registry, e.g. `nginx:alpine`, is looked up on Docker Hub.
+You can also use the admin-exec command `container pull docker://...`,
+and when configuring a container Infix checks first if it already has
+the image before trying to download anything.  (See also the upgrade
+section, below.)
 
-The default method is `docker://`, so when setting the `image` for your
-container, you can omit the `docker://` prefix.  You can also use the
-admin-exec command `container pull docker://...`, and when configuring a
-container `podman` will check first if it has the image before trying to
-download anything.  (See also the upgrade section, below.)
-
-The `oci-archive:/` is interesting since many users may not have, or do
-not want to, publish their images in a registry.  Use the Docker [OCI
-exporter][5] or any other tool that supports generating [OCI Image][3]
-format.  Infix supports loading both `.tar` or `.tar.gz` formats.
+Many users may not have, or do not want to, publish their images in a
+registry.  Use the Docker [OCI exporter][5] or any other tool that
+supports generating [OCI Image][3] format.  Infix supports loading both
+`.tar` or `.tar.gz` formats, and `oci:`, `oci-archive:` and `dir:` all
+accept an archive, an OCI layout directory, or an already unpacked
+image.
 
 Here we show a simple example of fetching an OCI image to the system,
 but many others exist, tools like `wget`, `curl`, and `scp` come to
@@ -218,17 +223,18 @@ drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
 drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
 </code></pre>
 
-Importing the image into Podman can be done either from the CLI
-admin-exec context ...
+Importing the image can be done either from the CLI admin-exec
+context ...
 
 <pre class="cli"><code>admin@example:/var/tmp$ <b>cli</b>
 admin@example:/> <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge</b>
 </code></pre>
 
 > [!TIP]
-> The `name curios:edge` is the tag you give the imported (raw) archive
-> which you can then reference in your container image configuration:
-> `set image curios:edge`.
+> The `name curios:edge` is the name you give the imported archive, it
+> is unpacked to `/var/lib/containers/images/curios-edge` which you can
+> then reference in your container image configuration:
+> `set image oci:curios-edge`.
 
 ... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):
@@ -256,9 +262,8 @@ admin@example:/> <b>show log</b>
 Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
-Nov 20 07:24:57 example container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 example container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 example container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
+Nov 20 07:24:57 example container[5040]: Flattening image /var/lib/containers/images/.dl-x2c1 to /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652
+Nov 20 07:24:57 example container[5040]: sys: created from /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652
 </code></pre>
 
 
@@ -340,27 +345,27 @@ Infix intelligently manages container lifecycles to provide a smooth
 experience while minimizing unnecessary work:
 
 **At first setup:** When you configure a container for the first time,
-Infix fetches the image (if needed) and creates the container instance.
+Infix fetches the image (if needed), unpacks it once, and creates the
+container instance.
 
-**At boot time:** Infix checks if the container needs to be recreated by
-comparing checksums for:
-
- - The image archive that the container was built from
- - The container configuration script
+**At boot time, and at every start:** the container is recreated from
+its configuration and the unpacked image.  Nothing is copied: an
+embedded image is used in place from the read-only Infix image, so a
+container with a large image starts as fast as one with a small one.
 
 **When configuration changes:** If you modify any container settings
 (network, volumes, environment, etc.), the container is automatically
 recreated with the new configuration.
 
 **When explicitly upgraded:** Using the `container upgrade` command forces
-a fresh pull of the image and recreates the container.
+a fresh fetch of the image and recreates the container.
 
-This means that in most cases, **containers persist across reboots** and
-are only recreated when actually necessary. Your container's state stored
-in volumes is preserved across recreations.  Since Infix containers use a
-read-only root filesystem, any changes written outside of volumes or the
-writable paths provided by Podman (`/dev`, `/dev/shm`, `/run`, `/tmp`,
-`/var/tmp`) will be lost when the container is recreated.
+Only your container's state stored in volumes persists across restarts
+and reboots.  Since Infix containers use a read-only root filesystem,
+any changes written outside of volumes or the writable `tmpfs` paths
+(`/dev`, `/dev/shm`, `/run`, `/tmp`, `/var/tmp`) are lost when the
+container stops.  A container removed from the configuration leaves
+nothing behind but its named volumes, see [Volume Management][].
 
 ### Method 1: Upgrading Immutable Tags
 
@@ -375,8 +380,8 @@ admin@example:/config/container/web/> <b>leave</b>
 
 **What happens:**
 
- 1. Podman pulls the new image in the background (if not already present)
- 2. Your container is automatically stopped
+ 1. Your container is automatically stopped
+ 2. Infix fetches and unpacks the new image (if not already present)
  3. The container is recreated with the new image
  4. The container is started with your existing volumes intact
 
@@ -411,19 +416,22 @@ This command:
  3. Recreates the container with the new image
  4. Starts the container automatically
 
-**Example using registry:**
+**Example using a registry:**
 
 <pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
-system
-Trying to pull ghcr.io/kernelkit/curios:edge...
-Getting image source signatures
-Copying blob 07bfba95fe93 done
-Copying config 0cb6059c0f done
-Writing manifest to image destination
-Storing signatures
-0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
-system: not running.
-59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+>> Upgrading container system from image ghcr.io/kernelkit/curios:edge ...
+>> Stopping container ... done
+>> Recreating container ...
+>> Container system upgraded successfully.
+</code></pre>
+
+**Example using an archive served over http:**
+
+<pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
+>> Upgrading container system from image http://192.168.0.1/curios-latest.tar.gz ...
+>> Stopping container ... done
+>> Recreating container ...
+>> Container system upgraded successfully.
 </code></pre>
 
 **Example using local OCI archive:**
@@ -431,39 +439,28 @@ system: not running.
 An OCI archive image can be upgraded in a similar manner. First, get the
 new archive onto the system (see Container Images section above), then,
 provided the `oci-archive:/path/to/archive` format is used in your
-configuration, call the upgrade command:
-
-<pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
-Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
-7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
-</code></pre>
-
-OCI archives can also be fetched from ftp/http/https URLs. In that case,
-the upgrade works the same way as a registry image — Infix downloads the
-new archive and recreates the container.
+configuration, call the upgrade command.  The archive is unpacked again
+only when its contents changed.
 
 ### Embedded Container Images
 
 > [!TIP]
 > Containers running from OCI images embedded in the operating system,
-> e.g., `/lib/oci/mycontainer.tar.gz`, are automatically kept in sync
-> with the Infix system image version.
+> e.g., `oci:/lib/oci/mycontainer`, are always in sync with the Infix
+> system image version.
 >
-> **How it works:** When you build a custom Infix image with embedded OCI
-> archives, those containers will be upgraded whenever you upgrade the
-> Infix operating system itself. At boot, Infix checks if the embedded
-> image has changed and automatically recreates the container if needed.
+> **How it works:** When you build a custom Infix image with embedded
+> images, see `package/curios-httpd` for an example, the image is
+> unpacked at build time into `/lib/oci/NAME/` and the container runs
+> straight from that read-only directory.  Upgrading the Infix system
+> image upgrades the container with it, nothing is copied or checked
+> at boot.
 >
-> **Example:** default builds of Infix include a couple of OCI images
-> for reference, one is `/lib/oci/curios-nftables-v24.11.0.tar.gz`, but
-> there is also a symlink called `curios-nftables-latest.tar.gz` in the
-> same directory, which is what the Infix regression tests use in the
-> image configuration of the container. When the system is upgraded and
-> the embedded image changes, the test containers are automatically
-> recreated with the new version.
->
-> This approach ensures your embedded containers always match your system
-> version without any manual intervention.
+> **Example:** default builds of Infix include a couple of images for
+> reference, one is `/lib/oci/curios-nftables-v25.06.0`, but there is
+> also a symlink called `curios-nftables-latest` in the same directory,
+> which is what the Infix regression tests use in the image
+> configuration of the container.
 
 
 Capabilities
@@ -546,9 +543,9 @@ Currently two types of of container networks are supported:
  - `bridge`: an IP masquerading bridge
 
 In the former the interface is delegated to (moved into) the container,
-while in the latter a VETH pair is automatically created by Podman and
-one end delegated to the container, while the other end is assigned to
-the bridge (see the next section).
+while in the latter a VETH pair is automatically created and one end
+delegated to the container, while the other end is assigned to the
+bridge (see the next section).
 
 > [!TIP]
 > For more information on VETH pairs, see the [Networking Guide][0].
@@ -560,12 +557,10 @@ A container bridge is what most container setups use and users want.
 
 ![IP Masquerading Container Bridge](img/cni-bridge-firewall.svg)
 
-The difference from a regular bridge is that the container runtime fully
-manages them -- connecting containers with automatically created VETH
-pairs (look at the bridge port names) and setting up firewall rules
-between the host and other containers, as well as managing port
-forwarding.  This transparent background management is what makes
-container use seem to be so simple.
+The difference from a regular bridge is that Infix connects containers
+to it with automatically created VETH pairs (look at the bridge port
+names), hands out addresses from its subnet, masquerades traffic leaving
+it and forwards published ports to the containers behind it.
 
 All interface configuration is done in configure context.
 
@@ -601,10 +596,13 @@ set as a `bridge-port` it must be removed from the bridge before being
 given to a container.
 
 The default subnet for a container `bridge` is 172.17.0.0/16, the bridge
-takes the `.1` address and hand out the rest of the range to containers
-in a round-robin like fashion.  A container with this `network` get an
-automatically created VETH pair connection to the bridge and a lot of
-other networking parameters (DNS, default route) are set up.
+takes the `.1` address and hands out the rest of the range to containers
+in order.  A container with this `network` gets an automatically created
+VETH pair connection to the bridge, a default route via the bridge, and
+the host's DNS servers unless overridden.  IP forwarding is enabled on
+the container bridge only; for containers to reach other networks, or
+for published ports to be reachable from them, enable `ipv4 forwarding`
+on the interface facing that network, see [IP Forwarding][ip].
 
 Some of the defaults of a container `bridge` can be changed, e.g.,
 instead of `set container-network type bridge`, above, do:
@@ -805,10 +803,10 @@ created read-writable entity that follows the life of your container.
 </code></pre>
 
 Volumes are persistent across both reboots and upgrades of the base
-image.  They are created by Podman when the container first starts up,
-unlike a regular bind mount it synchronizes with the contents of the
-underlying container image's path at first use.  I.e., "bind-mount, if
-empty: then rsync".
+image.  They are created in `/var/lib/containers/volumes` when the
+container first starts up, unlike a regular bind mount a volume is
+initialized with the contents of the underlying container image's path
+at first use.
 
 > [!NOTE]
 > Infix support named volumes (only), and it is not possible to share a
@@ -1109,18 +1107,18 @@ Depending on your needs, here is a checklist:
    - BusyBox init, a classic most embedded developers know, but read on ...
  - a system container only need the bare necessities of a system bringup
    - E.g., BusyBox's init, [but not everything][15]
-   - Some of the networking is set up by Podman and CNI for you, but
-     you may want to run a DHCP client?
+   - Addresses and routes are set up by Infix for you, but you may want
+     to run a DHCP client?
    - Do *not* rename interfaces inside the container, use the dedicated
      `interface_name` option in the configuration instead
-   - Remember, Podman provides a `tmpfs` for all critical system paths:
+   - Remember, Infix provides a `tmpfs` for all critical system paths:
      `/dev`, `/dev/shm`, `/run`, `/tmp`, and `/var/tmp`, so you don't
      need to clean or set up any of these mount points
 
 Examples using `tini` and BusyBox init are available from the KernelKit
 [curiOS project][14].  It is a small Buildroot based container image
 builder that generates OCI compatible image tarballs without any tools
-from Docker or Podman -- ready-made images exist for testing on both
+from Docker -- ready-made images exist for testing on both
 AMD64 and ARM64 targets, as well as `docker pull` images and and OCI
 tarballs with SHA256 checksums for integrity checking.
 
@@ -1146,4 +1144,6 @@ Container Image](#embedded-container-images) (above).
 [15]:     https://github.com/kernelkit/curiOS/blob/2e4748f65e356b2c117f586cd9420d7ba66f79d5/board/system/rootfs/etc/inittab
 [tini]:   https://github.com/krallin/tini
 [nginx]:  https://hub.docker.com/_/nginx
-[podman]: https://podman.io
+[crun]:   https://github.com/containers/crun
+[ip]:     ip.md
+[Volume Management]: #volume-management
