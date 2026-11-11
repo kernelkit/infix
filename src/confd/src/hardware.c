@@ -1857,7 +1857,6 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node  *difs = NULL, *dif = NULL;
-	int country_changed = 0;
 	int rc = SR_ERR_OK;
 	int gps_changed = 0;
 	int modem_changed = 0;
@@ -1875,20 +1874,12 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	/*
 	 * The country code is one setting for every radio.  Apply the
 	 * regulatory domain here, not from hostapd, so a radio without an
-	 * interface is in the right domain too.  Every radio's hostapd
-	 * config carries the code, so visit them all when it changes.
+	 * interface is in the right domain too.
 	 */
-	if (lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code")) {
-		country_changed = 1;
-		if (event == SR_EV_DONE)
-			systemf("iw reg set %s", wifi_country_code(config) ?: "00");
-	}
+	if (event == SR_EV_DONE && lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code"))
+		systemf("iw reg set %s", wifi_country_code(config) ?: "00");
 
-	if (country_changed)
-		difs = lydx_get_descendant(config, "hardware", "component", NULL);
-	else
-		difs = lydx_get_descendant(diff, "hardware", "component", NULL);
-
+	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		struct lyd_node *state, *cif;
 		const char *admin_state;
@@ -1916,10 +1907,6 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		}
 
 		class = lydx_get_cattr(cif, "class");
-		if (country_changed && strcmp(class, "infix-hardware:wifi") &&
-		    !lydx_get_xpathf(diff, XPATH_BASE_ "/component[name='%s']", name))
-			continue;
-
 		/* Handle USB components */
 		if (!strcmp(class, "infix-hardware:usb")) {
 			if (event != SR_EV_DONE)
