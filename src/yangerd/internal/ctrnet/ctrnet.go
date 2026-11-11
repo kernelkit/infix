@@ -1,26 +1,25 @@
 // Package ctrnet reports the host interfaces that have been moved into
-// a podman container's network namespace, under the name they have in
-// the running configuration.
+// a container's network namespace, under the name they have in the
+// running configuration.
 //
-// When confd hands an interface to a container, podman moves it into the
-// container's netns, renames it (eth0, eth1, ...) and keeps the original
-// name in ifalias.  The host side no longer sees it, so the regular
-// netlink monitor cannot report it.  Collect finds those interfaces by
-// walking every named netns and matching ifalias against the networks
-// podman lists for its containers, and builds an ietf-interfaces entry
-// for each: name is the configured (ifalias) name, description is the
-// in-container name, plus "infix-interfaces:container-network" with the
-// list of containers using it.  Only the common part of an interface is
-// emitted (type, status, phys-address, statistics, addresses), as the
-// Python yanger did; augments such as veth peer refer to the host view
-// and are left out.
+// When confd hands an interface to a container, ixcont moves it into the
+// container's netns, /run/netns/<container>, renames it (eth0, eth1, ...)
+// and keeps the original name in ifalias.  The host side no longer sees
+// it, so the regular netlink monitor cannot report it.  Collect finds
+// those interfaces by walking every named netns and matching ifalias
+// against the networks the container state files list, and builds an
+// ietf-interfaces entry for each: name is the configured (ifalias) name,
+// description is the in-container name, plus
+// "infix-interfaces:container-network" with the list of containers using
+// it.  Only the common part of an interface is emitted (type, status,
+// phys-address, statistics, addresses), as the Python yanger did;
+// augments such as veth peer refer to the host view and are left out.
 //
 // Collect is a pure function over command output and does not touch the
 // tree.  It runs after every container change and every link or address
 // event in a container netns, see Watcher, and the monitor appends what
 // it returns to the host's interfaces, where by construction those names
-// are absent.  A failure is returned rather than logged; with no podman
-// on the box the caller should treat it as "no container interfaces".
+// are absent.  A failure is returned rather than logged.
 package ctrnet
 
 import (
@@ -45,15 +44,12 @@ var commonKeys = []string{
 
 // Collect returns one ietf-interfaces interface object per container
 // network whose interface was found in a netns, keyed by the configured
-// interface name, and the netns they were found in.  It runs `podman ps -a --format json` (all containers,
-// like the Python yanger, so a stopped container still shows up in the
-// containers list of a network it shares), `ip -j netns list` and per
-// netns `ip -n <ns> -s -d -j link show` and `ip -n <ns> -j addr show`.
-func Collect(ctx context.Context, run RunFunc) (map[string]json.RawMessage, []string, error) {
-	networks, err := podmanNetworks(ctx, run)
-	if err != nil {
-		return nil, nil, err
-	}
+// interface name, and the netns they were found in.  networks maps each
+// container network to the containers using it, from the state files
+// (all containers, so a stopped container still shows up in the list of
+// a network it shares).  It runs `ip -j netns list` and per netns
+// `ip -n <ns> -s -d -j link show` and `ip -n <ns> -j addr show`.
+func Collect(ctx context.Context, run RunFunc, networks map[string][]string) (map[string]json.RawMessage, []string, error) {
 	if len(networks) == 0 {
 		return map[string]json.RawMessage{}, nil, nil
 	}
@@ -127,40 +123,6 @@ func Collect(ctx context.Context, run RunFunc) (map[string]json.RawMessage, []st
 	return result, found, nil
 }
 
-// podmanNetworks maps each network name to the containers using it, in
-// podman's listing order and without duplicates.
-func podmanNetworks(ctx context.Context, run RunFunc) (map[string][]string, error) {
-	out, err := run(ctx, "podman", "ps", "-a", "--format", "json")
-	if err != nil {
-		return nil, fmt.Errorf("podman ps: %w", err)
-	}
-
-	var containers []struct {
-		Names    []string `json:"Names"`
-		Networks []string `json:"Networks"`
-	}
-	if len(out) > 0 {
-		if err := json.Unmarshal(out, &containers); err != nil {
-			return nil, fmt.Errorf("podman ps: parse: %w", err)
-		}
-	}
-
-	networks := map[string][]string{}
-	for _, c := range containers {
-		name := "Unknown"
-		if len(c.Names) > 0 {
-			name = c.Names[0]
-		}
-		for _, net := range c.Networks {
-			if net == "" || contains(networks[net], name) {
-				continue
-			}
-			networks[net] = append(networks[net], name)
-		}
-	}
-	return networks, nil
-}
-
 // containerInterface builds the interface entry for one link found in a
 // container netns.  linkRow is the single `ip link` object, addrs the
 // netns' `ip addr show` array.
@@ -185,7 +147,7 @@ func containerInterface(linkRow, addrs json.RawMessage, name string, containers 
 		}
 	}
 
-	// podman keeps the configured name in ifalias and renames the
+	// ixcont keeps the configured name in ifalias and renames the
 	// interface; the user knows it by the configured name, so swap
 	// them back.
 	entry["description"] = full["name"]

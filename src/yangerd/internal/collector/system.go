@@ -96,6 +96,14 @@ func toInt(v interface{}) int {
 	return numconv.IntOrZero(v)
 }
 
+func asString(v interface{}) string {
+	s, ok := v.(string)
+	if ok {
+		return s
+	}
+	return ""
+}
+
 func zeroIfNil(v interface{}) interface{} {
 	if v == nil {
 		return 0
