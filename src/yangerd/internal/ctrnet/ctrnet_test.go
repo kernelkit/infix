@@ -9,16 +9,17 @@ import (
 	"testing"
 )
 
-const podmanPS = `[
-  {"Names": ["web"], "Networks": ["veth0b", "e3"], "State": "running"},
-  {"Names": ["db"], "Networks": ["veth0b"], "State": "running"},
-  {"Names": ["old"], "Networks": ["veth0b", "e9"], "State": "exited"},
-  {"Networks": ["e3"]}
-]`
+// From the state files: web and db run, old has exited but still lists
+// its networks, and a container without a name shows up as Unknown.
+var networks = map[string][]string{
+	"veth0b": {"web", "db", "old"},
+	"e3":     {"web", "Unknown"},
+	"e9":     {"old"},
+}
 
 const netnsList = `[{"name": "netns-1111"}, {"name": "netns-2222"}]`
 
-// e3 and veth0b were renamed eth0/eth1 by podman; eth2 has an alias
+// e3 and veth0b were renamed eth0/eth1 by ixcont; eth2 has an alias
 // nobody asked for and lo has none.
 const ns1Links = `[
   {"ifindex": 1, "ifname": "lo", "flags": ["LOOPBACK", "UP"], "link_type": "loopback", "operstate": "UNKNOWN"},
@@ -60,7 +61,6 @@ func (f *fakeRunner) run(_ context.Context, name string, args ...string) ([]byte
 func newRunner() *fakeRunner {
 	return &fakeRunner{
 		out: map[string]string{
-			"podman ps -a --format json":          podmanPS,
 			"ip -j netns list":                    netnsList,
 			"ip -n netns-1111 -s -d -j link show": ns1Links,
 			"ip -n netns-1111 -j addr show":       ns1Addrs,
@@ -82,7 +82,7 @@ func decode(t *testing.T, raw json.RawMessage) map[string]any {
 
 func TestCollect(t *testing.T) {
 	r := newRunner()
-	got, namespaces, err := Collect(context.Background(), r.run)
+	got, namespaces, err := Collect(context.Background(), r.run, networks)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
@@ -159,26 +159,16 @@ func TestCollect(t *testing.T) {
 
 func TestCollectNoContainers(t *testing.T) {
 	r := newRunner()
-	r.out["podman ps -a --format json"] = `[]`
 
-	got, _, err := Collect(context.Background(), r.run)
+	got, _, err := Collect(context.Background(), r.run, map[string][]string{})
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
 	if len(got) != 0 {
 		t.Fatalf("got %v, want empty", got)
 	}
-	if len(r.calls) != 1 {
+	if len(r.calls) != 0 {
 		t.Fatalf("ip must not run without container networks: %v", r.calls)
-	}
-}
-
-func TestCollectPodmanMissing(t *testing.T) {
-	r := newRunner()
-	r.errs["podman ps -a --format json"] = errors.New("executable file not found")
-
-	if _, _, err := Collect(context.Background(), r.run); err == nil {
-		t.Fatal("expected an error when podman cannot run")
 	}
 }
 
@@ -186,7 +176,7 @@ func TestCollectNetnsVanished(t *testing.T) {
 	r := newRunner()
 	r.errs["ip -n netns-1111 -s -d -j link show"] = errors.New("Cannot open network namespace")
 
-	got, _, err := Collect(context.Background(), r.run)
+	got, _, err := Collect(context.Background(), r.run, networks)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
@@ -199,7 +189,7 @@ func TestCollectEmptyNetnsList(t *testing.T) {
 	r := newRunner()
 	r.out["ip -j netns list"] = ``
 
-	got, _, err := Collect(context.Background(), r.run)
+	got, _, err := Collect(context.Background(), r.run, networks)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}

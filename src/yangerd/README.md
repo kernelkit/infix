@@ -27,8 +27,8 @@ It only knows the JSON its consumers expect.
 
 **Reactive first.**  A value with an event source is updated when the
 event fires, never on a timer.  Netlink, nl80211, ZAPI, D-Bus signals,
-wpa_supplicant and hostapd attach events, ptp4l subscriptions, inotify
-and `podman events` all push.  Between events a monitor does nothing, and a GET returns
+wpa_supplicant and hostapd attach events, ptp4l subscriptions and inotify
+all push.  Between events a monitor does nothing, and a GET returns
 what the last event left.  An event names what changed, so the handler
 refreshes that row, not the whole table; the full read is for start and
 reconnect.
@@ -99,7 +99,7 @@ build vendors them from `go.sum`.
 | | byte counters | on demand | sysfs `statistics/`, the link row only has those of the last link event |
 | | modem bearer | event | ModemManager D-Bus signals |
 | | bridge IGMP/MLD querier | on demand | mcd IPC socket, `show interfaces json` |
-| | interfaces in container network namespaces | event | podman events and netlink in each container netns, re-read with `podman ps` and `ip -n` |
+| | interfaces in container network namespaces | event | ixcont state files and netlink in each container netns, re-read with `ip -n` |
 | `ietf-routing:routing` | `ribs` | event | zebra ZAPI redistribution, or rtnetlink route events without FRR |
 | | `control-plane-protocols` | poll 10 s | ospfd, ripd, bfdd vty sockets; the route tables are the `get-routes` actions in confd |
 | | forwarding per interface | event | inotify on `/proc/sys/net/*/conf/*/forwarding` |
@@ -121,7 +121,7 @@ build vendors them from `go.sum`.
 | `ieee1588-ptp-tt:ptp` | port state, time status, parent | event | ptp4l subscription, near-static sets refreshed every 30 s |
 | | the set of ptp4l instances | poll 10 s | configuration files |
 | `ieee802-dot1ab-lldp:lldp` | neighbours | event | `lldpcli watch` |
-| `infix-containers:containers` | containers | event | `podman events`, re-read with `podman ps` |
+| `infix-containers:containers` | containers | event | inotify on `/run/containers`, re-read from ixcont state, `crun state` and cgroups |
 | `infix-dhcp-server:dhcp-server` | leases | event | dnsmasq D-Bus signals |
 | `infix-firewall:firewall` | zones, policies, services | event | firewalld D-Bus signals |
 | | address-set entries | on demand | nft, only sets with timeouts |

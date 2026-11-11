@@ -274,12 +274,11 @@ func main() {
 			}
 			for {
 				cctx, ccancel := context.WithTimeout(ctx, ctrnetTimeout)
-				ifaces, namespaces, err := ctrnet.Collect(cctx, cmd.Run)
+				ifaces, namespaces, err := ctrnet.Collect(cctx, cmd.Run, collector.ContainerNetworks(fs))
 				ccancel()
 				if err != nil {
-					// Keep what we have: podman busy with confd
-					// is transient, and without podman there is
-					// nothing staged to begin with.
+					// Keep what we have: a netns vanishing under
+					// us is transient.
 					slogLog.Debug("container network interfaces", "err", err)
 				} else {
 					nlmon.SetContainerInterfaces(ifaces)
@@ -434,8 +433,8 @@ func main() {
 			slogLog.Warn("fswatcher dns watch failed", "path", path, "err", err)
 		}
 	}
-	// Container operational data is handled by containermonitor (a
-	// `podman events` stream), not the fswatcher.
+	// Container operational data is handled by containermonitor (inotify
+	// on the ixcont state files), not the fswatcher.
 	fsw.InitialRead()
 	spawn("fswatcher", fsw.Run)
 
@@ -509,7 +508,7 @@ func slogLevel(s string) slog.Level {
 const (
 	routingTreeKey = "ietf-routing:routing"
 	pidFile        = "/run/yangerd.pid"
-	// ctrnetTimeout bounds one walk of podman and the named netns,
+	// ctrnetTimeout bounds one walk of the named netns,
 	// ctrnetSettle collects the events of a burst into one walk.
 	ctrnetTimeout = 30 * time.Second
 	ctrnetSettle  = 200 * time.Millisecond
