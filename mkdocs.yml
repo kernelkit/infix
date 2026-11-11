@@ -41,6 +41,7 @@ nav:
       - Routing: routing.md
       - Firewall Configuration: firewall.md
       - Quality of Service: qos.md
+      - Time-Sensitive Networking: tsn.md
       - RMON Counters: eth-counters.md
       - Tunneling (L2/L3): tunnels.md
       - VPN Tunnels:
