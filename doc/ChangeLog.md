@@ -134,6 +134,9 @@ All notable changes to the project are documented in this file.
 - WebUI: every confirmation now uses the same in-page dialog.  Before,
   all but Apply and Abort used the browser's own box, and one dismissed
   with Esc could run along with the next confirmed action
+- #1779: the build failed to download U-Boot, needed by most images,
+  since the U-Boot project shut down its old FTP server.  U-Boot is now
+  fetched from the project's new download site
 
 
 [v26.10.0][] - 2026-10-30
