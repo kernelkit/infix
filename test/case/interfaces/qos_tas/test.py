@@ -2,18 +2,25 @@
 """
 QoS Time-Aware Shaper
 
-Configure an IEEE 802.1Qbv gate control list on a port: a 100 µs cycle
-with the top class alone for 20 µs, the top class and the class two
-below it for 20 µs, and every other class for the remaining 60 µs.  On
-a port with eight classes that is class 7, then classes 7 and 5.  The port must
-run the list and report it back as the operational control list, with
-the cycle and base time as given.
+A time-aware shaper opens and closes a gate in front of each traffic
+class on a fixed, repeating timetable, the gate control list of IEEE
+802.1Qbv, so each kind of traffic has the port to itself at set times.
+This test configures a list on a port and checks that the port runs it
+and reports it back.  It sends no traffic: the TSN tests check the
+timing on the wire.
 
-The gates exclude what cannot run under them: a port egress shaper,
-since the schedule takes the root, and weighted classes, since gated
-classes are served strictly.  Both are rejected.  A port with fewer
-transmit queues than traffic classes rejects the schedule instead of
-running it, which is checked.
+.The gate control list of the test
+image::schedule.svg[align=center, scaledwidth=90%]
+
+The list repeats every 100 µs: the top class alone for 20 µs, the top
+class and the class two below it for 20 µs, and every other class for
+the remaining 60 µs.  The port must run the list and report it back as
+the operational control list, with the cycle and base time as given.
+
+Settings that cannot run under gates must be rejected: a port egress
+shaper, a weighted class, since gated classes are served strictly, an
+empty list, and a list on a port with fewer transmit queues than
+traffic classes.
 """
 import infamy
 import infamy.qos as qos
