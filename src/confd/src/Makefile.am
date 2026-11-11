@@ -81,7 +81,8 @@ confd_plugin_la_SOURCES =			\
 	meta.c					\
 	services.c				\
 	system-software.c 			\
-	hardware.c
+	hardware.c		hardware.h	\
+	  hw-usb.c
 
 if CONTAINERS
 confd_plugin_la_SOURCES += containers.c cni.c cni.h
