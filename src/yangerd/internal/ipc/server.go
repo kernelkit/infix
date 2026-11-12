@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -47,12 +48,10 @@ func (s *Server) Listen(path string) error {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	old := syscall.Umask(0177)
 	ln, err := net.Listen("unix", path)
+	syscall.Umask(old)
 	if err != nil {
-		return err
-	}
-	if err := os.Chmod(path, 0660); err != nil {
-		ln.Close()
 		return err
 	}
 	s.listener = ln

@@ -138,3 +138,20 @@ func serverRoundTrip(t *testing.T, tr *tree.Tree, ready bool, req *Request) *Res
 
 	return resp
 }
+
+func TestServerSocketIsOwnerOnly(t *testing.T) {
+	sockPath := filepath.Join(t.TempDir(), "yangerd.sock")
+	srv := NewServer(tree.New(), &atomic.Bool{})
+	if err := srv.Listen(sockPath); err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer srv.listener.Close()
+
+	fi, err := os.Stat(sockPath)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0600 {
+		t.Fatalf("socket mode %o, want 600", perm)
+	}
+}
