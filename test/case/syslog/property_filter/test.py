@@ -105,12 +105,12 @@ with infamy.Test() as test:
             }
         })
 
-        until(lambda: tgtssh.runsh("test -f /var/log/baseline").returncode == 0, attempts=10)
+        until(lambda: tgtssh.runsh("test -f /var/log/baseline").returncode == 0)
 
     with test.step("Send test messages"):
         for tag, msg in TEST_MESSAGES:
             target.log(f"{msg} {TOKEN}", severity="info", app_name=tag)
-        until(lambda: count_lines(tgtssh, "baseline", TEST_MESSAGES[-1][1]), attempts=10)
+        until(lambda: count_lines(tgtssh, "baseline", TEST_MESSAGES[-1][1]))
 
     with test.step("Verify myapp log contains only myapp messages"):
         count = count_lines(tgtssh, "myapp", "myapp")

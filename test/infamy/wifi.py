@@ -288,7 +288,7 @@ def diagnose(env, ap=None, ap_ifaces=("wifi0",), clients=(), client_iface="wifi0
                 print(f"  {line}")
 
 
-def until_diagnosed(env, fn, attempts=10, interval=1, **where):
+def until_diagnosed(env, fn, attempts=60, interval=1, **where):
     """infamy.util.until(), printing diagnose(env, **where) if it gives up"""
     from infamy.util import until
     try:

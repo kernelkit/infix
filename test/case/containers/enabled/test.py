@@ -62,18 +62,18 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     with test.step("Disable container"):
         set_container_enabled(target, NAME, False)
 
     with test.step("Verify container has stopped"):
-        until(lambda: not c.running(NAME), attempts=60)
+        until(lambda: not c.running(NAME))
 
     with test.step("Re-enable container"):
         set_container_enabled(target, NAME, True)
 
     with test.step("Verify container has started again"):
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     test.succeed()

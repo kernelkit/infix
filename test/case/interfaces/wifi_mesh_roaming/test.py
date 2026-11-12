@@ -135,7 +135,7 @@ with infamy.Test() as test:
         for name, dut in gws:
             until(lambda dut=dut, mesh_mac=mesh_macs[name]:
                   wifi.mesh_peer_macs(dut) == set(mesh_macs.values()) - {mesh_mac},
-                  attempts=60, interval=2)
+                  interval=2)
 
     with test.step("Verify each node reports mesh-id 'backhaul' with forwarding enabled"):
         for name, dut in gws:
@@ -145,7 +145,7 @@ with infamy.Test() as test:
 
     with test.step("Verify the client associates to the 'campus' SSID"):
         wifi.until_diagnosed(env, lambda: wifi.associated(client, SSID),
-                             attempts=60, interval=2, ap=("gw1", "gw2", "gw3"),
+                             interval=2, ap=("gw1", "gw2", "gw3"),
                              ap_ifaces=("wifi1",), clients=("client",))
 
     # The client reports the BSSID it is on; with all three APs sharing the
@@ -157,7 +157,7 @@ with infamy.Test() as test:
         return bssid if bssid in aps and bssid not in not_on else None
 
     with test.step("Verify the client is connected to one of the campus APs"):
-        first_bssid = until(on_campus_ap, attempts=60, interval=2)
+        first_bssid = until(on_campus_ap, interval=2)
         first_ap, first_dut = aps[first_bssid]
         print(f"client is on {first_ap} ({first_bssid})")
 
@@ -176,7 +176,7 @@ with infamy.Test() as test:
                 return False
 
         with test.step("Verify the client is reachable across the mesh"):
-            until(lambda: reaches(CLIENT_IP), attempts=10, interval=2)
+            until(lambda: reaches(CLIENT_IP), interval=2)
 
         with test.step("Take down the client's current AP to force a roam"):
             first_dut.put_config_dicts({"ietf-interfaces": {"interfaces": {
@@ -211,7 +211,7 @@ with infamy.Test() as test:
         with test.step("Verify the client was asked to move, given candidates, and roamed without disconnecting"):
             def log():
                 return clientsh.runsh(f"tail -n +{mark + 1} /var/log/syslog").stdout
-            until(lambda: "Disassociation Imminent" in log(), attempts=10, interval=1)
+            until(lambda: "Disassociation Imminent" in log(), interval=1)
             assert "Preferred List Available" in log(), log()
             assert "CTRL-EVENT-DISCONNECTED" not in log(), log()
 

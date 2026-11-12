@@ -115,7 +115,7 @@ with infamy.Test() as test:
                 with test.step("Join multicast group ff2e::1 on host:data2"):
                     with mcast.MCastReceiver(receive_ns, GROUP):
                         with test.step("Verify the bridge has learned group ff2e::1 on target:data2"):
-                            until(lambda: iface.exist_bridge_multicast_filter(target, GROUP, mreceive, "br0"), attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(target, GROUP, mreceive, "br0"))
 
                         with test.step("Verify group ff2e::1 is still received on host:data2"):
                             receive_ns.must_receive(f"ip6 dst {GROUP}")

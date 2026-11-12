@@ -89,13 +89,13 @@ with infamy.Test() as test:
         )
 
     with test.step("Verify the station associates to the ap over the wifi link"):
-        until(lambda: wifi.associated(station, SSID), attempts=60, interval=2)
+        until(lambda: wifi.associated(station, SSID), interval=2)
 
     with test.step("Verify the station's wifi0 operational status is up"):
         until(lambda: iface.is_oper_up(station, "wifi0"), attempts=30)
 
     with test.step("Verify the station leases its address from the ap over wifi"):
         until(lambda: iface.address_exist(station, "wifi0", LEASE),
-              attempts=60, interval=2)
+              interval=2)
 
     test.succeed()

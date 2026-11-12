@@ -130,13 +130,13 @@ with infamy.Test() as test:
                 with test.step("Join multicast group 224.1.1.1 on host:data3"):
                     with mcast.MCastReceiver(receive_ns, "224.1.1.1"):
                         with test.step("Verify dut3 has learned group 224.1.1.1 on dut3:data"):
-                            until(lambda: iface.exist_bridge_multicast_filter(dut3, "224.1.1.1", d3data, "br0"), attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(dut3, "224.1.1.1", d3data, "br0"))
 
                         with test.step("Verify dut2 has learned group 224.1.1.1 on dut2:east"):
-                            until(lambda: iface.exist_bridge_multicast_filter(dut2, "224.1.1.1", d2east, "br0"), attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(dut2, "224.1.1.1", d2east, "br0"))
 
                         with test.step("Verify dut1 has learned group 224.1.1.1 on dut1:link"):
-                            until(lambda: iface.exist_bridge_multicast_filter(dut1, "224.1.1.1", d1link, "br0"), attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(dut1, "224.1.1.1", d1link, "br0"))
 
                         with test.step("Verify group 224.1.1.1 is still received on host:data3"):
                             receive_ns.must_receive("ip dst 224.1.1.1")

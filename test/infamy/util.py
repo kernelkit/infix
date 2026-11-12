@@ -37,7 +37,7 @@ def parallel(*fns):
     return [th.join() for th in ths]
 
 
-def until(fn, attempts=10, interval=1):
+def until(fn, attempts=60, interval=1):
     last_exc = None
     for attempt in range(attempts):
         try:

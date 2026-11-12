@@ -104,8 +104,7 @@ with infamy.Test() as test:
                 # server_source_synced.  iburst + makestep take 10-20 s,
                 # the rest of the budget is only used when broken
                 try:
-                    until(lambda: ntp.server_source_synced(srv2, ips["srv1"]),
-                          attempts=60)
+                    until(lambda: ntp.server_source_synced(srv2, ips["srv1"]))
                 except Exception:
                     print("DEBUG: srv2 did not converge on srv1. Associations:")
                     for assoc in ntp.server_get_associations(srv2):

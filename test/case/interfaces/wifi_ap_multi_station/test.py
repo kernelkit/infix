@@ -109,7 +109,7 @@ with infamy.Test() as test:
         with test.step("Verify the station associates to the ap over the wifi link"):
             print(f"Verifying {name}")
             wifi.until_diagnosed(env, lambda dut=dut: wifi.associated(dut, SSID),
-                                 attempts=60, interval=2, ap="ap", clients=(name,))
+                                 interval=2, ap="ap", clients=(name,))
 
     for name, dut in stations:
         with test.step("Verify the station's wifi0 operational status is up"):
@@ -119,7 +119,7 @@ with infamy.Test() as test:
     for name, dut in stations:
         with test.step("Verify the station leases an address from the ap over wifi"):
             print(f"Verifying {name}")
-            wifi.until_diagnosed(env, lambda dut=dut: leased(dut), attempts=60, interval=2,
+            wifi.until_diagnosed(env, lambda dut=dut: leased(dut), interval=2,
                                  ap="ap", clients=(name,))
 
     test.succeed()

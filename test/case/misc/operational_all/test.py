@@ -192,21 +192,21 @@ with infamy.Test() as test:
     with test.step("Verify operational interfaces match the test-config"):
         def check(name, dut):
             want = configured_interfaces(dut)
-            until(lambda: interfaces_match(name, dut, want), attempts=60)
+            until(lambda: interfaces_match(name, dut, want))
 
         parallel(*(lambda n=name, d=dut: check(n, d) for name, dut in duts.items()))
 
     with test.step("Verify operational addresses on each interface match the test-config"):
         def check_addresses(name, dut):
             want = configured_addresses(dut)
-            until(lambda: addresses_match(name, dut, want), attempts=60)
+            until(lambda: addresses_match(name, dut, want))
 
         parallel(*(lambda n=name, d=dut: check_addresses(n, d) for name, dut in duts.items()))
 
     with test.step("Verify the routing tables hold only kernel and connected routes for configured addresses"):
         def check_routes(name, dut):
             nets = configured_networks(configured_addresses(dut))
-            until(lambda: routes_clean(name, dut, nets), attempts=60)
+            until(lambda: routes_clean(name, dut, nets))
 
         parallel(*(lambda n=name, d=dut: check_routes(n, d) for name, dut in duts.items()))
 

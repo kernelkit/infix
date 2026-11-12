@@ -96,7 +96,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container 'web-br0-veth' has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     hport = env["host"]["data"]
 
@@ -105,7 +105,7 @@ with infamy.Test() as test:
         with test.step("Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2"):
             ns.must_reach(DUTIP)
         with test.step("Verify container 'web-br0-veth' is reachable on http://10.0.0.2:91"):
-            until(lambda: MESG in ns.call(lambda: curl(URL)), attempts=10)
+            until(lambda: MESG in ns.call(lambda: curl(URL)))
 
     with test.step("Remove container and VETH pair, verify clean teardown"):
         # Regression test for #941/#1546: removing a veth pair with one end

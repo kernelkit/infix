@@ -97,8 +97,8 @@ with infamy.Test() as test:
         )
 
     with test.step("Verify initial election: alpha is grandmaster, beta is time receiver"):
-        parallel(lambda: until(lambda: ptp.is_own_gm(alpha), attempts=60),
-                 lambda: until(lambda: ptp.is_time_receiver(beta), attempts=60))
+        parallel(lambda: until(lambda: ptp.is_own_gm(alpha)),
+                 lambda: until(lambda: ptp.is_time_receiver(beta)))
 
     with test.step("Reconfigure alpha with worse priority1=200"):
         alpha.put_config_dicts(configure_oc(if_alpha, priority1=200,

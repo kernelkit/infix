@@ -85,12 +85,12 @@ with infamy.Test() as test:
             until(lambda: gps.is_activated(target, "gps1"), attempts=500)
 
         with test.step("Verify both GPS receivers report full position data"):
-            until(lambda: gps.has_position(target, "gps0"), attempts=60)
-            until(lambda: gps.has_position(target, "gps1"), attempts=60)
+            until(lambda: gps.has_position(target, "gps0"))
+            until(lambda: gps.has_position(target, "gps1"))
 
         with test.step("Verify both GPS receivers have a satellite fix"):
-            until(lambda: gps.has_fix(target, "gps0"), attempts=60)
-            until(lambda: gps.has_fix(target, "gps1"), attempts=60)
+            until(lambda: gps.has_fix(target, "gps0"))
+            until(lambda: gps.has_fix(target, "gps1"))
 
         with test.step("Verify gps0 position is near the coordinates"):
             verify_position(target, "gps0")
@@ -111,12 +111,12 @@ with infamy.Test() as test:
             until(lambda: gps.is_activated(target, "gps1"), attempts=500)
 
         with test.step("Verify both GPS receivers report full position data"):
-            until(lambda: gps.has_position(target, "gps0"), attempts=60)
-            until(lambda: gps.has_position(target, "gps1"), attempts=60)
+            until(lambda: gps.has_position(target, "gps0"))
+            until(lambda: gps.has_position(target, "gps1"))
 
         with test.step("Verify both GPS receivers have a satellite fix"):
-            until(lambda: gps.has_fix(target, "gps0"), attempts=60)
-            until(lambda: gps.has_fix(target, "gps1"), attempts=60)
+            until(lambda: gps.has_fix(target, "gps0"))
+            until(lambda: gps.has_fix(target, "gps1"))
 
         with test.step("Verify gps0 position is near the coordinates"):
             verify_position(target, "gps0")

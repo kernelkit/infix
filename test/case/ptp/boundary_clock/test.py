@@ -155,10 +155,10 @@ with infamy.Test() as test:
         )
 
     with test.step("Wait for BC uplink port to become time-receiver"):
-        until(lambda: ptp.is_time_receiver(bc, port_idx=1), attempts=60)
+        until(lambda: ptp.is_time_receiver(bc, port_idx=1))
 
     with test.step("Wait for BC dnlink port to become time-transmitter"):
-        until(lambda: ptp.is_time_transmitter(bc, port_idx=2), attempts=60)
+        until(lambda: ptp.is_time_transmitter(bc, port_idx=2))
 
     with test.step("Wait for boundary clock offset to converge"):
         bc_threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "bc", hops=1)
@@ -170,7 +170,7 @@ with infamy.Test() as test:
                                                ip="192.168.101.2"))
 
     with test.step("Wait for time receiver to reach time-receiver state"):
-        until(lambda: ptp.is_time_receiver(receiver), attempts=60)
+        until(lambda: ptp.is_time_receiver(receiver))
 
     with test.step("Verify time receiver steps-removed equals 2 (one BC hop)"):
         until(lambda: ptp.steps_removed(receiver) == 2, attempts=30)

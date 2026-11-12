@@ -223,7 +223,7 @@ def slow_port(port, until):
             return (link and "LOWER_UP" in link[0].get("flags", [])
                     and scheduler(port.ssh, port.name))
 
-        until(linked, attempts=60)
+        until(linked)
         print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
         return 100_000_000
 

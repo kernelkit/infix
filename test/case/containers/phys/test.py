@@ -60,7 +60,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     hport = env["host"]["data"]
 
@@ -70,7 +70,7 @@ with infamy.Test() as test:
             ns.must_reach(DUTIP)
 
         with test.step("Verify container is reachable on http://10.0.0.2:91"):
-            until(lambda: MESG1 in ns.call(lambda: curl(URL)), attempts=10)
+            until(lambda: MESG1 in ns.call(lambda: curl(URL)))
 
         with test.step("Add a content mount, overriding index.html"):
             # Verify modifying a running container takes, issue #930
@@ -92,6 +92,6 @@ with infamy.Test() as test:
             })
 
         with test.step("Verify server is restarted and returns new content"):
-            until(lambda: MESG2 in ns.call(lambda: curl(URL)), attempts=60)
+            until(lambda: MESG2 in ns.call(lambda: curl(URL)))
 
     test.succeed()

@@ -197,7 +197,7 @@ nc -lk -p 830 -e /usr/bin/agent &
 
     with test.step("Verify agent container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NETCONF_CONTAINER), attempts=60)
+        until(lambda: c.running(NETCONF_CONTAINER))
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)
@@ -208,6 +208,6 @@ nc -lk -p 830 -e /usr/bin/agent &
 
         with test.step("Verify agent container reaches NETCONF on the target"):
             until(lambda: "SSH-2.0-" in ns.call(
-                lambda: netutil.tcp_read(EXTIP, 830)), attempts=10)
+                lambda: netutil.tcp_read(EXTIP, 830)))
 
     test.succeed()

@@ -115,7 +115,7 @@ with infamy.Test() as test:
             other = [dut1, dut2][1 - querier]
             return other["link"] in iface.get_bridge_router_ports(other, "br0", vid)
 
-        until(lambda: router_port_learned(55) and router_port_learned(77), attempts=10)
+        until(lambda: router_port_learned(55) and router_port_learned(77))
 
     with infamy.IsolatedMacVlan(hsend55) as send55_ns, \
          infamy.IsolatedMacVlan(hnojoin77) as nojoin77_ns, \
@@ -147,8 +147,7 @@ with infamy.Test() as test:
                 with test.step("Join multicast group ff2e::55 on host:data21"):
                     with mcast.MCastReceiver(receive55_ns, GROUP55):
                         with test.step("Verify dut2 has learned group ff2e::55 on dut2:data1 in VLAN 55"):
-                            until(lambda: iface.exist_bridge_multicast_filter(dut2, GROUP55, dut2["data1"], "br0", 55),
-                                  attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(dut2, GROUP55, dut2["data1"], "br0", 55))
 
                         with test.step("Verify group ff2e::55 is still received on host:data21, and not in VLAN 77"):
                             parallel(lambda: receive55_ns.must_receive(f"ip6 dst {GROUP55}"),

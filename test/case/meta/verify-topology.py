@@ -124,7 +124,7 @@ with infamy.Test() as test:
             return not missing(uplinks, tables)
 
         try:
-            until(heard, attempts=60)
+            until(heard)
         except Exception:
             pass
         report(uplinks, tables)

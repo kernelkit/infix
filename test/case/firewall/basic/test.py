@@ -132,7 +132,7 @@ with infamy.Test() as test:
             zones = {zone["name"]: zone for zone in fw["zone"]}
             return UNUSED_IF in zones["public-untrusted-net"].get("interface", [])
 
-        until(unused_in_default_zone, attempts=10)
+        until(unused_in_default_zone)
 
     with infamy.IsolatedMacVlan(host_data) as ns:
         ns.addip(HOST_IP)

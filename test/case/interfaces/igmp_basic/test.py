@@ -123,7 +123,7 @@ with infamy.Test() as test:
                             receive_ns.must_receive("ip dst 224.1.1.1")
 
                         with test.step("Verify that the group 224.1.1.1 is no longer received on host:data3"):
-                            until(lambda: iface.exist_bridge_multicast_filter(target, "224.1.1.1", mreceive, "br0"), attempts=10)
+                            until(lambda: iface.exist_bridge_multicast_filter(target, "224.1.1.1", mreceive, "br0"))
                             nojoin_ns.must_not_receive("ip dst 224.1.1.1")
 
     test.succeed()

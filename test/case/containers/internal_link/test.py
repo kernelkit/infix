@@ -86,8 +86,8 @@ with infamy.Test() as test:
 
     c = infamy.Container(target)
     with test.step("Verify both containers have started"):
-        until(lambda: c.running(LEFT), attempts=60)
-        until(lambda: c.running(RIGHT), attempts=60)
+        until(lambda: c.running(LEFT))
+        until(lambda: c.running(RIGHT))
 
     with test.step(f"Verify {LEFT} reaches {RIGHT} over the internal VETH pair"):
         pid = tgtssh.runsh(f"sudo podman inspect --format '{{{{.State.Pid}}}}' {LEFT}").stdout.strip()

@@ -159,13 +159,13 @@ with infamy.Test() as test:
         )
 
     with test.step("Wait for grandmaster port to become time-transmitter"):
-        until(lambda: ptp.is_time_transmitter(gm), attempts=60)
+        until(lambda: ptp.is_time_transmitter(gm))
 
     with test.step("Wait for time receiver to reach time-receiver state"):
-        until(lambda: ptp.is_time_receiver(receiver), attempts=60)
+        until(lambda: ptp.is_time_receiver(receiver))
 
     with test.step("Verify time receiver steps-removed equals 1"):
-        until(lambda: ptp.steps_removed(receiver) == 1, attempts=60)
+        until(lambda: ptp.steps_removed(receiver) == 1)
 
     with test.step("Wait for time receiver offset to converge"):
         until(lambda: ptp.has_converged(receiver, threshold_ns), attempts=180)

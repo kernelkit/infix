@@ -116,7 +116,7 @@ with infamy.Test() as test:
             except Exception:
                 return False
 
-        until(webui_ready, attempts=60, interval=2)
+        until(webui_ready, interval=2)
 
     with test.step("Unauthenticated access to a protected page redirects to /login"):
         anon = WebUI(host, "admin", password)

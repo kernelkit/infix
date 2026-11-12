@@ -129,7 +129,7 @@ with infamy.Test() as test:
         )
 
     with test.step("Verify the client associates to the 'campus' SSID"):
-        until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)
+        until(lambda: wifi.associated(client, SSID), interval=2)
         client_mac = wifi.phys_address(client, "wifi0")
 
     with test.step("Verify band steering put the client on the 5GHz BSS"):
@@ -146,7 +146,7 @@ with infamy.Test() as test:
         until(lambda: iface.is_oper_up(client, "wifi0"), attempts=30)
         until(lambda: iface.address_exist(client, "wifi0", POOL_START) or
               iface.address_exist(client, "wifi0", POOL_END),
-              attempts=60, interval=2)
+              interval=2)
 
     # Stopping the 5GHz BSS in hostapd, without a configuration change,
     # leaves the 2.4GHz BSS running: the client falls back to it and logs
@@ -196,7 +196,7 @@ with infamy.Test() as test:
     with test.step("Enable the 5GHz BSS again"):
         ap.put_config_dicts({"ietf-interfaces": {"interfaces": {
             "interface": [{"name": "wifi1", "enabled": True}]}}})
-        until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
+        until(lambda: iface.is_oper_up(ap, "wifi1"), interval=2)
 
     with test.step("Verify both BSSes are reported as access points with the SSID"):
         until(lambda: wifi.ap_ssid(ap, "wifi1") == SSID, attempts=30, interval=2)

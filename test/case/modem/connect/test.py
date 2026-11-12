@@ -111,7 +111,7 @@ with infamy.Test() as test:
         until(lambda: registered(target), attempts=90)
 
     with test.step("Verify wwan0 is up with the address from the network"):
-        until(lambda: has_address(target), attempts=60)
+        until(lambda: has_address(target))
 
     with test.step("Verify the default route via wwan0"):
         until(lambda: route.ipv4_route_exist(target, "0.0.0.0/0", pref=200),

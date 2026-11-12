@@ -117,14 +117,14 @@ with infamy.Test() as test:
 
     with test.step("Verify wan exists and is configured before the session is up"):
         until(lambda: iface.exist(client, "wan"), attempts=20)
-        until(lambda: iface.get_param(client, "wan", "description") == "Uplink", attempts=10)
+        until(lambda: iface.get_param(client, "wan", "description") == "Uplink")
         if session_up(client):
             test.fail()
 
     with infamy.IsolatedMacVlan(host) as ns:
         with infamy.pppoe.Server(ns, auth="pap", local=SERVER, peer=PEER, dns=DNS) as server:
             with test.step(f"Verify session comes up with PAP, wan gets {PEER}"):
-                until(lambda: session_up(client), attempts=60)
+                until(lambda: session_up(client))
 
             with test.step("Verify default route via wan is static with preference 5"):
                 until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", proto="ietf-routing:static",
@@ -134,7 +134,7 @@ with infamy.Test() as test:
                 until(lambda: peer_dns(client), attempts=20)
 
             with test.step("Verify IPv4 forwarding is enabled on wan"):
-                until(lambda: forwarding(client), attempts=10)
+                until(lambda: forwarding(client))
 
             with infamy.IsolatedMacVlan(hostlan) as lanhost:
                 lanhost.addip(LAN_HOST)
@@ -147,7 +147,7 @@ with infamy.Test() as test:
                     # The server never answers, the SYN is all we need
                     syn = f"import socket; socket.create_connection(('{SERVER}', 80), timeout=2)"
                     until(lambda: lanhost.run(["python3", "-c", syn], capture_output=True) and
-                          server.syn_mss() == CLAMPED_MSS, attempts=10)
+                          server.syn_mss() == CLAMPED_MSS)
 
             with test.step("Stop server, verify wan stays without session and default route"):
                 server.stop()
@@ -159,7 +159,7 @@ with infamy.Test() as test:
 
         with infamy.pppoe.Server(ns, auth="chap", local=SERVER, peer=PEER, dns=DNS):
             with test.step("Restart server with CHAP, verify the client reconnects"):
-                until(lambda: session_up(client), attempts=60)
+                until(lambda: session_up(client))
 
             with test.step("Disable wan, verify the session ends and wan stays"):
                 set_enabled(client, "wan", False)
@@ -175,7 +175,7 @@ with infamy.Test() as test:
                 set_enabled(client, port, False)
                 until(lambda: not session_up(client), attempts=20)
                 set_enabled(client, port, True)
-                until(lambda: session_up(client), attempts=60)
+                until(lambda: session_up(client))
 
             with test.step("Change password to a wrong one, verify the session stays down"):
                 client.put_config_dicts({"ietf-keystore": keystore({"pppoe": "wrong"})})

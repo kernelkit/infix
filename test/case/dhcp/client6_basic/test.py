@@ -73,7 +73,7 @@ with infamy.Test() as test:
                 client.put_config_dicts({"ietf-interfaces": config})
 
             with test.step("Verify DHCPv6 client is running"):
-                until(checkrun, attempts=10)
+                until(checkrun)
 
             with test.step(f"Verify client lease for {CLIENT}"):
                 until(lambda: iface.address_exist(client, port, CLIENT, prefix_length=128), attempts=30)

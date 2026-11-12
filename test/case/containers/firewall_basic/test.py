@@ -182,11 +182,11 @@ table ip nat {
 
     with test.step("Verify firewall container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NFTNM), attempts=60)
+        until(lambda: c.running(NFTNM))
 
     with test.step("Verify web container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(WEBNM), attempts=60)
+        until(lambda: c.running(WEBNM))
 
     with infamy.IsolatedMacVlan(hport) as ns:
         MESG = "tiny web server from the curiOS docker"
