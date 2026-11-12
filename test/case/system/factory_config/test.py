@@ -46,7 +46,7 @@ def cleanup(env):
     print("Restoring device to clean test baseline")
     target = env.attach("target", "mgmt", "netconf", test_reset=False)
     target.reboot()
-    if not wait_boot(target, env):
+    if not wait_boot(target, env, probe=True):
         test.fail("Device did not come back while restoring baseline")
 
 with infamy.Test() as test:
@@ -70,10 +70,10 @@ with infamy.Test() as test:
         target.startup_override()
 
     with test.step("Reboot onto the factory config"):
-        target.reboot()
-        if not wait_boot(target, env):
-            test.fail("Device did not boot from factory config")
         test.push_test_cleanup(lambda: cleanup(env))
+        target.reboot()
+        if not wait_boot(target, env, probe=True):
+            test.fail("Device did not boot from factory config")
 
     with test.step("Verify device is usable and not in failure-config"):
         target = env.attach("target", "mgmt", test_reset=False)
