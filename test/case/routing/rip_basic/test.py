@@ -179,13 +179,13 @@ with infamy.Test() as test:
     with test.step(f"Wait for {version} routes to be exchanged"):
         print("Waiting for RIP routes to propagate...")
         # R1 should learn R2's loopback
-        until(lambda: route.route_exist(R1, f"{param['R2lo']}/{plen}", af=af, proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.route_exist(R1, f"{param['R2lo']}/{plen}", af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R1's loopback
-        until(lambda: route.route_exist(R2, f"{param['R1lo']}/{plen}", af=af, proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.route_exist(R2, f"{param['R1lo']}/{plen}", af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R1's static route (redistributed)
-        until(lambda: route.route_exist(R2, f"{param['blackhole']}/{plen}", af=af, proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.route_exist(R2, param["R1net"], af=af, proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.route_exist(R1, param["R2net"], af=af, proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.route_exist(R2, f"{param['blackhole']}/{plen}", af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R2, param["R1net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R1, param["R2net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
 
     with test.step("Read the routes R1 learned with the get-routes action"):
         lo = f"{param['R2lo']}/{plen}"
