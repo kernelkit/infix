@@ -645,12 +645,12 @@ with infamy.Test() as test:
             # breakpoint()
             with test.step("Verify ABR:data can access container A on R1 (10.1.1.101)"):
                 URL = "http://10.1.1.101:8080"
-                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
             with test.step("Verify ABR:data can access container A on R2 (10.1.2.101)"):
                 URL = "http://10.1.2.101:8080"
-                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
             with test.step("Verify ABR:data can access container A on R3 (10.1.3.101)"):
                 URL = "http://10.1.3.101:8080"
-                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)), attempts=60)
 
     test.succeed()

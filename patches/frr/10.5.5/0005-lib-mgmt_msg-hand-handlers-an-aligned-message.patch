@@ -1,7 +1,7 @@
-From 03d5f5fd348f3357a77b0944278339c914bdda96 Mon Sep 17 00:00:00 2001
+From a19c8a656bd7d6cce2692e315d93dd6341866d63 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 4 Oct 2026 15:15:28 +0200
-Subject: [PATCH 5/6] lib: mgmt_msg: hand handlers an aligned message
+Subject: [PATCH 5/7] lib: mgmt_msg: hand handlers an aligned message
 Organization: Wires
 
 mgmt_msg_procbufs() passes handlers a pointer into the receive stream,

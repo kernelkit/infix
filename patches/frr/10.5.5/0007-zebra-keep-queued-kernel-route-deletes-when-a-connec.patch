@@ -1,0 +1,37 @@
+From db200521906d929aada9f9c6151507eba5e1bdea Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Thu, 12 Nov 2026 07:43:38 +0100
+Subject: [PATCH 7/7] zebra: keep queued kernel route deletes when a connected
+ route comes up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+connected_up() drops queued kernel routes for its prefix so that a
+late RTM_NEWROUTE cannot shadow the connected route.  The cleanup also
+dropped a queued delete.  When an address is removed and a link update
+for the interface is handled before the RTM_DELADDR, the address is
+announced once more, the pending RTM_DELROUTE is thrown away and the
+kernel route stays in the RIB after the kernel has removed it.  It then
+wins over any protocol route for the same prefix, which is never
+installed or redistributed.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ zebra/zebra_rib.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index bc8c94b9c7..d6849d8e53 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -4458,7 +4458,7 @@ void rib_meta_queue_early_route_cleanup(const struct prefix *p, int route_type)
+ 	/* Iterate through the early route subqueue */
+ 	for (ALL_LIST_ELEMENTS(zrouter.mq->subq[META_QUEUE_EARLY_ROUTE], node, nnode, ere)) {
+ 		/* Check if this entry matches the prefix and route type */
+-		if (prefix_same(&ere->p, p) && ere->re->type == route_type) {
++		if (!ere->deletion && prefix_same(&ere->p, p) && ere->re->type == route_type) {
+ 			/* Remove from the list */
+ 			list_delete_node(zrouter.mq->subq[META_QUEUE_EARLY_ROUTE], node);
+ 

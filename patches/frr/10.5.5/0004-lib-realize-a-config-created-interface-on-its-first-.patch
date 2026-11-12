@@ -1,7 +1,7 @@
-From 78c7b88c97fa62b1a6e7a8baf1a9bd67117debc9 Mon Sep 17 00:00:00 2001
+From aa98de37fbb285f2d8adb32fe13076d059fa37b4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 29 Sep 2026 20:46:52 +0200
-Subject: [PATCH 4/6] lib: realize a config-created interface on its first
+Subject: [PATCH 4/7] lib: realize a config-created interface on its first
  state update
 Organization: Wires
 

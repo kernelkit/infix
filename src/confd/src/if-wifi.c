@@ -807,3 +807,119 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 
 	return SR_ERR_OK;
 }
+
+#define IFACE "/ietf-interfaces:interfaces/interface"
+#define RADIO "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio"
+
+/* True if dif is a WiFi interface, cif is set to its entry in config, if any */
+static bool wifi_iface(struct dep *d, struct lyd_node *dif, struct lyd_node **cif)
+{
+	enum iftype type;
+
+	*cif = lydx_get_xpathf(d->config, IFACE "[name='%s']", lydx_get_cattr(dif, "name"));
+
+	type = iftype_from_iface(dif);
+	if (type == IFT_UNKNOWN)
+		type = iftype_from_iface(*cif);
+
+	return type == IFT_WIFI;
+}
+
+/* A WDS link has no radio of its own, it follows its access point */
+static const char *wifi_radio(struct dep *d, const char *ifname)
+{
+	struct lyd_node *radio, *ap;
+
+	radio = lydx_get_xpathf(d->config, IFACE "[name='%s']/infix-interfaces:wifi/radio", ifname);
+	if (!radio) {
+		ap = lydx_get_xpathf(d->config, IFACE "[name='%s']/infix-interfaces:wifi/wds-link/access-point", ifname);
+		if (ap)
+			radio = lydx_get_xpathf(d->config, IFACE "[name='%s']/infix-interfaces:wifi/radio",
+						lyd_get_value(ap));
+	}
+
+	return radio ? lyd_get_value(radio) : NULL;
+}
+
+/*
+ * A derived address is the interface's position on its radio, see
+ * wifi_default_addr(), so adding or removing one moves the others.
+ * Flag those without a fixed address the way a custom-phys-address
+ * change is, netdag then recreates them.  A deleted interface is only
+ * in the diff, so take the radio from there.
+ */
+static void wifi_dep_siblings(struct dep *d)
+{
+	struct lyd_node *difs, *dif, *cif;
+
+	difs = lydx_get_descendant(*d->diff, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(difs, dif, "interface") {
+		const char *ifname = lydx_get_cattr(dif, "name");
+		enum lydx_op op = lydx_get_op(dif);
+		struct lyd_node *radio;
+		struct ly_set *ifaces;
+		uint32_t i;
+
+		if (op != LYDX_OP_CREATE && op != LYDX_OP_DELETE)
+			continue;
+
+		radio = lydx_get_descendant(lyd_child(dif), "wifi", "radio", NULL);
+		if (!radio || !wifi_iface(d, dif, &cif))
+			continue;
+
+		ifaces = lydx_find_xpathf(d->config, IFACE "[infix-interfaces:wifi/radio='%s']",
+					  lyd_get_value(radio));
+		for (i = 0; ifaces && i < ifaces->count; i++) {
+			const char *name = lydx_get_cattr(ifaces->dnodes[i], "name");
+			char mac[18];
+
+			if (!strcmp(name, ifname) || !interface_get_phys_addr(ifaces->dnodes[i], mac))
+				continue;
+
+			dep_add(d, NULL, IFACE "[name='%s']/infix-interfaces:custom-phys-address", name);
+		}
+		ly_set_free(ifaces, NULL);
+	}
+}
+
+/*
+ * A changed WiFi interface regenerates its radio.  The band steering
+ * directive of a 2.4 GHz radio names the same-SSID access point on
+ * another radio, so a changed access point regenerates every radio
+ * that has one.
+ */
+static void wifi_dep_radios(struct dep *d)
+{
+	struct lyd_node *difs, *dif, *cif;
+
+	difs = lydx_get_descendant(*d->diff, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(difs, dif, "interface") {
+		struct ly_set *radios;
+		const char *radio;
+		uint32_t i;
+
+		if (!wifi_iface(d, dif, &cif))
+			continue;
+
+		radio = wifi_radio(d, lydx_get_cattr(dif, "name"));
+		if (!radio)
+			continue;
+
+		dep_add(d, radio, RADIO, radio);
+
+		if (!lydx_get_descendant(lyd_child(dif), "wifi", "access-point", NULL) &&
+		    !(cif && lydx_get_descendant(lyd_child(cif), "wifi", "access-point", NULL)))
+			continue;
+
+		radios = lydx_find_xpathf(d->config, IFACE "/infix-interfaces:wifi[access-point]/radio");
+		for (i = 0; radios && i < radios->count; i++)
+			dep_add(d, lyd_get_value(radios->dnodes[i]), RADIO, lyd_get_value(radios->dnodes[i]));
+		ly_set_free(radios, NULL);
+	}
+}
+
+void wifi_dep(struct dep *d)
+{
+	wifi_dep_siblings(d);
+	wifi_dep_radios(d);
+}
