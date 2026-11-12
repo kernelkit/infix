@@ -194,22 +194,22 @@ with infamy.Test() as test:
                                           wifi.phys_address(guest, "wifi0")))
 
     with test.step("Verify the repeater's wifi0 associates to 'infix-backhaul'"):
-        until(lambda: wifi.associated(repeater, BACKHAUL_SSID), attempts=60, interval=2)
+        until(lambda: wifi.associated(repeater, BACKHAUL_SSID), interval=2)
 
     with test.step("Verify wds0 on the root is up"):
         until(lambda: iface.is_oper_up(root, "wds0"), attempts=30, interval=2)
 
     with test.step("Verify home is on the repeater's 'infix-home' access point"):
-        until(lambda: wifi.station_bssid(home) == home_ap_mac, attempts=60, interval=2)
+        until(lambda: wifi.station_bssid(home) == home_ap_mac, interval=2)
 
     with test.step("Verify guest is on the repeater's 'infix-guest' access point"):
-        until(lambda: wifi.station_bssid(guest) == guest_ap_mac, attempts=60, interval=2)
+        until(lambda: wifi.station_bssid(guest) == guest_ap_mac, interval=2)
 
     with test.step("Verify home leases 10.10.0.9 from the root's VLAN 10 DHCP server through the backhaul"):
-        until(lambda: iface.address_exist(home, "wifi0", HOME_IP), attempts=60, interval=2)
+        until(lambda: iface.address_exist(home, "wifi0", HOME_IP), interval=2)
 
     with test.step("Verify guest leases 10.20.0.9 from the root's VLAN 20 DHCP server through the backhaul"):
-        until(lambda: iface.address_exist(guest, "wifi0", GUEST_IP), attempts=60, interval=2)
+        until(lambda: iface.address_exist(guest, "wifi0", GUEST_IP), interval=2)
 
     hlan = env["host"]["lan"]
     with infamy.IsolatedMacVlan(hlan) as ns:
@@ -239,7 +239,7 @@ with infamy.Test() as test:
             repeater.put_config_dicts(backhaul_enabled(True))
 
         with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 again"):
-            until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
+            until(lambda: iface.is_oper_up(root, "wds0"), interval=2)
             until(lambda: reaches(ns, HOME_IP), attempts=30, interval=2)
             until(lambda: reaches(ns, GUEST_IP), attempts=30, interval=2)
 
@@ -257,12 +257,12 @@ with infamy.Test() as test:
         with test.step("Verify wifi2 on the repeater moved to the fourth derived address and guest followed it"):
             until(lambda: wifi.phys_address(repeater, "wifi2") == wifi.derived_address(chassis, 4),
                   attempts=30, interval=2)
-            until(lambda: wifi.station_bssid(guest) == wifi.derived_address(chassis, 4), attempts=60, interval=2)
+            until(lambda: wifi.station_bssid(guest) == wifi.derived_address(chassis, 4), interval=2)
 
         with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point added"):
-            until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
-            until(lambda: reaches(ns, HOME_IP), attempts=60, interval=2)
-            until(lambda: reaches(ns, GUEST_IP), attempts=60, interval=2)
+            until(lambda: iface.is_oper_up(root, "wds0"), interval=2)
+            until(lambda: reaches(ns, HOME_IP), interval=2)
+            until(lambda: reaches(ns, GUEST_IP), interval=2)
 
         with test.step("Remove access point wifi10 from the repeater"):
             repeater.put_config_dicts({}, delete=[
@@ -271,12 +271,12 @@ with infamy.Test() as test:
 
         with test.step("Verify wifi2 on the repeater is back at the third derived address and guest followed it"):
             until(lambda: wifi.phys_address(repeater, "wifi2") == guest_ap_mac, attempts=30, interval=2)
-            until(lambda: wifi.station_bssid(guest) == guest_ap_mac, attempts=60, interval=2)
+            until(lambda: wifi.station_bssid(guest) == guest_ap_mac, interval=2)
 
         with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point removed"):
-            until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
-            until(lambda: reaches(ns, HOME_IP), attempts=60, interval=2)
-            until(lambda: reaches(ns, GUEST_IP), attempts=60, interval=2)
+            until(lambda: iface.is_oper_up(root, "wds0"), interval=2)
+            until(lambda: reaches(ns, HOME_IP), interval=2)
+            until(lambda: reaches(ns, GUEST_IP), interval=2)
 
         with test.step("Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12"):
             repeater.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [{
@@ -291,7 +291,7 @@ with infamy.Test() as test:
             until(lambda: iface.is_oper_up(repeater, "wifi1"), attempts=30, interval=2)
 
         with test.step("Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12"):
-            until(lambda: wifi.station_bssid(guest) == GUEST_AP_MAC_NEW, attempts=60, interval=2)
+            until(lambda: wifi.station_bssid(guest) == GUEST_AP_MAC_NEW, interval=2)
 
         with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 after the address change"):
             until(lambda: reaches(ns, HOME_IP), attempts=30, interval=2)

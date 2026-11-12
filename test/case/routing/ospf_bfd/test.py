@@ -195,8 +195,8 @@ with infamy.Test() as test:
         # unpredictable link-local ones under OSPFv3.  Each router has BFD on
         # exactly the two links to its neighbor, so two sessions up is both of
         # them.
-        until(lambda: route.bfd_sessions_up(R1) >= 2, attempts=60)
-        until(lambda: route.bfd_sessions_up(R2) >= 2, attempts=60)
+        until(lambda: route.bfd_sessions_up(R1) >= 2)
+        until(lambda: route.bfd_sessions_up(R2) >= 2)
 
     def path_via(link):
         """Does the data path from h1 to h2 use R2's fast or slow link?"""

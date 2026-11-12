@@ -53,13 +53,13 @@ with infamy.Test() as test:
                 }
             }
         })
-        until(lambda: tgtssh.runsh(f"test -f {LOG_FILE}").returncode == 0, attempts=10)
+        until(lambda: tgtssh.runsh(f"test -f {LOG_FILE}").returncode == 0)
 
     with test.step("Log message with severity, app-name, msgid, and structured data"):
         target.log("Kilroy was here", severity="warning",
                    app_name="infamy", msgid="test-start",
                    sd={"test@61046": {"name": "rpc_log", "step": "3"}})
-        until(lambda: "Kilroy was here" in logfile(), attempts=10)
+        until(lambda: "Kilroy was here" in logfile())
 
     with test.step("Verify RFC 5424 header fields of the logged message"):
         line = [ln for ln in logfile().splitlines() if "Kilroy was here" in ln][0]
@@ -71,7 +71,7 @@ with infamy.Test() as test:
 
     with test.step("Log message with only the mandatory text"):
         target.log("Plain message, no frills")
-        until(lambda: "Plain message" in logfile(), attempts=10)
+        until(lambda: "Plain message" in logfile())
 
     with test.step("Verify default app-name claims no system identity, msgid and SD empty"):
         line = [ln for ln in logfile().splitlines() if "Plain message" in ln][0]

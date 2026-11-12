@@ -73,12 +73,12 @@ with infamy.Test() as test:
             }
         })
 
-        until(lambda: tgtssh.runsh("test -f /var/log/exact-errors").returncode == 0, attempts=10)
+        until(lambda: tgtssh.runsh("test -f /var/log/exact-errors").returncode == 0)
 
     with test.step("Send test messages at all severity levels"):
         for severity, message in TEST_MESSAGES:
             target.log(message, severity=severity, app_name="advtest")
-        until(lambda: "Error: error condition" in tgtssh.runsh("cat /var/log/exact-errors 2>/dev/null").stdout, attempts=10)
+        until(lambda: "Error: error condition" in tgtssh.runsh("cat /var/log/exact-errors 2>/dev/null").stdout)
 
     with test.step("Verify exact-errors log contains only error messages"):
         rc = tgtssh.runsh("cat /var/log/exact-errors 2>/dev/null")

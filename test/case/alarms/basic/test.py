@@ -80,7 +80,7 @@ with infamy.Test() as test:
             return alarm and alarm["perceived-severity"] == "critical" \
                 and not is_true(alarm["is-cleared"]) \
                 and alarm["alarm-text"] == "Nightly backup failed"
-        until(raised, attempts=10)
+        until(raised)
 
     with test.step("Verify summary counts one critical alarm, not cleared"):
         data = target.get_data(f"{ALARMS}/summary")
@@ -101,7 +101,7 @@ with infamy.Test() as test:
             changes = alarm.get("operator-state-change", []) if alarm else []
             return any(c["state"] == "ack" and c.get("text") == "On it"
                        and c.get("operator") == "admin" for c in changes)
-        until(acked, attempts=10)
+        until(acked)
 
     with test.step("Clear external alarm 'backup'"):
         target.call_dict("infix-alarms", {"clear-alarm": {"resource": "backup"}})
@@ -110,7 +110,7 @@ with infamy.Test() as test:
         def cleared():
             alarm = entry(target, "backup")
             return alarm and is_true(alarm["is-cleared"])
-        until(cleared, attempts=10)
+        until(cleared)
 
     with test.step("Touch marker /run/alarm/active/external/disk-full on target"):
         tgtssh.runsh("sudo touch /run/alarm/active/external/disk-full")
@@ -120,7 +120,7 @@ with infamy.Test() as test:
             alarm = entry(target, "disk-full")
             return alarm and alarm["perceived-severity"] == "indeterminate" \
                 and not is_true(alarm["is-cleared"])
-        until(touched, attempts=10)
+        until(touched)
 
     with test.step("Add an alarm profile raising external alarms on 'disk-full' to warning"):
         target.put_config_dicts({
@@ -143,21 +143,20 @@ with infamy.Test() as test:
         def assigned():
             alarm = entry(target, "disk-full")
             return alarm and alarm["perceived-severity"] == "warning"
-        until(assigned, attempts=10)
+        until(assigned)
 
     with test.step("Remove the alarm profile"):
         target.put_config_dicts({}, delete=[f"{ALARMS}/alarm-profile[alarm-type-id='{EXTERNAL}']"
                                             "[alarm-type-qualifier-match=''][resource='disk-full']"])
 
     with test.step("Verify alarm 'disk-full' is back at severity indeterminate"):
-        until(lambda: (entry(target, "disk-full") or {}).get("perceived-severity") == "indeterminate",
-              attempts=10)
+        until(lambda: (entry(target, "disk-full") or {}).get("perceived-severity") == "indeterminate")
 
     with test.step("Verify 'show alarms' lists 'disk-full' as active"):
         def shown():
             out = tgtssh.runsh('klish -c "show alarms"').stdout
             return "disk-full" in out and "active" in out
-        until(shown, attempts=10)
+        until(shown)
 
     with test.step("Verify the login banner counts one active alarm"):
         out = tgtssh.runsh("sh -l -c true").stdout
@@ -176,15 +175,14 @@ with infamy.Test() as test:
             changes = alarm.get("operator-state-change", []) if alarm else []
             return any(c["state"] == "ack" and c.get("text") == "Known"
                        and c.get("operator") == "admin" for c in changes)
-        until(disk_acked, attempts=10)
+        until(disk_acked)
 
     with test.step("Touch marker /run/alarm/active/link-down/eth9 on target"):
         tgtssh.runsh("sudo mkdir -p /run/alarm/active/link-down && "
                      "sudo touch /run/alarm/active/link-down/eth9")
 
     with test.step("Verify the link-down alarm names eth9 by its instance-identifier"):
-        until(lambda: entry(target, ETH9, kind="infix-alarms:link-down") is not None,
-              attempts=10)
+        until(lambda: entry(target, ETH9, kind="infix-alarms:link-down") is not None)
 
     with test.step("Close alarm 'eth9' from the CLI without giving its type"):
         tgtssh.runsh('klish -c "alarm close eth9 text Spare"')
@@ -195,7 +193,7 @@ with infamy.Test() as test:
             changes = alarm.get("operator-state-change", []) if alarm else []
             return any(c["state"] == "closed" and c.get("text") == "Spare"
                        for c in changes)
-        until(eth9_closed, attempts=10)
+        until(eth9_closed)
 
     with test.step("Verify the login banner leaves the closed 'eth9' out"):
         out = tgtssh.runsh("sh -l -c true").stdout
@@ -223,7 +221,7 @@ with infamy.Test() as test:
             alarm = entry(target, "software", kind="infix-alarms:update-check-failed")
             return alarm and alarm["perceived-severity"] == "minor" \
                 and not is_true(alarm["is-cleared"])
-        until(check_failed, attempts=10)
+        until(check_failed)
 
     with test.step("Remove marker /run/alarm/active/update-check-failed/software on target"):
         tgtssh.runsh("sudo rm /run/alarm/active/update-check-failed/software")
@@ -249,7 +247,7 @@ with infamy.Test() as test:
             alarm = entry(target, "disk-full", "shelved-alarms", "shelved-alarm")
             return alarm and alarm["shelf-name"] == "known-full-disk" \
                 and entry(target, "disk-full") is None
-        until(shelved, attempts=10)
+        until(shelved)
 
     with test.step("Verify 'show alarms' hides 'disk-full' and 'show alarms shelved' lists it"):
         out = tgtssh.runsh('klish -c "show alarms"').stdout
@@ -269,7 +267,7 @@ with infamy.Test() as test:
         target.put_config_dicts({}, delete=[f"{ALARMS}/control/alarm-shelving/shelf[name='known-full-disk']"])
 
     with test.step("Verify alarm 'disk-full' is back in the alarm list"):
-        until(lambda: entry(target, "disk-full") is not None, attempts=10)
+        until(lambda: entry(target, "disk-full") is not None)
 
     with test.step("Close every active alarm with one set-operator-state on the alarm list"):
         output = target.call_action_output(f"{ALARMS}/alarm-list/infix-alarms:set-operator-state",
@@ -282,7 +280,7 @@ with infamy.Test() as test:
             alarm = entry(target, "disk-full")
             changes = alarm.get("operator-state-change", []) if alarm else []
             return any(c["state"] == "closed" and c.get("text") == "Sweep" for c in changes)
-        until(disk_closed, attempts=10)
+        until(disk_closed)
 
     with test.step("Clear alarm 'disk-full' from the CLI"):
         tgtssh.runsh('klish -c "alarm clear disk-full"')
@@ -291,7 +289,7 @@ with infamy.Test() as test:
         def disk_cleared():
             alarm = entry(target, "disk-full")
             return alarm and is_true(alarm["is-cleared"])
-        until(disk_cleared, attempts=10)
+        until(disk_cleared)
 
     with test.step("Purge cleared alarms older than 7 days, none is that old"):
         output = target.call_action_output(f"{ALARMS}/alarm-list/purge-alarms",
@@ -308,7 +306,6 @@ with infamy.Test() as test:
         until(lambda: entry(target, "backup") is None
               and entry(target, "disk-full") is None
               and entry(target, ETH9, kind="infix-alarms:link-down") is None
-              and entry(target, "software", kind="infix-alarms:update-check-failed") is None,
-              attempts=10)
+              and entry(target, "software", kind="infix-alarms:update-check-failed") is None)
 
     test.succeed()

@@ -96,7 +96,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)
@@ -131,6 +131,6 @@ with infamy.Test() as test:
             })
 
         with test.step("Verify container has restarted with updated env"):
-            until(lambda: "TEST_VAR=updated-value" in ns.call(lambda: curl(URL)), attempts=60)
+            until(lambda: "TEST_VAR=updated-value" in ns.call(lambda: curl(URL)))
 
     test.succeed()

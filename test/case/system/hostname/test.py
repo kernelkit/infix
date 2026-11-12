@@ -58,6 +58,6 @@ with infamy.Test() as test:
             oper = target.get_data("/ietf-system:system")
             return bool(regex.match(oper["system"]["hostname"]))
 
-        until(hostname_expanded, attempts=10)
+        until(hostname_expanded)
 
     test.succeed()

@@ -61,8 +61,7 @@ with infamy.Test() as test:
         target.put_config_dicts(veth(True))
 
     with test.step("Verify veth0a has link and no alarm"):
-        until(lambda: iface.get_param(target, "veth0a", "oper-status") == "up",
-              attempts=10)
+        until(lambda: iface.get_param(target, "veth0a", "oper-status") == "up")
         assert link_alarm(target, "veth0a") is None
 
     with test.step("Disable veth0b"):
@@ -89,7 +88,7 @@ with infamy.Test() as test:
         def cleared():
             alarm = link_alarm(target, "veth0a")
             return alarm and is_true(alarm["is-cleared"])
-        until(cleared, attempts=10)
+        until(cleared)
 
     with test.step("Remove veth pair"):
         target.put_config_dicts({}, delete=["/ietf-interfaces:interfaces/interface[name='veth0a']",

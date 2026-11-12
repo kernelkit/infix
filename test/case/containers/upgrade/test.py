@@ -109,7 +109,7 @@ with infamy.Test() as test:
 
         with test.step("Verify container 'web' has started with version 24.05.0"):
             c = infamy.Container(target)
-            until(lambda: c.running(NAME), attempts=60)
+            until(lambda: c.running(NAME))
 
             # Get initial operational data to capture container ID and image ID
             containers_data = target.get_data("/infix-containers:containers")
@@ -142,7 +142,7 @@ with infamy.Test() as test:
         with test.step("Verify container 'web' is running new version 24.11.0"):
             c = infamy.Container(target)
             # Wait for upgrade to complete and container to restart
-            until(lambda: c.running(NAME), attempts=60)
+            until(lambda: c.running(NAME))
 
             # Get operational data after upgrade
             containers_data = target.get_data("/infix-containers:containers")

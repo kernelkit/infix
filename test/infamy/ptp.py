@@ -3,7 +3,7 @@
 Query PTP operational data from the ieee1588-ptp-tt YANG model.
 All functions are None-safe and intended for use with until():
 
-    until(lambda: ptp.is_time_receiver(target), attempts=60)
+    until(lambda: ptp.is_time_receiver(target))
 """
 
 
@@ -105,8 +105,7 @@ def port_state_dbg(target, port_idx=1, inst_idx=0):
     Useful in until() lambdas and test step output to show what is actually
     being observed when a state check does not converge::
 
-        until(lambda: is_time_transmitter(gm) or not print(port_state_dbg(gm)),
-              attempts=60)
+        until(lambda: is_time_transmitter(gm) or not print(port_state_dbg(gm)))
     """
     data = target.get_data("/ieee1588-ptp-tt:ptp") or {}
     if not data:

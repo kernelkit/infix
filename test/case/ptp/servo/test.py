@@ -131,8 +131,8 @@ with infamy.Test() as test:
                 return False
             return True
 
-        parallel(lambda: until(gm_ready, attempts=60),
-                 lambda: until(receiver_ready, attempts=60))
+        parallel(lambda: until(gm_ready),
+                 lambda: until(receiver_ready))
 
     with test.step("Wait for initial convergence"):
         until(lambda: ptp.has_converged(receiver, threshold_ns), attempts=120)
@@ -143,13 +143,13 @@ with infamy.Test() as test:
         receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
                                                client=True, ip="192.168.100.2",
                                                step_threshold=1.0))
-        until(lambda: ptp.has_converged(receiver, threshold_ns), attempts=60)
+        until(lambda: ptp.has_converged(receiver, threshold_ns))
 
     with test.step(f"Inject {STEP_SEC}-second offset on grandmaster clock"):
         gmssh = env.attach("gm", "mgmt", "ssh")
         step_clock(gmssh, gm_iface, STEP_SEC)
 
     with test.step("Verify receiver converges by stepping (step-threshold=1.0 s)"):
-        until(lambda: ptp.has_converged(receiver, threshold_ns), attempts=60)
+        until(lambda: ptp.has_converged(receiver, threshold_ns))
 
     test.succeed()

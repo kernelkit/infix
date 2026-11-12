@@ -169,7 +169,7 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(client, client_link, "10.0.0.2", proto="static"), attempts=20)
 
     with test.step("Verify network connectivity between client and server"):
-        until(lambda: clientssh.runsh("ping -c 1 -W 1 10.0.0.1 >/dev/null 2>&1").returncode == 0, attempts=10)
+        until(lambda: clientssh.runsh("ping -c 1 -W 1 10.0.0.1 >/dev/null 2>&1").returncode == 0)
 
     with test.step("Send log messages with different hostnames"):
         for hostname, message in TEST_MESSAGES:

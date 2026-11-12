@@ -120,7 +120,7 @@ with infamy.Test() as test:
         until(lambda: "wds0" in wifi.bridge_vlan_members(root, "br0", 10), attempts=30)
 
     with test.step("Verify the satellite's wifi0 associates to 'infix-wds'"):
-        until(lambda: wifi.associated(satellite, SSID), attempts=60, interval=2)
+        until(lambda: wifi.associated(satellite, SSID), interval=2)
 
     with test.step("Verify wds0 on the root comes up and reports the station connected"):
         until(lambda: iface.is_oper_up(root, "wds0"), attempts=30, interval=2)
@@ -131,7 +131,7 @@ with infamy.Test() as test:
 
     with test.step("Verify the satellite leases 192.168.20.100 on br0 over the WDS link"):
         until(lambda: iface.address_exist(satellite, "br0", LEASE),
-              attempts=60, interval=2)
+              interval=2)
 
     with test.step("Set a description on wds0 on the root"):
         root.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [
@@ -139,7 +139,7 @@ with infamy.Test() as test:
 
     with test.step("Verify wds0 on the root stays up with the station connected"):
         until(lambda: iface.is_oper_up(root, "wds0") and wifi.wds_connected(root, "wds0"),
-              attempts=10, interval=1)
+              interval=1)
 
     with test.step("Disable wifi0 on the satellite"):
         satellite.put_config_dicts(station_enabled(False))
@@ -154,7 +154,7 @@ with infamy.Test() as test:
         satellite.put_config_dicts(station_enabled(True))
 
     with test.step("Verify wds0 on the root comes up again"):
-        until(lambda: iface.is_oper_up(root, "wds0"), attempts=60, interval=2)
+        until(lambda: iface.is_oper_up(root, "wds0"), interval=2)
         until(lambda: wifi.wds_connected(root, "wds0"), attempts=30, interval=2)
 
     test.succeed()

@@ -62,10 +62,10 @@ with infamy.Test() as test:
 
     with test.step("Verify container 'web' has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
-        until(lambda: _verify(addr, silent=True), attempts=10)
+        until(lambda: _verify(addr, silent=True))
 
     with test.step("Verify resource constraints and usage are available"):
         data = target.get_data("/infix-containers:containers")
@@ -95,5 +95,5 @@ with infamy.Test() as test:
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         # Wait for it to restart and respond, or fail
-        until(lambda: _verify(addr, silent=True), attempts=60)
+        until(lambda: _verify(addr, silent=True))
     test.succeed()

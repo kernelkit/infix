@@ -48,14 +48,14 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=60)
+        until(lambda: c.running(NAME))
 
     with test.step("Modify container volume content"):
         cmd = f"sudo container shell {NAME} 'echo {MESG} >/var/www/index.html'"
         tgtssh.runsh(cmd)
 
     with test.step("Verify container volume content"):
-        until(lambda: MESG in curl(URL), attempts=10)
+        until(lambda: MESG in curl(URL))
 
     with test.step("Upgrade container"):
         out = tgtssh.runsh(f"sudo container upgrade {NAME}")
@@ -68,6 +68,6 @@ with infamy.Test() as test:
         #     print(f"Container {NAME} upgraded: {out.stdout}")
 
     with test.step("Verify container volume content survived upgrade"):
-        until(lambda: MESG in curl(URL), attempts=60)
+        until(lambda: MESG in curl(URL))
 
     test.succeed()

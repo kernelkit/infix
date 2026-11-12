@@ -46,6 +46,6 @@ with infamy.Test() as test:
         def check_autoconf():
             out = tgtssh.runsh("sysctl net.ipv6.conf.br0.autoconf").stdout
             return "autoconf = 1" in out
-        until(check_autoconf, attempts=10)
+        until(check_autoconf)
 
     test.succeed()

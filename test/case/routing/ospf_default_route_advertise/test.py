@@ -263,7 +263,7 @@ with infamy.Test() as test:
 
     with test.step("Verify R1 has an active static default route"):
         until(lambda: route.route_exist(R1, param["default"], af=af, proto="ietf-routing:static",
-                                        active_check=True), attempts=60)
+                                        active_check=True))
 
     with test.step("Wait for all neighbors to peer"):
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1link, "2.2.2.2",

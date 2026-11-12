@@ -63,7 +63,7 @@ with infamy.Test() as test:
         )
 
     with test.step("Verify the station associates to the ap over the wifi link"):
-        until(lambda: wifi.associated(station, SSID), attempts=60, interval=2)
+        until(lambda: wifi.associated(station, SSID), interval=2)
 
     with test.step("Scan for networks on radio0 of the station"):
         networks = wifi.scan(station, "radio0")

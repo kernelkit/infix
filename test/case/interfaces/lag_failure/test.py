@@ -137,7 +137,7 @@ with infamy.Test() as test:
 
         with test.step("Wait for LACP to synchronize both links"):
             until(lambda: all(infamy.lag.lacp_synced(dut, dut["link1"], dut["link2"])
-                              for dut in (dut1, dut2)), attempts=60)
+                              for dut in (dut1, dut2)))
 
         with test.step("Initial connectivity check ..."):
             ns.must_reach(IP2, timeout=30)

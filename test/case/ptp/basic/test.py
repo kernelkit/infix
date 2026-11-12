@@ -99,8 +99,8 @@ with infamy.Test() as test:
         )
 
     with test.step("Wait for grandmaster and time receiver ports to reach active states"):
-        parallel(lambda: until(lambda: ptp.is_time_transmitter(gm), attempts=60),
-                 lambda: until(lambda: ptp.is_time_receiver(receiver), attempts=60))
+        parallel(lambda: until(lambda: ptp.is_time_transmitter(gm)),
+                 lambda: until(lambda: ptp.is_time_receiver(receiver)))
 
     with test.step("Wait for time receiver offset to converge"):
         until(lambda: ptp.has_converged(receiver, threshold_ns), attempts=120)

@@ -187,8 +187,7 @@ with infamy.Test() as test:
         print("Verifying combined DNS and NTP servers...")
         # Expected DNS: STATIC_DNS (1.1.1.1) AND DHCP_DNS (192.168.3.1)
         # Expected NTP: STATIC_NTP (2.2.2.2) AND DHCP_NTP (192.168.3.1)
-        until(lambda: has_system_servers(client, [STATIC_DNS, DHCP_DNS], [STATIC_NTP, DHCP_NTP]),
-              attempts=60)
+        until(lambda: has_system_servers(client, [STATIC_DNS, DHCP_DNS], [STATIC_NTP, DHCP_NTP]))
         print("SUCCESS: Combined static and DHCP servers verified")
 
     test.succeed()

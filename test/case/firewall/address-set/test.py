@@ -143,7 +143,7 @@ with infamy.Test() as test:
                 return current.get(STATIC_IP) is False and \
                     current.get(HOST_IP) is True
 
-            until(entries_settled, attempts=10)
+            until(entries_settled)
 
         with test.step("Verify dynamic entry survives configuration change"):
             target.put_config_dicts({
@@ -155,8 +155,7 @@ with infamy.Test() as test:
             })
 
             until(lambda: firewall_logging(target) == "unicast", attempts=30)
-            until(lambda: current_entries(target, "allowed").get(HOST_IP) is True,
-                  attempts=10)
+            until(lambda: current_entries(target, "allowed").get(HOST_IP) is True)
             ns.must_reach(TARGET_IP, timeout=30)
 
         with test.step("Verify static entry cannot be removed with action"):
@@ -176,7 +175,7 @@ with infamy.Test() as test:
                 current = current_entries(target, "allowed")
                 return list(current.keys()) == [STATIC_IP]
 
-            until(only_static_left, attempts=10)
+            until(only_static_left)
             ns.must_not_reach(TARGET_IP, timeout=5)
 
     with test.step("Verify entries in timeout set expire on their own"):
