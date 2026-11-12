@@ -32,7 +32,7 @@ case "$1" in
 	    || die "Unable to tear down partitions"
 
 	[ "$dstsize" -eq "$srcsize" ] || {
-	    lvm lvresize --yes --size ${newsize}B "$dst" \
+	    lvm lvresize --yes --size ${srcsize}B "$dst" \
 		|| die "Unable to resize $RAUC_SLOT_BOOTNAME to ${srcsize}B"
 	}
 
