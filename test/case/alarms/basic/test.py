@@ -62,8 +62,12 @@ with infamy.Test() as test:
         })
 
     with test.step("Verify the login banner is silent"):
-        out = tgtssh.runsh("sh -l -c true").stdout
-        assert "active alarm" not in out, out
+        def silent():
+            out = tgtssh.runsh("sh -l -c true").stdout
+            assert "active alarm" not in out, \
+                tgtssh.runsh('klish -c "show alarms"').stdout
+            return True
+        until(silent)
 
     with test.step("Raise external alarm 'backup' with severity critical"):
         target.call_dict("infix-alarms", {
