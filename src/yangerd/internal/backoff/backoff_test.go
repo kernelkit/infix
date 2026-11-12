@@ -41,3 +41,14 @@ func TestRetryRestartsUntilCancelled(t *testing.T) {
 		t.Fatalf("calls = %d, want 3", calls)
 	}
 }
+
+func TestGuardTurnsPanicIntoError(t *testing.T) {
+	err := Guard(context.Background(), func(context.Context) error {
+		var m map[string]int
+		m["x"] = 1
+		return nil
+	})
+	if err == nil {
+		t.Fatal("Guard returned nil for a panicking function")
+	}
+}

@@ -105,7 +105,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := run(ctx); err != nil && ctx.Err() == nil {
+			if err := backoff.Guard(ctx, run); err != nil && ctx.Err() == nil {
 				slogLog.Error(name+" exited", "err", err)
 			}
 		}()

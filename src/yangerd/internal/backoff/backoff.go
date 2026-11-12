@@ -4,8 +4,10 @@ package backoff
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
+	"runtime/debug"
 	"time"
 )
 
@@ -51,6 +53,16 @@ func Sleep(ctx context.Context, d time.Duration) error {
 	}
 }
 
+// Guard runs fn and turns a panic into an error.
+func Guard(ctx context.Context, fn func(ctx context.Context) error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v\n%s", r, debug.Stack())
+		}
+	}()
+	return fn(ctx)
+}
+
 // Retry runs fn until ctx is cancelled, restarting it with exponential
 // backoff each time it returns.  A run that lasted longer than the
 // maximum delay counts as healthy and resets the delay, so a source
@@ -63,7 +75,7 @@ func Retry(ctx context.Context, log *slog.Logger, name string, fn func(ctx conte
 
 	for {
 		started := time.Now()
-		err := fn(ctx)
+		err := Guard(ctx, fn)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
