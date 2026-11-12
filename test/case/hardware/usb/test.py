@@ -18,7 +18,7 @@ port is handled correctly.
 """
 import infamy
 import infamy.usb as usb
-from infamy.util import until, wait_boot
+from infamy.util import until, reboot_to_startup
 
 
 def set_usb_state(target, ports, state):
@@ -96,12 +96,7 @@ with infamy.Test() as test:
         verify_usb_state(target, available, "unlocked")
 
     with test.step("Save the configuration to startup configuration and reboot"):
-        target.startup_override()
-        target.copy("running", "startup")
-        target.reboot()
-        if not wait_boot(target, env):
-            test.fail()
-        target = env.attach("target", "mgmt", test_reset=False)
+        target = reboot_to_startup(target, env)
 
     with test.step("Verify USB port remain unlocked after reboot"):
         verify_usb_state(target, available, "unlocked")
