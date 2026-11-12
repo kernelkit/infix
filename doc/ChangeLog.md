@@ -138,6 +138,8 @@ All notable changes to the project are documented in this file.
   address learned from OSPF or RIP could stay inactive and was then not
   redistributed either.  Mostly seen with loopback addresses moved from
   one device to another
+- x86_64: upgrading to a bundle whose system image differs in size
+  from the one installed in the target partition failed
 - OSPF: after a restart, a device could keep a stale copy of its own
   routes from a neighbor and never refresh them.  Also, routes marked
   never to age could still age out
