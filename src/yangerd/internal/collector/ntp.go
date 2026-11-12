@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/facebook/time/ntp/chrony"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
+	"github.com/kernelkit/infix/src/yangerd/internal/unixgram"
 )
 
 // chronySock is chronyd's command (cmdmon) Unix socket.  The UDP
@@ -27,39 +27,28 @@ type cmdmonClient interface {
 	Communicate(packet chrony.RequestPacket) (chrony.ResponsePacket, error)
 }
 
-// dialChrony connects to chronyd's cmdmon socket.  SOCK_DGRAM over
-// AF_UNIX has no connection state, so the client must bind its own
-// socket for the replies, in a directory chronyd can write to -- the
-// same dance chronyc does.
-func dialChrony() (cmdmonClient, func() error, error) {
-	local := &net.UnixAddr{
-		Name: fmt.Sprintf("/run/chrony/yangerd.%d.sock", os.Getpid()),
-		Net:  "unixgram",
-	}
-	remote := &net.UnixAddr{Name: chronySock, Net: "unixgram"}
+// chronyLocalDir holds our client sockets.  It is ours, not chronyd's:
+// the reply socket is made world-writable for the unprivileged chronyd,
+// which must not own the directory that is done in.
+const chronyLocalDir = "/run/yangerd/chrony"
 
-	os.Remove(local.Name) /* stale socket from a crashed run */
-	conn, err := net.DialUnix("unixgram", local, remote)
+var chronySeq atomic.Uint64
+
+// dialChrony connects to chronyd's cmdmon socket.  SOCK_DGRAM over
+// AF_UNIX has no connection state, so the client binds its own socket
+// for the replies.
+func dialChrony() (cmdmonClient, func() error, error) {
+	unixgram.CleanDir(chronyLocalDir)
+	local := fmt.Sprintf("%s/%d", chronyLocalDir, chronySeq.Add(1))
+	conn, err := unixgram.Dial(local, chronySock, 0666)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	closeFn := func() error {
-		err := conn.Close()
-		os.Remove(local.Name)
-		return err
-	}
-
-	// chronyd runs unprivileged and must be able to send replies here
-	if err := os.Chmod(local.Name, 0666); err != nil {
-		closeFn()
-		return nil, nil, err
-	}
 	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
-		closeFn()
+		conn.Close()
 		return nil, nil, err
 	}
-	return &chrony.Client{Connection: conn}, closeFn, nil
+	return &chrony.Client{Connection: conn}, conn.Close, nil
 }
 
 // ntpSource pairs a source's data and stats replies, fetched by the
