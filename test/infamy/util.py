@@ -78,11 +78,15 @@ def to_binary(text):
     return enc.decode('utf-8').replace('\n', '')
 
 
-def wait_boot(target, env):
+def wait_boot(target, env, probe=False):
     """Wait for target to go down and come back up after a reboot.
 
     The topology may set shutdown_time on the node, the time it takes
     for the node to go down, to wait before checking if it is gone.
+
+    With probe, wait for the first node answering on the management
+    port instead of the address the test attached to, for a device
+    that boots another configuration and returns on another address.
     """
     print(f"{target} is shutting down ...")
     node = env.ltop.xlate(target.name) if env.ltop else target.name
@@ -95,18 +99,16 @@ def wait_boot(target, env):
     print(f"{target} is booting up ...")
     until(lambda: target.reachable(), attempts=300)
 
-    iface = target.get_mgmt_iface()
-    if not iface:
-        return False
+    host = target.location.host
+    if probe:
+        host = infamy.neigh.ll6ping(target.location.interface)
+        if not host:
+            return False
 
-    neigh = infamy.neigh.ll6ping(iface)
-    if not neigh:
-        return False
-
-    print(f"{target} is responding to IPv6 ping ...")
+    print(f"{target} is responding to IPv6 ping, waiting for {host} ...")
 
     pwd = target.location.password
-    until(lambda: target.reachable() and is_reachable(neigh, env, pwd),
+    until(lambda: target.reachable() and is_reachable(host, env, pwd),
           attempts=300)
 
     return True
