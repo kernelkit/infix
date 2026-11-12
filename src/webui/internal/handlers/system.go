@@ -854,6 +854,7 @@ func (h *SystemHandler) SoftwareProgress(w http.ResponseWriter, r *http.Request)
 
 	autoReboot := r.URL.Query().Get("auto-reboot") == "1"
 
+	keepStreamOpen(w)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")
