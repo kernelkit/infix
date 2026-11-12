@@ -150,6 +150,8 @@ int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
 int wifi_gen_station(struct lyd_node *cif);
 int wifi_gen_mesh(struct lyd_node *cif);
 wifi_mode_t wifi_get_mode(struct lyd_node *wifi);
+int wifi_center_chan_80(int ch);
+int wifi_center_chan_160(int ch);
 
 /* if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
