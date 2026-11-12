@@ -15,6 +15,7 @@ qemu-img create -b $origimg -F raw -f qcow2 {{name}}.qcow2 4G
 
 {{> inc/infix-wifi}}
 {{> inc/infix-modem}}
+{{> inc/infix-test-mode}}
 
 {{#qn_gps}}
 mkfifo /tmp/{{name}}-gps.in /tmp/{{name}}-gps.out 2>/dev/null
