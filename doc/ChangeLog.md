@@ -134,6 +134,10 @@ All notable changes to the project are documented in this file.
 - WebUI: every confirmation now uses the same in-page dialog.  Before,
   all but Apply and Abort used the browser's own box, and one dismissed
   with Esc could run along with the next confirmed action
+- After an IP address was removed from an interface, a route to that
+  address learned from OSPF or RIP could stay inactive and was then not
+  redistributed either.  Mostly seen with loopback addresses moved from
+  one device to another
 
 
 [v26.10.0][] - 2026-10-30
