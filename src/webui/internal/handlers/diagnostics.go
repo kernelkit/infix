@@ -128,6 +128,13 @@ func clampInt(s string, def, min, max int) int {
 
 // ─── SSE helpers ─────────────────────────────────────────────────────
 
+// keepStreamOpen lifts the server's write timeout off an event stream.
+func keepStreamOpen(w http.ResponseWriter) {
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil {
+		log.Printf("event stream: clear write deadline: %v", err)
+	}
+}
+
 func sseLine(w io.Writer, f http.Flusher, s string) {
 	// SSE data fields must be single-line; collapse any CR/LF.
 	s = strings.ReplaceAll(strings.ReplaceAll(s, "\r", ""), "\n", " ")
@@ -260,6 +267,7 @@ func (h *DiagnosticsHandler) Run(w http.ResponseWriter, r *http.Request) {
 		family = "auto"
 	}
 
+	keepStreamOpen(w)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")

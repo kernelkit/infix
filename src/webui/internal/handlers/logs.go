@@ -404,6 +404,7 @@ func (h *LogsHandler) Tail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	keepStreamOpen(w)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")
