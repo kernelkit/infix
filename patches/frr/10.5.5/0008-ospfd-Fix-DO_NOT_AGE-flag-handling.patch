@@ -1,0 +1,422 @@
+From 8130ac15c1b9e17a809594d3de948e8341bb07ff Mon Sep 17 00:00:00 2001
+From: Ari Kauppi <kauppi@papupata.org>
+Date: Sat, 22 Nov 2025 16:17:25 +0400
+Subject: [PATCH 8/9] ospfd: Fix DO_NOT_AGE flag handling
+Organization: Wires
+
+lsa->data->ls_age is in network byte order, not in host order.
+Ensure that endianness is taken properly into account in flag ops.
+
+Ensure that DO_NOT_AGE bit is not lost on LS Age increment or when
+maxaging.
+
+DO_NOT_AGE flag must also be masked out when time in seconds is needed.
+
+Signed-off-by: Ari Kauppi <kauppi@papupata.org>
+[Backport of upstream PR #20112 (9ceb338f0f7c) to 10.5.5; dropped the
+ ospf_lsa_install() AS-external hunk, that code is not in 10.5.x]
+---
+ ospfd/ospf_apiserver.c |  3 +--
+ ospfd/ospf_ext.c       | 12 ++++++------
+ ospfd/ospf_flood.c     | 20 +++++++++-----------
+ ospfd/ospf_gr_helper.c |  4 ++--
+ ospfd/ospf_lsa.c       | 14 ++++++--------
+ ospfd/ospf_lsa.h       |  9 ++++++---
+ ospfd/ospf_opaque.c    |  6 +++---
+ ospfd/ospf_packet.c    | 19 +++++++++++++++----
+ ospfd/ospf_ri.c        |  3 +--
+ ospfd/ospf_route.c     |  7 ++-----
+ ospfd/ospf_te.c        |  9 +++------
+ ospfd/ospf_vty.c       |  8 ++------
+ 12 files changed, 56 insertions(+), 58 deletions(-)
+
+diff --git a/ospfd/ospf_apiserver.c b/ospfd/ospf_apiserver.c
+index 6c35b179be..43311cf6f3 100644
+--- a/ospfd/ospf_apiserver.c
++++ b/ospfd/ospf_apiserver.c
+@@ -1940,8 +1940,7 @@ struct ospf_lsa *ospf_apiserver_lsa_refresher(struct ospf_lsa *lsa)
+ 	if (!apiserv) {
+ 		zlog_warn("%s: LSA[%s]: No apiserver?", __func__,
+ 			  dump_lsa_key(lsa));
+-		lsa->data->ls_age =
+-			htons(OSPF_LSA_MAXAGE); /* Flush it anyway. */
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE); /* Flush it anyway. */
+ 		goto out;
+ 	}
+ 
+diff --git a/ospfd/ospf_ext.c b/ospfd/ospf_ext.c
+index df0b3b9081..095f5dcc6c 100644
+--- a/ospfd/ospf_ext.c
++++ b/ospfd/ospf_ext.c
+@@ -1418,7 +1418,7 @@ static struct ospf_lsa *ospf_ext_pref_lsa_refresh(struct ospf_lsa *lsa)
+ 			"EXT (%s): Segment Routing functionality is Disabled",
+ 			__func__);
+ 		/* Flush it anyway. */
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* Lookup this lsa corresponding Extended parameters */
+@@ -1427,7 +1427,7 @@ static struct ospf_lsa *ospf_ext_pref_lsa_refresh(struct ospf_lsa *lsa)
+ 		flog_warn(EC_OSPF_EXT_LSA_UNEXPECTED,
+ 			  "EXT (%s): Invalid parameter LSA ID", __func__);
+ 		/* Flush it anyway. */
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* Check if Interface was not disable in the interval */
+@@ -1436,7 +1436,7 @@ static struct ospf_lsa *ospf_ext_pref_lsa_refresh(struct ospf_lsa *lsa)
+ 			  "EXT (%s): Interface was Disabled: Flush it!",
+ 			  __func__);
+ 		/* Flush it anyway. */
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* If the lsa's age reached to MaxAge, start flushing procedure. */
+@@ -1504,7 +1504,7 @@ static struct ospf_lsa *ospf_ext_link_lsa_refresh(struct ospf_lsa *lsa)
+ 		zlog_info("EXT (%s): Segment Routing functionality is Disabled",
+ 			  __func__);
+ 		/* Flush it anyway. */
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* Lookup this LSA corresponding Extended parameters */
+@@ -1513,7 +1513,7 @@ static struct ospf_lsa *ospf_ext_link_lsa_refresh(struct ospf_lsa *lsa)
+ 		flog_warn(EC_OSPF_EXT_LSA_UNEXPECTED,
+ 			  "EXT (%s): Invalid parameter LSA ID", __func__);
+ 		/* Flush it anyway. */
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* Check if Interface was not disable in the interval */
+@@ -1521,7 +1521,7 @@ static struct ospf_lsa *ospf_ext_link_lsa_refresh(struct ospf_lsa *lsa)
+ 		flog_warn(EC_OSPF_EXT_LSA_UNEXPECTED,
+ 			  "EXT (%s): Interface was Disabled: Flush it!",
+ 			  __func__);
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	}
+ 
+ 	/* If the lsa's age reached to MaxAge, start flushing procedure */
+diff --git a/ospfd/ospf_flood.c b/ospfd/ospf_flood.c
+index dad103b843..09a8b55da7 100644
+--- a/ospfd/ospf_flood.c
++++ b/ospfd/ospf_flood.c
+@@ -44,13 +44,11 @@ void ospf_refresh_dna_type5_and_type7_lsas(struct ospf *ospf)
+ 	struct ospf_lsa *lsa = NULL;
+ 
+ 	LSDB_LOOP (EXTERNAL_LSDB(ospf), rn, lsa)
+-		if (IS_LSA_SELF(lsa) &&
+-		    CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE))
++		if (IS_LSA_SELF(lsa) && IS_LSA_AGE_DNA(lsa))
+ 			ospf_lsa_refresh(ospf, lsa);
+ 
+ 	LSDB_LOOP (NSSA_LSDB(ospf), rn, lsa)
+-		if (IS_LSA_SELF(lsa) &&
+-		    CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE))
++		if (IS_LSA_SELF(lsa) && IS_LSA_AGE_DNA(lsa))
+ 			ospf_lsa_refresh(ospf, lsa);
+ }
+ 
+@@ -404,9 +402,9 @@ int ospf_flood(struct ospf *ospf, struct ospf_neighbor *nbr,
+ 	if (current != NULL) /* -- endo. */
+ 	{
+ 		if (IS_LSA_SELF(current)
+-		    && (ntohs(current->data->ls_age) == 0
+-			&& ntohl(current->data->ls_seqnum)
+-				   == OSPF_INITIAL_SEQUENCE_NUMBER)) {
++		    && LS_AGE_RAW(current) == OSPF_LSA_INITIAL_AGE
++		    && ntohl(current->data->ls_seqnum)
++					== OSPF_INITIAL_SEQUENCE_NUMBER) {
+ 			if (IS_DEBUG_OSPF_EVENT)
+ 				zlog_debug(
+ 					"%s:LSA[Flooding]: Got a self-originated LSA, while local one is initial instance.",
+@@ -617,7 +615,7 @@ int ospf_flood_through_interface(struct ospf_interface *oi,
+ 		 * self lsas.
+ 		 */
+ 		if (oi->area->fr_info.enabled)
+-			SET_FLAG(lsa->data->ls_age, DO_NOT_AGE);
++			SET_FLAG(lsa->data->ls_age, htons(DO_NOT_AGE));
+ 	}
+ 
+ 	/* Remember if new LSA is added to a retransmit list. */
+@@ -1345,7 +1343,7 @@ void ospf_lsa_flush_area(struct ospf_lsa *lsa, struct ospf_area *area)
+ 	/* Reset the lsa origination time such that it gives
+ 	   more time for the ACK to be received and avoid
+ 	   retransmissions */
+-	lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++	LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	if (IS_DEBUG_OSPF_EVENT)
+ 		zlog_debug("%s: MaxAge set to LSA[%s]", __func__,
+ 			   dump_lsa_key(lsa));
+@@ -1370,7 +1368,7 @@ void ospf_lsa_flush_as(struct ospf *ospf, struct ospf_lsa *lsa)
+ 	/* Reset the lsa origination time such that it gives
+ 	   more time for the ACK to be received and avoid
+ 	   retransmissions */
+-	lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++	LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	if (IS_DEBUG_OSPF_EVENT)
+ 		zlog_debug("%s: MaxAge set to LSA[%s]", __func__,
+ 			   dump_lsa_key(lsa));
+@@ -1382,7 +1380,7 @@ void ospf_lsa_flush_as(struct ospf *ospf, struct ospf_lsa *lsa)
+ 
+ void ospf_lsa_flush(struct ospf *ospf, struct ospf_lsa *lsa)
+ {
+-	lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++	LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 
+ 	switch (lsa->data->type) {
+ 	case OSPF_ROUTER_LSA:
+diff --git a/ospfd/ospf_gr_helper.c b/ospfd/ospf_gr_helper.c
+index f66398db05..601b2e03de 100644
+--- a/ospfd/ospf_gr_helper.c
++++ b/ospfd/ospf_gr_helper.c
+@@ -463,11 +463,11 @@ int ospf_process_grace_lsa(struct ospf *ospf, struct ospf_lsa *lsa,
+ 	}
+ 
+ 	/*LSA age must be less than the grace period */
+-	if (ntohs(lsa->data->ls_age) >= grace_interval) {
++	if (LS_AGE_RAW(lsa) >= grace_interval) {
+ 		if (IS_DEBUG_OSPF_GR)
+ 			zlog_debug(
+ 				"%s, Grace LSA age(%d) is more than the grace interval(%d)",
+-				__func__, lsa->data->ls_age, grace_interval);
++				__func__, LS_AGE_RAW(lsa), grace_interval);
+ 		restarter->gr_helper_info.rejected_reason =
+ 			OSPF_HELPER_LSA_AGE_MORE;
+ 		return OSPF_GR_NOT_HELPER;
+diff --git a/ospfd/ospf_lsa.c b/ospfd/ospf_lsa.c
+index 4af12ec30e..6f30249578 100644
+--- a/ospfd/ospf_lsa.c
++++ b/ospfd/ospf_lsa.c
+@@ -82,9 +82,7 @@ uint32_t get_metric(uint8_t *metric)
+  */
+ bool ospf_check_dna_lsa(const struct ospf_lsa *lsa)
+ {
+-	return ((IS_LSA_SELF(lsa) && CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE))
+-			? true
+-			: false);
++	return ((IS_LSA_SELF(lsa) && IS_LSA_AGE_DNA(lsa)) ? true : false);
+ }
+ 
+ struct timeval msec2tv(int a)
+@@ -145,11 +143,11 @@ int get_age(struct ospf_lsa *lsa)
+ 	 */
+ 
+ 	/* If LSA is marked as donotage */
+-	if (CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE) && !IS_LSA_SELF(lsa))
+-		return ntohs(lsa->data->ls_age);
++	if (IS_LSA_AGE_DNA(lsa) && !IS_LSA_SELF(lsa))
++		return LS_AGE_RAW(lsa);
+ 
+ 	monotime_since(&lsa->tv_recv, &rel);
+-	return ntohs(lsa->data->ls_age) + rel.tv_sec;
++	return LS_AGE_RAW(lsa) + rel.tv_sec;
+ }
+ 
+ 
+@@ -3043,7 +3041,7 @@ struct ospf_lsa *ospf_lsa_install(struct ospf *ospf, struct ospf_interface *oi,
+ 
+ 			if (!IS_LSA_MAXAGE(lsa))
+ 				lsa->flags |= OSPF_LSA_PREMATURE_AGE;
+-			lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++			LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 
+ 			if (IS_DEBUG_OSPF(lsa, LSA_REFRESH)) {
+ 				zlog_debug(
+@@ -3701,7 +3699,7 @@ int ospf_lsa_flush_schedule(struct ospf *ospf, struct ospf_lsa *lsa)
+ 			lsa->data->type, &lsa->data->id);
+ 
+ 	/* Force given lsa's age to MaxAge. */
+-	lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++	LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 
+ 	switch (lsa->data->type) {
+ 	/* Opaque wants to be notified of flushes */
+diff --git a/ospfd/ospf_lsa.h b/ospfd/ospf_lsa.h
+index 309d506ea6..be3d4b94e6 100644
+--- a/ospfd/ospf_lsa.h
++++ b/ospfd/ospf_lsa.h
+@@ -205,10 +205,13 @@ enum lsid_status { LSID_AVAILABLE = 0, LSID_CHANGE, LSID_NOT_AVAILABLE };
+ #define GET_METRIC(x) get_metric(x)
+ #define IS_EXTERNAL_METRIC(x)   ((x) & 0x80)
+ 
+-#define GET_AGE(x)     (ntohs ((x)->data->ls_age) + time (NULL) - (x)->tv_recv)
+ #define LS_AGE(x) (OSPF_LSA_MAXAGE < get_age(x) ? OSPF_LSA_MAXAGE : get_age(x))
+-#define IS_LSA_SELF(L)          (CHECK_FLAG ((L)->flags, OSPF_LSA_SELF))
+-#define IS_LSA_MAXAGE(L)        (LS_AGE ((L)) == OSPF_LSA_MAXAGE)
++#define LS_AGE_RAW(L)	  (ntohs((L)->data->ls_age) & ~DO_NOT_AGE)
++#define LS_AGE_SET(L, age) ((L)->data->ls_age = \
++							IS_LSA_AGE_DNA((L)) | htons(age))
++#define IS_LSA_SELF(L)	  (CHECK_FLAG((L)->flags, OSPF_LSA_SELF))
++#define IS_LSA_MAXAGE(L)  (LS_AGE((L)) == OSPF_LSA_MAXAGE)
++#define IS_LSA_AGE_DNA(L) (CHECK_FLAG((L)->data->ls_age, htons(DO_NOT_AGE)))
+ #define IS_LSA_MAX_SEQ(L)                                                      \
+ 	((L)->data->ls_seqnum == htonl(OSPF_MAX_SEQUENCE_NUMBER))
+ 
+diff --git a/ospfd/ospf_opaque.c b/ospfd/ospf_opaque.c
+index ea85081500..f167cba67c 100644
+--- a/ospfd/ospf_opaque.c
++++ b/ospfd/ospf_opaque.c
+@@ -829,7 +829,7 @@ void ospf_opaque_type9_lsa_if_cleanup(struct ospf_interface *oi)
+ 					   GET_OPAQUE_ID(ntohl(
+ 						   lsa->data->id.s_addr)));
+ 			ospf_lsdb_delete(lsdb, lsa);
+-			lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++			LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 
+ 			/*
+ 			 * Invoke the delete hook directly since it bypasses the normal MAXAGE
+@@ -1735,7 +1735,7 @@ struct ospf_lsa *ospf_opaque_lsa_refresh(struct ospf_lsa *lsa)
+ 			zlog_debug("LSA[Type%d:%pI4]: Flush stray Opaque-LSA",
+ 				   lsa->data->type, &lsa->data->id);
+ 
+-		lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 		ospf_lsa_flush(ospf, lsa);
+ 	} else
+ 		new = (*functab->lsa_refresher)(lsa);
+@@ -2224,7 +2224,7 @@ void ospf_opaque_self_originated_lsa_received(struct ospf_neighbor *nbr,
+ 	 * registered when opaque LSAs are originated (which is not the case
+ 	 * for stale LSAs).
+ 	 */
+-	lsa->data->ls_age = htons(OSPF_LSA_MAXAGE);
++	LS_AGE_SET(lsa, OSPF_LSA_MAXAGE);
+ 	ospf_lsa_install(
+ 		top, (lsa->data->type == OSPF_OPAQUE_LINK_LSA) ? nbr->oi : NULL,
+ 		lsa);
+diff --git a/ospfd/ospf_packet.c b/ospfd/ospf_packet.c
+index 0291dcbbf0..e4bac59ab2 100644
+--- a/ospfd/ospf_packet.c
++++ b/ospfd/ospf_packet.c
+@@ -1596,8 +1596,10 @@ static struct list *ospf_ls_upd_list_lsa(struct ospf_neighbor *nbr,
+ 		 * What if the received LSA's age is greater than MaxAge?
+ 		 * Treat it as a MaxAge case -- endo.
+ 		 */
+-		if (ntohs(lsah->ls_age) > OSPF_LSA_MAXAGE)
+-			lsah->ls_age = htons(OSPF_LSA_MAXAGE);
++		uint16_t ls_age = ntohs(lsah->ls_age);
++
++		if ((ls_age & ~DO_NOT_AGE) > OSPF_LSA_MAXAGE)
++			lsah->ls_age = htons(OSPF_LSA_MAXAGE | (ls_age & DO_NOT_AGE));
+ 
+ 		if (CHECK_FLAG(nbr->options, OSPF_OPTION_O)) {
+ #ifdef STRICT_OBIT_USAGE_CHECK
+@@ -3186,6 +3188,8 @@ static int ospf_make_db_desc(struct ospf_interface *oi,
+ 
+ 					/* Set LS age. */
+ 					ls_age = LS_AGE(lsa);
++					if (IS_LSA_AGE_DNA(lsa))
++						SET_FLAG(ls_age, DO_NOT_AGE);
+ 					lsah->ls_age = htons(ls_age);
+ 				}
+ 
+@@ -3268,9 +3272,16 @@ static int ls_age_increment(struct ospf_lsa *lsa, int delay)
+ {
+ 	int age;
+ 
+-	age = IS_LSA_MAXAGE(lsa) ? OSPF_LSA_MAXAGE : LS_AGE(lsa) + delay;
++	age = LS_AGE(lsa) + delay;
++
++	if (age > OSPF_LSA_MAXAGE)
++		age = OSPF_LSA_MAXAGE;
++
++	/* Preserve DNA bit on age increment */
++	if (IS_LSA_AGE_DNA(lsa))
++		SET_FLAG(age, DO_NOT_AGE);
+ 
+-	return (age > OSPF_LSA_MAXAGE ? OSPF_LSA_MAXAGE : age);
++	return age;
+ }
+ 
+ static int ospf_make_ls_upd(struct ospf_interface *oi, struct list *update,
+diff --git a/ospfd/ospf_ri.c b/ospfd/ospf_ri.c
+index 76e6efeb83..3d1f0e6062 100644
+--- a/ospfd/ospf_ri.c
++++ b/ospfd/ospf_ri.c
+@@ -1002,8 +1002,7 @@ static struct ospf_lsa *ospf_router_info_lsa_refresh(struct ospf_lsa *lsa)
+ 		 */
+ 		zlog_info("RI (%s): ROUTER INFORMATION is disabled now.",
+ 			  __func__);
+-		lsa->data->ls_age =
+-			htons(OSPF_LSA_MAXAGE); /* Flush it anyway. */
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE); /* Flush it anyway. */
+ 	}
+ 
+ 	/* Verify that the Router Information ID is supported */
+diff --git a/ospfd/ospf_route.c b/ospfd/ospf_route.c
+index 170909fa90..1e146d9394 100644
+--- a/ospfd/ospf_route.c
++++ b/ospfd/ospf_route.c
+@@ -994,11 +994,8 @@ void ospf_prune_unreachable_routers(struct route_table *rtrs)
+ 				 * which generated this lsa is no longer
+ 				 * reachabele.
+ 				 */
+-				(CHECK_FLAG(or->u.std.origin->ls_age,
+-					    DO_NOT_AGE))
+-					? UNSET_FLAG(or->u.std.origin->ls_age,
+-						     DO_NOT_AGE)
+-					: 0;
++				if (CHECK_FLAG(or->u.std.origin->ls_age, htons(DO_NOT_AGE)))
++					UNSET_FLAG(or->u.std.origin->ls_age, htons(DO_NOT_AGE));
+ 
+ 				listnode_delete(paths, or);
+ 				ospf_route_free(or);
+diff --git a/ospfd/ospf_te.c b/ospfd/ospf_te.c
+index f9a387756e..310d9eccfa 100644
+--- a/ospfd/ospf_te.c
++++ b/ospfd/ospf_te.c
+@@ -1453,16 +1453,14 @@ static struct ospf_lsa *ospf_mpls_te_lsa_refresh(struct ospf_lsa *lsa)
+ 		 * It seems a slip among routers in the routing domain.
+ 		 */
+ 		ote_debug("MPLS-TE (%s): MPLS-TE is disabled now", __func__);
+-		lsa->data->ls_age =
+-			htons(OSPF_LSA_MAXAGE); /* Flush it anyway. */
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE); /* Flush it anyway. */
+ 	}
+ 
+ 	/* At first, resolve lsa/lp relationship. */
+ 	if ((lp = lookup_linkparams_by_instance(lsa)) == NULL) {
+ 		flog_warn(EC_OSPF_TE_UNEXPECTED,
+ 			  "MPLS-TE (%s): Invalid parameter?", __func__);
+-		lsa->data->ls_age =
+-			htons(OSPF_LSA_MAXAGE); /* Flush it anyway. */
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE); /* Flush it anyway. */
+ 		ospf_opaque_lsa_flush_schedule(lsa);
+ 		return NULL;
+ 	}
+@@ -1471,8 +1469,7 @@ static struct ospf_lsa *ospf_mpls_te_lsa_refresh(struct ospf_lsa *lsa)
+ 	if (!CHECK_FLAG(lp->flags, LPFLG_LSA_ACTIVE)) {
+ 		flog_warn(EC_OSPF_TE_UNEXPECTED,
+ 			  "MPLS-TE (%s): lp was disabled: Flush it!", __func__);
+-		lsa->data->ls_age =
+-			htons(OSPF_LSA_MAXAGE); /* Flush it anyway. */
++		LS_AGE_SET(lsa, OSPF_LSA_MAXAGE); /* Flush it anyway. */
+ 	}
+ 
+ 	/* If the lsa's age reached to MaxAge, start flushing procedure. */
+diff --git a/ospfd/ospf_vty.c b/ospfd/ospf_vty.c
+index 0418e32005..819ee961b2 100644
+--- a/ospfd/ospf_vty.c
++++ b/ospfd/ospf_vty.c
+@@ -6317,14 +6317,10 @@ static void show_ip_ospf_database_header(struct vty *vty, struct ospf_lsa *lsa,
+ 	if (!json) {
+ 		if (IS_LSA_SELF(lsa))
+ 			vty_out(vty, "  LS age: %d%s\n", LS_AGE(lsa),
+-				CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE)
+-					? "(S-DNA)"
+-					: "");
++				IS_LSA_AGE_DNA(lsa) ? "(S-DNA)" : "");
+ 		else
+ 			vty_out(vty, "  LS age: %d%s\n", LS_AGE(lsa),
+-				CHECK_FLAG(lsa->data->ls_age, DO_NOT_AGE)
+-					? "(DNA)"
+-					: "");
++				IS_LSA_AGE_DNA(lsa) ? "(DNA)" : "");
+ 		vty_out(vty, "  Options: 0x%-2x : %s\n", lsa->data->options,
+ 			ospf_options_dump(lsa->data->options));
+ 		vty_out(vty, "  LS Flags: 0x%-2x %s\n", lsa->flags,
