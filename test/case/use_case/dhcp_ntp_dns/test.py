@@ -4,10 +4,14 @@ Combined test of DHCP + NTP + DNS
 
 Verify statically configured DNS and NTP servers are not lost when receiving
 servers from a DHCP server.
+
+Both DUTs then save their configuration to startup-config and reboot, to
+verify the setup comes back from a cold start.  A static DNS server is
+added after the reboot to verify the client still accepts changes.
 """
 import infamy
 import infamy.iface as iface
-from infamy.util import parallel, until
+from infamy.util import parallel, until, reboot_to_startup
 
 def any_dhcp_address(target, iface_name):
     try:
@@ -52,10 +56,11 @@ def has_system_servers(target, dns, ntp_list):
 with infamy.Test() as test:
     SERVER_IP = '192.168.3.1'
     CLIENT_STATIC_IP = '192.168.3.10'
-    
+
     STATIC_DNS = '1.1.1.1'
     STATIC_NTP = '2.2.2.2'
-    
+    STATIC_DNS2 = '9.9.9.9'
+
     DHCP_DNS = SERVER_IP
     DHCP_NTP = SERVER_IP
 
@@ -189,5 +194,34 @@ with infamy.Test() as test:
         # Expected NTP: STATIC_NTP (2.2.2.2) AND DHCP_NTP (192.168.3.1)
         until(lambda: has_system_servers(client, [STATIC_DNS, DHCP_DNS], [STATIC_NTP, DHCP_NTP]))
         print("SUCCESS: Combined static and DHCP servers verified")
+
+    with test.step("Save configuration to startup-config and reboot both DUTs"):
+        server, client = parallel(lambda: reboot_to_startup(server, env),
+                                  lambda: reboot_to_startup(client, env))
+
+    with test.step("Verify client gets a DHCP address after reboot"):
+        until(lambda: any_dhcp_address(client, client_data), attempts=120)
+
+    with test.step("Verify combined DNS and NTP servers after reboot"):
+        until(lambda: has_system_servers(client, [STATIC_DNS, DHCP_DNS], [STATIC_NTP, DHCP_NTP]),
+              attempts=60)
+
+    with test.step("Add static DNS server 9.9.9.9 on client"):
+        client.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "dns-resolver": {
+                        "server": [{
+                            "name": "static-dns2",
+                            "udp-and-tcp": {"address": STATIC_DNS2}
+                        }]
+                    }
+                }
+            }
+        })
+
+    with test.step("Verify DNS servers 1.1.1.1, 9.9.9.9 and 192.168.3.1 are in use"):
+        until(lambda: has_dns_server(client, [STATIC_DNS, STATIC_DNS2, DHCP_DNS]),
+              attempts=30)
 
     test.succeed()

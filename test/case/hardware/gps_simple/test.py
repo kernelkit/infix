@@ -9,7 +9,7 @@ which appear as virtio serial ports inside the guest.
 """
 import infamy
 import infamy.gps as gps
-from infamy.util import until, wait_boot
+from infamy.util import until, reboot_to_startup
 
 # Fun facts: The top of mount everest
 test_lat = 27.9881
@@ -99,12 +99,7 @@ with infamy.Test() as test:
             verify_position(target, "gps1")
 
         with test.step("Save the configuration to startup configuration and reboot"):
-            target.startup_override()
-            target.copy("running", "startup")
-            target.reboot()
-            if not wait_boot(target, env):
-                test.fail()
-            target = env.attach("target", "mgmt", test_reset=False)
+            target = reboot_to_startup(target, env)
 
         with test.step("Verify both GPS receivers are activated"):
             until(lambda: gps.is_activated(target, "gps0"), attempts=500)

@@ -1,3 +1,12 @@
+---
+name: infix-test
+description: >-
+  Run, read and debug the infamy regression tests under test/case on QEMU
+  DUTs: test layout and logical topologies, where the logs are, reaching a
+  DUT over SSH or console from the infamy0 container, running a subset.
+  Use when a make test run fails or a test needs investigating.
+---
+
 # Infix test skill
 
 Info about the Infix regression tests.
@@ -38,3 +47,14 @@ Info about the Infix regression tests.
   `make test TESTS=$PWD/test/case/subset.yaml`. Repeat an entry under
   different names to loop a flaky test. `INFAMY_ARGS=--transport=netconf`
   (or `restconf`) forces the transport, otherwise it is picked per run.
+
+## Use-case tests
+
+Every test under `test/case/use_case/` ends with a reboot recheck: once
+the setup is verified, save it, reboot every DUT onto it, verify the same
+things again, then make one config change and verify that it applies.
+Reboot with `util.reboot_to_startup(target, env)`.  It reattaches with
+`test_reset=False`, so the saved config is kept, and returns the new
+device; use it in place of the old one from then on.  If the
+DUTs come back with factory-config, check that `output/` is built from
+the current tree before blaming the test.
