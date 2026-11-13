@@ -9,6 +9,8 @@
   name: "interfaces-all"
 - case: journal-retention/test.py
   name: "journal-retention"
+- case: qos/test
+  name: "qos"
 - case: sensors/test
   name: "sensors"
 - case: system/test

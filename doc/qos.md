@@ -1,4 +1,4 @@
-Quality of Service
+<b>Quality of Service</b>
 ==================
 
 On occasion, most networks will experience congestion due to some
@@ -443,7 +443,8 @@ classes is rejected with the port and the profile named.
 What stays on the port is what follows the link rather than the role:
 the `egress-shaper`, the credit-based shaper reservations and the gate
 control list.  The operational datastore shows the profile a port
-runs under `qos profile`.
+runs as `qos active-profile`, and `show qos` lists it for every port,
+see [Checking the Result](#checking-the-result).
 
 ### Profiles for Common Port Roles
 
@@ -487,54 +488,59 @@ admin@example:/config/system/…/stream-reservation/> <b>leave</b>
 
 ## Checking the Result
 
-The operational datastore shows what a port runs, under
-`/interfaces/interface[name='e1']/qos/`: the profile in use, the
-egress shaper with the burst that was chosen for it, and under
-`capabilities` what the port's hardware can do and does.  From the
-shell:
+`show qos` lists every port with the profile it runs, what it
+classifies on, its shaper, reservations and gate schedule, and the
+stages its switch hardware runs.  A glance down the `PROFILE` column
+tells whether all ports of a role got the profile they should have:
 
-<pre class="cli"><code>admin@example:~$ <b>sudo sysrepocfg -X -f json -d operational -x "/ietf-interfaces:interfaces/interface[name='e1']/infix-interfaces:qos"</b>
-{
-  "ietf-interfaces:interfaces": {
-    "interface": [
-      {
-        "name": "e1",
-        "infix-interfaces:qos": {
-          "capabilities": {
-            "supported-offload": [
-              "classification",
-              "remarking",
-              "transmission-selection",
-              "egress-shaper",
-              "credit-based-shaper",
-              "time-aware-shaper"
-            ],
-            "offload": [
-              "classification",
-              "transmission-selection"
-            ],
-            "supported-trust-order": [
-              "pcp",
-              "dscp",
-              "dscp-pcp"
-            ]
-          }
-        }
-      }
-    ]
-  }
-}
+<pre class="cli"><code>admin@example:/> <b>show qos</b>
+<span class="header">PORT  PROFILE  TRUST    SHAPER  RESERVED  SCHEDULE  HARDWARE OFFLOAD      </span>
+e1             pcp                                  classify select
+e2             pcp    100 Mbps                      classify select shaper
+e3    access   dscp                                 classify select remark
+e4    access   dscp                                 classify select remark
 </code></pre>
 
-This is a switch port with the default settings.  `supported-offload`
-lists the stages the switch hardware can run, and `offload` the ones it
-runs with the current configuration: here classification and
-transmission selection, since nothing else is configured.  A stage that
-is configured and supported but missing from `offload` runs in the
-kernel instead, and then only for the traffic the CPU handles, see
-[Hardware Offload](#hardware-offload).  The same is available over
+The details of one port are part of `show interface`:
+
+<pre class="cli"><code>admin@example:/> <b>show interface e3</b>
+…
+<b>Quality of Service</b>
+profile            : access
+trust              : dscp
+default priority   : 0
+remark             : pcp from-priority
+hardware offload   : classification, transmission-selection, remarking
+available offload  : egress-shaper, credit-based-shaper, time-aware-shaper
+
+<span class="header">CLASS  PRIORITIES  ALGORITHM        SHARE  RESERVED</span>
+    7  7           strict-priority
+    6  6           strict-priority
+    5  5           strict-priority
+    4  4           strict-priority
+    3  3           strict-priority
+    2  2           strict-priority
+    1  0           strict-priority
+    0  1           strict-priority
+</code></pre>
+
+Everything shown is read back from the port, from the switch hardware
+where it does the work and from the kernel elsewhere.  It is what the
+port runs, which for a port on a profile is the profile's settings.
+`hardware offload` lists the stages the switch hardware runs with the
+current configuration, and `available offload` those it could run but
+that are not configured.  A stage that is configured but in neither
+list runs in the kernel instead, and then only for the traffic the CPU
+handles, see [Hardware Offload](#hardware-offload).  A port with
+reservations or a gate schedule shows those too.
+
+The same data is in the operational datastore, under
+`/interfaces/interface[name='e3']/qos/`, for
 [RESTCONF](scripting-restconf.md) and NETCONF, and the WebUI shows it
-per port on its QoS page.
+per port on its QoS page.  From the shell, `copy` prints it as JSON:
+
+<pre class="cli"><code>admin@example:~$ <b>copy operational -x "/interfaces/interface[name='e3']/qos"</b>
+</code></pre>
 
 
 ## VLAN Interfaces

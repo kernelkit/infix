@@ -1069,6 +1069,19 @@ def ptp(args: List[str]) -> None:
         cli_pretty(data, "show-ptp")
 
 
+def qos(args: List[str]) -> None:
+    data = get_json("/ietf-interfaces:interfaces")
+    if not data:
+        print("No QoS data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, "show-qos")
+
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'alarms': alarms,
@@ -1088,6 +1101,7 @@ def execute_command(command: str, args: List[str]):
         'ospf': ospf,
         'ospf6': ospf6,
         'ptp': ptp,
+        'qos': qos,
         'rip': rip,
         'ripng': ripng,
         'routes': routes,

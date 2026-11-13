@@ -61,6 +61,15 @@ All notable changes to the project are documented in this file.
     table and the credit-based and time-aware shapers to the switch,
     including the time-aware shaper's `queue-max-sdu`.  A gate closes
     early enough for a full-size frame to finish before the next window
+  - New CLI command `show qos` with an overview of all ports: profile,
+    trust mode, shaper, reservations, gate schedule and hardware
+    offload.  `show interface NAME` lists the QoS state of the port,
+    with its traffic classes and gate schedule
+  - The operational datastore reports the QoS settings each port runs,
+    read back from the switch hardware or the kernel: trust mode and
+    priority maps, the traffic class table, the algorithm and share of
+    each class, and remarking.  `qos active-profile` names the profile
+    a port runs
   - `qos capabilities` lists `supported-offload`, the stages a port's
     switch fabric can run, next to `offload`, those it runs right now
   - The port's `qos egress rate-limit` is now `qos egress-shaper`, and

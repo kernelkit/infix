@@ -74,6 +74,39 @@ admin@example:/config/interface/…/gate-parameter-table/> <b>set gate-control-e
 admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
 </code></pre>
 
+`show interface` then lists what the port runs: the reservation of
+each shaped class, and the gate schedule with the traffic classes each
+entry opens.
+
+<pre class="cli"><code>admin@example:/> <b>show interface e2</b>
+…
+<b>Quality of Service</b>
+trust              : pcp
+default priority   : 0
+hardware offload   : classification, transmission-selection, credit-based-shaper, time-aware-shaper
+available offload  : remarking, egress-shaper
+
+<span class="header">CLASS  PRIORITIES  ALGORITHM            SHARE  RESERVED</span>
+    7  3           credit-based-shaper          50 Mbps
+    6  2           strict-priority
+    5  7           strict-priority
+    4  6           strict-priority
+    3  5           strict-priority
+    2  4           strict-priority
+    1  0           strict-priority
+    0  1           strict-priority
+
+gate schedule      : running
+cycle time         : 1 ms
+base time          : 0.000000000 s
+
+<span class="header">ENTRY  OPEN CLASSES  INTERVAL</span>
+    0  3               200 µs
+    1  7               600 µs
+    2  0-2,4-6       187.7 µs
+    3  none           12.3 µs
+</code></pre>
+
 The port where the traffic enters decides which frames get priority 5
 and 3, e.g. by trusting the DSCP, see [Ingress
 Classification](qos.md#ingress-classification).  The sections below
@@ -199,9 +232,9 @@ family under [Hardware Offload](qos.md#hardware-offload).
 
 ## Measuring the Result
 
-The list, cycle and base time a port runs are in the operational
-datastore, as described above, together with `oper-idle-slope` for
-each shaped class.  That shows what is configured.  Whether frames
+`show interface` and the operational datastore show the list, cycle
+and base time a port runs, and the reservation of each shaped class.
+That shows what is configured.  Whether frames
 leave when the timetable says takes a measurement, and the system
 comes with a tool for it: `ptping` sends probes that are timestamped
 in hardware, both when they leave the sender and when they reach the
