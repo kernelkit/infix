@@ -174,7 +174,7 @@ with infamy.Test() as test:
                  lambda: listener.put_config_dicts(station(listener["data"], LISTENER)))
 
     with test.step("Verify the DUT is grandmaster and the talker and listener follow it"):
-        until(lambda: ptp.is_own_gm(dut), attempts=60)
+        until(lambda: ptp.is_own_gm(dut))
         parallel(*[lambda n=n, t=t: until(lambda: ptp.is_time_receiver(t) and
                                           ptp.has_converged(t, ptp.default_threshold(env, n)),
                                           attempts=120)
