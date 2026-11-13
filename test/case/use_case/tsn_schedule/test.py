@@ -163,7 +163,7 @@ with infamy.Test() as test:
         target.put_config_dicts(gptp(td1))
 
     with test.step("Verify the DUT is its own grandmaster and the port transmits time"):
-        until(lambda: ptp.is_own_gm(target) and ptp.is_time_transmitter(target), attempts=60)
+        until(lambda: ptp.is_own_gm(target) and ptp.is_time_transmitter(target))
 
     with test.step("Run the gate control list on the egress port, reserve 50 Mbps for class 7"):
         speed = int(target.get_iface(td1)["speed"])
