@@ -51,7 +51,7 @@ def config(port, table, qos=None):
 
 
 def must_reject(target, cfg, what, reason):
-    qos.must_reject(what, lambda: target.put_config_dicts(cfg), reason)
+    qos.must_reject(what, target, cfg, reason)
 
 
 def oper_table(target, port):

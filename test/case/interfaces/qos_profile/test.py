@@ -56,8 +56,8 @@ with infamy.Test() as test:
         until(lambda: runs(tgtssh, p1, port1.traffic_classes, qos.TABLE_8_5))
 
     with test.step("Reject deleting the profile while ports use it"):
-        qos.must_reject("delete of a referenced profile",
-                        lambda: target.put_config_dicts({}, delete=[f"{PROFILE}[name='sr']"]))
+        qos.must_reject("delete of a referenced profile", target, {},
+                        delete=[f"{PROFILE}[name='sr']"])
         assert port0.profile == "sr" and port1.profile == "sr"
 
     with test.step("Take the first port off the profile and give it inline settings"):

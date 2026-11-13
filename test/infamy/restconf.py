@@ -55,6 +55,18 @@ def xpath_to_uri(xpath, extra=None):
     return uri_path
 
 
+def error_message(response):
+    """What a RESTCONF error reply says went wrong, without the JSON around it"""
+    try:
+        errors = response.json()["ietf-restconf:errors"]["error"]
+        text = "; ".join(e.get("error-message") or e["error-tag"] for e in errors)
+    except (ValueError, KeyError, TypeError):
+        return response.text.strip() or response.reason
+    # sysrepo puts its own status on the first line, the cause on the next
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return re.sub(r" \(SR_ERR_\w+\)$", "", " ".join(lines[1:] if len(lines) > 1 else lines))
+
+
 # Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
 def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
                         timeout=TIMEOUT):
@@ -81,10 +93,9 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
             response = requests_workaround(method, url, json, headers, auth,
                                            verify, retry, timeout)
         else:
-            # The RESTCONF error body names the offending node and why
-            if response.text:
-                print(f"{method} {url}: HTTP {response.status_code}: {response.text.strip()}")
-            raise e
+            raise requests.exceptions.HTTPError(
+                f"{method} {url}: HTTP {response.status_code}: {error_message(response)}",
+                response=response) from None
 
     return response
 
@@ -364,11 +375,8 @@ class Device(Transport):
                 except Exception as e:
                     last_error = e
                     if attempt < retries - 1:
-                        print(f"Failed PATCH to {url}: {e}  Retrying ...")
+                        print(f"Failed PATCH: {e}  Retrying ...")
                         time.sleep(1)
-                    else:
-                        print(f"Failed PATCH to {url}: {e}")
-                    continue
 
             if last_error is not None:
                 raise last_error
@@ -419,23 +427,9 @@ class Device(Transport):
                 break
             except Exception as e:
                 last_error = e
-                # Try to extract detailed error message from response
-                error_detail = str(e)
-                if hasattr(e, 'response') and e.response is not None:
-                    try:
-                        err_json = e.response.json()
-                        if 'ietf-restconf:errors' in err_json:
-                            errors = err_json['ietf-restconf:errors'].get('error', [])
-                            if errors:
-                                error_detail = errors[0].get('error-message', str(e))
-                    except:
-                        pass
                 if attempt < retries - 1:
-                    print(f"Failed PATCH: {error_detail}  Retrying ...")
+                    print(f"Failed PATCH: {e}  Retrying ...")
                     time.sleep(1)
-                else:
-                    print(f"Failed PATCH: {error_detail}")
-                continue
 
         if last_error is not None:
             raise last_error

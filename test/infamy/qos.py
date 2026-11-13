@@ -462,13 +462,13 @@ def run_flows(talker, listener, dst, flows):
     return total
 
 
-def must_reject(what, func, *reasons):
-    """func must fail its commit, and the error must name one of the reasons
+def must_reject(what, target, models, *reasons, delete=()):
+    """The commit must fail, and the error must name one of the reasons
 
     With no reasons any error will do; a rejected delete over RESTCONF
     carries no message, so the test checks the effect instead."""
     try:
-        func()
+        target.put_config_dicts(models, retries=1, delete=delete)
     except Exception as err:
         text = getattr(getattr(err, "response", None), "text", None) or str(err)
         matched = [reason for reason in reasons if reason in text]
