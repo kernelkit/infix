@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -897,17 +898,24 @@ func parseDnsmasqLeases(data string) []map[string]any {
 			clientID = fields[4]
 		}
 
-		leases = append(leases, map[string]any{
-			"expires":      expires,
-			"address":      fields[2],
-			"phys-address": fields[1],
-			"hostname":     hostname,
-			"client-id":    clientID,
-		})
+		lease := map[string]any{
+			"expires":   expires,
+			"address":   fields[2],
+			"hostname":  hostname,
+			"client-id": clientID,
+		}
+		// dnsmasq prefixes the hardware type and prints as many
+		// octets as the client sent when it is not Ethernet.
+		if macRe.MatchString(fields[1]) {
+			lease["phys-address"] = fields[1]
+		}
+		leases = append(leases, lease)
 	}
 
 	return leases
 }
+
+var macRe = regexp.MustCompile(`^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$`)
 
 func buildDHCPTree(leases []map[string]any, stats map[string]any) json.RawMessage {
 	root := map[string]any{
