@@ -78,6 +78,13 @@ func find(qs []Querier, bridge string, vid int, upper, family string) *Querier {
 	return nil
 }
 
+// Ranges of the leaves the values go into.  The interval of an elected
+// querier is what its queries say, a peer picks it.
+const (
+	maxQueryInterval = 1024
+	maxUint16        = 65535
+)
+
 // Apply sets the querier mode, query interval and active queriers in
 // mcast, the multicast node of a bridge (vid 0) or of a bridge VLAN.
 func Apply(mcast map[string]any, qs []Querier, bridge string, vid int, upper string) {
@@ -89,7 +96,7 @@ func Apply(mcast map[string]any, qs []Querier, bridge string, vid int, upper str
 		if q4.State == "proxy" {
 			mode = "proxy"
 		}
-		if q4.Interval > 0 {
+		if q4.Interval > 0 && q4.Interval <= maxQueryInterval {
 			mcast["query-interval"] = q4.Interval
 		}
 	}
@@ -102,13 +109,15 @@ func Apply(mcast map[string]any, qs []Querier, bridge string, vid int, upper str
 			continue
 		}
 		aq := map[string]any{
-			"family":         q.Family,
-			"address":        q.Address,
-			"local":          q.Timeout == nil,
-			"version":        q.Version,
-			"query-interval": q.Interval,
+			"family":  q.Family,
+			"address": q.Address,
+			"local":   q.Timeout == nil,
+			"version": q.Version,
 		}
-		if q.Timeout != nil {
+		if q.Interval >= 0 && q.Interval <= maxUint16 {
+			aq["query-interval"] = q.Interval
+		}
+		if q.Timeout != nil && *q.Timeout >= 0 && *q.Timeout <= maxUint16 {
 			aq["timeout"] = *q.Timeout
 		}
 		active = append(active, aq)
