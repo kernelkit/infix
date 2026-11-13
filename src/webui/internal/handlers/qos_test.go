@@ -36,8 +36,8 @@ func TestQoSOverview(t *testing.T) {
 		"ietf-interfaces:interfaces": map[string]any{
 			"interface": []map[string]any{
 				{"name": "e1", "type": "infix-if-type:ethernet", "infix-interfaces:qos": map[string]any{
-					"profile":       "tsn-ring",
-					"egress-shaper": map[string]any{"rate": "100000000"},
+					"active-profile": "tsn-ring",
+					"egress-shaper":  map[string]any{"rate": "100000000"},
 					"capabilities": map[string]any{
 						"max-traffic-classes": 4,
 						"offload":             []string{"classification", "remarking", "transmission-selection", "egress-shaper"},

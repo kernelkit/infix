@@ -1,6 +1,7 @@
 // Package qosmonitor keeps the QoS operational state of each port: its
-// capabilities, the profile it runs, the egress shaper and the other shapers in
-// effect.  The qdisc tree is read through a long-lived `tc` batch
+// capabilities, the profile it runs, its classification, traffic classes
+// and remarking, the egress shaper and the other shapers in effect.  The
+// qdisc tree and filters are read through a long-lived `tc` batch
 // process and the DCB tables over rtnetlink, one query per port, on
 // rtnetlink TC and DCB events, on link events and on changes to
 // /run/qos, where confd records the profile a port runs.
@@ -47,7 +48,7 @@ type Querier interface {
 
 // DCBReader reads a port's DCB tables, see DCB.
 type DCBReader interface {
-	Tables(ifname string) (app, rewr bool, err error)
+	Tables(ifname string) (dcbTables, error)
 }
 
 // link is the part of an `ip -json -d link show` row used here.
@@ -181,12 +182,12 @@ func (m *Monitor) receive(ctx context.Context) error {
 	}
 }
 
-// dispatch queues a refresh of the port a qdisc or DCB notification is
-// about.  Filter and class notifications share the TC group and change
-// nothing reported here.
+// dispatch queues a refresh of the port a qdisc, filter or DCB
+// notification is about.  Class notifications share the TC group and
+// change nothing reported here.
 func (m *Monitor) dispatch(msg netlink.Message) {
 	switch msg.Header.Type {
-	case unix.RTM_NEWQDISC, unix.RTM_DELQDISC:
+	case unix.RTM_NEWQDISC, unix.RTM_DELQDISC, unix.RTM_NEWTFILTER, unix.RTM_DELTFILTER:
 		if len(msg.Data) >= sizeofTcmsg {
 			m.refreshIndex(int(int32(binary.NativeEndian.Uint32(msg.Data[4:8]))))
 		}
@@ -351,9 +352,16 @@ func (m *Monitor) read(l link) port {
 		m.log.Debug("qosmonitor: tc", "ifname", l.Name, "err", err)
 	}
 	if p.Trust != nil {
-		if p.App, p.Rewr, err = m.dcb.Tables(l.Name); err != nil {
+		json.Unmarshal(q.Get("qos-pcp-encoded"), &p.PCPEncoded)
+		if p.DCB, err = m.dcb.Tables(l.Name); err != nil {
 			m.log.Debug("qosmonitor: dcb", "ifname", l.Name, "err", err)
 		}
+	}
+	if hasClsact(p.Qdiscs) {
+		dev := "filter show dev if" + strconv.Itoa(l.Index)
+		p.Ingress, _ = m.tc.Query(dev + " ingress")
+		egress, _ := m.tc.Query(dev + " egress")
+		p.Remarks = remarksInSoftware(egress)
 	}
 	if data, err := os.ReadFile(filepath.Join(m.runDir, l.Name)); err == nil {
 		p.Profile = string(bytes.TrimSpace(data))

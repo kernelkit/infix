@@ -42,7 +42,7 @@ class Port:
             "/infix-interfaces:qos")
         iface = next(iter(data["interfaces"]["interface"]), {}) if data else {}
         qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("profile")
+        return qos.get("active-profile")
 
     @property
     def switched(self):

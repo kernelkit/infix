@@ -38,7 +38,11 @@ func TestBuildSwitchPort(t *testing.T) {
 		TxQueues:  4,
 		Trust:     []string{"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
 		Supported: []string{"classification", "remarking", "transmission-selection", "egress-shaper"},
-		App:       true,
+		DCB: dcbTables{
+			HasTrust: true,
+			Trust:    []uint8{dcbSelectorPCP},
+			App:      []dcbApp{{dcbSelectorEther, 2, 0}, {dcbSelectorPCP, 3, 11}},
+		},
 		Qdiscs: json.RawMessage(`[
 			{"kind":"tbf","handle":"8001:","root":true,"offloaded":true,"options":{"rate":12500000,"burst":15000}},
 			{"kind":"ets","handle":"8002:","parent":"8001:1","offloaded":true,"options":{"bands":4}}]`),
@@ -52,7 +56,14 @@ func TestBuildSwitchPort(t *testing.T) {
 			"supported-offload":     []any{"classification", "remarking", "transmission-selection", "egress-shaper"},
 			"offload":               []any{"classification", "egress-shaper", "transmission-selection"},
 		},
-		"profile":       "edge",
+		"active-profile": "edge",
+		"ingress": map[string]any{
+			"trust":            "pcp",
+			"default-priority": 2.0,
+			"pcp-map": map[string]any{"entry": []any{
+				map[string]any{"pcp": 3.0, "dei": true, "priority": 3.0},
+			}},
+		},
 		"egress-shaper": map[string]any{"rate": "100000000", "burst": 15000.0},
 	}}
 	if !reflect.DeepEqual(got, want) {
@@ -167,9 +178,9 @@ func TestBuildSchedLimits(t *testing.T) {
 	}
 }
 
-type fakeDCB struct{ app, rewr bool }
+type fakeDCB struct{ tables dcbTables }
 
-func (f fakeDCB) Tables(string) (bool, bool, error) { return f.app, f.rewr, nil }
+func (f fakeDCB) Tables(string) (dcbTables, error) { return f.tables, nil }
 
 type fakeBatch map[string]string
 
@@ -203,7 +214,7 @@ func TestDrainOnlyOnChange(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "e1"), []byte("edge\n"), 0o644)
 	m.Refresh("e1")
 	m.drain()
-	if len(calls) != 2 || string(calls[1]["e1"]) != `{"infix-interfaces:qos":{"capabilities":{"offload":["transmission-selection"]},"profile":"edge"}}` {
+	if len(calls) != 2 || string(calls[1]["e1"]) != `{"infix-interfaces:qos":{"active-profile":"edge","capabilities":{"offload":["transmission-selection"]}}}` {
 		t.Fatalf("profile not picked up: %v", calls)
 	}
 
@@ -234,5 +245,117 @@ func TestDispatch(t *testing.T) {
 	}
 	if _, ok := m.pending["e3"]; !ok {
 		t.Fatalf("want e3 pending, got %v", m.pending)
+	}
+}
+
+func TestIngressFilters(t *testing.T) {
+	p := port{Ingress: json.RawMessage(`[
+		{"protocol":"ip","pref":100,"kind":"flower","chain":0},
+		{"protocol":"ip","pref":100,"kind":"flower","options":{"keys":{"eth_type":"ipv4","ip_tos":0,"ip_tos_mask":"fc"},
+		 "actions":[{"kind":"skbedit","priority":"none"}]}},
+		{"protocol":"ip","pref":100,"kind":"flower","options":{"keys":{"eth_type":"ipv4","ip_tos":184,"ip_tos_mask":"fc"},
+		 "actions":[{"kind":"skbedit","priority":":5"}]}},
+		{"protocol":"ipv6","pref":101,"kind":"flower","options":{"keys":{"eth_type":"ipv6","ip_tos":184,"ip_tos_mask":"fc"},
+		 "actions":[{"kind":"skbedit","priority":":5"}]}},
+		{"protocol":"802.1Q","pref":200,"kind":"flower","options":{"keys":{"vlan_prio":7},
+		 "actions":[{"kind":"skbedit","priority":":7"}]}},
+		{"protocol":"all","pref":900,"kind":"matchall","options":{"actions":[{"kind":"skbedit","priority":":2"}]}}]`)}
+	raw, _ := json.Marshal(ingress(p))
+	var got map[string]any
+	json.Unmarshal(raw, &got)
+	want := map[string]any{
+		"trust":            "dscp-pcp",
+		"default-priority": 2.0,
+		"dscp-map": map[string]any{"entry": []any{
+			map[string]any{"dscp": 0.0, "priority": 0.0},
+			map[string]any{"dscp": 46.0, "priority": 5.0},
+		}},
+		"pcp-map": map[string]any{"entry": []any{
+			map[string]any{"pcp": 7.0, "dei": false, "priority": 7.0},
+			map[string]any{"pcp": 7.0, "dei": true, "priority": 7.0},
+		}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got  %v\nwant %v", got, want)
+	}
+
+	// The catch-all alone: nothing is trusted
+	p.Ingress = json.RawMessage(`[{"pref":900,"kind":"matchall","options":{"actions":[{"kind":"skbedit","priority":"none"}]}}]`)
+	if got := ingress(p); got["trust"] != "none" || got["default-priority"] != 0 {
+		t.Fatalf("got %v", got)
+	}
+	if got := ingress(port{}); got != nil {
+		t.Fatalf("want nil, got %v", got)
+	}
+}
+
+func egressJSON(t *testing.T, p port) map[string]any {
+	t.Helper()
+	var qdiscs []qdisc
+	json.Unmarshal(p.Qdiscs, &qdiscs)
+	raw, err := json.Marshal(egress(p, qdiscs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	json.Unmarshal(raw, &got)
+	return got
+}
+
+func class(id float64, algo string, share ...float64) map[string]any {
+	c := map[string]any{"id": id, "algorithm": algo}
+	if len(share) > 0 {
+		c["bandwidth"] = share[0]
+	}
+	return c
+}
+
+func TestEgressETS(t *testing.T) {
+	// Four classes under an egress shaper: 3 shaped, 2 strict, 1 and 0 share 70/30
+	p := port{
+		Remarks: true,
+		Qdiscs: json.RawMessage(`[
+			{"kind":"tbf","handle":"1:","root":true,"options":{"rate":12500000,"burst":15000}},
+			{"kind":"ets","handle":"2:","parent":"1:1","options":{"bands":4,"strict":2,"quanta":[106260,45540],
+			 "priomap":[3,3,2,2,1,1,0,0,3,3,3,3,3,3,3,3]}},
+			{"kind":"cbs","handle":"8003:","parent":"2:1","options":{"idleslope":20000,"offload":0}}]`),
+	}
+	want := map[string]any{
+		"traffic-class-table": map[string]any{
+			"priority0": 0.0, "priority1": 0.0, "priority2": 1.0, "priority3": 1.0,
+			"priority4": 2.0, "priority5": 2.0, "priority6": 3.0, "priority7": 3.0,
+		},
+		"traffic-class": []any{
+			class(3, algoCBS), class(2, algoStrict), class(1, algoETS, 70), class(0, algoETS, 30),
+		},
+		"remark": map[string]any{"dscp": "from-priority"},
+	}
+	if got := egressJSON(t, p); !reflect.DeepEqual(got, want) {
+		t.Fatalf("got  %v\nwant %v", got, want)
+	}
+}
+
+func TestEgressQueues(t *testing.T) {
+	// mqprio and taprio number the classes as the model does
+	p := port{
+		PCPEncoded: true,
+		DCB:        dcbTables{Rewr: []dcbApp{{dcbSelectorDSCP, 1, 8}}},
+		Qdiscs: json.RawMessage(`[
+			{"kind":"mqprio","handle":"1:","root":true,"options":{"tc":2,"map":[0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],"mode":"dcb"}},
+			{"kind":"cbs","handle":"8003:","parent":"1:2","options":{"idleslope":20000,"offload":1}}]`),
+	}
+	want := map[string]any{
+		"traffic-class-table": map[string]any{
+			"priority0": 0.0, "priority1": 0.0, "priority2": 0.0, "priority3": 0.0,
+			"priority4": 1.0, "priority5": 1.0, "priority6": 1.0, "priority7": 1.0,
+		},
+		"traffic-class": []any{class(1, algoCBS), class(0, algoStrict)},
+		"remark":        map[string]any{"pcp": "from-priority", "dscp": "from-priority"},
+	}
+	if got := egressJSON(t, p); !reflect.DeepEqual(got, want) {
+		t.Fatalf("got  %v\nwant %v", got, want)
+	}
+	if got := egress(port{}, nil); got != nil {
+		t.Fatalf("want nil, got %v", got)
 	}
 }
