@@ -102,7 +102,7 @@ with infamy.Test() as test:
     with test.step("Enable the gate control list on the port"):
         target.put_config_dicts(config(port, gates(port, entries)))
         until(lambda: (qos.root_qdisc(tgtssh, port) or {}).get("kind") == "taprio")
-        qos.show_offload(cap, "time-aware-shaper")
+        qos.wait_offload(cap, "time-aware-shaper")
 
     with test.step("Verify the port reports the list, cycle and base time it runs"):
         def runs_list():

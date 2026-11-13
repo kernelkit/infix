@@ -101,7 +101,7 @@ with infamy.Test() as test:
             {"traffic-class": [{"id": top, "algorithm": CBS}]},
             {"cbsa-parameter-table": [{"traffic-class": top, "admin-idle-slope": RESERVE}]}))
         until(lambda: any(q.get("kind") == "cbs" for q in qos.qdiscs(tgtssh, td1)))
-        qos.show_offload(port, "credit-based-shaper")
+        qos.wait_offload(port, "credit-based-shaper")
 
     with test.step("Verify the port reports the reservation as its operational idle slope"):
         until(lambda: oper_idle_slope(target, td1, top) == RESERVE)

@@ -69,8 +69,6 @@ with infamy.Test() as test:
             }
         }})
         until(lambda: (qos.root_qdisc(tgtssh, td1) or {}).get("kind") == "tbf")
-        qos.show_shaper(port)
-
         port.require_offload(test, "egress-shaper")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \

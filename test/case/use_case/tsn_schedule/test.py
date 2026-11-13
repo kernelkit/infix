@@ -170,8 +170,8 @@ with infamy.Test() as test:
         wins = windows(speed)
         target.put_config_dicts(schedule(td1, wins))
         until(lambda: {"taprio", "cbs"} <= {q.get("kind") for q in qos.qdiscs(tgtssh, td1)})
-        qos.show_offload(port, "time-aware-shaper")
-        qos.show_offload(port, "credit-based-shaper")
+        qos.wait_offload(port, "time-aware-shaper")
+        qos.wait_offload(port, "credit-based-shaper")
         sched = window_rate(SCHED_NS, speed)
         bulk = window_rate(wins[2][1], speed)
 
