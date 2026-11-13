@@ -35,7 +35,7 @@ def egress_config(port, egress):
 
 
 def must_reject(target, port, egress, what, *reasons):
-    qos.must_reject(what, lambda: target.put_config_dicts(egress_config(port, egress)), *reasons)
+    qos.must_reject(what, target, egress_config(port, egress), *reasons)
 
 
 with infamy.Test() as test:

@@ -53,7 +53,7 @@ def config(td0, td1, top, egress, cbsa):
 
 
 def must_reject(target, cfg, what, reason):
-    qos.must_reject(what, lambda: target.put_config_dicts(cfg), reason)
+    qos.must_reject(what, target, cfg, reason)
 
 
 def oper_idle_slope(target, port, tc):
