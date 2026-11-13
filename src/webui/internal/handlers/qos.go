@@ -43,7 +43,7 @@ func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		mgr := h.Schema.Manager()
 		qos := "/ietf-interfaces:interfaces/interface/infix-interfaces:qos"
 		data.Desc = map[string]string{
-			"profile":       schema.DescriptionOf(mgr, qos+"/profile"),
+			"profile":       schema.DescriptionOf(mgr, qos+"/active-profile"),
 			"classes":       schema.DescriptionOf(mgr, qos+"/capabilities/max-traffic-classes"),
 			"egress-shaper": schema.DescriptionOf(mgr, qos+"/egress-shaper"),
 			"offload":       schema.DescriptionOf(mgr, qos+"/capabilities/offload"),
@@ -59,7 +59,7 @@ func (h *QoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		if iface.QoS == nil || iface.QoS.Capabilities == nil {
 			continue
 		}
-		row := qosRow{Name: iface.Name, Profile: iface.QoS.Profile, TrafficClasses: 8}
+		row := qosRow{Name: iface.Name, Profile: iface.QoS.ActiveProfile, TrafficClasses: 8}
 		if iface.QoS.Capabilities.MaxTrafficClasses > 0 {
 			row.TrafficClasses = iface.QoS.Capabilities.MaxTrafficClasses
 		}

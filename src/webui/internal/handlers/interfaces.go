@@ -64,13 +64,15 @@ type ifaceJSON struct {
 // qosIfaceJSON mirrors infix-interfaces:qos.  In configuration the port
 // holds either a profile reference or the inline ingress and egress
 // containers, a YANG choice; operational data carries the profile the
-// daemon applied, the egress shaper in effect and the capabilities.
+// port runs as active-profile, the settings read back from the port,
+// the egress shaper in effect and the capabilities.
 type qosIfaceJSON struct {
-	Profile      string          `json:"profile"`
-	Ingress      *qosIngressJSON `json:"ingress"`
-	Egress       *qosEgressJSON  `json:"egress"`
-	Shaper       *qosShaperJSON  `json:"egress-shaper"`
-	Capabilities *qosCapsJSON    `json:"capabilities"`
+	Profile       string          `json:"profile"`
+	ActiveProfile string          `json:"active-profile"`
+	Ingress       *qosIngressJSON `json:"ingress"`
+	Egress        *qosEgressJSON  `json:"egress"`
+	Shaper        *qosShaperJSON  `json:"egress-shaper"`
+	Capabilities  *qosCapsJSON    `json:"capabilities"`
 }
 
 type qosShaperJSON struct {

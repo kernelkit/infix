@@ -40,7 +40,8 @@ submodule infix-if-qos {
                  to /system/qos-profile, a choice.  egress/rate-limit
                  becomes qos/egress-shaper, and feature rate-limit
                  becomes egress-shaper.  capabilities gain
-                 supported-offload, the stages the fabric can run.";
+                 supported-offload, the stages the fabric can run.
+                 active-profile reports the profile a port runs.";
     reference "internal";
   }
 
@@ -128,6 +129,16 @@ submodule infix-if-qos {
              An order that is not listed is rejected rather than
              reordered.";
         }
+      }
+
+      leaf active-profile {
+        config false;
+        type string;
+        description "The QoS profile the port runs.
+
+           Set when the settings of the port come from a profile.  The
+           settings themselves are reported under ingress and egress,
+           as read back from the port, with or without a profile.";
       }
 
       choice source {

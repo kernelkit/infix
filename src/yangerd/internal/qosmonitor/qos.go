@@ -28,14 +28,16 @@ type schedLimits struct {
 
 // port is what the kernel and the quirks say about one port's QoS.
 type port struct {
-	TxQueues  int
-	Trust     []string // quirk qos-trust-order, nil without DCB
-	Supported []string // quirk qos-offload
-	Sched     schedLimits
-	App       bool            // PCP or DSCP entries in the DCB app table
-	Rewr      bool            // PCP or DSCP entries in the DCB rewrite table
-	Qdiscs    json.RawMessage // tc qdisc show
-	Profile   string          // the profile confd applied, from /run/qos
+	TxQueues   int
+	Trust      []string // quirk qos-trust-order, nil without DCB
+	Supported  []string // quirk qos-offload
+	Sched      schedLimits
+	DCB        dcbTables       // trust order, app and rewrite tables
+	PCPEncoded bool            // quirk qos-pcp-encoded, the fabric always writes the PCP
+	Qdiscs     json.RawMessage // tc qdisc show
+	Ingress    json.RawMessage // tc filter show ingress, of a port classifying in software
+	Remarks    bool            // the port remarks the DSCP in software
+	Profile    string          // the profile confd applied, from /run/qos
 }
 
 type qdisc struct {
@@ -84,7 +86,13 @@ func build(p port, mods Modules) map[string]any {
 		qos["capabilities"] = caps
 	}
 	if p.Profile != "" {
-		qos["profile"] = p.Profile
+		qos["active-profile"] = p.Profile
+	}
+	if in := ingress(p); in != nil {
+		qos["ingress"] = in
+	}
+	if eg := egress(p, qdiscs); eg != nil {
+		qos["egress"] = eg
 	}
 	if shaper := egressShaper(qdiscs); shaper != nil {
 		qos["egress-shaper"] = shaper
@@ -121,10 +129,10 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 	// driver took them.
 	var offload []string
 	if p.Trust != nil {
-		if p.App {
+		if hasPrioMap(p.DCB.App) {
 			offload = append(offload, "classification")
 		}
-		if p.Rewr {
+		if hasPrioMap(p.DCB.Rewr) {
 			offload = append(offload, "remarking")
 		}
 	}
@@ -213,24 +221,8 @@ func shapers(qdiscs []qdisc, mods Modules, limits schedLimits) map[string]any {
 		out["ieee802-dot1dc-sched-if:gate-parameter-table"] = table
 	}
 
-	var root, sched *qdisc
-	for i := range qdiscs {
-		if qdiscs[i].Root {
-			root = &qdiscs[i]
-			break
-		}
-	}
-	sched = root
-	if root != nil && root.Kind == "tbf" {
-		sched = nil
-		for i := range qdiscs {
-			if qdiscs[i].Parent == root.Handle+"1" {
-				sched = &qdiscs[i]
-				break
-			}
-		}
-	}
-	if sched == nil || (sched.Kind != "ets" && sched.Kind != "mqprio" && sched.Kind != "taprio") {
+	sched := scheduler(qdiscs)
+	if sched == nil {
 		return out
 	}
 
@@ -291,17 +283,9 @@ func shapers(qdiscs []qdisc, mods Modules, limits schedLimits) map[string]any {
 	}
 	var classes []any
 	for _, q := range qdiscs {
-		if q.Kind != "cbs" || !strings.HasPrefix(q.Parent, sched.Handle) {
+		tc, ok := classOf(q, sched, bands)
+		if !ok || q.Kind != "cbs" {
 			continue
-		}
-		_, minorHex, _ := strings.Cut(q.Parent, ":")
-		minor, err := strconv.ParseInt(minorHex, 16, 64)
-		if err != nil {
-			continue
-		}
-		tc := int(minor) - 1
-		if sched.Kind == "ets" {
-			tc = bands - int(minor)
 		}
 		var c cbsOpts
 		json.Unmarshal(q.Options, &c)
