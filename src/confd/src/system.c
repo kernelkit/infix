@@ -41,6 +41,10 @@
 #define PLATFORM_PATH_    "/ietf-system:system-state/platform"
 #define PASSWORD_PATH     "/ietf-system:system/authentication/user/password"
 
+/* BusyBox adduser range, LAST_SYSTEM_ID + 1 to LAST_ID */
+#define USER_ID_MIN    1000
+#define USER_ID_MAX    60000
+
 #define _PATH_PASSWD   "/etc/passwd"
 #define _PATH_HOSTNAME "/etc/hostname"
 #define _PATH_HOSTS    "/etc/hosts"
@@ -1121,7 +1125,21 @@ static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct confd *c
 	return err;
 }
 
-static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct confd *, struct sr_change *change)
+/* Accounts and groups outside the adduser range belong to the system */
+static int is_system_name(const char *name)
+{
+	const struct passwd *pw = getpwnam(name);
+	const struct group *gr = getgrnam(name);
+
+	if (pw && (pw->pw_uid < USER_ID_MIN || pw->pw_uid > USER_ID_MAX))
+		return 1;
+	if (gr && (gr->gr_gid < USER_ID_MIN || gr->gr_gid > USER_ID_MAX))
+		return 1;
+
+	return 0;
+}
+
+static sr_error_t check_sr_user_update(sr_session_ctx_t *session, struct confd *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	sr_val_t *val;
@@ -1133,6 +1151,11 @@ static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct confd *, struc
 	name = sr_xpath_key_value(val->xpath, "user", "name", &state);
 	if (!is_valid_username(name)) {
 		AUDIT("Invalid username \"%s\"", name);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+	if (change->op == SR_OP_CREATED && is_system_name(name)) {
+		AUDIT("Username \"%s\" is reserved by the system", name);
+		sr_session_set_error_message(session, "Username \"%s\" is reserved by the system.", name);
 		return SR_ERR_VALIDATION_FAILED;
 	}
 	NOTE("Username \"%s\" is valid", name);
