@@ -6,22 +6,97 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var sizeRe = regexp.MustCompile(`(?i)^\s*([0-9.]+)\s*([KMGT]?I?B)?\s*$`)
+// StateGlob matches the state file ixcont keeps per container.
+const StateGlob = "/run/containers/*/state.json"
 
-// collectTimeout bounds one full collection: a podman stats stuck on a
-// container in a bad state must not wedge the container monitor.
+const cgroupRoot = "/sys/fs/cgroup"
+
+// collectTimeout bounds one full collection: a crun stuck on a container
+// in a bad state must not wedge the container monitor.
 const collectTimeout = 60 * time.Second
+
+// containerState is what ixcont writes to state.json.  Networks is nil
+// for a container sharing the host's network namespace.
+type containerState struct {
+	Name     string              `json:"name"`
+	ID       string              `json:"id"`
+	Image    string              `json:"image"`
+	ImageID  string              `json:"image-id"`
+	Cmdline  string              `json:"cmdline"`
+	Status   string              `json:"status"`
+	Started  float64             `json:"started"`
+	Networks *[]containerNetwork `json:"networks"`
+	Publish  []string            `json:"publish"`
+	Cgroup   string              `json:"cgroup"`
+}
+
+type containerNetwork struct {
+	Name      string   `json:"name"`
+	Ifname    string   `json:"ifname"`
+	Type      string   `json:"type"`
+	Addresses []string `json:"addresses"`
+}
+
+// cpuSample remembers the last cgroup CPU reading per container, so
+// the next collection can report a percentage over the interval.
+type cpuSample struct {
+	usec uint64
+	at   time.Time
+}
+
+var (
+	cpuMu   sync.Mutex
+	cpuPrev = map[string]cpuSample{}
+)
 
 // containerCollector gathers infix-containers operational data.
 type containerCollector struct {
 	cmd CommandRunner
 	fs  FileReader
+}
+
+// loadStates reads every container state file, in name order.
+func loadStates(fs FileReader) []containerState {
+	paths, err := fs.Glob(StateGlob)
+	if err != nil {
+		return nil
+	}
+	var states []containerState
+	for _, path := range paths {
+		data, err := fs.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		var st containerState
+		if err := json.Unmarshal(data, &st); err != nil || st.Name == "" {
+			log.Printf("collector containers: %s: %v", path, err)
+			continue
+		}
+		states = append(states, st)
+	}
+	return states
+}
+
+// ContainerNetworks maps each container network to the containers using
+// it, all of them, so a stopped container still shows up in the list of
+// a network it shares.
+func ContainerNetworks(fs FileReader) map[string][]string {
+	networks := map[string][]string{}
+	for _, st := range loadStates(fs) {
+		if st.Networks == nil {
+			continue
+		}
+		for _, n := range *st.Networks {
+			networks[n.Name] = append(networks[n.Name], st.Name)
+		}
+	}
+	return networks
 }
 
 // CollectContainers runs a full container collection and returns the
@@ -34,10 +109,8 @@ func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
 
 	c := &containerCollector{cmd: cmd, fs: fs}
 	containers := []interface{}{}
-	for _, ps := range c.podmanPS(ctx) {
-		if cont := c.container(ctx, ps); cont != nil {
-			containers = append(containers, cont)
-		}
+	for _, st := range loadStates(fs) {
+		containers = append(containers, c.container(ctx, st))
 	}
 	if len(containers) == 0 {
 		return nil
@@ -50,161 +123,31 @@ func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
 	return data
 }
 
-func (c *containerCollector) podmanPS(ctx context.Context) []map[string]interface{} {
-	var list []map[string]interface{}
-	if err := runJSON(ctx, c.cmd, &list, "podman", "ps", "-a", "--format=json"); err != nil {
-		log.Printf("collector containers: %v", err)
-		return nil
+// running asks crun, the only authority on whether the process is alive.
+func (c *containerCollector) running(ctx context.Context, name string) bool {
+	var st struct {
+		Status string `json:"status"`
 	}
-	return list
+	if err := runJSON(ctx, c.cmd, &st, "crun", "state", name); err != nil {
+		return false
+	}
+	return st.Status == "running"
 }
 
-func (c *containerCollector) podmanInspect(ctx context.Context, name string) map[string]interface{} {
-	out, err := c.cmd.Run(ctx, "podman", "inspect", name)
+func (c *containerCollector) cgroupFile(st containerState, name string) string {
+	data, err := c.fs.ReadFile(filepath.Join(cgroupRoot, st.Cgroup, name))
 	if err != nil {
-		log.Printf("collector containers: inspect %s: %v", name, err)
-		return map[string]interface{}{}
+		return ""
 	}
-
-	var list []map[string]interface{}
-	if err := json.Unmarshal(out, &list); err == nil && len(list) > 0 {
-		return list[0]
-	}
-
-	var generic []interface{}
-	if err := json.Unmarshal(out, &generic); err == nil {
-		for _, item := range generic {
-			if m, ok := item.(map[string]interface{}); ok {
-				return m
-			}
-		}
-	}
-
-	var single map[string]interface{}
-	if err := json.Unmarshal(out, &single); err == nil {
-		return single
-	}
-
-	log.Printf("collector containers: inspect %s parse: invalid json", name)
-	return map[string]interface{}{}
+	return strings.TrimSpace(string(data))
 }
 
-func (c *containerCollector) resourceStats(ctx context.Context, name string) map[string]interface{} {
-	out, err := c.cmd.Run(ctx, "podman", "stats", "--no-stream", "--format", "json", "--no-reset", name)
-	if err != nil {
-		log.Printf("collector containers: stats %s: %v", name, err)
-		return nil
-	}
-
-	var statsList []map[string]interface{}
-	if err := json.Unmarshal(out, &statsList); err != nil {
-		var single map[string]interface{}
-		if err2 := json.Unmarshal(out, &single); err2 != nil {
-			log.Printf("collector containers: stats %s parse: %v", name, err)
-			return nil
-		}
-		statsList = append(statsList, single)
-	}
-
-	if len(statsList) == 0 {
-		return nil
-	}
-
-	stat := statsList[0]
-	rusage := make(map[string]interface{})
-
-	if memUsage, ok := stat["mem_usage"].(string); ok {
-		parts := strings.SplitN(memUsage, "/", 2)
-		if len(parts) == 2 {
-			memKiB := parseSizeKiB(strings.TrimSpace(parts[0]))
-			rusage["memory"] = strconv.Itoa(memKiB)
-		}
-	}
-
-	if cpuPercent, ok := stat["cpu_percent"].(string); ok {
-		cpuPercent = strings.TrimSpace(strings.TrimSuffix(cpuPercent, "%"))
-		if cpuVal, err := strconv.ParseFloat(cpuPercent, 64); err == nil {
-			rusage["cpu"] = fmt.Sprintf("%.2f", cpuVal)
-		}
-	}
-
-	if blockIO, ok := stat["block_io"].(string); ok {
-		parts := strings.SplitN(blockIO, "/", 2)
-		if len(parts) == 2 {
-			readKiB := parseSizeKiB(strings.TrimSpace(parts[0]))
-			writeKiB := parseSizeKiB(strings.TrimSpace(parts[1]))
-
-			bio := make(map[string]interface{})
-			if readKiB > 0 {
-				bio["read"] = strconv.Itoa(readKiB)
-			}
-			if writeKiB > 0 {
-				bio["write"] = strconv.Itoa(writeKiB)
-			}
-			rusage["block-io"] = bio
-		}
-	}
-
-	if netIO, ok := stat["net_io"].(string); ok {
-		parts := strings.SplitN(netIO, "/", 2)
-		if len(parts) == 2 {
-			rxKiB := parseSizeKiB(strings.TrimSpace(parts[0]))
-			txKiB := parseSizeKiB(strings.TrimSpace(parts[1]))
-
-			nio := make(map[string]interface{})
-			if rxKiB > 0 {
-				nio["received"] = strconv.Itoa(rxKiB)
-			}
-			if txKiB > 0 {
-				nio["sent"] = strconv.Itoa(txKiB)
-			}
-			rusage["net-io"] = nio
-		}
-	}
-
-	if pids, ok := stat["pids"]; ok {
-		pidInt := toInt(pids)
-		rusage["pids"] = pidInt
-	}
-
-	if len(rusage) == 0 {
-		return nil
-	}
-
-	return rusage
-}
-
-func (c *containerCollector) readCgroupLimits(inspect map[string]interface{}) map[string]interface{} {
-	stateRaw, ok := inspect["State"]
-	if !ok {
-		return nil
-	}
-	state, ok := stateRaw.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	cgroupPath, ok := state["CgroupPath"].(string)
-	if !ok || cgroupPath == "" {
-		return nil
-	}
-
-	cgroupBase := "/sys/fs/cgroup" + cgroupPath
-	memVal := 0
-	cpuVal := 0
-
-	if data, err := c.fs.ReadFile(filepath.Join(cgroupBase, "memory.max")); err == nil {
-		memVal = parseCgroupMemory(strings.TrimSpace(string(data)))
-	}
-
-	if data, err := c.fs.ReadFile(filepath.Join(cgroupBase, "cpu.max")); err == nil {
-		cpuVal = parseCgroupCPU(strings.TrimSpace(string(data)))
-	}
-
+func (c *containerCollector) limits(st containerState) map[string]interface{} {
+	memVal := parseCgroupMemory(c.cgroupFile(st, "memory.max"))
+	cpuVal := parseCgroupCPU(c.cgroupFile(st, "cpu.max"))
 	if memVal <= 0 && cpuVal <= 0 {
 		return nil
 	}
-
 	result := make(map[string]interface{})
 	if memVal > 0 {
 		result["memory"] = strconv.Itoa(memVal)
@@ -212,202 +155,167 @@ func (c *containerCollector) readCgroupLimits(inspect map[string]interface{}) ma
 	if cpuVal > 0 {
 		result["cpu"] = cpuVal
 	}
-
 	return result
 }
 
-func (c *containerCollector) network(ps map[string]interface{}, inspect map[string]interface{}) map[string]interface{} {
-	networkSettingsRaw, hasNetworkSettings := inspect["NetworkSettings"]
-	if hasNetworkSettings {
-		if networkSettings, ok := networkSettingsRaw.(map[string]interface{}); ok {
-			if networksRaw, ok := networkSettings["Networks"]; ok {
-				if networks, ok := networksRaw.(map[string]interface{}); ok {
-					if _, ok := networks["host"]; ok {
-						return map[string]interface{}{"host": true}
-					}
-				}
+// cpuStatUsage returns usage_usec from a cgroup v2 cpu.stat.
+func cpuStatUsage(stat string) uint64 {
+	for _, line := range strings.Split(stat, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 2 && fields[0] == "usage_usec" {
+			v, _ := strconv.ParseUint(fields[1], 10, 64)
+			return v
+		}
+	}
+	return 0
+}
+
+// ioStatBytes sums rbytes and wbytes over all devices in io.stat.
+func ioStatBytes(stat string) (uint64, uint64) {
+	var rd, wr uint64
+	for _, line := range strings.Split(stat, "\n") {
+		for _, field := range strings.Fields(line) {
+			key, val, ok := strings.Cut(field, "=")
+			if !ok {
+				continue
+			}
+			v, _ := strconv.ParseUint(val, 10, 64)
+			switch key {
+			case "rbytes":
+				rd += v
+			case "wbytes":
+				wr += v
 			}
 		}
 	}
-
-	net := map[string]interface{}{
-		"interface": []interface{}{},
-		"publish":   []interface{}{},
-	}
-
-	networks := asStringSlice(ps["Networks"])
-	ifaces := net["interface"].([]interface{})
-	for _, n := range networks {
-		ifaces = append(ifaces, map[string]interface{}{"name": n})
-	}
-	net["interface"] = ifaces
-
-	running := strings.EqualFold(asString(ps["State"]), "running")
-	if !running {
-		return net
-	}
-
-	portsRaw, ok := ps["Ports"]
-	if !ok {
-		return net
-	}
-
-	ports, ok := portsRaw.([]interface{})
-	if !ok || len(ports) == 0 {
-		return net
-	}
-
-	publish := net["publish"].([]interface{})
-	for _, portRaw := range ports {
-		port, ok := portRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		hostIP := asString(port["host_ip"])
-		hostPort := asString(port["host_port"])
-		if hostPort == "" {
-			hostPort = strconv.Itoa(toInt(port["host_port"]))
-		}
-		containerPort := asString(port["container_port"])
-		if containerPort == "" {
-			containerPort = strconv.Itoa(toInt(port["container_port"]))
-		}
-		protocol := asString(port["protocol"])
-
-		if hostPort == "0" || hostPort == "" || containerPort == "0" || containerPort == "" || protocol == "" {
-			continue
-		}
-
-		addr := ""
-		if hostIP != "" {
-			addr = hostIP + ":"
-		}
-
-		publish = append(publish, fmt.Sprintf("%s%s:%s/%s", addr, hostPort, containerPort, protocol))
-	}
-	net["publish"] = publish
-
-	return net
+	return rd, wr
 }
 
-func (c *containerCollector) container(ctx context.Context, ps map[string]interface{}) map[string]interface{} {
-	names := asStringSlice(ps["Names"])
-	if len(names) == 0 {
-		return nil
+func (c *containerCollector) netIO(ctx context.Context, st containerState) (uint64, uint64, bool) {
+	if st.Networks == nil {
+		return 0, 0, false
+	}
+	var links []struct {
+		Ifname string `json:"ifname"`
+		Stats  struct {
+			RX struct {
+				Bytes uint64 `json:"bytes"`
+			} `json:"rx"`
+			TX struct {
+				Bytes uint64 `json:"bytes"`
+			} `json:"tx"`
+		} `json:"stats64"`
+	}
+	if err := runJSON(ctx, c.cmd, &links, "ip", "-n", st.Name, "-s", "-j", "link", "show"); err != nil {
+		return 0, 0, false
+	}
+	var rx, tx uint64
+	for _, l := range links {
+		if l.Ifname == "lo" {
+			continue
+		}
+		rx += l.Stats.RX.Bytes
+		tx += l.Stats.TX.Bytes
+	}
+	return rx, tx, true
+}
+
+func (c *containerCollector) usage(ctx context.Context, st containerState) map[string]interface{} {
+	rusage := make(map[string]interface{})
+
+	if mem, err := strconv.ParseUint(c.cgroupFile(st, "memory.current"), 10, 64); err == nil {
+		rusage["memory"] = strconv.FormatUint(mem/1024, 10)
 	}
 
-	name := names[0]
-	running := strings.EqualFold(asString(ps["State"]), "running")
+	now := time.Now()
+	usec := cpuStatUsage(c.cgroupFile(st, "cpu.stat"))
+	cpuMu.Lock()
+	prev, ok := cpuPrev[st.Name]
+	cpuPrev[st.Name] = cpuSample{usec: usec, at: now}
+	cpuMu.Unlock()
+	if ok && usec >= prev.usec && now.After(prev.at) {
+		pct := float64(usec-prev.usec) / float64(now.Sub(prev.at).Microseconds()) * 100
+		rusage["cpu"] = fmt.Sprintf("%.2f", pct)
+	} else {
+		rusage["cpu"] = "0.00"
+	}
+
+	if rd, wr := ioStatBytes(c.cgroupFile(st, "io.stat")); rd > 0 || wr > 0 {
+		bio := make(map[string]interface{})
+		if rd > 0 {
+			bio["read"] = strconv.FormatUint(rd/1024, 10)
+		}
+		if wr > 0 {
+			bio["write"] = strconv.FormatUint(wr/1024, 10)
+		}
+		rusage["block-io"] = bio
+	}
+
+	if rx, tx, ok := c.netIO(ctx, st); ok && (rx > 0 || tx > 0) {
+		nio := make(map[string]interface{})
+		if rx > 0 {
+			nio["received"] = strconv.FormatUint(rx/1024, 10)
+		}
+		if tx > 0 {
+			nio["sent"] = strconv.FormatUint(tx/1024, 10)
+		}
+		rusage["net-io"] = nio
+	}
+
+	if pids, err := strconv.Atoi(c.cgroupFile(st, "pids.current")); err == nil {
+		rusage["pids"] = pids
+	}
+
+	return rusage
+}
+
+func (c *containerCollector) network(st containerState, running bool) map[string]interface{} {
+	if st.Networks == nil {
+		return map[string]interface{}{"host": true}
+	}
+
+	ifaces := []interface{}{}
+	for _, n := range *st.Networks {
+		ifaces = append(ifaces, map[string]interface{}{"name": n.Name})
+	}
+	publish := []interface{}{}
+	if running {
+		for _, p := range st.Publish {
+			publish = append(publish, p)
+		}
+	}
+	return map[string]interface{}{"interface": ifaces, "publish": publish}
+}
+
+func (c *containerCollector) container(ctx context.Context, st containerState) map[string]interface{} {
+	running := c.running(ctx, st.Name)
+
+	status := st.Status
+	if running {
+		status = "Up " + time.Since(time.Unix(int64(st.Started), 0)).Round(time.Second).String()
+	}
 
 	out := map[string]interface{}{
-		"name":     name,
-		"id":       asString(ps["Id"]),
-		"image":    asString(ps["Image"]),
-		"image-id": asString(ps["ImageID"]),
-		"running":  running,
-		"status":   asString(ps["Status"]),
+		"name":    st.Name,
+		"running": running,
+		"status":  status,
+		"network": c.network(st, running),
 	}
-
-	inspect := c.podmanInspect(ctx, name)
-
-	// Report the actual running command line as the config-false
-	// "cmdline" leaf (an unrestricted string), built from inspect's
-	// Path + Args like the legacy yanger collector.  Do NOT report it
-	// into the config-true "command" leaf: that leaf has a restrictive
-	// pattern and a real command line (e.g. one containing "&&" or
-	// quotes) fails YANG validation, which rejects the entire
-	// containers subtree on read.
-	if path := asString(inspect["Path"]); path != "" {
-		parts := append([]string{path}, asStringSlice(inspect["Args"])...)
-		out["cmdline"] = strings.Join(parts, " ")
+	// A failed setup leaves only name and status behind; an empty
+	// string fails the YANG patterns and would drop the whole entry.
+	for key, val := range map[string]string{"id": st.ID, "image": st.Image, "image-id": st.ImageID, "cmdline": st.Cmdline} {
+		if val != "" {
+			out[key] = val
+		}
 	}
-
-	if net := c.network(ps, inspect); len(net) > 0 {
-		out["network"] = net
-	}
-
-	if limits := c.readCgroupLimits(inspect); limits != nil {
+	if limits := c.limits(st); limits != nil {
 		out["resource-limit"] = limits
 	}
-
 	if running {
-		if usage := c.resourceStats(ctx, name); usage != nil {
-			out["resource-usage"] = usage
-		}
+		out["resource-usage"] = c.usage(ctx, st)
 	}
 
 	return out
-}
-
-func asString(v interface{}) string {
-	s, ok := v.(string)
-	if ok {
-		return s
-	}
-	return ""
-}
-
-func asStringSlice(v interface{}) []string {
-	switch vv := v.(type) {
-	case []string:
-		return vv
-	case []interface{}:
-		out := make([]string, 0, len(vv))
-		for _, e := range vv {
-			if s, ok := e.(string); ok && s != "" {
-				out = append(out, s)
-			}
-		}
-		return out
-	case string:
-		if vv == "" {
-			return nil
-		}
-		return splitLines(vv)
-	default:
-		return nil
-	}
-}
-
-func parseSizeKiB(sizeStr string) int {
-	if strings.TrimSpace(sizeStr) == "" {
-		return 0
-	}
-
-	m := sizeRe.FindStringSubmatch(strings.ToUpper(strings.TrimSpace(sizeStr)))
-	if len(m) < 2 {
-		return 0
-	}
-
-	value, err := strconv.ParseFloat(m[1], 64)
-	if err != nil {
-		return 0
-	}
-
-	unit := "B"
-	if len(m) >= 3 && m[2] != "" {
-		unit = strings.ToUpper(m[2])
-	}
-
-	multipliers := map[string]float64{
-		"B":   1.0 / 1024.0,
-		"KB":  1000.0 / 1024.0,
-		"KIB": 1,
-		"MB":  (1000.0 * 1000.0) / 1024.0,
-		"MIB": 1024,
-		"GB":  (1000.0 * 1000.0 * 1000.0) / 1024.0,
-		"GIB": 1024 * 1024,
-		"TB":  (1000.0 * 1000.0 * 1000.0 * 1000.0) / 1024.0,
-		"TIB": 1024 * 1024 * 1024,
-	}
-
-	mult, ok := multipliers[unit]
-	if !ok {
-		mult = 1
-	}
-
-	return int(value * mult)
 }
 
 func parseCgroupMemory(memStr string) int {

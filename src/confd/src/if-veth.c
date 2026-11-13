@@ -31,7 +31,7 @@ bool veth_is_primary(struct lyd_node *cif)
 	self_cni = lydx_get_child(cif, "container-network") != NULL;
 	peer_cni = lydx_get_child(peer, "container-network") != NULL;
 
-	/* When exactly one end is handed to a container (CNI host-device),
+	/* When exactly one end is handed to a container (ixcont),
 	 * the other end stays in the host namespace and creates the pair.
 	 */
 	if (self_cni != peer_cni)
@@ -40,7 +40,7 @@ bool veth_is_primary(struct lyd_node *cif)
 	/* Neither or both ends are container interfaces: pick a stable
 	 * primary by name so exactly one end creates the pair.  When both
 	 * ends are containers the pair is still created in the host
-	 * namespace first, then moved into each container by CNI host-device.
+	 * namespace first, then moved into each container by ixcont.
 	 */
 	return strcmp(lydx_get_cattr(cif, "name"), peername) < 0;
 }

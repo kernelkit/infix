@@ -6,28 +6,28 @@
 
 <PTYPE name="CONTAINERS">
   <COMPL>
-    <ACTION sym="script">doas container list</ACTION>
+    <ACTION sym="script">doas ixcont list</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="CONTAINERSa">
   <COMPL>
-    <ACTION sym="script">doas container -a list</ACTION>
+    <ACTION sym="script">doas ixcont -a list</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="IMAGES">
   <COMPL>
-    <ACTION sym="script">doas container -a list images</ACTION>
+    <ACTION sym="script">doas ixcont list images</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="ARCHIVES">
   <COMPL>
-    <ACTION sym="script">doas container -a list oci</ACTION>
+    <ACTION sym="script">doas ixcont list oci</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
@@ -35,18 +35,17 @@
 <VIEW name="main">
 
 <COMMAND name="container" help="Manage containers, images, and volumes" mode="switch">
-  <COMMAND name="prune" help="Clean up all unused containers, images and volume data">
+  <COMMAND name="prune" help="Clean up all unused images and volume data">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      doas podman system prune
-      doas podman volume prune
+      doas ixcont prune
     </ACTION>
   </COMMAND>
 
-  <!-- alias for -container shell' -->
+  <!-- alias for 'container shell' -->
   <COMMAND name="connect" help="Start a shell inside a container, if available">
-    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      doas container shell $KLISH_PARAM_name
+      doas ixcont shell $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -62,118 +61,77 @@
         echo "Missing container name."
       else
         cmd=${KLISH_PARAM_command:-sh}
-        doas container exec $KLISH_PARAM_name $cmd
+        doas ixcont exec $KLISH_PARAM_name $cmd
       fi
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="load" help="Load a container OCI tarball (.tar, .tar.gz) to image">
+  <COMMAND name="load" help="Load a container OCI archive (.tar, .tar.gz) as an image">
     <PARAM name="url" ptype="/ARCHIVES" help="Filename or URL, e.g. https://addr/rootfs-oci.tar.gz" />
     <SWITCH name="optional" min="0">
-      <COMMAND name="name" help="Image name, and tag (default: latest)">
-        <PARAM name="name" ptype="/STRING" help="name[:tag]"/>
+      <COMMAND name="name" help="Image name (default: archive name)">
+        <PARAM name="name" ptype="/STRING" help="name"/>
       </COMMAND>
       <COMMAND name="creds" help="Credentials for remote access">
         <PARAM name="creds" ptype="/STRING" help="username[:password]"/>
       </COMMAND>
-      <COMMAND name="checksum" help="Checksum to verify against (SHA56)">
-        <PARAM name="sha" ptype="/STRING" help="SHA256"/>
-      </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       creds=${KLISH_PARAM_creds:+-c $KLISH_PARAM_creds}
-      sha=${KLISH_PARAM_sha:+--checksum $KLISH_PARAM_sha}
-      cd /var/lib/containers/oci
-      doas container $creds $sha load $KLISH_PARAM_url $KLISH_PARAM_name
+      doas ixcont $creds load $KLISH_PARAM_url $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="pull" help="Fetch a container image">
-    <PARAM name="image" ptype="/STRING" help="Image url and tag, e.g. docker://hello-world:latest" />
+  <COMMAND name="pull" help="Fetch a container image from a registry">
+    <PARAM name="image" ptype="/STRING" help="Image reference, e.g. docker://ghcr.io/kernelkit/curios:edge" />
     <SWITCH name="optional" min="0">
       <COMMAND name="creds" help="Credentials">
         <PARAM name="creds" ptype="/STRING" help="username[:password]"/>
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      creds=${KLISH_PARAM_creds:+--creds=$KLISH_PARAM_creds}
-      doas container pull $creds $KLISH_PARAM_image
-    </ACTION>
-  </COMMAND>
-
-  <COMMAND name="remove" help="Remove a container image from local storage">
-    <SWITCH name="optional" min="0">
-      <PARAM name="name" ptype="/IMAGES" help="Image name" />
-    </SWITCH>
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      if [ -n "$KLISH_PARAM_name" ]; then
-        all=-a
-      fi
-      doas container $all remove $KLISH_PARAM_name
+      creds=${KLISH_PARAM_creds:+-c $KLISH_PARAM_creds}
+      doas ixcont $creds pull $KLISH_PARAM_image
     </ACTION>
   </COMMAND>
 
   <COMMAND name="restart" help="Restart a crashed container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      doas container restart $KLISH_PARAM_name
+      doas ixcont restart $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="run" help="Interactivly run a container image, with optional command">
+  <COMMAND name="run" help="Interactively run a container image, with optional command">
     <PARAM name="image" ptype="/IMAGES" help="Image name" />
     <SWITCH name="optional" min="0">
       <COMMAND name="command" help="Command to run">
         <PARAM name="command" ptype="/STRING" help="Command to run"/>
       </COMMAND>
-      <COMMAND name="port" help="Port to publish, default all exposed">
-        <PARAM name="port" ptype="/STRING" help="HOST:CONTAINER[/udp]"/>
-      </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      port=${KLISH_PARAM_port:+-p $KLISH_PARAM_port}
-      doas container $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
-    </ACTION>
-    <SWITCH name="optional" min="0">
-      <COMMAND name="detach" help="Run container in background and print container ID">
-        <ACTION sym="script" out="tty">
-	  doas container -d $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
-	</ACTION>
-      </COMMAND>
-    </SWITCH>
-  </COMMAND>
-
-  <COMMAND name="save" help="Save a container image as an OCI tarball (.tar, .tar.gz)">
-    <PARAM name="name" ptype="/IMAGES" help="Container image" />
-    <SWITCH name="optional" min="0">
-      <COMMAND name="file" help="Filename, default: 'container name'.tar">
-        <PARAM name="file" ptype="/ARCHIVES" help="Filename, calls gzip if .tar.gz"/>
-      </COMMAND>
-    </SWITCH>
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      cd /var/lib/containers/oci
-      doas container save $KLISH_PARAM_name $KLISH_PARAM_file
+      doas ixcont run $KLISH_PARAM_image ${KLISH_PARAM_command}
     </ACTION>
   </COMMAND>
 
   <COMMAND name="shell" help="Start a shell inside a container, if available">
-    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      doas container shell $KLISH_PARAM_name
+      doas ixcont shell $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="start" help="Start a container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      doas container start $KLISH_PARAM_name
+      doas ixcont start $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="stop" help="Stop a container">
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      doas container stop $KLISH_PARAM_name
+      doas ixcont stop $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -186,7 +144,7 @@
       if env | grep -q 'reset-volumes' >/dev/null; then
           opt="-R"
       fi
-      doas container $opt upgrade $KLISH_PARAM_name
+      doas ixcont $opt upgrade $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 </COMMAND>
@@ -204,33 +162,28 @@
 	</ACTION>
       </COMMAND>
       <COMMAND name="images" help="Show container images">
-        <ACTION sym="script">doas container show images</ACTION>
-        <SWITCH name="optional" min="0">
-          <COMMAND name="all" help="All images (default hides intermediate imaages)">
-            <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	      doas container -a show images |pager
-	    </ACTION>
-          </COMMAND>
-        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas ixcont show images |pager
+	</ACTION>
       </COMMAND>
       <COMMAND name="oci" help="Show OCI archives (for loading as image)">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas container list oci |pager
+	  doas ixcont list oci |pager
 	</ACTION>
       </COMMAND>
-      <COMMAND name="stat" help="Show continuous containers stats (Ctrl-C aborts)">
+      <COMMAND name="stat" help="Show container resource usage">
 	<ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas container stat
+	  doas ixcont stat
 	</ACTION>
       </COMMAND>
-      <COMMAND name="usage" help="Show container resource usage">
+      <COMMAND name="usage" help="Show container disk usage">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas podman system df -v
+	  doas ixcont usage
 	</ACTION>
       </COMMAND>
       <COMMAND name="volumes" help="Show container volumes">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas container show volumes |pager
+	  doas ixcont show volumes |pager
 	</ACTION>
       </COMMAND>
     </SWITCH>

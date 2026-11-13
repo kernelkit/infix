@@ -4,7 +4,7 @@
 #define CONFD_INTERFACES_H_
 
 #include "core.h"
-#include "cni.h"
+#include "ctrnet.h"
 
 #define IF_XPATH      "/ietf-interfaces:interfaces/interface"
 #define IF_VLAN_XPATH "%s/infix-interfaces:vlan"

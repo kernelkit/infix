@@ -368,23 +368,16 @@ cmd_collect()
     fi
 
     # Container information
-    if command -v podman >/dev/null 2>&1; then
-        # List all containers
-        collect podman/ps.txt podman ps -a
-
-        # Collect podman system info
-        collect podman/info.json podman info --format=json
-
-        # Get list of containers and inspect each
-        if podman ps -a --format '{{.Names}}' > "${COLLECT_DIR}/.container-list" 2>> "${EXEC_LOG}"; then
-            while IFS= read -r container; do
-                if [ -n "$container" ]; then
-                    safe_name=$(echo "$container" | tr '/' '_')
-                    collect "podman/inspect-${safe_name}.json" podman inspect "$container"
-                fi
-            done < "${COLLECT_DIR}/.container-list"
-            rm -f "${COLLECT_DIR}/.container-list"
-        fi
+    if command -v ixcont >/dev/null 2>&1; then
+        collect containers/show.txt ixcont show
+        collect containers/images.txt ixcont show images
+        collect containers/volumes.txt ixcont show volumes
+        for state in /run/containers/*/state.json; do
+            [ -f "$state" ] || continue
+            name=$(basename "$(dirname "$state")")
+            collect "containers/state-${name}.json" cat "$state"
+            collect "containers/config-${name}.json" cat "/run/containers/${name}/config.json"
+        done
     fi
 
     # Additional system information
