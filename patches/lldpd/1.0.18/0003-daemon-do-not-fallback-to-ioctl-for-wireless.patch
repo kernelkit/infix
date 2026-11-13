@@ -1,0 +1,38 @@
+From 0f694a4a6b1fb09407fea38afd8654ba4276882c Mon Sep 17 00:00:00 2001
+From: Vincent Bernat <vincent@bernat.ch>
+Date: Tue, 10 Mar 2026 17:12:25 +0100
+Subject: [PATCH 3/3] daemon: do not fallback to ioctl for wireless
+
+Even very old kernels support this wireless directory.
+
+(cherry picked from commit 5facaf317d4af18bc12851bc04e29f2310a08d71)
+---
+ src/daemon/interfaces-linux.c | 15 ---------------
+ 1 file changed, 15 deletions(-)
+
+diff --git a/src/daemon/interfaces-linux.c b/src/daemon/interfaces-linux.c
+index 9f8142b..7ad4219 100644
+--- a/src/daemon/interfaces-linux.c
++++ b/src/daemon/interfaces-linux.c
+@@ -890,21 +890,6 @@ iflinux_add_wireless(struct lldpd *cfg, struct interfaces_device_list *interface
+ 			iface->type |= IFACE_WIRELESS_T | IFACE_PHYSICAL_T;
+ 		}
+ 	}
+-#ifdef ENABLE_OLDIES
+-	/* Fallback to wireless extensions ioctl for old kernels without
+-	 * /sys/class/net/<name>/wireless. */
+-	TAILQ_FOREACH (iface, interfaces, next) {
+-		if (iface->type &
+-		    (IFACE_VLAN_T | IFACE_BOND_T | IFACE_BRIDGE_T | IFACE_WIRELESS_T))
+-			continue;
+-		struct iwreq iwr = {};
+-		strlcpy(iwr.ifr_name, iface->name, IFNAMSIZ);
+-		if (ioctl(cfg->g_sock, SIOCGIWNAME, &iwr) >= 0) {
+-			log_debug("interfaces", "%s is wireless", iface->name);
+-			iface->type |= IFACE_WIRELESS_T | IFACE_PHYSICAL_T;
+-		}
+-	}
+-#endif
+ }
+ 
+ /* Query each interface to see if it is a bridge */

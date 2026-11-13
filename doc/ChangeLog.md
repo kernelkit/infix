@@ -54,6 +54,8 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- LLDP: a device with a Wi-Fi interface announced its WLAN access
+  point capability as disabled
 - A container `command` containing `$(...)` or `$VAR` was
   expanded on the host before the container started.  The command now
   reaches the container exactly as configured.  Reported by Dave Seddon
