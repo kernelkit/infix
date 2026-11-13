@@ -1,0 +1,10 @@
+#!/bin/sh
+
+oper_xpaths="/ietf-interfaces:interfaces"
+
+cli_commands="show-qos"
+cli_commands="$cli_commands show-interfaces_-n_e1"
+cli_commands="$cli_commands show-interfaces_-n_e2"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"

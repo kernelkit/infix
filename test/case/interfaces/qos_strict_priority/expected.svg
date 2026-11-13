@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="376" viewBox="0 0 680 376" font-family="DejaVu Sans, Arial, sans-serif" font-size="13">
+  <rect width="680" height="376" fill="#ffffff"/>
+  <text x="20" y="20" fill="#333333">Strict priority on a full port</text>
+  <text x="437" y="44" text-anchor="middle" fill="#333333">all the port can send</text>
+  <text x="20" y="79" fill="#333333" font-weight="bold">Baseline</text>
+  <text x="202" y="79" text-anchor="end" fill="#555555">offered</text>
+  <rect x="212" y="62" width="180" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="302" y="79" text-anchor="middle" fill="#ffffff">EF 80</text>
+  <rect x="392" y="62" width="180" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="482" y="79" text-anchor="middle" fill="#ffffff">CS1 80</text>
+  <text x="202" y="111" text-anchor="end" fill="#555555">delivered</text>
+  <rect x="212" y="94" width="112.5" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="268.25" y="111" text-anchor="middle" fill="#ffffff">EF 50</text>
+  <rect x="324.5" y="94" width="112.5" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="380.75" y="111" text-anchor="middle" fill="#ffffff">CS1 50</text>
+  <text x="20" y="111" fill="#333333">one priority</text>
+  <text x="20" y="171" fill="#333333" font-weight="bold">Split</text>
+  <text x="202" y="171" text-anchor="end" fill="#555555">offered</text>
+  <rect x="212" y="154" width="180" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="302" y="171" text-anchor="middle" fill="#ffffff">EF 80</text>
+  <rect x="392" y="154" width="180" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="482" y="171" text-anchor="middle" fill="#ffffff">CS1 80</text>
+  <text x="202" y="203" text-anchor="end" fill="#555555">delivered</text>
+  <rect x="212" y="186" width="180" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="302" y="203" text-anchor="middle" fill="#ffffff">EF 80</text>
+  <rect x="392" y="186" width="45" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="414.5" y="203" text-anchor="middle" fill="#ffffff">20</text>
+  <text x="20" y="203" fill="#333333">EF above CS1</text>
+  <text x="20" y="263" fill="#333333" font-weight="bold">Starve</text>
+  <text x="202" y="263" text-anchor="end" fill="#555555">offered</text>
+  <rect x="212" y="246" width="270" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="347" y="263" text-anchor="middle" fill="#ffffff">EF 120</text>
+  <rect x="482" y="246" width="180" height="24" fill="#4f8a3c" stroke="#333333"/>
+  <text x="572" y="263" text-anchor="middle" fill="#ffffff">CS1 80</text>
+  <text x="202" y="295" text-anchor="end" fill="#555555">delivered</text>
+  <rect x="212" y="278" width="225" height="24" fill="#e4572e" stroke="#333333"/>
+  <text x="324.5" y="295" text-anchor="middle" fill="#ffffff">EF 100</text>
+  <text x="20" y="295" fill="#333333">EF above CS1</text>
+  <line x1="437" y1="50" x2="437" y2="314" stroke="#333333" stroke-dasharray="4 3"/>
+  <text x="212" y="338" fill="#555555">percent of what the port can send</text>
+</svg>

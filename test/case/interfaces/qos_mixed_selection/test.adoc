@@ -4,22 +4,29 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_mixed_selection
 
 ==== Description
 
-Three talkers, marked EF, AF21 and CS1, bridged through the DUT and out
-one egress port that cannot carry them all.  The port is negotiated down
-to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where
-it has no PHY.  The ingress port classifies EF to priority 4, AF21 to 3
-and CS1 to 2, classes 4, 3 and 2 in the default table: EF in a strict
-class above the two weighted ones, which share 60 and 30 percent, with
-the two classes below holding five percent each and carrying nothing.
+Strict priority and weighted sharing can run together on one port: the
+strict classes are served first and the weighted classes divide what
+is left.  This is the usual setup for a port that carries voice or
+control traffic next to ordinary data.  This test fills a port with
+three flows and checks both rules at once.
 
-EF offers 40 percent of what the port drains, the two weighted talkers
-60 percent each, so the port is oversubscribed and both weighted classes
-always have a backlog.  EF must arrive intact, and the two weighted
-flows must divide what EF leaves 2:1, within five points, both of them
-losing more than a tenth of their frames.  The test's own iperf3 control
-traffic, DSCP 0, is classified to priority 7.  Skipped on a switch
-fabric whose scheduler is not offloaded, where forwarded frames never
-meet the configured algorithm.
+.What the three talkers offer and what the port must deliver
+image::expected.svg[align=center, scaledwidth=90%]
+
+Three talkers, marked EF, AF21 and CS1, send through the DUT's bridge
+and out one port.  That port is slowed down so the test's traffic can
+fill it: negotiated down to 100 Mbps, or shaped to 10 Mbps where
+it has no PHY.  The port where the traffic enters puts EF in a strict
+class above AF21 and CS1, which share the rest 2:1.
+
+EF offers 40 percent of what the port can send and the other two
+60 percent each, 160 percent in all.  EF must arrive intact.  AF21 and
+CS1 must divide what EF leaves 2:1, within five points, and both must
+be held back by more than a tenth of what they offer.
+
+The weights are set as 60 and 30 percent.  Every class below a
+weighted one must be weighted too, so the two classes below get the
+remaining ten percent, five each, and carry no traffic.
 
 ==== Topology
 
@@ -33,6 +40,6 @@ image::topology.svg[QoS Mixed Selection topology, align=center, scaledwidth=75%]
 . Set up the talker and listener namespaces
 . EF at 40 percent, AF21 and CS1 at 60 percent each
 . Verify EF arrived intact
-. Verify AF21 and CS1 both lost frames and split the rest 2:1
+. Verify AF21 and CS1 were both held back and split the rest 2:1
 
 

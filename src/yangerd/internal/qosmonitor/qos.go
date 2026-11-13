@@ -2,24 +2,42 @@ package qosmonitor
 
 import (
 	"encoding/json"
+	"math/big"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 )
 
-// trustOrders are the orders a driver's dcb apptrust accepts, by driver
-// name; the kernel has no query for it.  Same table as confd's qos
-// validation.
-var trustOrders = map[string][]string{
-	"sparx5-switch":  {"pcp", "dscp", "dscp-pcp"},
-	"lan966x-switch": {"pcp", "dscp", "dscp-pcp"},
-	"mv88e6085":      {"pcp", "dscp", "pcp-dscp", "dscp-pcp"},
+// Modules tells which optional YANG modules are installed, so their
+// nodes may be reported.
+type Modules struct {
+	Sched bool // ieee802-dot1dc-sched-if
+	CBSA  bool // ieee802-dot1dc-cbsa-if
 }
 
-// port is what the kernel says about one port's QoS.
+// schedLimits are the bounds of a port's gate control list, from its
+// quirks, in nanoseconds; zero when the port names none.
+type schedLimits struct {
+	ListMax     int64
+	CycleMax    int64
+	IntervalMax int64
+	Tick        int64 // tenths of a nanosecond
+}
+
+// port is what the kernel and the quirks say about one port's QoS.
 type port struct {
-	TxQueues int
-	Driver   string
-	App      bool            // PCP or DSCP entries in the DCB app table
-	Rewr     bool            // PCP or DSCP entries in the DCB rewrite table
-	Qdiscs   json.RawMessage // tc qdisc show
+	TxQueues   int
+	Trust      []string // quirk qos-trust-order, nil without DCB
+	Supported  []string // quirk qos-offload
+	Sched      schedLimits
+	DCB        dcbTables       // trust order, app and rewrite tables
+	PCPEncoded bool            // quirk qos-pcp-encoded, the fabric always writes the PCP
+	Qdiscs     json.RawMessage // tc qdisc show
+	Ingress    json.RawMessage // tc filter show ingress, of a port classifying in software
+	Remarks    bool            // the port remarks the DSCP in software
+	Profile    string          // the profile confd applied, from /run/qos
 }
 
 type qdisc struct {
@@ -31,9 +49,35 @@ type qdisc struct {
 	Options   json.RawMessage `json:"options"`
 }
 
+type tbfOpts struct {
+	Rate  json.Number `json:"rate"`
+	Burst json.Number `json:"burst"`
+}
+
+type cbsOpts struct {
+	IdleSlope int64 `json:"idleslope"`
+	Offload   int   `json:"offload"` // tc prints it as a number
+}
+
+type taprioEntry struct {
+	Index    int             `json:"index"`
+	GateMask json.RawMessage `json:"gatemask"`
+	Interval int64           `json:"interval"`
+}
+
+type taprioOpts struct {
+	Bands     int             `json:"bands"` // ets
+	Flags     json.RawMessage `json:"flags"`
+	BaseTime  int64           `json:"base_time"`
+	CycleTime int64           `json:"cycle_time"`
+	Extension int64           `json:"cycle_time_extension"`
+	Schedule  []taprioEntry   `json:"schedule"`
+	Admin     json.RawMessage `json:"admin"`
+}
+
 // build returns the members the port adds to its interface entry, keyed
 // by module-prefixed node name, or nil when it has none.
-func build(p port) map[string]any {
+func build(p port, mods Modules) map[string]any {
 	var qdiscs []qdisc
 	json.Unmarshal(p.Qdiscs, &qdiscs)
 
@@ -41,8 +85,20 @@ func build(p port) map[string]any {
 	if caps := capabilities(p, qdiscs); len(caps) > 0 {
 		qos["capabilities"] = caps
 	}
+	if p.Profile != "" {
+		qos["active-profile"] = p.Profile
+	}
+	if in := ingress(p); in != nil {
+		qos["ingress"] = in
+	}
+	if eg := egress(p, qdiscs); eg != nil {
+		qos["egress"] = eg
+	}
+	if shaper := egressShaper(qdiscs); shaper != nil {
+		qos["egress-shaper"] = shaper
+	}
 
-	out := map[string]any{}
+	out := shapers(qdiscs, mods, p.Sched)
 	if len(qos) > 0 {
 		out["infix-interfaces:qos"] = qos
 	}
@@ -62,23 +118,26 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["max-traffic-classes"] = p.TxQueues
 	}
 
-	trust := trustOrders[p.Driver]
-	if trust != nil {
-		caps["supported-trust-order"] = trust
+	if p.Trust != nil {
+		caps["supported-trust-order"] = p.Trust
+	}
+	if p.Supported != nil {
+		caps["supported-offload"] = p.Supported
 	}
 
 	// Stages the driver runs.  ets and tbf report offloaded when the
 	// driver took them.
 	var offload []string
-	if trust != nil {
-		if p.App {
+	if p.Trust != nil {
+		if hasPrioMap(p.DCB.App) {
 			offload = append(offload, "classification")
 		}
-		if p.Rewr {
+		if hasPrioMap(p.DCB.Rewr) {
 			offload = append(offload, "remarking")
 		}
 	}
 
+	cbs := false
 	for _, q := range qdiscs {
 		switch q.Kind {
 		case "ets":
@@ -87,7 +146,26 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 			}
 		case "tbf":
 			if q.Root && q.Offloaded {
-				offload = append(offload, "rate-limit")
+				offload = append(offload, "egress-shaper")
+			}
+		case "cbs":
+			var o cbsOpts
+			if !cbs && json.Unmarshal(q.Options, &o) == nil && o.Offload != 0 {
+				offload = append(offload, "credit-based-shaper")
+				cbs = true
+			}
+		case "mqprio":
+			// tc prints the mode only for a root the driver took
+			var o struct {
+				Mode string `json:"mode"`
+			}
+			if json.Unmarshal(q.Options, &o) == nil && o.Mode != "" {
+				offload = append(offload, "transmission-selection")
+			}
+		case "taprio":
+			var o taprioOpts
+			if json.Unmarshal(q.Options, &o) == nil && number(o.Flags)&0x2 != 0 {
+				offload = append(offload, "transmission-selection", "time-aware-shaper")
 			}
 		}
 	}
@@ -95,4 +173,172 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["offload"] = offload
 	}
 	return caps
+}
+
+// egressShaper is the egress shaper in effect, from a tbf root.  tc gives
+// the rate in bytes per second, the model wants bits.
+func egressShaper(qdiscs []qdisc) map[string]any {
+	for _, q := range qdiscs {
+		if q.Kind != "tbf" || !q.Root {
+			continue
+		}
+		var o tbfOpts
+		if json.Unmarshal(q.Options, &o) != nil {
+			return nil
+		}
+		rate := numconv.Uint64(o.Rate)
+		if rate == 0 {
+			return nil
+		}
+		limit := map[string]any{"rate": strconv.FormatUint(rate*8, 10)}
+		if burst, err := o.Burst.Int64(); err == nil && burst > 0 {
+			limit["burst"] = burst
+		}
+		return limit
+	}
+	return nil
+}
+
+// shapers is the IEEE 802.1DC credit-based and time-aware shaper state
+// of a port, read back from its qdisc tree, with the limits of its gate
+// control list.
+//
+// The sched entries of a taprio root are the operational gate control
+// list.  A cbs child reports the idle slope the kernel runs; under gates
+// that slope was scaled up by the cycle over the class's open time, so
+// it is scaled back to the reservation it came from.  The classes of an
+// ets root count down from the top, those of mqprio and taprio are the
+// queues.
+func shapers(qdiscs []qdisc, mods Modules, limits schedLimits) map[string]any {
+	out := map[string]any{}
+	table := map[string]any{}
+
+	if mods.Sched && limits.ListMax != 0 {
+		table["supported-list-max"] = limits.ListMax
+		table["supported-cycle-max"] = rational(limits.CycleMax)
+		table["supported-interval-max"] = limits.IntervalMax
+		table["tick-granularity"] = limits.Tick
+		out["ieee802-dot1dc-sched-if:gate-parameter-table"] = table
+	}
+
+	sched := scheduler(qdiscs)
+	if sched == nil {
+		return out
+	}
+
+	var o taprioOpts
+	json.Unmarshal(sched.Options, &o)
+	gated := sched.Kind == "taprio"
+
+	type gate struct {
+		mask     uint64
+		interval int64
+	}
+	var schedule []gate
+	if gated {
+		entries := append([]taprioEntry(nil), o.Schedule...)
+		sort.SliceStable(entries, func(i, j int) bool { return entries[i].Index < entries[j].Index })
+		for _, e := range entries {
+			schedule = append(schedule, gate{number(e.GateMask), e.Interval})
+		}
+	}
+	cycle := o.CycleTime
+	if cycle == 0 {
+		for _, g := range schedule {
+			cycle += g.interval
+		}
+	}
+
+	if gated && mods.Sched {
+		const ns = 1_000_000_000
+		list := make([]any, 0, len(schedule))
+		for i, g := range schedule {
+			list = append(list, map[string]any{
+				"index":               i,
+				"operation-name":      "ieee802-dot1q-sched:set-gate-states",
+				"gate-states-value":   g.mask,
+				"time-interval-value": g.interval,
+			})
+		}
+		table["oper-control-list"] = map[string]any{"gate-control-entry": list}
+		table["oper-cycle-time"] = rational(cycle)
+		table["oper-base-time"] = map[string]any{
+			"seconds":     strconv.FormatInt(o.BaseTime/ns, 10),
+			"nanoseconds": o.BaseTime % ns,
+		}
+		table["config-pending"] = len(o.Admin) > 0
+		if o.Extension != 0 {
+			table["oper-cycle-time-extension"] = o.Extension
+		}
+		out["ieee802-dot1dc-sched-if:gate-parameter-table"] = table
+	}
+
+	if !mods.CBSA {
+		return out
+	}
+
+	bands := o.Bands
+	if bands == 0 {
+		bands = 8
+	}
+	var classes []any
+	for _, q := range qdiscs {
+		tc, ok := classOf(q, sched, bands)
+		if !ok || q.Kind != "cbs" {
+			continue
+		}
+		var c cbsOpts
+		json.Unmarshal(q.Options, &c)
+		idle := c.IdleSlope * 1000
+		if gated && cycle > 0 {
+			var open int64
+			for _, g := range schedule {
+				if g.mask&(1<<tc) != 0 {
+					open += g.interval
+				}
+			}
+			idle = scale(idle, open, cycle)
+		}
+		classes = append(classes, map[string]any{
+			"traffic-class":   tc,
+			"oper-idle-slope": strconv.FormatInt(idle, 10),
+		})
+	}
+	if len(classes) > 0 {
+		out["ieee802-dot1dc-cbsa-if:cbsa"] = map[string]any{"cbsa-parameter-table": classes}
+	}
+	return out
+}
+
+// rational is a time in nanoseconds as the seconds fraction the IEEE
+// modules want.
+func rational(ns int64) map[string]any {
+	const sec = 1_000_000_000
+	div := gcd(ns, sec)
+	return map[string]any{"numerator": ns / div, "denominator": sec / div}
+}
+
+// number reads a JSON value tc prints either as a number or as a hex
+// or decimal string.
+func number(raw json.RawMessage) uint64 {
+	s := strings.Trim(string(raw), `"`)
+	n, err := strconv.ParseUint(s, 0, 64)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// scale is a * b / c; the product of a 10 Gbps slope and a cycle in
+// nanoseconds does not fit in 64 bits.
+func scale(a, b, c int64) int64 {
+	r := new(big.Int).Mul(big.NewInt(a), big.NewInt(b))
+	return r.Div(r, big.NewInt(c)).Int64()
+}
+
+func gcd(a, b int64) int64 {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
 }

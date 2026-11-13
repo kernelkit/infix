@@ -20,13 +20,14 @@ Supported:
 - switch core and SerDes, all ports
 - eMMC, I2C (including the SFP mux), SPI, USB host
 - watchdog, temperature sensor, SGPIO LEDs
+- QoS in the switch, including the credit-based and time-aware shapers
 - our own boot chain, from BL2 to a slot booted out of the eMMC, with
   the environment held in the authenticated control device tree
 
 Not yet done:
 
-- TSN queueing.  PSFP and time aware shaping need `NET_SCH_TAPRIO`,
-  `NET_ACT_GATE`, and `NET_SCH_CBS`, all currently off
+- PSFP, per-stream filtering and policing.  It needs `NET_ACT_GATE`,
+  currently off
 - HSR/PRP offload, see above
 - MAC addresses from OTP.  With no environment in flash the board falls
   back to `lan969x_otp_get_mac()`, which derives 30 addresses for this

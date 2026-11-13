@@ -1,4 +1,4 @@
-Quality of Service
+<b>Quality of Service</b>
 ==================
 
 On occasion, most networks will experience congestion due to some
@@ -15,73 +15,69 @@ Every interface type is accepted; what the hardware can offload varies
 and is reported back in the operational datastore, see [Hardware
 Offload](#hardware-offload).
 
+Most of this only matters when a port has more to send than it can
+carry.  The settings on this page, and the two shapers on the
+[TSN](tsn.md) page, each answer a different need:
 
-## Terminology
-
-QoS vocabulary comes from two families of standards.  IEEE 802.1Q[^1]
-defines priorities and traffic classes for bridged Ethernet, the IETF
-Differentiated Services (DiffServ) RFCs define how IP packets are marked.
-
-**Priority** is the internal value, 0 to 7, that every frame carries
-through the system from classification to transmission.  IEEE 802.1Q
-Annex I names a traffic type for each priority.  Higher is better,
-except that priority 1 is meant for traffic that may yield to best
-effort:
-
-| Priority | Traffic type          |
-|---------:|-----------------------|
-| 7        | Network Control       |
-| 6        | Internetwork Control  |
-| 5        | Voice                 |
-| 4        | Video                 |
-| 3        | Critical Applications |
-| 2        | Excellent Effort      |
-| 1        | Background            |
-| 0        | Best Effort (default) |
+| Need                                                   | Mechanism             | Described in                                 |
+|--------------------------------------------------------|-----------------------|----------------------------------------------|
+| Important traffic goes first on a busy port            | Strict priority       | [Traffic Classes](#traffic-classes-and-transmission-selection) |
+| Kinds of traffic share a busy port, none is starved    | Weighted sharing      | [Traffic Classes](#traffic-classes-and-transmission-selection) |
+| A port sends no more than the link beyond it can take  | Egress shaper         | [Egress Shaper](#egress-shaper)              |
+| A stream gets its bandwidth, and no more               | Credit-based shaper   | [TSN](tsn.md#credit-based-shaper)            |
+| Traffic gets the port at set times, in every cycle     | Time-aware shaper     | [TSN](tsn.md#time-aware-shaper)              |
 /// table-caption
-IEEE 802.1Q-2022 Table I-2, traffic types.
+What each QoS mechanism is for.
 ///
 
-**PCP and DEI** are the Priority Code Point and Drop Eligible Indicator,
-the three-bit priority and one-bit drop flag in a VLAN tag[^2].  A frame
-without a VLAN tag has neither.
+The terms used are explained in [Terminology](#terminology), at the end
+of the page.
 
-**DSCP** is the six-bit Differentiated Services Code Point in the IP
-header[^3].  Named codepoints group into _per-hop behaviours_ (PHB), the
-forwarding treatment a router or switch gives them[^4]:
 
-| Name                     | Codepoints                     | Reference      |
-|--------------------------|--------------------------------|----------------|
-| Expedited Forwarding, EF | 46                             | RFC 4594 1.5.3 |
-| Assured Forwarding, AFxy | 10..14, 18..22, 26..30, 34..38 | RFC 4594 1.5.2 |
-| Class Selector, CS1..7   | 8, 16, 24, 32, 40, 48, 56      | RFC 4594 1.5.4 |
-| Default Forwarding, DF   | 0, also written CS0            | RFC 4594 1.5.1 |
-/// table-caption
-DiffServ per-hop behaviours and their codepoints.
-///
+## Getting Started
 
-The class selectors carry the old IP precedence in the top three bits,
-so CS_n_ maps naturally to priority _n_.  Assured forwarding has four
-classes, AF1 to AF4, each with three drop precedences, e.g. AF11, AF12,
-AF13.  RFC 4594 groups the codepoints into service classes, telephony,
-signaling, multimedia and so on, with a recommended treatment for
-each[^5].
+Four common tasks, each a few lines.  The sections after this one
+describe every setting.
 
-**Traffic class** is a transmit queue on the egress port.  A port has 1
-to 8 of them, numbered so that the highest class is served first, and a
-table binds each of the eight priorities to one class[^6].
+**Give voice priority on a port facing hosts.**  Hosts mark their
+traffic with a DSCP, e.g. EF for voice.  Trusting the DSCP on the port
+gives voice priority 5, and writing the priority into the VLAN tag lets
+the switches beyond keep it.  Nothing more is needed: every port
+serves higher priorities first by default.
 
-**Transmission selection** is how the port picks the next class to send
-from[^7].  _Strict priority_ always serves the highest non-empty class.
-_Enhanced Transmission Selection_ (ETS)[^8] shares bandwidth between
-classes in proportion to a bandwidth share.
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/> <b>set ingress trust dscp</b>
+admin@example:/config/interface/…/qos/> <b>set egress remark pcp from-priority</b>
+admin@example:/config/interface/…/qos/> <b>leave</b>
+</code></pre>
 
-**Stream Reservation (SR) classes** are the two priorities reserved for
-time-sensitive audio and video streams in AVB and TSN networks[^9]:
-SR class A on priority 3 and SR class B on priority 2.
+**Let ordinary and background traffic share an uplink.**  On a port
+with eight traffic classes, ordinary traffic, priority 0, is in class 1
+and background traffic, priority 1, in class 0.  With weights of 80 and
+20 percent, background traffic keeps a fifth of a busy port and
+ordinary traffic the rest.  The classes above stay strict:
 
-**DCB**, Data Center Bridging[^10], is the Linux kernel interface through
-which per-port priority tables are programmed into switch hardware.
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e10 qos egress</b>
+admin@example:/config/interface/…/egress/> <b>set traffic-class 1 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/> <b>set traffic-class 1 bandwidth 80</b>
+admin@example:/config/interface/…/egress/> <b>set traffic-class 0 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/> <b>set traffic-class 0 bandwidth 20</b>
+admin@example:/config/interface/…/egress/> <b>leave</b>
+</code></pre>
+
+**Hold a port to the rate of the link beyond it.**  A port on a
+1 Gbps link toward a 10 Mbps radio or leased line fills the far end's
+queue, where nothing knows what is important.  Shaping the port keeps
+the queue, and the decision, here:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e10 qos</b>
+admin@example:/config/interface/…/qos/> <b>set egress-shaper rate 10M</b>
+admin@example:/config/interface/…/qos/> <b>leave</b>
+</code></pre>
+
+**Reserve bandwidth for a stream, or give traffic the port at set
+times.**  These are the shapers of Time-Sensitive Networking, see
+[TSN](tsn.md).
 
 
 ## The Pipeline
@@ -117,7 +113,7 @@ Configured under `qos ingress`:
 
 | Setting            | Description                                    |
 |--------------------|------------------------------------------------|
-| `trust`            | Trusted fields in order, default `pcp`         |
+| `trust`            | Fields to classify by, in order, default `pcp` |
 | `default-priority` | Priority when no trusted field matches         |
 | `pcp-map`          | PCP to priority, preset or custom table        |
 | `dscp-map`         | DSCP to priority, preset or custom table       |
@@ -150,7 +146,7 @@ behind them keeps the default and carries the edge's decision through.
 
 A custom `pcp-map` is keyed by PCP and DEI.  A custom `dscp-map` is keyed
 by DSCP with a `trusted` flag per entry, so individual codepoints can be
-believed while the rest fall through to the default priority.
+trusted while the rest fall through to the default priority.
 
 ### Presets
 
@@ -192,7 +188,7 @@ admin@example:/config/interface/…/ingress/> <b>set pcp-map preset ieee</b>
 admin@example:/config/interface/…/ingress/> <b>leave</b>
 </code></pre>
 
-An access port that believes only EF (46) and AF31 (26) and gives
+An access port that trusts only EF (46) and AF31 (26) and gives
 everything else the port default:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e2 qos ingress</b>
@@ -241,6 +237,43 @@ share to the others.
 Strict-priority classes must be the highest-numbered ones, with the
 weighted classes below them; other layouts are rejected.
 
+The algorithms only make a difference when a port has more to send than
+it can carry:
+
+- Strict-priority classes are served highest first.  A class with
+  enough traffic takes the whole port and starves every class below
+  it, so strict priority suits traffic of bounded volume, e.g. network
+  control and voice.
+- Weighted classes divide what the strict classes leave.  With shares
+  of 67 and 33 percent and both classes loaded, one gets two thirds and
+  the other one third, however much either offers.
+- Frames of one class share one queue and leave in the order they
+  came.  When the queue is full the port drops what arrives, whichever
+  flow it belongs to, so flows that must not crowd each other out need
+  classes of their own.
+
+Two flows that each offer 80 percent of what the port can send, first
+at one priority and then with one above the other:
+
+![Strict priority on a full port](img/qos-strict-priority.svg){ width=600 }
+/// figure-caption
+Strict priority: the higher class is served first, whatever that leaves.
+///
+
+The same two flows in two weighted classes:
+
+![Weighted sharing on a full port](img/qos-weighted-sharing.svg){ width=600 }
+/// figure-caption
+Weighted sharing: the split follows the weights.
+///
+
+And a strict class above two weighted ones, the usual combination:
+
+![Strict priority above weighted sharing](img/qos-mixed-selection.svg){ width=600 }
+/// figure-caption
+The strict class is served first, the weighted classes divide the rest 2:1.
+///
+
 A port with four queues, the top two classes strict, the bottom two
 sharing what is left in a 2:1 ratio.  No map is set, so the `ieee`
 preset supplies Table 8-5's four-class column, `0 0 1 1 2 2 3 3`:
@@ -256,10 +289,10 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 </code></pre>
 
 
-### Rate Limit
+### Egress Shaper
 
 A port can be held below its link speed with one token bucket on the
-whole port, configured under `qos egress rate-limit`.  `rate` is the
+whole port, configured under `qos egress-shaper`.  `rate` is the
 sustained rate in bits per second, here 10M for 10000000, and `burst` how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
@@ -267,15 +300,15 @@ frame.  The bucket sits above the traffic classes: it bounds what the
 port sends in total, and transmission selection decides which class
 gets the bounded rate.
 
-<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/> <b>set rate-limit rate 10M</b>
-admin@example:/config/interface/…/egress/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/> <b>set egress-shaper rate 10M</b>
+admin@example:/config/interface/…/qos/> <b>leave</b>
 </code></pre>
 
-On a port without offload the limit applies to the frames the CPU
+On a port without offload the shaper applies to the frames the CPU
 sends.  Where the driver takes the bucket it applies to the frames the
 fabric forwards as well, and `offload` under `capabilities` then lists
-`rate-limit`.
+`egress-shaper`.
 
 
 ### Egress Remarking
@@ -374,36 +407,248 @@ admin@example:/config/interface/…/traffic-class-table/> <b>leave</b>
 </code></pre>
 
 
+### Shapers for Time-Sensitive Traffic
+
+A traffic class can also reserve bandwidth with a credit-based shaper,
+and a port can open each class's gate by a timetable with the
+time-aware shaper.  Both are described on the [TSN](tsn.md) page.
+
+
+## Profiles
+
+Ports in the same role share their classification and traffic class
+settings, and a switch with many such ports would repeat them per
+port.  A profile holds one port's `ingress` and `egress` settings under
+a name, defined once as a `qos-profile` under `system`, and a port
+references it instead of carrying the settings inline:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile access</b>
+admin@example:/config/system/…/access/> <b>set ingress trust dscp-pcp</b>
+admin@example:/config/system/…/access/> <b>set egress remark dscp from-priority</b>
+admin@example:/config/system/…/access/> <b>leave</b>
+admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set interface e3 qos profile access</b>
+admin@example:/config/> <b>set interface e4 qos profile access</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+A port holds either a profile reference or inline settings, never
+both: setting one replaces the other.  A profile has no effect until a
+port references it, and a profile that ports still reference cannot be
+deleted.  Changing a profile applies the change on every port that
+references it.  The profile is validated against each port it is
+applied to, so a class table that reaches beyond a port's traffic
+classes is rejected with the port and the profile named.
+
+What stays on the port is what follows the link rather than the role:
+the `egress-shaper`, the credit-based shaper reservations and the gate
+control list.  The operational datastore shows the profile a port
+runs as `qos active-profile`, and `show qos` lists it for every port,
+see [Checking the Result](#checking-the-result).
+
+### Profiles for Common Port Roles
+
+Three profiles cover the common port roles, each setting only what the
+role changes from the defaults.  The WebUI offers the same three as
+templates when adding a profile; either way the result is an ordinary
+profile, to be changed as the network needs.
+
+A *trunk* port between switches classifies by the PCP of tagged frames and
+uses the IEEE 802.1Q traffic classes, which are the defaults.  The
+profile names the role, so its ports can be changed together later:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile trunk</b>
+admin@example:/config/system/…/trunk/> <b>set description "Port between switches."</b>
+admin@example:/config/system/…/trunk/> <b>leave</b>
+</code></pre>
+
+An *edge* port facing hosts classifies by DSCP, which survives
+routing, and writes the resulting priority into the PCP so the tagged
+links beyond keep it:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile edge</b>
+admin@example:/config/system/…/edge/> <b>set ingress trust dscp</b>
+admin@example:/config/system/…/edge/> <b>set egress remark pcp from-priority</b>
+admin@example:/config/system/…/edge/> <b>leave</b>
+</code></pre>
+
+A *stream reservation* port puts SR classes A and B on the two highest
+traffic classes, the layout of [Stream Reservation
+Layout](#stream-reservation-layout).  This profile carries the layout
+only.  To shape the SR classes, set their `algorithm` to
+`credit-based-shaper` in the profile, see [TSN](tsn.md#credit-based-shaper), and give every port that uses it
+a reservation per shaped class; a shaped class without one is
+rejected.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit system qos-profile stream-reservation</b>
+admin@example:/config/system/…/stream-reservation/> <b>set egress traffic-class-table preset ieee-sr</b>
+admin@example:/config/system/…/stream-reservation/> <b>leave</b>
+</code></pre>
+
+
+## Checking the Result
+
+`show qos` lists every port with the profile it runs, what it
+classifies on, its shaper, reservations and gate schedule, and the
+stages its switch hardware runs.  A glance down the `PROFILE` column
+tells whether all ports of a role got the profile they should have:
+
+<pre class="cli"><code>admin@example:/> <b>show qos</b>
+<span class="header">PORT  PROFILE  TRUST    SHAPER  RESERVED  SCHEDULE  HARDWARE OFFLOAD      </span>
+e1             pcp                                  classify select
+e2             pcp    100 Mbps                      classify select shaper
+e3    access   dscp                                 classify select remark
+e4    access   dscp                                 classify select remark
+</code></pre>
+
+The details of one port are part of `show interface`:
+
+<pre class="cli"><code>admin@example:/> <b>show interface e3</b>
+…
+<b>Quality of Service</b>
+profile            : access
+trust              : dscp
+default priority   : 0
+remark             : pcp from-priority
+hardware offload   : classification, transmission-selection, remarking
+available offload  : egress-shaper, credit-based-shaper, time-aware-shaper
+
+<span class="header">CLASS  PRIORITIES  ALGORITHM        SHARE  RESERVED</span>
+    7  7           strict-priority
+    6  6           strict-priority
+    5  5           strict-priority
+    4  4           strict-priority
+    3  3           strict-priority
+    2  2           strict-priority
+    1  0           strict-priority
+    0  1           strict-priority
+</code></pre>
+
+Everything shown is read back from the port, from the switch hardware
+where it does the work and from the kernel elsewhere.  It is what the
+port runs, which for a port on a profile is the profile's settings.
+`hardware offload` lists the stages the switch hardware runs with the
+current configuration, and `available offload` those it could run but
+that are not configured.  A stage that is configured but in neither
+list runs in the kernel instead, and then only for the traffic the CPU
+handles, see [Hardware Offload](#hardware-offload).  A port with
+reservations or a gate schedule shows those too.
+
+The same data is in the operational datastore, under
+`/interfaces/interface[name='e3']/qos/`, for
+[RESTCONF](scripting-restconf.md) and NETCONF, and the WebUI shows it
+per port on its QoS page.  From the shell, `copy` prints it as JSON:
+
+<pre class="cli"><code>admin@example:~$ <b>copy operational -x "/interfaces/interface[name='e3']/qos"</b>
+</code></pre>
+
+
+## VLAN Interfaces
+
+For VLAN interfaces, the system supports mapping the PCP to internal
+priority on ingress, and the reverse on egress.  This is separate from
+the `qos` settings above, which on a VLAN interface govern only its
+traffic classes.
+
+![VLAN priority mapping](img/qos-vlan-iface.svg){ width=600 }
+/// figure-caption
+Ingress and egress priority mapping for VLAN interfaces.
+///
+
+These `ingress-qos` and `egress-qos` settings are done per VLAN, both
+defaulting to '0'.  The example below shows how to keep the PCP priority
+for packets being routed between two VLAN interfaces.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1.10</b>
+admin@example:/config/interface/e1.10/> <b>set vlan ingress-qos priority from-pcp</b>
+admin@example:/config/interface/e1.10/> <b>up</b>
+admin@example:/config/> <b>edit interface e1.20</b>
+admin@example:/config/interface/e1.20/> <b>set vlan egress-qos pcp from-priority</b>
+admin@example:/config/interface/e1.20/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+
+## Software Forwarded Traffic
+
+For packets which are processed by a CPU, i.e. typically routed traffic,
+and bridged traffic between interfaces that do not belong to the same
+hardware switching domain, the traffic class table and transmission
+selection above apply in software.  For classification and marking
+beyond what the `qos` settings offer, an [nftables container][nft] can
+be used to define a QoS policy.
+
+The picture below shows a packet flow subject to both: classified and
+queued by the switch fabric on the way in and out, and carrying its
+priority through the VLAN interfaces and a container with a traffic
+control policy in between.
+
+![Hardware and software QoS](img/qos-complex.svg){ width=600 }
+/// figure-caption
+Hardware and software QoS handling.
+///
+
+
 ## Hardware Offload
 
 The system runs on a wide range of hardware, and offload is best effort.
-The same configuration is accepted everywhere; where it ends up differs,
-and each port reports it under `qos capabilities`:
+The same configuration is accepted everywhere; where it ends up differs.
+On a switch, frames forwarded between ports never pass the CPU, so a
+stage has to run in the switch hardware to apply to them:
+
+| Stage                  | Marvell LinkStreet | Microchip LAN966x | Microchip LAN969x | Other ports |
+|------------------------|:------------------:|:-----------------:|:-----------------:|:-----------:|
+| Classification         | hardware           | hardware          | hardware          | kernel      |
+| Remarking              | hardware           | hardware          | hardware          | kernel, DSCP only |
+| Transmission selection | hardware           | hardware          | hardware          | kernel      |
+| Egress shaper          | hardware           | hardware          | hardware          | kernel      |
+| Credit-based shaper    | refused            | refused           | hardware          | kernel      |
+| Time-aware shaper      | refused            | refused           | hardware          | kernel      |
+/// table-caption
+Where each QoS stage runs.  "Kernel" covers the traffic the CPU handles.
+///
+
+The two shapers are refused on a switch port that cannot run them in
+hardware, since the kernel would only shape the few frames the CPU
+sends.
+
+A port without a switch behind it, e.g. on a router board, runs every
+stage in the kernel, which there is all of its traffic.  The details
+per switch family follow below.  Each port reports where it stands
+under `qos capabilities`:
 
 | Capability              | Description                                     |
 |-------------------------|-------------------------------------------------|
 | `max-traffic-classes`   | Traffic classes on the port, eight unless shown |
 | `supported-trust-order` | `trust` values the driver accepts               |
-| `offload`               | Stages the driver runs in hardware              |
+| `supported-offload`     | Stages the port's switch fabric can run         |
+| `offload`               | Stages the driver runs in hardware right now    |
 /// table-caption
 QoS capabilities a port reports.
 ///
 
-`supported-trust-order` is absent when the driver has no ingress
-classification support.  `offload` lists `classification`, `remarking`, `transmission-selection`
-and `rate-limit` as the driver takes them; a stage not listed runs in
-the kernel.
+`supported-trust-order` and `supported-offload` describe the switch
+the port belongs to and are absent on a port without one.
+`supported-offload` and `offload` both list from `classification`,
+`remarking`, `transmission-selection`, `egress-shaper`,
+`credit-based-shaper` and `time-aware-shaper`:
+`supported-offload` what the fabric can run, `offload` what the driver
+has taken with the current configuration.  A supported stage missing
+from `offload` fell back to the kernel, e.g. a traffic class table the
+fabric cannot carry; a stage not supported always runs there.
 
 Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:
 
-| Feature                | Linux tool     | Driver hook          | Fallback              |
-|------------------------|----------------|----------------------|-----------------------|
-| Ingress classification | `dcb app`      | `dcbnl` app ops      | `tc flower`, software |
-| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`  | Rule order, software  |
-| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`      | DSCP only, software   |
-| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS` | software              |
-| Port rate limit        | `tc tbf`       | `TC_SETUP_QDISC_TBF` | software              |
+| Feature                | Linux tool     | Driver hook             | Fallback              |
+|------------------------|----------------|-------------------------|-----------------------|
+| Ingress classification | `dcb app`      | `dcbnl` app ops         | `tc flower`, software |
+| Trust order            | `dcb apptrust` | `dcbnl_setapptrust`     | Rule order, software  |
+| Egress remarking       | `dcb rewr`     | `dcbnl_setrewr`         | DSCP only, software   |
+| Transmission selection | `tc ets`       | `TC_SETUP_QDISC_ETS`    | software              |
+| Port egress shaper     | `tc tbf`       | `TC_SETUP_QDISC_TBF`    | software              |
+| Credit-based shaper    | `tc cbs`       | `TC_SETUP_QDISC_CBS`    | software              |
+| Time-aware shaper      | `tc taprio`    | `TC_SETUP_QDISC_TAPRIO` | software              |
 /// table-caption
 QoS features and their Linux backends.
 ///
@@ -463,7 +708,7 @@ The `traffic-class-table` and the `traffic-class` list apply to hardware
 forwarded frames as well: each priority is queued in its traffic class,
 the strict classes are served first, and the weighted classes share the
 rest by Weighted Round Robin (WRR)[^11] with the `bandwidth` shares as
-weights.  The `rate-limit` is the port's own egress shaper.  Four
+weights.  The `egress-shaper` is the port's own shaper.  Four
 hardware details show through:
 
 - A frame's output queue is chosen where it enters the switch, by the
@@ -489,51 +734,116 @@ hardware details show through:
 Without any `qos` configuration the class table is IEEE 802.1Q-2022
 Table 8-5 with every class strict, as on any other port.
 
+### Microchip LAN969x
 
-## VLAN Interfaces
+The Laguna family of switch chips, in the Tactical 1000 and the
+EV23X71A, is managed by the `sparx5` driver.  The classification and
+remarking tables are reached through DCB as on Marvell, and every stage
+runs in the fabric, the credit-based and time-aware shapers included.
 
-For VLAN interfaces, the system supports mapping the PCP to internal
-priority on ingress, and the reverse on egress.  This is separate from
-the `qos` settings above, which on a VLAN interface govern only its
-traffic classes.
-
-![VLAN priority mapping](img/qos-vlan-iface.svg){ width=600 }
-/// figure-caption
-Ingress and egress priority mapping for VLAN interfaces.
+| Stage                   | On LAN969x                                              |
+|-------------------------|---------------------------------------------------------|
+| Trust orders            | `pcp`, `dscp` and `dscp-pcp`                            |
+| `pcp-map`               | Per port, as is `default-priority`                      |
+| `dscp-map`              | One table for the chip, written by the ports that trust DSCP; the port configured last defines it |
+| `remark pcp`            | Per port, from the priority                             |
+| `remark dscp`           | One table for the chip, defined the same way by the ports that remark DSCP |
+| Traffic classes         | Eight per port, each port's own `traffic-class-table`   |
+| Transmission selection  | Strict priority and Deficit Weighted Round Robin (DWRR) with the `bandwidth` shares as weights, in 31 steps relative to the smallest share |
+| `egress-shaper`         | The port's own shaper, rate in steps of 40 kbps, burst in steps of 4 KiB up to 508 KiB |
+| Credit-based shaper     | One per queue, idle slope in steps of 4 kbps.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes |
+| Time-aware shaper       | One gate control list per port, limits in the next table |
+/// table-caption
+QoS offload on LAN969x.
 ///
 
-These `ingress-qos` and `egress-qos` settings are done per VLAN, both
-defaulting to '0'.  The example below shows how to keep the PCP priority
-for packets being routed between two VLAN interfaces.
+Give the ports that trust DSCP one `dscp-map`, and the ports that remark
+DSCP one `remark dscp` setting, since the chip holds one table of each.
 
-<pre class="cli"><code>admin@example:/config/> <b>edit interface e1.10</b>
-admin@example:/config/interface/e1.10/> <b>set vlan ingress-qos priority from-pcp</b>
-admin@example:/config/interface/e1.10/> <b>up</b>
-admin@example:/config/> <b>edit interface e1.20</b>
-admin@example:/config/interface/e1.20/> <b>set vlan egress-qos pcp from-priority</b>
-admin@example:/config/interface/e1.20/> <b>leave</b>
-admin@example:/>
-</code></pre>
-
-
-## Software Forwarded Traffic
-
-For packets which are processed by a CPU, i.e. typically routed traffic,
-and bridged traffic between interfaces that do not belong to the same
-hardware switching domain, the traffic class table and transmission
-selection above apply in software.  For classification and marking
-beyond what the `qos` settings offer, an [nftables container][nft] can
-be used to define a QoS policy.
-
-The picture below shows a packet flow subject to both: classified and
-queued by the switch fabric on the way in and out, and carrying its
-priority through the VLAN interfaces and a container with a traffic
-control policy in between.
-
-![Hardware and software QoS](img/qos-complex.svg){ width=600 }
-/// figure-caption
-Hardware and software QoS handling.
+| Gate control list     | On LAN969x                                              |
+|-----------------------|---------------------------------------------------------|
+| Entries               | Up to 3000, from a memory shared by all ports            |
+| Cycle time            | 1 µs to 999 999 999 ns                                   |
+| Interval              | 1 µs to 999 999 999 ns, and the intervals may not exceed the cycle |
+| Tick granularity      | 1 ns, reported as 10 tenths of a nanosecond              |
+| Cycle time extension  | Not supported                                            |
+| Base time             | From the switch clock; one in the past is moved forward by whole cycles |
+| Gate closing          | A frame that cannot finish before its gate closes waits for the next opening.  The guard band fits a 1500-byte frame with two VLAN tags: 13.8 µs at 1 Gbps |
+| `queue-max-sdu`       | Longer frames are dropped, and the class's guard band is its largest frame rounded down to 64 bytes |
+| Classes under gates   | Served strictly; weighted classes and an `egress-shaper` are refused |
+/// table-caption
+Time-aware shaper limits on LAN969x.  Each port reports them under
+`gate-parameter-table` as `supported-list-max`, `supported-cycle-max`,
+`supported-interval-max` and `tick-granularity`.
 ///
+
+
+## Terminology
+
+QoS vocabulary comes from two families of standards.  IEEE 802.1Q[^1]
+defines priorities and traffic classes for bridged Ethernet, the IETF
+Differentiated Services (DiffServ) RFCs define how IP packets are marked.
+
+**Priority** is the internal value, 0 to 7, that every frame carries
+through the system from classification to transmission.  IEEE 802.1Q
+Annex I names a traffic type for each priority.  Higher is better,
+except that priority 1 is meant for traffic that may yield to best
+effort:
+
+|    Priority | Acronym | Traffic type          |
+|------------:|--------:|-----------------------|
+|           7 |      NC | Network Control       |
+|           6 |      IC | Internetwork Control  |
+|           5 |      VO | Voice                 |
+|           4 |      VI | Video                 |
+|           3 |      CA | Critical Applications |
+|           2 |      EE | Excellent Effort      |
+| 0 (default) |      BE | Best Effort           |
+|           1 |      BK | Background            |
+/// table-caption
+IEEE 802.1Q-2022 Table I-2, traffic types.
+///
+
+**PCP and DEI** are the Priority Code Point and Drop Eligible Indicator,
+the three-bit priority and one-bit drop flag in a VLAN tag[^2].  A frame
+without a VLAN tag has neither.
+
+**DSCP** is the six-bit Differentiated Services Code Point in the IP
+header[^3].  Named codepoints group into _per-hop behaviours_ (PHB), the
+forwarding treatment a router or switch gives them[^4]:
+
+| Name                     | Codepoints                     | Reference      |
+|--------------------------|--------------------------------|----------------|
+| Expedited Forwarding, EF | 46                             | RFC 4594 1.5.3 |
+| Assured Forwarding, AFxy | 10..14, 18..22, 26..30, 34..38 | RFC 4594 1.5.2 |
+| Class Selector, CS1..7   | 8, 16, 24, 32, 40, 48, 56      | RFC 4594 1.5.4 |
+| Default Forwarding, DF   | 0, also written CS0            | RFC 4594 1.5.1 |
+/// table-caption
+DiffServ per-hop behaviours and their codepoints.
+///
+
+The class selectors carry the old IP precedence in the top three bits,
+so CS_n_ maps naturally to priority _n_.  Assured forwarding has four
+classes, AF1 to AF4, each with three drop precedences, e.g. AF11, AF12,
+AF13.  RFC 4594 groups the codepoints into service classes, telephony,
+signaling, multimedia and so on, with a recommended treatment for
+each[^5].
+
+**Traffic class** is a transmit queue on the egress port.  A port has 1
+to 8 of them, numbered so that the highest class is served first, and a
+table binds each of the eight priorities to one class[^6].
+
+**Transmission selection** is how the port picks the next class to send
+from[^7].  _Strict priority_ always serves the highest non-empty class.
+_Enhanced Transmission Selection_ (ETS)[^8] shares bandwidth between
+classes in proportion to a bandwidth share.
+
+**Stream Reservation (SR) classes** are the two priorities reserved for
+time-sensitive audio and video streams in AVB and TSN networks[^9]:
+SR class A on priority 3 and SR class B on priority 2.
+
+**DCB**, Data Center Bridging[^10], is the Linux kernel interface through
+which per-port priority tables are programmed into switch hardware.
 
 
 [nft]: container.md#application-container-nftables

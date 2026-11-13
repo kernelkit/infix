@@ -1,0 +1,24 @@
+name               : e2
+type               : ethernet
+index              : 4
+operational status : up
+ip forwarding      : disabled
+ipv4 addresses     :
+ipv6 addresses     :
+──────────────────
+[1mQuality of Service[0m
+trust              : dscp-pcp
+default priority   : 0
+remark             : pcp from-priority
+egress shaper      : 100 Mbps, burst 125000 bytes
+hardware offload   : classification, remarking, egress-shaper, transmission-selection
+
+[7mCLASS  PRIORITIES  ALGORITHM        SHARE  RESERVED[0m
+    7  7           strict-priority                 
+    6  6           strict-priority                 
+    5  5           strict-priority                 
+    4  4           strict-priority                 
+    3  3           strict-priority                 
+    2  2           strict-priority                 
+    1  0           strict-priority                 
+    0  1           strict-priority                 

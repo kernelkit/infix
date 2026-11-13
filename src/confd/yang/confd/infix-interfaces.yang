@@ -44,6 +44,12 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-11-11 {
+    description "Submodule infix-if-qos: QoS profiles, and the port's
+                 egress/rate-limit becomes egress-shaper.";
+    reference "internal";
+  }
+
   revision 2026-10-22 {
     description "Add bridge unicast forwarding database and aging time, and
                  operational state for the active IGMP and MLD querier.";

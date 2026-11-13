@@ -56,7 +56,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, port = env.ltop.xlate("target", "data")
+        port = target["data"]
 
     with test.step("Verify the running configuration has no qos container"):
         assert running_qos(target, port) is None, f"{port} has qos configuration"

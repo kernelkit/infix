@@ -1,0 +1,34 @@
+name               : e1
+type               : ethernet
+index              : 3
+operational status : up
+ip forwarding      : disabled
+ipv4 addresses     :
+ipv6 addresses     :
+──────────────────
+[1mQuality of Service[0m
+profile            : sr
+trust              : dscp
+default priority   : 0
+hardware offload   : classification, transmission-selection, credit-based-shaper, time-aware-shaper
+available offload  : remarking, egress-shaper
+
+[7mCLASS  PRIORITIES  ALGORITHM                        SHARE  RESERVED[0m
+    7  3           credit-based-shaper                      50 Mbps
+    6  2           strict-priority                                 
+    5  7           strict-priority                                 
+    4  6           strict-priority                                 
+    3  5           strict-priority                                 
+    2  4           strict-priority                                 
+    1  0           enhanced-transmission-selection    70%          
+    0  1           enhanced-transmission-selection    30%          
+
+gate schedule      : running
+cycle time         : 1 ms
+base time          : 0.000000000 s
+
+[7mENTRY  OPEN CLASSES  INTERVAL[0m
+    0  3               200 µs
+    1  7               600 µs
+    2  0-2,4-6       187.7 µs
+    3  none           12.3 µs

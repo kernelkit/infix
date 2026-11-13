@@ -138,6 +138,46 @@ include::qos_factory_default/Readme.adoc[]
 
 <<<
 
+include::qos_bridge_classify/Readme.adoc[]
+
+<<<
+
+include::qos_queue_assignment/Readme.adoc[]
+
+<<<
+
+include::qos_egress_shaper/Readme.adoc[]
+
+<<<
+
+include::qos_profile/Readme.adoc[]
+
+<<<
+
+include::qos_strict_priority/Readme.adoc[]
+
+<<<
+
+include::qos_weighted_sharing/Readme.adoc[]
+
+<<<
+
+include::qos_mixed_selection/Readme.adoc[]
+
+<<<
+
+include::qos_cbs/Readme.adoc[]
+
+<<<
+
+include::qos_tas/Readme.adoc[]
+
+<<<
+
+include::qos_max_sdu/Readme.adoc[]
+
+<<<
+
 include::verify_all_interface_types/Readme.adoc[]
 
 <<<

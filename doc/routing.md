@@ -201,8 +201,8 @@ OSPF cannot discover neighbors via multicast.  Static neighbors must be
 configured so the router knows where to send unicast Hello packets.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
-admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.2</b>
-admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.3</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 neighbor 10.0.123.2</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 neighbor 10.0.123.3</b>
 admin@example:/config/routing/…/ospf/> <b>leave</b>
 admin@example:/>
 </code></pre>
@@ -248,8 +248,8 @@ admin@example:/config/routing/…/ospf/> set
   the shortest path if they use the same reference bandwidth.  The cost
   of an interface without an explicit `cost` is the reference bandwidth
   divided by the link speed, rounded, with 1 as the lowest cost.  The
-  default is 100000 Mbit/s, which gives a 1 Gbit/s link cost 100.  Use
-  `set auto-cost reference-bandwidth 10000` (Mbit/s) to change it. 
+  default is 100000 Mbps, which gives a 1 Gbps link cost 100.  Use
+  `set auto-cost reference-bandwidth 10000` (Mbps) to change it. 
   Auto-cost can not be disabled, but a cost set manually per interface takes precedence.
 
 `show ip ospf` shows the reference bandwidth in use, and `show ipv6
@@ -257,7 +257,7 @@ ospf` does the same for OSPFv3.
 
 <pre class="cli"><code>admin@example:/> <b>show ip ospf</b>
  OSPF Routing Process, Router ID: 192.168.10.1
- Reference bandwidth: 100000 Mbit/s
+ Reference bandwidth: 100000 Mbps
  Number of areas attached to this router: 1
  ...
 </code></pre>
@@ -397,8 +397,8 @@ The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
 RIP and set active interfaces:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ripv2 name default rip</b>
-admin@example:/config/routing/…/rip/> <b>set interfaces interface e0</b>
-admin@example:/config/routing/…/rip/> <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/> <b>set interface e0</b>
+admin@example:/config/routing/…/rip/> <b>set interface e1</b>
 admin@example:/config/routing/…/rip/> <b>leave</b>
 admin@example:/>
 </code></pre>
@@ -418,10 +418,10 @@ runs for you.  The routes RIP has installed are also in the
 By default, interfaces send and receive RIPv2 packets.  To control the
 RIP version per interface:
 
-<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interfaces interface e0</b>
-admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set send-version 1</b>
-admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set receive-version 1-2</b>
-admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interface e0</b>
+admin@example:/config/routing/…/e0/> <b>set send-version 1</b>
+admin@example:/config/routing/…/e0/> <b>set receive-version 1-2</b>
+admin@example:/config/routing/…/e0/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
@@ -430,9 +430,9 @@ Valid version values are `1`, `2`, or `1-2` (both versions).
 To configure a passive interface (advertise network but don't send/receive
 RIP updates):
 
-<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interfaces interface e0</b>
-admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set passive</b>
-admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interface e0</b>
+admin@example:/config/routing/…/e0/> <b>set passive</b>
+admin@example:/config/routing/…/e0/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
@@ -522,8 +522,8 @@ RIPng is RIP for IPv6.  It uses the same `ietf-rip` model as RIPv2,
 selected by the control plane protocol type `ripng`:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ripng name default rip</b>
-admin@example:/config/routing/…/rip/> <b>set interfaces interface e0</b>
-admin@example:/config/routing/…/rip/> <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/> <b>set interface e0</b>
+admin@example:/config/routing/…/rip/> <b>set interface e1</b>
 admin@example:/config/routing/…/rip/> <b>leave</b>
 admin@example:/>
 </code></pre>

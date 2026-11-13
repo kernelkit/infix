@@ -68,6 +68,9 @@ Each is explained in the doc named above; these are the ones that come back in r
   and link to the manual page, not a tour of the feature. A new manual page is listed
   in `doc/README.md` and in the `nav` of `mkdocs.yml`. The manual never uses the
   product name, write "the device" or "the system".
+- The WebUI reads the YANG schema for everything about the model: option values, labels,
+  help text, defaults and ranges. Never copy any of those into Go or a template; if the
+  schema lacks it, fix the model. See `src/webui/README.md`, *Development*.
 
 ## Notes for agents
 

@@ -1,0 +1,72 @@
+From 0a1a3c73e3cb761b657074fb3a6d5020417623a9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 10 Nov 2026 16:57:34 +0100
+Subject: [PATCH 157/159] net: sparx5: add the TAS max SDU registers
+Organization: Wires
+
+A TAS profile sets the guard band before a gate closes per traffic
+class, in TAS_QMAXSDU_CFG.  LAN969x can also discard frames longer
+than a class's max SDU, set in QMAXSDU_DISC_CFG.  The driver knows
+neither register.
+
+Add both, with the layout from Microchip's MESA[1].  The discard
+register exists on LAN969x only.
+
+[1] https://github.com/microchip-ung/mesa/blob/master/base/fa/vtss_la_regs.h
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_main_regs.h       | 30 +++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index d999f8cc0383..efa971e9b9a1 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -5605,6 +5605,18 @@ extern const struct sparx5_regs *regs;
+ #define HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL_GET(x)\
+ 	FIELD_GET(HSCH_TAS_CFG_CTRL2_MINIMUM_GB_VAL, x)
+ 
++/* HSCH:TAS_PROFILE_CFG:TAS_QMAXSDU_CFG */
++#define HSCH_TAS_QMAXSDU_CFG(g, r)                                             \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_PROFILE_CFG], g,            \
++	      regs->gcnt[GC_HSCH_TAS_PROFILE_CFG], regs->gsize[GW_HSCH_TAS_PROFILE_CFG],   \
++	      0, r, 8, 4)
++
++#define HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL         GENMASK(7, 0)
++#define HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL_SET(x)\
++	FIELD_PREP(HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL, x)
++#define HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL_GET(x)\
++	FIELD_GET(HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL, x)
++
+ /* HSCH:TAS_PROFILE_CFG:TAS_PROFILE_CONFIG */
+ #define HSCH_TAS_PROFILE_CONFIG(g)                                             \
+ 	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_PROFILE_CFG], g,            \
+@@ -5658,6 +5670,24 @@ extern const struct sparx5_regs *regs;
+ #define HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA_GET(x)\
+ 	FIELD_GET(HSCH_TAS_PROFILE_CONFIG_TAS_CBSHP_ENA, x)
+ 
++/* HSCH:TAS_PROFILE_CFG:QMAXSDU_DISC_CFG, LAN969X ONLY */
++#define HSCH_QMAXSDU_DISC_CFG(g, r)                                            \
++	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_PROFILE_CFG], g,            \
++	      regs->gcnt[GC_HSCH_TAS_PROFILE_CFG], regs->gsize[GW_HSCH_TAS_PROFILE_CFG],   \
++	      36, r, 8, 4)
++
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA   BIT(8)
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA_SET(x)\
++	FIELD_PREP(HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA, x)
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA_GET(x)\
++	FIELD_GET(HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA, x)
++
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB        GENMASK(5, 0)
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB_SET(x)\
++	FIELD_PREP(HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB, x)
++#define HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB_GET(x)\
++	FIELD_GET(HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB, x)
++
+ /* HSCH:TAS_LIST_CFG:TAS_BASE_TIME_NSEC */
+ #define HSCH_TAS_BASE_TIME_NSEC                                                \
+ 	__REG(TARGET_HSCH, 0, 1, regs->gaddr[GA_HSCH_TAS_LIST_CFG], 0, 1, 64, 0, 0,  \
+-- 
+2.43.0
+

@@ -96,8 +96,13 @@
     });
     document.addEventListener('htmx:sendError', show);
     document.addEventListener('htmx:timeout',   show);
+    // A gateway error from the WebUI itself is an answer, about the
+    // device behind it; only one the proxy gave for a WebUI that is down
+    // means we lost the box.  Our answers carry X-WebUI, nginx's do not.
     document.addEventListener('htmx:responseError', function (evt) {
-      var s = evt.detail && evt.detail.xhr && evt.detail.xhr.status;
+      var xhr = evt.detail && evt.detail.xhr;
+      if (!xhr || xhr.getResponseHeader('X-WebUI')) return;
+      var s = xhr.status;
       if (s === 502 || s === 503 || s === 504) show();
     });
     document.addEventListener('htmx:afterRequest', function (evt) {
@@ -1570,18 +1575,18 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
-    // NACM refused the candidate copy: the page is of no use, say so instead.
-    var configureDenied = false;
+    // The candidate copy failed: the page is of no use, say why instead.
+    var configureFailed = false;
     document.addEventListener('htmx:responseError', function(evt) {
       var d = evt.detail;
-      if (!d || !d.xhr || d.xhr.status !== 403 ||
-          !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
-      configureDenied = true;
+      if (!d || !d.xhr || !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
+      configureFailed = true;
       var content = document.getElementById('content');
-      if (content) {
-        content.innerHTML = '<div class="alert alert-error">' +
-          'You do not have permission to change the configuration.</div>';
-      }
+      if (!content) return;
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-error';
+      alert.textContent = d.xhr.responseText || 'Could not start editing the configuration.';
+      content.replaceChildren(alert);
     });
 
     // The Configure accordion is open on page load only on a configure
@@ -1594,7 +1599,7 @@ function markActiveOpt(cls, attr, value) {
       if (content) content.classList.add('cfg-entering');
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
         .then(function() {
-          if (configureDenied) return;
+          if (configureFailed) return;
           return htmx.ajax('GET', window.location.pathname + window.location.search,
                            {target: '#content', swap: 'innerHTML'});
         })
@@ -2039,7 +2044,8 @@ function openModal(message, onConfirm, opts) {
 
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
-// Templates are keyed by data-template attribute value.
+// data-template names a row template below, or the id of a <template>
+// element the page rendered.
 (function () {
   var rowTemplates = {
     'ntp': function(i) {
@@ -2083,7 +2089,16 @@ function openModal(message, onConfirm, opts) {
       row.querySelectorAll('input').forEach(function(inp) {
         inp.name = inp.name.replace(/_\d+$/, '_' + i);
       });
+      row.querySelectorAll('[data-row-index]').forEach(function(c) { c.textContent = i; });
     });
+  }
+
+  // A row template rendered by the server: a <template> element whose
+  // __N__ placeholders take the row number.
+  function rowFromTemplate(key, i) {
+    var tpl = document.getElementById(key);
+    if (tpl && tpl.content) { return tpl.innerHTML.replace(/__N__/g, i); }
+    return rowTemplates[key] ? rowTemplates[key](i) : null;
   }
 
   document.addEventListener('click', function(e) {
@@ -2092,9 +2107,11 @@ function openModal(message, onConfirm, opts) {
       var tbodyId  = addBtn.getAttribute('data-table');
       var tmplKey  = addBtn.getAttribute('data-template');
       var tbody    = document.getElementById(tbodyId);
-      if (!tbody || !rowTemplates[tmplKey]) { return; }
+      if (!tbody) { return; }
       var idx = tbody.querySelectorAll('tr').length;
-      tbody.insertAdjacentHTML('beforeend', rowTemplates[tmplKey](idx));
+      var html = rowFromTemplate(tmplKey, idx);
+      if (!html) { return; }
+      tbody.insertAdjacentHTML('beforeend', html);
       var newInput = tbody.querySelector('tr:last-child input');
       if (newInput) { newInput.focus(); }
       return;

@@ -4,3 +4,12 @@
 
 - name: OSPF Container
   case: ospf_container/test.py
+
+- name: TSN Schedule
+  case: tsn_schedule/test.py
+
+- name: TSN Gate Timing
+  case: tsn_gate_timing/test.py
+
+- name: TSN Guard Band
+  case: tsn_guard_band/test.py

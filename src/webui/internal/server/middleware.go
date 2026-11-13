@@ -202,6 +202,9 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 		if security.IsSecureRequest(r) {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
+		// Marks an answer as ours: a 5xx without it is the proxy answering
+		// for a WebUI that is down, which the connection banner acts on.
+		w.Header().Set("X-WebUI", "1")
 		next.ServeHTTP(w, r)
 	})
 }

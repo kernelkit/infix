@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: tsn&#45;gate&#45;timing Pages: 1 -->
+<svg width="548pt" height="268pt"
+ viewBox="0.00 0.00 548.04 268.02" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 264.02)">
+<title>tsn&#45;gate&#45;timing</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-264.02 544.04,-264.02 544.04,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-60.01 0,-200.01 58,-200.01 58,-60.01 0,-60.01"/>
+<text text-anchor="middle" x="29" y="-184.81" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="0,-177.01 58,-177.01 "/>
+<text text-anchor="middle" x="29" y="-129.81" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="0,-106.01 58,-106.01 "/>
+<text text-anchor="middle" x="29" y="-90.81" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="0,-83.01 58,-83.01 "/>
+<text text-anchor="middle" x="29" y="-67.81" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt3</text>
+</g>
+<!-- talker -->
+<g id="node2" class="node">
+<title>talker</title>
+<polygon fill="none" stroke="black" points="386.04,-217.52 386.04,-259.52 540.04,-259.52 540.04,-217.52 386.04,-217.52"/>
+<text text-anchor="middle" x="409.54" y="-245.92" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="386.04,-238.52 433.04,-238.52 "/>
+<text text-anchor="middle" x="409.54" y="-224.92" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="433.04,-217.52 433.04,-259.52 "/>
+<text text-anchor="middle" x="486.54" y="-241.92" font-family="DejaVu Sans Mono, Book" font-size="12.00">talker</text>
+<text text-anchor="middle" x="486.54" y="-228.92" font-family="DejaVu Sans Mono, Book" font-size="12.00">192.168.20.1</text>
+</g>
+<!-- host&#45;&#45;talker -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;talker:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-189.01C58,-189.01 386.04,-249.52 386.04,-249.52"/>
+</g>
+<!-- dut -->
+<g id="node3" class="node">
+<title>dut</title>
+<polygon fill="none" stroke="black" points="405.04,-98.51 405.04,-161.51 521.04,-161.51 521.04,-98.51 405.04,-98.51"/>
+<text text-anchor="middle" x="436.04" y="-147.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">uplink</text>
+<polyline fill="none" stroke="black" points="405.04,-140.51 467.04,-140.51 "/>
+<text text-anchor="middle" x="436.04" y="-126.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="405.04,-119.51 467.04,-119.51 "/>
+<text text-anchor="middle" x="436.04" y="-105.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">dnlink</text>
+<polyline fill="none" stroke="black" points="467.04,-98.51 467.04,-161.51 "/>
+<text text-anchor="middle" x="494.04" y="-133.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">dut</text>
+<text text-anchor="middle" x="494.04" y="-120.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">(br0)</text>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;dut:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-94.01C58,-94.01 405.04,-130.01 405.04,-130.01"/>
+</g>
+<!-- listener -->
+<g id="node4" class="node">
+<title>listener</title>
+<polygon fill="none" stroke="black" points="386.04,-0.5 386.04,-42.5 540.04,-42.5 540.04,-0.5 386.04,-0.5"/>
+<text text-anchor="middle" x="409.54" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="386.04,-21.5 433.04,-21.5 "/>
+<text text-anchor="middle" x="409.54" y="-7.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="433.04,-0.5 433.04,-42.5 "/>
+<text text-anchor="middle" x="486.54" y="-24.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">listener</text>
+<text text-anchor="middle" x="486.54" y="-11.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">192.168.20.2</text>
+</g>
+<!-- host&#45;&#45;listener -->
+<g id="edge3" class="edge">
+<title>host:mgmt3&#45;&#45;listener:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-71.01C58,-71.01 386.04,-10.5 386.04,-10.5"/>
+</g>
+<!-- talker&#45;&#45;dut -->
+<g id="edge4" class="edge">
+<title>talker:data&#45;&#45;dut:uplink</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M409.04,-217.52C409.04,-217.52 436.04,-162.01 436.04,-162.01"/>
+</g>
+<!-- dut&#45;&#45;listener -->
+<g id="edge5" class="edge">
+<title>dut:dnlink&#45;&#45;listener:data</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M436.04,-98.01C436.04,-98.01 409.04,-42.5 409.04,-42.5"/>
+</g>
+</g>
+</svg>

@@ -22,6 +22,7 @@ class Port:
         self.ssh = ssh
         self._switched = None
         self._driver = None
+        self._tx_queues = None
 
     @property
     def caps(self):
@@ -32,6 +33,16 @@ class Port:
         iface = next(iter(data["interfaces"]["interface"]), {})
         qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
         return qos.get("capabilities", {})
+
+    @property
+    def profile(self):
+        """The QoS profile the port runs, None when it runs its own settings"""
+        data = self.target.get_data(
+            f"/ietf-interfaces:interfaces/interface[name='{self.name}']"
+            "/infix-interfaces:qos")
+        iface = next(iter(data["interfaces"]["interface"]), {}) if data else {}
+        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
+        return qos.get("active-profile")
 
     @property
     def switched(self):
@@ -63,9 +74,23 @@ class Port:
         return self._driver or None
 
     @property
+    def tx_queues(self):
+        """How many transmit queues the port has"""
+        if self._tx_queues is None:
+            self._tx_queues = int(self.ssh.runsh(
+                f"ls -d /sys/class/net/{self.name}/queues/tx-* | wc -l").stdout)
+
+        return self._tx_queues
+
+    @property
     def offload(self):
         """The stages the port currently runs in hardware"""
         return self.caps.get("offload", [])
+
+    @property
+    def supported(self):
+        """The stages the port's fabric can run, [] when it names none"""
+        return self.caps.get("supported-offload", [])
 
     @property
     def traffic_classes(self):
@@ -82,12 +107,12 @@ class Port:
         return stage in self.offload
 
     def require_offload(self, test, stage):
-        """Skip unless a fabric port runs @stage in hardware
+        """Skip unless a fabric port can run @stage in hardware
 
         A port the CPU serves needs no offload: the kernel does the work
         and the measurement means what it says.
         """
-        if self.switched and not self.offloads(stage):
+        if self.switched and stage not in self.supported:
             test.skip(f"{self.name} forwards in hardware and its driver "
                       f"does not offload {stage}")
 

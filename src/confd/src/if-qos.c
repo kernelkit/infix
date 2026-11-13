@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <dirent.h>
+#include <net/if.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
@@ -12,6 +13,9 @@
 #define NUM_PRIO   8
 #define ETS_QUANTUM_UNIT 1514	/* one frame of bytes per percent of share */
 #define MAX_TC     8
+#define FRAME_OVERHEAD 22	/* Ethernet header, VLAN tag and FCS beyond the MTU */
+#define MAX_GATE_ENTRIES 1024	/* where the port names no limit of its own */
+#define NSEC_PER_SEC 1000000000ULL
 
 /*
  * IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class
@@ -55,10 +59,25 @@ static const uint8_t dscp_ietf[][2] = {
 	{ 56, 7 },
 };
 
+/* In rank order: a port lays its classes out shaped, strict, weighted from the top. */
 enum tsa {
-	TSA_STRICT,
 	TSA_ETS,
+	TSA_STRICT,
+	TSA_CBS,
 	TSA_UNSUPPORTED,
+};
+
+/* The IEEE 802.1Qbv gate control list, times in nanoseconds. */
+struct qos_gates {
+	bool     enabled;
+	int      num;
+	uint32_t *index;
+	uint8_t  *mask;
+	uint32_t *interval;
+	uint64_t cycle;		/* 0 = the sum of the intervals */
+	uint32_t extension;
+	uint64_t base;
+	uint32_t max_sdu[MAX_TC];
 };
 
 struct qos_egress {
@@ -66,8 +85,10 @@ struct qos_egress {
 	uint8_t  map[NUM_PRIO];
 	enum tsa algo[MAX_TC];
 	uint8_t  bandwidth[MAX_TC];	/* percent, ETS classes only */
-	uint64_t rate;		/* bits/s, 0 = no rate limit */
+	uint64_t idle[MAX_TC];		/* bits/s, CBS classes only */
+	uint64_t rate;		/* bits/s, 0 = no egress shaper */
 	uint32_t burst;		/* bytes */
+	struct qos_gates gates;
 };
 
 /*
@@ -103,29 +124,8 @@ static bool qos_is_explicit(struct lyd_node *node)
 	return false;
 }
 
-/*
- * Drivers with DCB rewrite support, and the trust orders their dcb
- * apptrust accepts; the kernel has no query for either.  Same table as
- * yanger's capabilities.  The rewrite table cannot be probed by trying:
- * a driver with dcbnl operations but no dcbnl_setrewr gets the kernel's
- * generic table, which accepts the entries and programs nothing.
- */
-static const struct {
-	const char *driver;
-	const char *orders[5];
-	bool pcp_encoded;	/* fabric always encodes PCP from the priority */
-} dcb_drivers[] = {
-	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL }, false },
-	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL }, false },
-	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true },
-};
-
-/*
- * One class per transmit queue, at most eight.  A single queue has no
- * queue structure to respect, so the kernel's eight classes apply.
- * Interfaces that do not exist yet get eight as well.
- */
-static int qos_num_tc(const char *ifname)
+/* Transmit queues of a port, 0 for one that does not exist yet. */
+static int qos_num_txq(const char *ifname)
 {
 	char path[PATH_MAX];
 	struct dirent *d;
@@ -135,12 +135,24 @@ static int qos_num_tc(const char *ifname)
 	snprintf(path, sizeof(path), "/sys/class/net/%s/queues", ifname);
 	dir = opendir(path);
 	if (!dir)
-		return MAX_TC;
+		return 0;
 
 	while ((d = readdir(dir)))
 		if (!strncmp(d->d_name, "tx-", 3))
 			n++;
 	closedir(dir);
+
+	return n;
+}
+
+/*
+ * One class per transmit queue, at most eight.  A single queue has no
+ * queue structure to respect, so the kernel's eight classes apply.
+ * Interfaces that do not exist yet get eight as well.
+ */
+static int qos_num_tc(const char *ifname)
+{
+	int n = qos_num_txq(ifname);
 
 	return n > 1 ? MIN(n, MAX_TC) : MAX_TC;
 }
@@ -174,41 +186,46 @@ static bool qos_is_dsa(const char *ifname)
 	return dsa;
 }
 
-static const char *qos_driver(const char *ifname, char *buf, size_t len)
+static bool qos_list_has(json_t *list, const char *word)
 {
-	char path[PATH_MAX], line[128];
-	const char *driver = NULL;
-	FILE *fp;
-
-	snprintf(path, sizeof(path), "/sys/class/net/%s/device/uevent", ifname);
-	fp = fopen(path, "r");
-	if (!fp)
-		return NULL;
-
-	while (fgets(line, sizeof(line), fp)) {
-		if (strncmp(line, "DRIVER=", 7))
-			continue;
-		strlcpy(buf, chomp(line + 7), len);
-		driver = buf;
-		break;
-	}
-	fclose(fp);
-
-	return driver;
-}
-
-static int qos_dcb_driver(const char *ifname)
-{
-	char buf[64];
-	const char *driver = qos_driver(ifname, buf, sizeof(buf));
+	json_t *val;
 	size_t i;
 
-	if (driver)
-		for (i = 0; i < NELEMS(dcb_drivers); i++)
-			if (!strcmp(dcb_drivers[i].driver, driver))
-				return i;
+	json_array_foreach(list, i, val)
+		if (json_is_string(val) && !strcmp(json_string_value(val), word))
+			return true;
 
-	return -1;
+	return false;
+}
+
+/* Whether a quirk list of the port, e.g. qos-offload, holds @word */
+static bool qos_quirk_has(const char *ifname, const char *quirk, const char *word)
+{
+	return qos_list_has(iface_quirk(ifname, quirk), word);
+}
+
+/* A numeric quirk of the port, e.g. sched-supported-list-max, or @dflt */
+static uint64_t qos_quirk_int(const char *ifname, const char *quirk, uint64_t dflt)
+{
+	json_t *val = iface_quirk(ifname, quirk);
+
+	return json_is_integer(val) ? (uint64_t)json_integer_value(val) : dflt;
+}
+
+/* Whether the port's fabric can run a stage of the pipeline */
+static bool qos_offloads(const char *ifname, const char *stage)
+{
+	return qos_quirk_has(ifname, "qos-offload", stage);
+}
+
+/* A fabric port that runs a shaper in software shapes only what the CPU sends */
+static void gen_shaper_log(FILE *fp, const char *ifname, const char *stage)
+{
+	if (!iface_quirk(ifname, "qos-offload") || qos_offloads(ifname, stage))
+		return;
+
+	fprintf(fp, "logger -t confd -p user.notice \"%s: %s not offloaded by the switch, "
+		"applies only to frames the CPU sends\"\n", ifname, stage);
 }
 
 /*
@@ -220,25 +237,51 @@ static int qos_dcb_driver(const char *ifname)
  */
 static bool qos_pcp_encoded(const char *ifname)
 {
-	int i = qos_dcb_driver(ifname);
-
-	return i >= 0 && dcb_drivers[i].pcp_encoded;
+	return iface_has_quirk(ifname, "qos-pcp-encoded");
 }
 
 /* Unknown drivers are not limited: without DCB the order is honoured in software. */
 static bool qos_trust_supported(const char *ifname, const char *order)
 {
-	int i = qos_dcb_driver(ifname);
-	size_t j;
+	json_t *orders = iface_quirk(ifname, "qos-trust-order");
 
-	if (i < 0)
-		return true;
+	return !orders || qos_list_has(orders, order);
+}
 
-	for (j = 0; dcb_drivers[i].orders[j]; j++)
-		if (!strcmp(dcb_drivers[i].orders[j], order))
+static bool qos_has_cbs(const struct qos_egress *eg)
+{
+	int i;
+
+	for (i = 0; i < MAX_TC; i++)
+		if (eg->algo[i] == TSA_CBS)
 			return true;
 
 	return false;
+}
+
+/* The root qdisc of a port: ets inverts the class numbering, the others queue by it. */
+enum qos_root {
+	ROOT_ETS,
+	ROOT_MQPRIO,
+	ROOT_TAPRIO,
+};
+
+/*
+ * A fabric shapes a queue, not an ets band, so a shaped class needs a
+ * root with one queue per class, mqprio, where the fabric takes it; so
+ * does a fabric that takes mqprio but not ets, to queue by the table.
+ * Gates take taprio in any case.
+ */
+static enum qos_root qos_root(const char *ifname, const struct qos_egress *eg)
+{
+	json_t *roots = iface_quirk(ifname, "qos-root-qdisc");
+
+	if (eg->gates.enabled)
+		return ROOT_TAPRIO;
+	if (qos_list_has(roots, "mqprio") && (qos_has_cbs(eg) || !qos_list_has(roots, "ets")))
+		return ROOT_MQPRIO;
+
+	return ROOT_ETS;
 }
 
 static enum tsa tsa_from_str(const char *val)
@@ -251,6 +294,8 @@ static enum tsa tsa_from_str(const char *val)
 		return TSA_STRICT;
 	if (!strcmp(id, "enhanced-transmission-selection"))
 		return TSA_ETS;
+	if (!strcmp(id, "credit-based-shaper"))
+		return TSA_CBS;
 
 	return TSA_UNSUPPORTED;
 }
@@ -316,16 +361,390 @@ static int qos_parse_egress(struct lyd_node *egress, const char *ifname, struct 
 			eg->bandwidth[id] = strtoul(val, NULL, 10);
 	}
 
-	table = lydx_get_child(egress, "rate-limit");
-	if (table) {
-		val = lydx_get_cattr(table, "rate");
-		eg->rate = val ? strtoull(val, NULL, 10) : 0;
+	return 0;
+}
 
-		/* Ten milliseconds at rate, never below one frame */
-		val = lydx_get_cattr(table, "burst");
-		eg->burst = val ? strtoul(val, NULL, 10) : eg->rate / 8 / 100;
-		if (eg->burst < 1518)
-			eg->burst = 1518;
+static void qos_parse_shaper(struct lyd_node *qos, struct qos_egress *eg)
+{
+	struct lyd_node *shaper = qos ? lydx_get_child(qos, "egress-shaper") : NULL;
+	const char *val;
+
+	if (!shaper)
+		return;
+
+	val = lydx_get_cattr(shaper, "rate");
+	eg->rate = val ? strtoull(val, NULL, 10) : 0;
+
+	/* Ten milliseconds at rate, never below one frame */
+	val = lydx_get_cattr(shaper, "burst");
+	eg->burst = val ? strtoul(val, NULL, 10) : eg->rate / 8 / 100;
+	if (eg->burst < 1518)
+		eg->burst = 1518;
+}
+
+/* The IEEE 802.1Qav reservations, ieee802-dot1dc-cbsa-if beside qos. */
+static void qos_parse_cbsa(struct lyd_node *cif, struct qos_egress *eg)
+{
+	struct lyd_node *cbsa, *entry;
+
+	cbsa = lydx_get_child(cif, "cbsa");
+	if (!cbsa)
+		return;
+
+	LYX_LIST_FOR_EACH(lyd_child(cbsa), entry, "cbsa-parameter-table") {
+		int tc = atoi(lydx_get_cattr(entry, "traffic-class"));
+		const char *val = lydx_get_cattr(entry, "admin-idle-slope");
+
+		if (tc >= 0 && tc < MAX_TC && val)
+			eg->idle[tc] = strtoull(val, NULL, 10);
+	}
+}
+
+static uint64_t qos_get_u64(struct lyd_node *parent, const char *name)
+{
+	const char *val = parent ? lydx_get_cattr(parent, name) : NULL;
+
+	return val ? strtoull(val, NULL, 10) : 0;
+}
+
+/*
+ * The IEEE 802.1Qbv schedule, ieee802-dot1dc-sched-if beside qos.  The
+ * cycle is a rational number of seconds and the base time a PTP
+ * timestamp; both become nanoseconds here.  Entries are kept in index
+ * order, whatever order the list arrives in.
+ */
+static int qos_parse_gates(struct lyd_node *cif, struct qos_gates *gates)
+{
+	struct lyd_node *table, *list, *entry;
+	uint64_t num, den;
+	int count = 0;
+
+	table = lydx_get_child(cif, "gate-parameter-table");
+	if (!table)
+		return 0;
+
+	gates->enabled = lydx_get_bool(table, "gate-enabled");
+
+	num = qos_get_u64(lydx_get_child(table, "admin-cycle-time"), "numerator");
+	den = qos_get_u64(lydx_get_child(table, "admin-cycle-time"), "denominator");
+	if (num && den)
+		gates->cycle = num * NSEC_PER_SEC / den;
+	gates->extension = qos_get_u64(table, "admin-cycle-time-extension");
+
+	gates->base = qos_get_u64(lydx_get_child(table, "admin-base-time"), "seconds") * NSEC_PER_SEC
+		+ qos_get_u64(lydx_get_child(table, "admin-base-time"), "nanoseconds");
+
+	LYX_LIST_FOR_EACH(lyd_child(table), entry, "queue-max-sdu-table") {
+		int tc = atoi(lydx_get_cattr(entry, "traffic-class"));
+
+		if (tc >= 0 && tc < MAX_TC)
+			gates->max_sdu[tc] = qos_get_u64(entry, "queue-max-sdu");
+	}
+
+	list = lydx_get_child(table, "admin-control-list");
+	LYX_LIST_FOR_EACH(lyd_child(list), entry, "gate-control-entry")
+		count++;
+	if (!count)
+		return 0;
+
+	gates->index    = calloc(count, sizeof(gates->index[0]));
+	gates->mask     = calloc(count, sizeof(gates->mask[0]));
+	gates->interval = calloc(count, sizeof(gates->interval[0]));
+	if (!gates->index || !gates->mask || !gates->interval)
+		return -ENOMEM;
+
+	LYX_LIST_FOR_EACH(lyd_child(list), entry, "gate-control-entry") {
+		uint64_t index = qos_get_u64(entry, "index");
+		const char *op = lydx_get_cattr(entry, "operation-name");
+		int i;
+
+		if (!op || !strstr(op, "set-gate-states"))
+			return -EOPNOTSUPP;
+
+		/* Insert sorted by index */
+		for (i = gates->num; i > 0 && gates->index[i - 1] > index; i--)
+			;
+		memmove(&gates->index[i + 1], &gates->index[i], (gates->num - i) * sizeof(gates->index[0]));
+		memmove(&gates->mask[i + 1], &gates->mask[i], (gates->num - i) * sizeof(gates->mask[0]));
+		memmove(&gates->interval[i + 1], &gates->interval[i],
+			(gates->num - i) * sizeof(gates->interval[0]));
+		gates->index[i] = index;
+		gates->mask[i] = qos_get_u64(entry, "gate-states-value");
+		gates->interval[i] = qos_get_u64(entry, "time-interval-value");
+		gates->num++;
+	}
+
+	return 0;
+}
+
+static void qos_gates_free(struct qos_gates *gates)
+{
+	free(gates->index);
+	free(gates->mask);
+	free(gates->interval);
+}
+
+/* Total time per cycle that the gate of a class stands open. */
+static uint64_t qos_gate_open(const struct qos_gates *gates, int tc)
+{
+	uint64_t open = 0;
+	int i;
+
+	for (i = 0; i < gates->num; i++)
+		if (gates->mask[i] & (1 << tc))
+			open += gates->interval[i];
+
+	return open;
+}
+
+static uint64_t qos_gate_cycle(const struct qos_gates *gates)
+{
+	uint64_t sum = 0;
+	int i;
+
+	if (gates->cycle)
+		return gates->cycle;
+
+	for (i = 0; i < gates->num; i++)
+		sum += gates->interval[i];
+
+	return sum;
+}
+
+/*
+ * The node holding a port's ingress and egress: the qos container
+ * itself, or the profile it references under /system/qos-profile.
+ */
+static struct lyd_node *qos_source(struct lyd_node *cif, struct lyd_node *qos)
+{
+	const char *name = lydx_get_cattr(qos, "profile");
+
+	if (!name)
+		return qos;
+
+	return lydx_get_xpathf(cif, "/ietf-system:system/infix-qos:qos-profile[name='%s']", name);
+}
+
+static int qos_parse(struct lyd_node *cif, struct lyd_node *src, struct lyd_node *qos,
+		     struct qos_egress *eg)
+{
+	int err;
+
+	err = qos_parse_egress(lydx_get_child(src, "egress"), lydx_get_cattr(cif, "name"), eg);
+	if (err)
+		return err;
+
+	qos_parse_shaper(qos, eg);
+	qos_parse_cbsa(cif, eg);
+
+	return qos_parse_gates(cif, &eg->gates);
+}
+
+static long qos_sysfs_long(const char *ifname, const char *attr, long dflt)
+{
+	char path[PATH_MAX];
+	long val = dflt;
+	FILE *fp;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/%s", ifname, attr);
+	fp = fopen(path, "r");
+	if (!fp)
+		return dflt;
+	if (fscanf(fp, "%ld", &val) != 1 || val <= 0)
+		val = dflt;
+	fclose(fp);
+
+	return val;
+}
+
+/* Highest rate the port can link at in Mbps, 0 when it names no link modes. */
+static long qos_max_speed(const char *ifname)
+{
+	long speed, max = 0;
+	char line[64];
+	FILE *pp;
+
+	pp = popenf("r", "ethtool --json %s 2>/dev/null | "
+		    "jq -r '.[0][\"supported-link-modes\"][]?'", ifname);
+	if (!pp)
+		return 0;
+	while (fgets(line, sizeof(line), pp)) {
+		speed = strtol(line, NULL, 10);
+		if (speed > max)
+			max = speed;
+	}
+	pclose(pp);
+
+	return max;
+}
+
+/* The port's highest rate in bits per second, a gigabit when it is virtual. */
+static uint64_t qos_port_rate(const char *ifname)
+{
+	long speed = qos_max_speed(ifname);
+
+	if (!speed)
+		speed = qos_sysfs_long(ifname, "speed", 1000);
+
+	return (uint64_t)speed * 1000000;
+}
+
+/* Link rate in bits per second, the port's highest while the link is down. */
+static uint64_t qos_link_rate(const char *ifname)
+{
+	long speed = qos_sysfs_long(ifname, "speed", 0);
+
+	return speed ? (uint64_t)speed * 1000000 : qos_port_rate(ifname);
+}
+
+/*
+ * Turning CBS on takes the algorithm in qos and the reservation in
+ * cbsa, so the two are checked against each other here.  Without gates
+ * the layout is the one tc ets accepts, strict bands first, with the
+ * shaped classes on top as IEEE 802.1Q-2022 34.5 has it.  Gates give
+ * each class its own windows, so a scheduled class may sit above them.
+ */
+static int qos_validate_shapers(sr_session_ctx_t *session, const char *ifname, const char *label,
+				struct qos_egress *eg)
+{
+	enum qos_root root = qos_root(ifname, eg);
+	uint64_t link = 0, max;
+	enum tsa below = TSA_CBS;
+	int i;
+
+	for (i = 0; i < MAX_TC; i++) {
+		if (eg->algo[i] == TSA_CBS && !eg->idle[i]) {
+			sr_session_set_error_message(session, "%s: traffic class %d: credit-based-"
+						     "shaper needs an admin-idle-slope in cbsa",
+						     label, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] != TSA_CBS && eg->idle[i]) {
+			sr_session_set_error_message(session, "%s: cbsa traffic class %d has an "
+						     "admin-idle-slope but its algorithm is not "
+						     "credit-based-shaper", label, i);
+			return -EINVAL;
+		}
+		if (eg->idle[i] && !link)
+			link = qos_port_rate(ifname);
+		if (eg->idle[i] > link) {
+			sr_session_set_error_message(session, "%s: traffic class %d: admin-idle-slope "
+						     "%" PRIu64 " exceeds the port's rate %" PRIu64,
+						     label, i, eg->idle[i], link);
+			return -EINVAL;
+		}
+		if (eg->algo[i] == TSA_CBS && eg->rate) {
+			sr_session_set_error_message(session, "%s: egress-shaper and credit-based "
+						     "shaping exclude each other", label);
+			return -EINVAL;
+		}
+	}
+
+	/* Walk from the top: shaped classes, then strict, then weighted, never back. */
+	for (i = eg->num_tc - 1; i >= 0 && !eg->gates.enabled; i--) {
+		if (eg->algo[i] > below) {
+			sr_session_set_error_message(session, "%s: traffic class %d: classes must be "
+						     "laid out credit-based-shaper, then strict-"
+						     "priority, then weighted, from the top",
+						     label, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] == TSA_ETS && root == ROOT_MQPRIO) {
+			sr_session_set_error_message(session, "%s: traffic class %d: enhanced-"
+						     "transmission-selection cannot share the port "
+						     "with a credit-based shaper, its fabric serves "
+						     "shaped queues under strict priority", label, i);
+			return -EINVAL;
+		}
+		below = eg->algo[i];
+	}
+
+	if (!eg->gates.enabled)
+		return 0;
+
+	/*
+	 * Gates: taprio takes the root with nothing above it and has no
+	 * weights, and a shaped class earns credit only while its gate is
+	 * open, so its slope scaled up to the cycle must still fit the link.
+	 */
+	if (!eg->gates.num) {
+		sr_session_set_error_message(session, "%s: gate-enabled with an empty "
+					     "admin-control-list", label);
+		return -EINVAL;
+	}
+	max = qos_quirk_int(ifname, "sched-supported-list-max", MAX_GATE_ENTRIES);
+	if ((uint64_t)eg->gates.num > max) {
+		sr_session_set_error_message(session, "%s: gate control list has %d entries, "
+					     "the port supports %" PRIu64, label,
+					     eg->gates.num, max);
+		return -EINVAL;
+	}
+	max = qos_quirk_int(ifname, "sched-supported-cycle-max", UINT64_MAX);
+	if (qos_gate_cycle(&eg->gates) > max) {
+		sr_session_set_error_message(session, "%s: gate cycle of %" PRIu64 " ns, the "
+					     "port supports %" PRIu64, label,
+					     qos_gate_cycle(&eg->gates), max);
+		return -EINVAL;
+	}
+	for (i = 0; i < MAX_TC; i++) {
+		if (!eg->gates.max_sdu[i] || !qos_offloads(ifname, "time-aware-shaper") ||
+		    iface_has_quirk(ifname, "sched-queue-max-sdu"))
+			continue;
+		sr_session_set_error_message(session, "%s: traffic class %d: queue-max-sdu is "
+					     "not supported by this port", label, i);
+		return -EINVAL;
+	}
+	max = qos_quirk_int(ifname, "sched-supported-interval-max", UINT64_MAX);
+	if (eg->rate) {
+		sr_session_set_error_message(session, "%s: egress-shaper and gate-enabled exclude "
+					     "each other", label);
+		return -EINVAL;
+	}
+	for (i = 0; i < eg->gates.num; i++) {
+		if (!eg->gates.interval[i]) {
+			sr_session_set_error_message(session, "%s: gate-control-entry %u: time-"
+						     "interval-value must be above zero", label,
+						     eg->gates.index[i]);
+			return -EINVAL;
+		}
+		if (eg->gates.interval[i] > max) {
+			sr_session_set_error_message(session, "%s: gate-control-entry %u: time-"
+						     "interval-value %u ns, the port supports %"
+						     PRIu64, label, eg->gates.index[i],
+						     eg->gates.interval[i], max);
+			return -EINVAL;
+		}
+	}
+	for (i = 0; i < eg->num_tc; i++) {
+		uint64_t open = qos_gate_open(&eg->gates, i);
+
+		if (eg->algo[i] == TSA_ETS) {
+			sr_session_set_error_message(session, "%s: traffic class %d: enhanced-"
+						     "transmission-selection cannot be gated, "
+						     "use strict-priority", label, i);
+			return -EINVAL;
+		}
+		if (eg->algo[i] != TSA_CBS)
+			continue;
+		if (!open) {
+			sr_session_set_error_message(session, "%s: traffic class %d: credit-based-"
+						     "shaper on a gate that never opens", label, i);
+			return -EINVAL;
+		}
+		if ((double)eg->idle[i] * qos_gate_cycle(&eg->gates) / open > (double)link) {
+			sr_session_set_error_message(session, "%s: traffic class %d: admin-idle-slope "
+						     "%" PRIu64 " over the gate's share of the "
+						     "cycle exceeds the link rate %" PRIu64,
+						     label, i, eg->idle[i], link);
+			return -EINVAL;
+		}
+	}
+
+	if (qos_num_txq(ifname) < eg->num_tc) {
+		sr_session_set_error_message(session, "%s: scheduled traffic needs a transmit "
+					     "queue per traffic class, port has %d", label,
+					     qos_num_txq(ifname));
+		return -EINVAL;
 	}
 
 	return 0;
@@ -337,34 +756,42 @@ static int qos_parse_egress(struct lyd_node *egress, const char *ifname, struct 
  * the layout tc ets accepts (strict bands first, i.e. the highest
  * classes).
  */
-static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct lyd_node *qos)
+/* The label names the port, and the profile when the settings come from one */
+static int qos_validate_port(sr_session_ctx_t *session, struct lyd_node *cif,
+			     struct lyd_node *src, struct lyd_node *qos, const char *label,
+			     struct qos_egress *eg)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
+	struct lyd_node *ingress = lydx_get_child(src, "ingress");
 	struct lyd_node *egress, *tc;
-	struct qos_egress eg;
-	struct lyd_node *ingress = lydx_get_child(qos, "ingress");
 	const char *trust;
-	bool ets = false;
 	int i;
 
 	trust = ingress ? lydx_get_cattr(ingress, "trust") : NULL;
 	if (trust && strcmp(trust, "none") && !qos_trust_supported(ifname, trust)) {
 		sr_session_set_error_message(session, "%s: trust order %s not supported "
-					     "by this port, see qos capabilities", ifname, trust);
+					     "by this port, see qos capabilities", label, trust);
 		return -EINVAL;
 	}
 
-	egress = lydx_get_child(qos, "egress");
-	if (qos_parse_egress(egress, ifname, &eg)) {
-		sr_session_set_error_message(session, "%s: invalid traffic class table", ifname);
+	egress = lydx_get_child(src, "egress");
+	switch (qos_parse(cif, src, qos, eg)) {
+	case 0:
+		break;
+	case -EOPNOTSUPP:
+		sr_session_set_error_message(session, "%s: gate-control-entry operation must "
+					     "be set-gate-states", label);
+		return -EINVAL;
+	default:
+		sr_session_set_error_message(session, "%s: invalid traffic class table", label);
 		return -EINVAL;
 	}
 
 	for (i = 0; i < NUM_PRIO; i++) {
-		if (eg.map[i] >= eg.num_tc) {
+		if (eg->map[i] >= eg->num_tc) {
 			sr_session_set_error_message(session, "%s: priority%d maps to traffic "
-						     "class %d, port has %d classes", ifname, i,
-						     eg.map[i], eg.num_tc);
+						     "class %d, port has %d classes", label, i,
+						     eg->map[i], eg->num_tc);
 			return -EINVAL;
 		}
 	}
@@ -375,34 +802,35 @@ static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct 
 	LYX_LIST_FOR_EACH(lyd_child(egress), tc, "traffic-class") {
 		int id = atoi(lydx_get_cattr(tc, "id"));
 
-		if (id >= eg.num_tc) {
+		if (id >= eg->num_tc) {
 			sr_session_set_error_message(session, "%s: traffic class %d, port has "
-						     "%d classes", ifname, id, eg.num_tc);
+						     "%d classes", label, id, eg->num_tc);
 			return -EINVAL;
 		}
 
-		if (eg.algo[id] == TSA_UNSUPPORTED) {
+		if (eg->algo[id] == TSA_UNSUPPORTED) {
 			sr_session_set_error_message(session, "%s: traffic class %d: algorithm %s "
-						     "not supported, use strict-priority or "
-						     "enhanced-transmission-selection", ifname, id,
+						     "not supported, use strict-priority, "
+						     "enhanced-transmission-selection or "
+						     "credit-based-shaper", label, id,
 						     lydx_get_cattr(tc, "algorithm"));
 			return -EINVAL;
 		}
 	}
 
-	/* Walk from the top: strict classes, then weighted, never back. */
-	for (i = eg.num_tc - 1; i >= 0; i--) {
-		if (eg.algo[i] == TSA_ETS)
-			ets = true;
-		else if (ets) {
-			sr_session_set_error_message(session, "%s: traffic class %d: strict-priority "
-						     "classes must be the highest-numbered ones, "
-						     "above all weighted classes", ifname, i);
-			return -EINVAL;
-		}
-	}
+	return qos_validate_shapers(session, ifname, label, eg);
+}
 
-	return 0;
+static int qos_validate(sr_session_ctx_t *session, struct lyd_node *cif, struct lyd_node *src,
+			struct lyd_node *qos, const char *label)
+{
+	struct qos_egress eg = { 0 };
+	int err;
+
+	err = qos_validate_port(session, cif, src, qos, label, &eg);
+	qos_gates_free(&eg.gates);
+
+	return err;
 }
 
 enum trust {
@@ -616,7 +1044,7 @@ static void gen_remark(FILE *fp, const char *ifname, struct lyd_node *remark)
 	pcp  = remark ? lydx_get_cattr(remark, "pcp") : NULL;
 	dscp = remark ? lydx_get_cattr(remark, "dscp") : NULL;
 
-	if (qos_dcb_driver(ifname) < 0) {
+	if (!qos_offloads(ifname, "remarking")) {
 		fputs("rewr_err=1\n", fp);
 	} else {
 		bool encoded = qos_pcp_encoded(ifname);
@@ -684,6 +1112,105 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
 }
 
 /*
+ * One cbs child per shaped class, on its band.  The operator gives the
+ * idle slope; the send slope and the credits follow IEEE 802.1Q-2022
+ * Annex L from it and the link rate, with one maximum frame as the
+ * interfering burst.  tc takes the slopes in kbps.  The shaper is
+ * offloaded where the fabric runs it, and is the real thing in software
+ * elsewhere.
+ */
+static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int handle,
+		    bool by_queue)
+{
+	uint64_t link = qos_link_rate(ifname) / 1000;
+	long frame = qos_sysfs_long(ifname, "mtu", 1500) + FRAME_OVERHEAD;
+	bool offload = qos_offloads(ifname, "credit-based-shaper");
+	int tc;
+
+	for (tc = 0; tc < eg->num_tc; tc++) {
+		uint64_t bps, idle, send;
+		int band;
+
+		if (eg->algo[tc] != TSA_CBS)
+			continue;
+
+		/*
+		 * A gated class earns credit only while its gate is open, so
+		 * the slope is scaled by the cycle over the open time to keep
+		 * the reservation, IEEE 802.1Q-2022 8.6.8.2.  A queue root
+		 * numbers its classes as the standard does, ets inverts them.
+		 */
+		bps = eg->idle[tc];
+		if (eg->gates.enabled) {
+			uint64_t cycle = qos_gate_cycle(&eg->gates);
+			uint64_t open = qos_gate_open(&eg->gates, tc);
+
+			bps = bps / open * cycle + bps % open * cycle / open;
+		}
+		idle = (bps + 999) / 1000;
+		band = by_queue ? tc + 1 : eg->num_tc - tc;
+		send = link > idle ? link - idle : 0;
+		fprintf(fp, "qdisc replace dev %s parent %d:%d handle %d: cbs idleslope %" PRIu64
+			" sendslope -%" PRIu64 " hicredit %" PRIu64 " locredit -%" PRIu64
+			" offload %d\n", ifname, handle, band, 0x10 + tc, idle, send,
+			(frame * idle + link / 2) / link, (frame * send + link / 2) / link, offload);
+	}
+}
+
+/* One class per queue in standard numbering, as mqprio and taprio take it */
+static void gen_queue_map(FILE *fp, const struct qos_egress *eg)
+{
+	int i;
+
+	fprintf(fp, " num_tc %d map", eg->num_tc);
+	for (i = 0; i < NUM_PRIO; i++)
+		fprintf(fp, " %d", eg->map[i]);
+	fputs(" queues", fp);
+	for (i = 0; i < eg->num_tc; i++)
+		fprintf(fp, " 1@%d", i);
+}
+
+/*
+ * A root for a fabric that shapes queues: the classes on their queues,
+ * served under strict priority by the hardware, the shapers below.
+ */
+static void gen_mqprio(FILE *fp, const char *ifname, struct qos_egress *eg)
+{
+	fprintf(fp, "qdisc replace dev %s root handle 1: mqprio", ifname);
+	gen_queue_map(fp, eg);
+	fputs(" hw 1\n", fp);
+}
+
+/*
+ * The gate control list as a taprio root: one class per queue in
+ * standard numbering, the gate masks and intervals as given, offloaded
+ * where the fabric runs it and against TAI in software elsewhere.
+ */
+static void gen_taprio(FILE *fp, const char *ifname, struct qos_egress *eg)
+{
+	struct qos_gates *gates = &eg->gates;
+	int i;
+
+	fprintf(fp, "qdisc replace dev %s root handle 1: taprio", ifname);
+	gen_queue_map(fp, eg);
+	fprintf(fp, " base-time %" PRIu64, gates->base);
+	if (gates->cycle)
+		fprintf(fp, " cycle-time %" PRIu64, gates->cycle);
+	if (gates->extension)
+		fprintf(fp, " cycle-time-extension %u", gates->extension);
+	for (i = 0; i < gates->num; i++)
+		fprintf(fp, " sched-entry S %02x %u", gates->mask[i], gates->interval[i]);
+	for (i = 0; i < eg->num_tc && !gates->max_sdu[i]; i++)
+		;
+	if (i < eg->num_tc) {
+		fputs(" max-sdu", fp);
+		for (i = 0; i < eg->num_tc; i++)
+			fprintf(fp, " %u", gates->max_sdu[i]);
+	}
+	fputs(qos_offloads(ifname, "time-aware-shaper") ? " flags 0x2\n" : " clockid CLOCK_TAI\n", fp);
+}
+
+/*
  * tc ets carries the whole layout, and a driver that offloads it says
  * so in the qdisc: band 0 is dequeued first, so class N-1 is band 0,
  * strict bands come first, and quanta are listed for the weighted
@@ -694,7 +1221,7 @@ static void gen_ets(FILE *fp, const char *ifname, struct qos_egress *eg, const c
 {
 	int i, nstrict = 0;
 
-	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] == TSA_STRICT; i--)
+	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] != TSA_ETS; i--)
 		nstrict++;
 
 	fprintf(fp, "qdisc add dev %s %s ets bands %d strict %d", ifname, attach, eg->num_tc, nstrict);
@@ -711,7 +1238,8 @@ static void gen_ets(FILE *fp, const char *ifname, struct qos_egress *eg, const c
 
 static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 {
-	const char *attach = "root";
+	const char *attach = "root handle 1:";
+	int handle = 1;
 
 	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
 	if (!eg->rate && eg->num_tc < 2)
@@ -720,18 +1248,38 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	fputs("tc -force -batch - <<EOF\n", fp);
 
 	/*
-	 * The rate limit is one bucket on the whole port, so it takes
+	 * The egress shaper is one bucket on the whole port, so it takes
 	 * the root and the scheduler hangs below it.
 	 */
 	if (eg->rate) {
 		fprintf(fp, "qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
 			" latency 100ms\n", ifname, eg->rate, eg->burst);
 		attach = "parent 1:1 handle 2:";
+		handle = 2;
 	}
 
-	if (eg->num_tc >= 2)
-		gen_ets(fp, ifname, eg, attach);
+	if (eg->num_tc >= 2) {
+		enum qos_root root = qos_root(ifname, eg);
+
+		switch (root) {
+		case ROOT_TAPRIO:
+			gen_taprio(fp, ifname, eg);
+			break;
+		case ROOT_MQPRIO:
+			gen_mqprio(fp, ifname, eg);
+			break;
+		case ROOT_ETS:
+			gen_ets(fp, ifname, eg, attach);
+			break;
+		}
+		gen_cbs(fp, ifname, eg, handle, root != ROOT_ETS);
+	}
 	fputs("EOF\n", fp);
+
+	if (eg->gates.enabled)
+		gen_shaper_log(fp, ifname, "time-aware-shaper");
+	if (qos_has_cbs(eg))
+		gen_shaper_log(fp, ifname, "credit-based-shaper");
 }
 
 static int gen_reset(struct dagger *net, const char *ifname)
@@ -751,6 +1299,7 @@ static int gen_reset(struct dagger *net, const char *ifname)
 	fprintf(fp, "rewr flush dev %s%s prio-dscp\n", ifname, qos_pcp_encoded(ifname) ? "" : " prio-pcp");
 	fprintf(fp, "apptrust set dev %s order\n", ifname);
 	fputs("EOF\n", fp);
+	fprintf(fp, "rm -f /run/qos/%s\n", ifname);
 	fputs("exit 0\n", fp);
 	fclose(fp);
 
@@ -763,6 +1312,22 @@ static int gen_reset(struct dagger *net, const char *ifname)
  * in metadata, which lydx_get_diff() reads; a deleted list entry or
  * presence container always counts.
  */
+/*
+ * A port put on, taken off, or moved between profiles.  A profile edit
+ * adds the port's profile leaf to the diff as well, with its value
+ * unchanged; that is handled from the profile's own diff.
+ */
+static bool qos_profile_switched(struct lyd_node *dqos)
+{
+	struct lyd_node *leaf = lydx_get_child(dqos, "profile");
+	struct lydx_diff nd;
+
+	if (!leaf || !lydx_get_diff(leaf, &nd))
+		return false;
+
+	return !nd.old || !nd.new || strcmp(nd.old, nd.new);
+}
+
 static bool qos_has_change(struct lyd_node *node)
 {
 	struct lyd_node *child;
@@ -796,8 +1361,14 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 		   struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
-	struct lyd_node *qos, *dqos, *ingress, *remark;
-	struct qos_egress eg;
+	struct lyd_node *qos, *dqos, *src, *dsrc, *ingress, *remark;
+	struct lyd_node *cbsa = lydx_get_child(cif, "cbsa");
+	struct lyd_node *dcbsa = lydx_get_child(dif, "cbsa");
+	struct lyd_node *gates = lydx_get_child(cif, "gate-parameter-table");
+	struct lyd_node *dgates = lydx_get_child(dif, "gate-parameter-table");
+	char label[IFNAMSIZ + 80];
+	struct qos_egress eg = { 0 };
+	const char *profile;
 	FILE *fp;
 	int err;
 
@@ -806,50 +1377,74 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 
 	/*
 	 * The defaults are a complete pipeline and apply on every
-	 * physical port, at creation and whenever qos changes.  Virtual
-	 * interfaces get one only when configured; removing it there
-	 * resets the interface.
+	 * physical port, at creation and whenever qos or the shapers
+	 * beside it change.  Virtual interfaces get one only when
+	 * configured; removing it there resets the interface.
 	 */
-	if (!qos_has_change(dqos) && lydx_get_op(dif) != LYDX_OP_CREATE)
+	if (!qos_has_change(dqos) && !qos_has_change(dcbsa) && !qos_has_change(dgates) &&
+	    lydx_get_op(dif) != LYDX_OP_CREATE)
 		return 0;
 
-	if (!qos_is_explicit(qos) && !qos_is_port(ifname)) {
-		if (qos_has_change(dqos))
+	if (!qos_is_explicit(qos) && !qos_is_explicit(cbsa) && !qos_is_explicit(gates) &&
+	    !qos_is_port(ifname)) {
+		if (qos_has_change(dqos) || qos_has_change(dcbsa) || qos_has_change(dgates))
 			return gen_reset(net, ifname);
 		return 0;
 	}
 
-	err = qos_validate(session, cif, qos);
+	/* The settings a port runs are its own or its profile's, and so is their diff */
+	profile = lydx_get_cattr(qos, "profile");
+	src = qos_source(cif, qos);
+	if (profile) {
+		dsrc = lydx_get_xpathf(dif, "/ietf-system:system/infix-qos:qos-profile[name='%s']", profile);
+		snprintf(label, sizeof(label), "%s (profile %s)", ifname, profile);
+	} else {
+		dsrc = dqos;
+		snprintf(label, sizeof(label), "%s", ifname);
+	}
+
+	err = qos_validate(session, cif, src, qos, label);
 	if (err)
 		return err;
 
-	err = qos_parse_egress(lydx_get_child(qos, "egress"), ifname, &eg);
-	if (err)
+	err = qos_parse(cif, src, qos, &eg);
+	if (!err) {
+		fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "qos.sh");
+		if (!fp)
+			err = -EIO;
+	}
+	if (err) {
+		qos_gates_free(&eg.gates);
 		return err;
+	}
 
-	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "qos.sh");
-	if (!fp)
-		return -EIO;
-
-	ingress = lydx_get_child(qos, "ingress");
-	remark  = lydx_get_descendant(lyd_child(qos), "egress", "remark", NULL);
+	ingress = lydx_get_child(src, "ingress");
+	remark  = lydx_get_descendant(lyd_child(src), "egress", "remark", NULL);
 
 	fprintf(fp, "tc qdisc del dev %s clsact 2>/dev/null\n", ifname);
 	gen_ingress(fp, ifname, ingress);
 	gen_remark(fp, ifname, remark);
 	gen_dcb_log(fp, ifname, ingress, remark);
 
+	/* The profile in use, read back as operational state */
+	if (profile)
+		fprintf(fp, "mkdir -p /run/qos && echo %s > /run/qos/%s\n", profile, ifname);
+	else
+		fprintf(fp, "rm -f /run/qos/%s\n", ifname);
+
 	/*
 	 * Replacing the root qdisc reprograms the port's queues, which on
 	 * offloading hardware drops traffic for a moment.  Only do it when
 	 * the traffic classes changed, not for an ingress or remark edit.
 	 */
-	if (lydx_get_op(dif) == LYDX_OP_CREATE ||
-	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class-table", NULL)) ||
-	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class", NULL)) ||
-	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "rate-limit", NULL)))
+	if (lydx_get_op(dif) == LYDX_OP_CREATE || qos_profile_switched(dqos) ||
+	    qos_has_change(lydx_get_descendant(lyd_child(dsrc), "egress", "traffic-class-table", NULL)) ||
+	    qos_has_change(lydx_get_descendant(lyd_child(dsrc), "egress", "traffic-class", NULL)) ||
+	    qos_has_change(lydx_get_child(dqos, "egress-shaper")) ||
+	    qos_has_change(dcbsa) || qos_has_change(dgates))
 		gen_egress(fp, ifname, &eg);
 	fclose(fp);
+	qos_gates_free(&eg.gates);
 
 	return 0;
 }

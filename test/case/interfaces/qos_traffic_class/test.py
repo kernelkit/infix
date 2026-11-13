@@ -2,21 +2,32 @@
 """
 QoS Traffic Classes and Transmission Selection
 
-Configure a custom priority to traffic class map on a port with the two
-lowest classes sharing 67:33 and the rest strict priority, and verify the
-root qdisc reflects it: an ets qdisc with the strict bands first, the
-shares as quanta of one frame per percent, and the priomap inverted as
-802.1Q numbering requires.  A driver that offloads it marks the qdisc
-offloaded.
+A port sorts the frames it sends into traffic classes by priority, and
+serves each class by strict priority or by a weighted share.  This
+test sets up a layout of its own on a port and checks that the port
+runs what was configured.  It sends no traffic: the Strict Priority,
+Weighted Sharing and Mixed Selection tests check what a layout does to
+a full port.
+
+Checked in turn:
+
+ - a custom priority to traffic class map, with the two lowest classes
+   sharing 67:33 and the rest strict priority
+ - the `ieee-sr` preset, which puts the stream reservation classes,
+   priorities 2 and 3, on the two highest classes
+ - a 10 Mbps egress shaper on top of the classes, and its removal
+ - removing all QoS settings, which brings back the default table,
+   IEEE 802.1Q-2022 Table 8-5
+
+After each change the port's scheduler is read back from the kernel.
+It must be an ets qdisc with the strict bands first, the shares as
+quanta of one frame per percent, and the priomap inverted as 802.1Q
+numbering requires.  The egress shaper must be a tbf root qdisc above
+the same ets table.  The operational datastore must report throughout
+whether the port's switch hardware runs transmission selection.
 
 The port's class count comes from its transmit queues, or eight for a
-single-queue port.  Switching the table to the ieee-sr preset must put
-the SR classes, priorities 2 and 3, on the two highest classes.  A rate
-limit must put a tbf root qdisc above the scheduler, with the same ets
-table beneath it, and go away with the setting.  Removing the qos
-container must restore the default table, IEEE 802.1Q-2022 Table 8-5,
-and the operational datastore must report whether transmission
-selection is offloaded throughout.
+single-queue port.
 """
 import json
 import infamy
@@ -73,7 +84,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, port = env.ltop.xlate("target", "data")
+        port = target["data"]
 
         cap = infamy.capability.Port(target, port, tgtssh)
         num_tc = cap.traffic_classes
@@ -129,30 +140,30 @@ with infamy.Test() as test:
         }}, delete=[qos_xpath(port, "/egress")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
-    with test.step("Add a 10 Mbit/s rate limit and verify the tbf root above the ets table"):
+    with test.step("Add a 10 Mbps egress shaper and verify the tbf root above the ets table"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": port,
                     "infix-interfaces:qos": {
-                        "egress": {"rate-limit": {"rate": 10000000}}
+                        "egress-shaper": {"rate": 10000000}
                     }
                 }]
             }
         }})
 
-        def rate_limited():
+        def shaped():
             out = tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout
             qdiscs = json.loads(out or "[]")
             root = [q for q in qdiscs if q.get("root")]
             child = [q for q in qdiscs if q.get("parent") == "1:1"]
             return (root and root[0]["kind"] == "tbf" and root[0]["options"]["rate"] == 1250000
                     and child and qdisc_matches(child[0], num_tc, TABLE_34_1[num_tc], num_tc, []))
-        until(rate_limited)
+        until(shaped)
         print(tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout)
 
-    with test.step("Remove the rate limit and verify the scheduler is the root again"):
-        target.put_config_dicts({}, delete=[qos_xpath(port, "/egress/rate-limit")])
+    with test.step("Remove the egress shaper and verify the scheduler is the root again"):
+        target.put_config_dicts({}, delete=[qos_xpath(port, "/egress-shaper")])
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_34_1[num_tc], num_tc, []))
 
     with test.step("Remove qos configuration and verify the default table is back"):

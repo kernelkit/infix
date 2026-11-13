@@ -6,12 +6,15 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"infix/webui/internal/schema"
 	"net/http"
 	"strings"
 
 	"encoding/json"
+	"errors"
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/security"
+	"net/url"
 	"unicode/utf16"
 )
 
@@ -83,8 +86,10 @@ func newPageData(w http.ResponseWriter, r *http.Request, page, leaf string) Page
 // parsed with. Exported so tests can parse the real template the same way.
 func IfaceTemplateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"shortPMD": ShortenPMD,
-		"add":      func(a, b int) int { return a + b },
+		"shortPMD":    ShortenPMD,
+		"add":         func(a, b int) int { return a + b },
+		"join":        strings.Join,
+		"stripPrefix": schema.StripModulePrefix,
 		"deref": func(v any) any {
 			switch p := v.(type) {
 			case *bool:
@@ -119,6 +124,21 @@ func IfaceTemplateFuncs() template.FuncMap {
 			return m, nil
 		},
 	}
+}
+
+// rcStatus is the status to answer a failed RESTCONF request with: the
+// device's own when it answered, 502 when it did not, and 500 when the
+// request never left the WebUI.
+func rcStatus(err error) int {
+	var re *restconf.Error
+	if errors.As(err, &re) {
+		return re.StatusCode
+	}
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return http.StatusBadGateway
+	}
+	return http.StatusInternalServerError
 }
 
 // hxTrigger sets an HX-Trigger header that fires event with a string

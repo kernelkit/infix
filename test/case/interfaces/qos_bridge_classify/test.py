@@ -8,7 +8,7 @@ tables can classify and remark it.  The DSCP and PCP on the wire at the
 egress port reveal the priority the ingress port assigned:
 
  - trust dscp: untagged IP frames on VLAN 20, DSCP 46 (EF) to priority 5,
-   DSCP 4 unknown to the preset to the default priority 1
+   DSCP 4, which the preset does not map, to the default priority 1
  - trust pcp with a custom map: tagged frames on VLAN 10, PCP 3 to
    priority 6, PCP 0 to priority 4, PCP 7 unmapped to the default
    priority 2
@@ -19,9 +19,7 @@ egress port reveal the priority the ingress port assigned:
 With remarking on, the egress port writes the class selector of the
 priority as DSCP and, where the driver offloads remarking, the priority
 as PCP; PCP remarking has no software path, so on other ports only the
-DSCP is checked.  The test is skipped on a switch whose driver cannot
-offload classification, since frames the fabric forwards never see the
-kernel's rules.
+DSCP is checked.
 """
 import re
 import infamy
@@ -58,10 +56,10 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, td0 = env.ltop.xlate("target", "data1")
-        _, td1 = env.ltop.xlate("target", "data2")
-        _, hd0 = env.ltop.xlate("host", "data1")
-        _, hd1 = env.ltop.xlate("host", "data2")
+        td0 = target["data1"]
+        td1 = target["data2"]
+        hd0 = env["host"]["data1"]
+        hd1 = env["host"]["data2"]
 
         ingress = infamy.capability.Port(target, td0, tgtssh)
         egress = infamy.capability.Port(target, td1, tgtssh)

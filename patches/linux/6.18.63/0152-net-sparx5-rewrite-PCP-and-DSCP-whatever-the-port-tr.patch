@@ -1,0 +1,124 @@
+From 3ae4ff27f4f5ed14c72a2fa9c3074122a3f3c0d2 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 15:08:36 +0100
+Subject: [PATCH 152/156] net: sparx5: rewrite PCP and DSCP whatever the port
+ trusts
+Organization: Wires
+
+PCP rewrite was only enabled on a port that trusts PCP, DSCP rewrite
+only on one that trusts DSCP.  Trust applies to the frames a port
+receives, the rewrite to the ones it sends, so with
+
+    dcb apptrust set dev eth0 order pcp
+    dcb rewr add dev eth0 prio-dscp 5:40
+
+eth0 sent every frame with its DSCP untouched.
+
+Enable each rewrite whenever its table has entries.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_dcb.c    | 37 ++++++++-----------
+ .../ethernet/microchip/sparx5/sparx5_port.c   |  4 +-
+ 2 files changed, 17 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+index 10224ad63a78..b4bbc886d655 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+@@ -141,8 +141,6 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ 	struct sparx5_port_qos qos = {0};
+ 	struct dcb_app app_itr = {0};
+ 	int portno = port->portno;
+-	bool dscp_rewr = false;
+-	bool pcp_rewr = false;
+ 	u16 dscp;
+ 	int i;
+ 
+@@ -168,29 +166,35 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ 		pcp_map->map[i] = dcb_getapp(dev, &app_itr);
+ 	}
+ 
+-	/* Get pcp rewrite mapping */
++	/* Get pcp rewrite mapping.
++	 * Rewrite on egress only with a table, an empty one would write
++	 * PCP 0 and DSCP 0 for every classified QoS class and DP.
++	 */
+ 	dcb_getrewr_prio_pcp_mask_map(dev, &pcp_rewr_map);
+ 	for (i = 0; i < ARRAY_SIZE(pcp_rewr_map.map); i++) {
+-		if (!pcp_rewr_map.map[i])
++		u16 mask = pcp_rewr_map.map[i];
++
++		if (!mask)
+ 			continue;
+-		pcp_rewr = true;
+-		qos.pcp_rewr.map.map[i] = fls(pcp_rewr_map.map[i]) - 1;
++		qos.pcp_rewr.enable = true;
++		qos.pcp_rewr.map.map[i] = fls(mask) - 1;
+ 	}
+ 
+ 	/* Get dscp rewrite mapping */
+ 	dcb_getrewr_prio_dscp_mask_map(dev, &dscp_rewr_map);
+ 	for (i = 0; i < ARRAY_SIZE(dscp_rewr_map.map); i++) {
+-		if (!dscp_rewr_map.map[i])
++		u64 mask = dscp_rewr_map.map[i];
++
++		if (!mask)
+ 			continue;
+ 
+ 		/* The rewrite table of the switch has 32 entries; one for each
+ 		 * priority for each DP level. Currently, the rewrite map does
+ 		 * not indicate DP level, so we map classified QoS class to
+-		 * classified DSCP, for each classified DP level. Rewrite of
+-		 * DSCP is only enabled, if we have active mappings.
++		 * classified DSCP, for each classified DP level.
+ 		 */
+-		dscp_rewr = true;
+-		dscp = fls64(dscp_rewr_map.map[i]) - 1;
++		qos.dscp_rewr.enable = true;
++		dscp = fls64(mask) - 1;
+ 		qos.dscp_rewr.map.map[i] = dscp;      /* DP 0 */
+ 		qos.dscp_rewr.map.map[i + 8] = dscp;  /* DP 1 */
+ 		qos.dscp_rewr.map.map[i + 16] = dscp; /* DP 2 */
+@@ -201,23 +205,12 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ 	if (sparx5_dcb_apptrust_contains(portno, DCB_APP_SEL_PCP)) {
+ 		qos.pcp.qos_enable = true;
+ 		qos.pcp.dp_enable = qos.pcp.qos_enable;
+-		/* Enable rewrite of PCP and DEI if PCP is trusted *and* rewrite
+-		 * table is not empty.
+-		 */
+-		if (pcp_rewr)
+-			qos.pcp_rewr.enable = true;
+ 	}
+ 
+ 	/* Enable use of dscp for queue classification ? */
+ 	if (sparx5_dcb_apptrust_contains(portno, IEEE_8021QAZ_APP_SEL_DSCP)) {
+ 		qos.dscp.qos_enable = true;
+ 		qos.dscp.dp_enable = qos.dscp.qos_enable;
+-		if (dscp_rewr)
+-			/* Do not enable rewrite if no mappings are active, as
+-			 * classified DSCP will then be zero for all classified
+-			 * QoS class and DP combinations.
+-			 */
+-			qos.dscp_rewr.enable = true;
+ 	}
+ 
+ 	return sparx5_port_qos_set(port, &qos);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index 9553763fe144..d7b5dcfc2d82 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -1254,8 +1254,8 @@ int sparx5_port_qos_pcp_rewr_set(const struct sparx5_port *port,
+ 	u8 pcp, dei;
+ 
+ 	/* Use mapping table, with classified QoS as index, to map QoS and DP
+-	 * to tagged PCP and DEI, if PCP is trusted. Otherwise use classified
+-	 * PCP. Classified PCP equals frame PCP.
++	 * to tagged PCP and DEI, if enabled. Otherwise use classified PCP.
++	 * Classified PCP equals frame PCP.
+ 	 */
+ 	if (qos->enable)
+ 		mode = SPARX5_PORT_REW_TAG_CTRL_MAPPED;
+-- 
+2.43.0
+

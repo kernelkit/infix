@@ -1,0 +1,35 @@
+From 51e6039fcb1b08ee8c0b3b59fedcafd186523fa7 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 6 Nov 2026 09:25:25 +0100
+Subject: [PATCH 142/156] net: sparx5: give each leak group its own rate
+Organization: Wires
+
+The leak groups of a layer are set up from the rate of the group with
+the layer's index: on LAN969x layer 0's four groups all serve
+655 Mbit/s, so a faster queue shaper is refused, and layer 2's all
+serve 6.5 Gbit/s, so a slow port shaper gets a coarse resolution.
+
+Index the rate table by the group.
+
+Signed-off-by: Joachim Wiberg <joachim.wiberg@wires.se>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_qos.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index a38c98bdc4e7..daec69c79a54 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -450,7 +450,7 @@ static int sparx5_leak_groups_init(struct sparx5 *sparx5)
+ 		layer = &layers[i];
+ 		for (ii = 0; ii < SPX5_HSCH_LEAK_GRP_CNT; ii++) {
+ 			lg = &layer->leak_groups[ii];
+-			lg->max_rate = ops->get_hsch_max_group_rate(i);
++			lg->max_rate = ops->get_hsch_max_group_rate(ii);
+ 
+ 			/* Calculate the leak time in us, to serve a maximum
+ 			 * rate of 'max_rate' for this group
+-- 
+2.43.0
+

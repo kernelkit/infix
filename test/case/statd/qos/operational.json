@@ -1,0 +1,331 @@
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "ieee802-dot1dc-cbsa-if:cbsa": {
+          "cbsa-parameter-table": [
+            {
+              "oper-idle-slope": "50000000",
+              "traffic-class": 7
+            }
+          ]
+        },
+        "ieee802-dot1dc-sched-if:gate-parameter-table": {
+          "config-pending": false,
+          "oper-base-time": {
+            "nanoseconds": 0,
+            "seconds": "0"
+          },
+          "oper-control-list": {
+            "gate-control-entry": [
+              {
+                "gate-states-value": 8,
+                "index": 0,
+                "operation-name": "ieee802-dot1q-sched:set-gate-states",
+                "time-interval-value": 200000
+              },
+              {
+                "gate-states-value": 128,
+                "index": 1,
+                "operation-name": "ieee802-dot1q-sched:set-gate-states",
+                "time-interval-value": 600000
+              },
+              {
+                "gate-states-value": 119,
+                "index": 2,
+                "operation-name": "ieee802-dot1q-sched:set-gate-states",
+                "time-interval-value": 187700
+              },
+              {
+                "gate-states-value": 0,
+                "index": 3,
+                "operation-name": "ieee802-dot1q-sched:set-gate-states",
+                "time-interval-value": 12300
+              }
+            ]
+          },
+          "oper-cycle-time": {
+            "denominator": 1000,
+            "numerator": 1
+          }
+        },
+        "if-index": 3,
+        "infix-interfaces:qos": {
+          "active-profile": "sr",
+          "capabilities": {
+            "offload": [
+              "classification",
+              "transmission-selection",
+              "credit-based-shaper",
+              "time-aware-shaper"
+            ],
+            "supported-offload": [
+              "classification",
+              "remarking",
+              "transmission-selection",
+              "egress-shaper",
+              "credit-based-shaper",
+              "time-aware-shaper"
+            ]
+          },
+          "egress": {
+            "traffic-class": [
+              {
+                "algorithm": "ieee802-dot1q-types:credit-based-shaper",
+                "id": 7
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 6
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 5
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 4
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 3
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 2
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                "bandwidth": 70,
+                "id": 1
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                "bandwidth": 30,
+                "id": 0
+              }
+            ],
+            "traffic-class-table": {
+              "priority0": 1,
+              "priority1": 0,
+              "priority2": 6,
+              "priority3": 7,
+              "priority4": 2,
+              "priority5": 3,
+              "priority6": 4,
+              "priority7": 5
+            }
+          },
+          "ingress": {
+            "default-priority": 0,
+            "dscp-map": {
+              "entry": [
+                {
+                  "dscp": 0,
+                  "priority": 0
+                },
+                {
+                  "dscp": 46,
+                  "priority": 5
+                }
+              ]
+            },
+            "trust": "dscp"
+          }
+        },
+        "name": "e1",
+        "oper-status": "up",
+        "type": "infix-if-type:ethernet"
+      },
+      {
+        "if-index": 4,
+        "infix-interfaces:qos": {
+          "capabilities": {
+            "offload": [
+              "classification",
+              "remarking",
+              "egress-shaper",
+              "transmission-selection"
+            ],
+            "supported-offload": [
+              "classification",
+              "remarking",
+              "transmission-selection",
+              "egress-shaper"
+            ]
+          },
+          "egress": {
+            "remark": {
+              "pcp": "from-priority"
+            },
+            "traffic-class": [
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 7
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 6
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 5
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 4
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 3
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 2
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 1
+              },
+              {
+                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "id": 0
+              }
+            ],
+            "traffic-class-table": {
+              "priority0": 1,
+              "priority1": 0,
+              "priority2": 2,
+              "priority3": 3,
+              "priority4": 4,
+              "priority5": 5,
+              "priority6": 6,
+              "priority7": 7
+            }
+          },
+          "egress-shaper": {
+            "burst": 125000,
+            "rate": "100000000"
+          },
+          "ingress": {
+            "default-priority": 0,
+            "pcp-map": {
+              "entry": [
+                {
+                  "dei": false,
+                  "pcp": 0,
+                  "priority": 0
+                },
+                {
+                  "dei": true,
+                  "pcp": 0,
+                  "priority": 0
+                },
+                {
+                  "dei": false,
+                  "pcp": 1,
+                  "priority": 1
+                },
+                {
+                  "dei": true,
+                  "pcp": 1,
+                  "priority": 1
+                },
+                {
+                  "dei": false,
+                  "pcp": 2,
+                  "priority": 2
+                },
+                {
+                  "dei": true,
+                  "pcp": 2,
+                  "priority": 2
+                },
+                {
+                  "dei": false,
+                  "pcp": 3,
+                  "priority": 3
+                },
+                {
+                  "dei": true,
+                  "pcp": 3,
+                  "priority": 3
+                },
+                {
+                  "dei": false,
+                  "pcp": 4,
+                  "priority": 4
+                },
+                {
+                  "dei": true,
+                  "pcp": 4,
+                  "priority": 4
+                },
+                {
+                  "dei": false,
+                  "pcp": 5,
+                  "priority": 5
+                },
+                {
+                  "dei": true,
+                  "pcp": 5,
+                  "priority": 5
+                },
+                {
+                  "dei": false,
+                  "pcp": 6,
+                  "priority": 6
+                },
+                {
+                  "dei": true,
+                  "pcp": 6,
+                  "priority": 6
+                },
+                {
+                  "dei": false,
+                  "pcp": 7,
+                  "priority": 7
+                },
+                {
+                  "dei": true,
+                  "pcp": 7,
+                  "priority": 7
+                }
+              ]
+            },
+            "trust": "dscp-pcp"
+          }
+        },
+        "name": "e2",
+        "oper-status": "up",
+        "type": "infix-if-type:ethernet"
+      },
+      {
+        "if-index": 5,
+        "infix-interfaces:qos": {
+          "capabilities": {
+            "offload": [
+              "classification"
+            ],
+            "supported-offload": [
+              "classification"
+            ]
+          },
+          "ingress": {
+            "default-priority": 0,
+            "trust": "pcp"
+          }
+        },
+        "name": "e10",
+        "oper-status": "down",
+        "type": "infix-if-type:ethernet"
+      },
+      {
+        "if-index": 1,
+        "name": "lo",
+        "oper-status": "up",
+        "type": "infix-if-type:loopback"
+      }
+    ]
+  }
+}

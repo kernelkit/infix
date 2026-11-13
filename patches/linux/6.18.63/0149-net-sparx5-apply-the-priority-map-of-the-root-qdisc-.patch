@@ -1,0 +1,359 @@
+From b4c4bd7a9834465fb65a578bf9a419f38b116283 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 11:20:16 +0100
+Subject: [PATCH 149/156] net: sparx5: apply the priority map of the root qdisc
+ in the fabric
+Organization: Wires
+
+An ets qdisc is offloaded only with the plain reversed priomap, so a
+root qdisc that queues priority 1 below priority 0, as IEEE 802.1Q
+Table 8-5 does, is refused:
+
+    tc qdisc add dev eth0 root ets bands 8 strict 8 priomap 6 7 5 4 3 2 1 0
+
+An mqprio or taprio map is taken, yet holds for the CPU path only.
+Frames forwarded by the fabric are queued by the priority their ingress
+port classified, whatever the map says.
+
+The queue system looks up the scheduler element of a frame per egress
+port, in XQS:QMAP_SE_TBL at the port's virtual port plus the classified
+QoS class.  At reset every class leads to the element of its own number.
+
+Write the map of the root qdisc there, so a frame is queued as the port
+it leaves by says, and keeps its priority for the PCP and DSCP rewrite.
+Frames the CPU receives get their priority from the classified QoS class
+in the extraction header, and frames it sends carry their priority in
+the injection header, as lan966x and the Ocelot tagger do.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/lan969x/lan969x_fdma.c   |  1 +
+ .../microchip/sparx5/lan969x/lan969x_regs.c   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_fdma.c   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  2 +
+ .../microchip/sparx5/sparx5_main_regs.h       |  9 ++++
+ .../ethernet/microchip/sparx5/sparx5_netdev.c |  6 +++
+ .../ethernet/microchip/sparx5/sparx5_packet.c |  6 +++
+ .../ethernet/microchip/sparx5/sparx5_qos.c    | 49 +++++++++++++++----
+ .../ethernet/microchip/sparx5/sparx5_qos.h    |  6 ++-
+ .../ethernet/microchip/sparx5/sparx5_regs.c   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_regs.h   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_tas.c    |  4 +-
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c |  5 +-
+ 13 files changed, 76 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
+index 995bb5603239..ef6bfe95b1e8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_fdma.c
+@@ -132,6 +132,7 @@ static struct sk_buff *lan969x_fdma_rx_get_frame(struct sparx5 *sparx5,
+ 
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, skb->dev);
++	skb->priority = fi.qos_class;
+ 	sparx5_rx_fwd_mark(port, skb);
+ 
+ 	skb->dev->stats.rx_bytes += skb->len;
+diff --git a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+index 3dfa44b6876e..ec4ec11a467d 100644
+--- a/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/lan969x/lan969x_regs.c
+@@ -111,6 +111,7 @@ const unsigned int lan969x_gaddr[GADDR_LAST] = {
+ 	[GA_REW_VOE_PORT_LM_CNT] = 90112,
+ 	[GA_REW_RAM_CTRL] = 93992,
+ 	[GA_VOP_RAM_CTRL] = 16368,
++	[GA_XQS_QMAP_SE_TBL] = 5696,
+ 	[GA_XQS_SYSTEM] = 5744,
+ 	[GA_XQS_QLIMIT_SHR] = 6912,
+ };
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c b/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
+index f360ba2293be..af47135b1647 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_fdma.c
+@@ -168,6 +168,7 @@ static bool sparx5_fdma_rx_get_frame(struct sparx5 *sparx5, struct sparx5_rx *rx
+ 
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, skb->dev);
++	skb->priority = fi.qos_class;
+ 	sparx5_rx_fwd_mark(port, skb);
+ 	skb->dev->stats.rx_bytes += skb->len;
+ 	skb->dev->stats.rx_packets++;
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index cb9a17f69d4b..97dcaaff0453 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -468,6 +468,7 @@ int sparx5_port_changeupper(struct net_device *dev,
+ struct frame_info {
+ 	int src_port;
+ 	u32 timestamp;
++	u8 qos_class;
+ };
+ 
+ void sparx5_xtr_flush(struct sparx5 *sparx5, u8 grp);
+@@ -572,6 +573,7 @@ static inline int sparx5_dcb_init(struct sparx5 *sparx5)
+ void sparx5_set_port_ifh_timestamp(struct sparx5 *sparx5, void *ifh_hdr,
+ 				   u64 timestamp);
+ void sparx5_set_port_ifh_rew_op(void *ifh_hdr, u32 rew_op);
++void sparx5_set_port_ifh_qos_class(void *ifh_hdr, u8 qos_class);
+ void sparx5_set_port_ifh_pdu_type(struct sparx5 *sparx5, void *ifh_hdr,
+ 				  u32 pdu_type);
+ void sparx5_set_port_ifh_pdu_w16_offset(struct sparx5 *sparx5, void *ifh_hdr,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+index a854fbbb27a6..d999f8cc0383 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main_regs.h
+@@ -8629,6 +8629,15 @@ extern const struct sparx5_regs *regs;
+ #define XQS_STAT_CFG_STAT_WRAP_DIS_GET(x)\
+ 	FIELD_GET(XQS_STAT_CFG_STAT_WRAP_DIS, x)
+ 
++/* XQS:SYSTEM:MAP_CFG_CFG */
++#define XQS_MAP_CFG_CFG                                                        \
++	__REG(TARGET_XQS, 0, 1, regs->gaddr[GA_XQS_SYSTEM], 0, 1, 872, 4, 0, 1, 4)
++
++/* XQS:QMAP_SE_TBL:QMAP_SE_TBL */
++#define XQS_QMAP_SE_TBL(g)                                                     \
++	__REG(TARGET_XQS, 0, 1, regs->gaddr[GA_XQS_QMAP_SE_TBL], g, 4, 8, 0, 0, \
++	      1, 4)
++
+ /* XQS:QLIMIT_SHR:QLIMIT_SHR_TOP_CFG */
+ #define XQS_QLIMIT_SHR_TOP_CFG(g)                                              \
+ 	__REG(TARGET_XQS, 0, 1, regs->gaddr[GA_XQS_QLIMIT_SHR], g, 4, 48, 0, 0,\
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+index c1c4b027eb1c..28ac2cad207f 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+@@ -78,6 +78,12 @@ void sparx5_set_port_ifh(struct sparx5 *sparx5, void *ifh_hdr, u16 portno)
+ 	ifh_encode_bitfield(ifh_hdr, 1,        is_sparx5(sparx5) ? 67 : 66, 1);
+ }
+ 
++void sparx5_set_port_ifh_qos_class(void *ifh_hdr, u8 qos_class)
++{
++	/* VSTAX.CL_QOS = the priority, queued by the destination port's map */
++	ifh_encode_bitfield(ifh_hdr, qos_class, VSTAX + 56, 3);
++}
++
+ void sparx5_set_port_ifh_rew_op(void *ifh_hdr, u32 rew_op)
+ {
+ 	ifh_encode_bitfield(ifh_hdr, rew_op, VSTAX + 32,  10);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+index 748f347f4a7b..cd34a774acba 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_packet.c
+@@ -49,6 +49,9 @@ void sparx5_ifh_parse(struct sparx5 *sparx5, u32 *ifh, struct frame_info *info)
+ 	info->src_port = spx5_field_get(GENMASK(is_sparx5(sparx5) ? 7 : 6, 1),
+ 					fwd);
+ 
++	/* VSTAX.CL_QOS is bit 129-131 */
++	info->qos_class = (xtr_hdr[19] >> 1) & GENMASK(2, 0);
++
+ 	/*
+ 	 * Bit 270-271 are occasionally unexpectedly set by the hardware,
+ 	 * clear bits before extracting timestamp
+@@ -192,6 +195,7 @@ static void sparx5_xtr_grp(struct sparx5 *sparx5, u8 grp, bool byte_swap)
+ 	eth_skb_pad(skb);
+ 	sparx5_ptp_rxtstamp(sparx5, skb, fi.timestamp);
+ 	skb->protocol = eth_type_trans(skb, netdev);
++	skb->priority = fi.qos_class;
+ 	sparx5_rx_fwd_mark(port, skb);
+ 	netdev->stats.rx_bytes += skb->len;
+ 	netdev->stats.rx_packets++;
+@@ -274,6 +278,8 @@ netdev_tx_t sparx5_port_xmit_impl(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	memset(ifh, 0, IFH_LEN * 4);
+ 	sparx5_set_port_ifh(sparx5, ifh, port->portno);
++	sparx5_set_port_ifh_qos_class(ifh, min_t(u32, skb->priority,
++						 SPX5_PRIOS - 1));
+ 
+ 	if (sparx5->ptp && skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+ 		if (sparx5_ptp_txtstamp_request(port, skb) < 0)
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+index fdcdc999216c..a6ae7730bb23 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.c
+@@ -534,25 +534,44 @@ int sparx5_qos_init(struct sparx5 *sparx5)
+ 	return 0;
+ }
+ 
+-int sparx5_tc_mqprio_add(struct net_device *ndev, u8 num_tc)
++/* Queue each priority in the class @prio_tc says, the identity when NULL */
++int sparx5_tc_prio_tc_set(struct sparx5_port *port, const u8 *prio_tc)
++{
++	struct sparx5 *sparx5 = port->sparx5;
++	int prio, tc;
++
++	/* A port's entries start at its virtual port, 8 * portno at reset */
++	for (prio = 0; prio < SPX5_PRIOS; prio++) {
++		tc = prio_tc ? prio_tc[prio] : prio;
++		spx5_wr(port->portno * SPX5_PRIOS + prio, sparx5,
++			XQS_MAP_CFG_CFG);
++		spx5_wr(sparx5_hsch_l0_get_idx(sparx5, port->portno, tc),
++			sparx5, XQS_QMAP_SE_TBL(0));
++	}
++
++	return 0;
++}
++
++int sparx5_tc_mqprio_add(struct net_device *ndev,
++			 const struct tc_mqprio_qopt *qopt)
+ {
+ 	int i;
+ 
+-	if (num_tc != SPX5_PRIOS) {
++	if (qopt->num_tc != SPX5_PRIOS) {
+ 		netdev_err(ndev, "Only %d traffic classes supported\n",
+ 			   SPX5_PRIOS);
+ 		return -EINVAL;
+ 	}
+ 
+-	netdev_set_num_tc(ndev, num_tc);
++	netdev_set_num_tc(ndev, qopt->num_tc);
+ 
+-	for (i = 0; i < num_tc; i++)
++	for (i = 0; i < qopt->num_tc; i++)
+ 		netdev_set_tc_queue(ndev, i, 1, i);
+ 
+ 	netdev_dbg(ndev, "dev->num_tc %u dev->real_num_tx_queues %u\n",
+ 		   ndev->num_tc, ndev->real_num_tx_queues);
+ 
+-	return 0;
++	return sparx5_tc_prio_tc_set(netdev_priv(ndev), qopt->prio_tc_map);
+ }
+ 
+ int sparx5_tc_mqprio_del(struct net_device *ndev)
+@@ -562,7 +581,7 @@ int sparx5_tc_mqprio_del(struct net_device *ndev)
+ 	netdev_dbg(ndev, "dev->num_tc %u dev->real_num_tx_queues %u\n",
+ 		   ndev->num_tc, ndev->real_num_tx_queues);
+ 
+-	return 0;
++	return sparx5_tc_prio_tc_set(netdev_priv(ndev), NULL);
+ }
+ 
+ /* Shape a scheduler element: rate in kbit/s, burst in bytes */
+@@ -631,7 +650,8 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ {
+ 	struct sparx5_dwrr dwrr = {0};
+ 	u32 weight[SPX5_PRIOS];
+-	int i;
++	u8 prio_tc[SPX5_PRIOS];
++	int i, err;
+ 
+ 	for (i = 0; i < SPX5_PRIOS; i++) {
+ 		/* Strict band; skip */
+@@ -648,14 +668,25 @@ int sparx5_tc_ets_add(struct sparx5_port *port,
+ 	}
+ 	sparx5_dwrr_cost_set(&dwrr, weight);
+ 
+-	return sparx5_dwrr_conf_set(port, &dwrr);
++	err = sparx5_dwrr_conf_set(port, &dwrr);
++	if (err)
++		return err;
++
++	/* Band 0 is served first by tc, queue 7 by the fabric */
++	for (i = 0; i < SPX5_PRIOS; i++)
++		prio_tc[i] = SPX5_PRIOS - 1 - params->priomap[i];
++
++	return sparx5_tc_prio_tc_set(port, prio_tc);
+ }
+ 
+ int sparx5_tc_ets_del(struct sparx5_port *port)
+ {
+ 	struct sparx5_dwrr dwrr = {0};
++	int err;
++
++	err = sparx5_dwrr_conf_set(port, &dwrr);
+ 
+-	return sparx5_dwrr_conf_set(port, &dwrr);
++	return err ?: sparx5_tc_prio_tc_set(port, NULL);
+ }
+ 
+ int sparx5_tc_cbs_add(struct sparx5_port *port,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+index 27a7664550b5..abc6432facdb 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_qos.h
+@@ -63,8 +63,12 @@ int sparx5_qos_init(struct sparx5 *sparx5);
+ int sparx5_tas_init(struct sparx5 *sparx5);
+ void sparx5_tas_speed(struct sparx5_port *port, int speed);
+ 
++int sparx5_tc_prio_tc_set(struct sparx5_port *port, const u8 *prio_tc);
++
+ /* Multi-Queue Priority */
+-int sparx5_tc_mqprio_add(struct net_device *ndev, u8 num_tc);
++struct tc_mqprio_qopt;
++int sparx5_tc_mqprio_add(struct net_device *ndev,
++			 const struct tc_mqprio_qopt *qopt);
+ int sparx5_tc_mqprio_del(struct net_device *ndev);
+ 
+ /* Token Bucket Filter */
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+index d1e9148a35ab..8a981831416f 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.c
+@@ -111,6 +111,7 @@ const unsigned int sparx5_gaddr[GADDR_LAST] = {
+ 	[GA_REW_VOE_PORT_LM_CNT] = 393216,
+ 	[GA_REW_RAM_CTRL] = 378696,
+ 	[GA_VOP_RAM_CTRL] = 279176,
++	[GA_XQS_QMAP_SE_TBL] = 6720,
+ 	[GA_XQS_SYSTEM] = 6768,
+ 	[GA_XQS_QLIMIT_SHR] = 7936,
+ };
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+index db520791c39f..726e0e617c56 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_regs.h
+@@ -120,6 +120,7 @@ enum sparx5_gaddr_enum {
+ 	GA_REW_VOE_PORT_LM_CNT,
+ 	GA_REW_RAM_CTRL,
+ 	GA_VOP_RAM_CTRL,
++	GA_XQS_QMAP_SE_TBL,
+ 	GA_XQS_SYSTEM,
+ 	GA_XQS_QLIMIT_SHR,
+ 	GADDR_LAST,
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+index fbdbec3570a3..67f7b903b4c0 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+@@ -379,7 +379,7 @@ int sparx5_tc_taprio_add(struct sparx5_port *port,
+ 
+ 	sparx5_tas_list_state_set(sparx5, SPX5_TAS_STATE_ADVANCING);
+ 
+-	return 0;
++	return sparx5_tc_prio_tc_set(port, qopt->mqprio.qopt.prio_tc_map);
+ }
+ 
+ int sparx5_tc_taprio_del(struct sparx5_port *port)
+@@ -390,7 +390,7 @@ int sparx5_tc_taprio_del(struct sparx5_port *port)
+ 		err = sparx5_tas_list_shutdown(port,
+ 					       sparx5_tas_list_index(port, i));
+ 
+-	return err;
++	return err ?: sparx5_tc_prio_tc_set(port, NULL);
+ }
+ 
+ void sparx5_tas_speed(struct sparx5_port *port, int speed)
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index a30954c643ad..84581c19a1a2 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -81,7 +81,7 @@ static int sparx5_tc_setup_qdisc_mqprio(struct net_device *ndev,
+ 	if (m->qopt.num_tc == 0)
+ 		return sparx5_tc_mqprio_del(ndev);
+ 	else
+-		return sparx5_tc_mqprio_add(ndev, m->qopt.num_tc);
++		return sparx5_tc_mqprio_add(ndev, &m->qopt);
+ }
+ 
+ static int sparx5_tc_setup_qdisc_tbf(struct net_device *ndev,
+@@ -129,9 +129,6 @@ static int sparx5_tc_setup_qdisc_ets(struct net_device *ndev,
+ 
+ 		/* Sanity checks */
+ 		for (i = 0; i < SPX5_PRIOS; ++i) {
+-			/* Priority map is *always* reverse e.g: 7 6 5 .. 0 */
+-			if (params->priomap[i] != (7 - i))
+-				return -EOPNOTSUPP;
+ 			/* Throw an error if we receive zero weights by tc */
+ 			if (params->quanta[i] && params->weights[i] == 0) {
+ 				pr_err("Invalid ets configuration; band %d has weight zero",
+-- 
+2.43.0
+

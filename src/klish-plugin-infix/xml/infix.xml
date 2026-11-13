@@ -715,6 +715,10 @@ echo "Public:  $pub"
     <ACTION sym="script">show ptp $KLISH_PARAM_instance</ACTION>
   </COMMAND>
 
+  <COMMAND name="qos" help="Show QoS overview of all ports">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show qos |pager</ACTION>
+  </COMMAND>
+
   <COMMAND name="ntp" help="Show NTP status">
     <SWITCH name="subcommands" min="0">
       <COMMAND name="source" help="Show NTP source(s)">

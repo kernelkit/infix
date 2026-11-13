@@ -31,12 +31,15 @@ type Optional struct {
 
 // Names of the optional parts, the keys of Set.Enabled.
 const (
-	WiFi       = "wifi"
-	Containers = "containers"
-	GPS        = "gps"
-	Modem      = "modem"
-	Routing    = "routing"
-	Alarms     = "alarms"
+	WiFi         = "wifi"
+	Containers   = "containers"
+	GPS          = "gps"
+	Modem        = "modem"
+	Routing      = "routing"
+	Alarms       = "alarms"
+	QoS          = "qos"
+	TSN          = "tsn"
+	EgressShaper = "egress-shaper"
 )
 
 // Optionals is the table of optional parts.  Extend here, both the
@@ -50,6 +53,9 @@ var Optionals = []Optional{
 	{Name: Routing, Module: "ietf-ospf"},
 	// Alarms arrived in a later release, older devices have no list.
 	{Name: Alarms, Module: "ietf-alarms"},
+	{Name: QoS, Module: "infix-qos"},
+	{Name: TSN, Module: "infix-tsn"},
+	{Name: EgressShaper, Module: "infix-interfaces", Feature: "egress-shaper"},
 }
 
 // Set is the installed modules and their enabled features.

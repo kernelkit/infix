@@ -1,4 +1,7 @@
 ---
+# TEMPORARY, drop before merge: only the QoS tests run on this branch,
+# to turn the Tactical-1000 runs around faster.  The full suite is in
+# the history of this file.
 - settings:
     test-spec: Readme.adoc
 
@@ -6,57 +9,17 @@
   suite: sanity.yaml
   abort: true
 
-- name: "System"
-  suite: system/all.yaml
+- name: "VLAN Interface Ingress/Egress QoS"
+  case: interfaces/vlan_qos/test.py
 
-# Upgrade may leave wrong boot order
-- case: meta/bootorder.py
-  name: "Verify Bootorder After Upgrade"
-  infamy:
-    specification: False
+- name: "Quality of Service Tests"
+  suite: interfaces/qos.yaml
 
-- name: "Syslog"
-  suite: syslog/all.yaml
+- name: "TSN Schedule"
+  case: use_case/tsn_schedule/test.py
 
-- name: "Interfaces"
-  suite: interfaces/all.yaml
+- name: "TSN Gate Timing"
+  case: use_case/tsn_gate_timing/test.py
 
-- name: "NTP Server"
-  suite: ntp/all.yaml
-
-- name: "PTP"
-  suite: ptp/all.yaml
-
-- name: "Routing"
-  suite: routing/all.yaml
-
-- name: "Firewall"
-  suite: firewall/all.yaml
-
-- name: "Containers"
-  suite: containers/all.yaml
-
-- name: "DHCP"
-  suite: dhcp/all.yaml
-
-- name: "Hardware"
-  suite: hardware/all.yaml
-
-- name: "Cellular Modem"
-  suite: modem/all.yaml
-
-- name: "Services"
-  suite: services/all.yaml
-
-- name: "SNMP"
-  suite: snmp/all.yaml
-
-- name: "Alarms"
-  suite: alarms/all.yaml
-
-- name: "Use Case Tests"
-  suite: use_case/all.yaml
-
-- name: "Miscellaneous"
-  suite: misc/all.yaml
-
+- name: "TSN Guard Band"
+  case: use_case/tsn_guard_band/test.py

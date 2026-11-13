@@ -38,6 +38,8 @@ STRICT = "ieee802-dot1q-types:strict-priority"
 ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 
 ETS_QUANTUM_UNIT = 1514        # one frame per percent of bandwidth, as configured
+WIRE_OVERHEAD = 20             # preamble, SFD and interframe gap
+WIRE_MAX = 1522 + WIRE_OVERHEAD   # tagged 1500-byte frame on the wire
 
 
 def xpath(port, path=""):
@@ -69,9 +71,23 @@ def traffic_classes(weighted, strict=()):
     return classes
 
 
+def tx_rate(ssh, port, seconds=3):
+    """Bit rate a port transmits at, from its byte counter over @seconds"""
+    stat = f"/sys/class/net/{port}/statistics/tx_bytes"
+    out = ssh.runsh(f"a=$(cat {stat}); sleep {seconds}; echo $(($(cat {stat}) - a))")
+    return int(out.stdout) * 8 / seconds
+
+
 def qdiscs(ssh, port):
     out = ssh.runsh(f"tc -j qdisc show dev {port}").stdout
     return json.loads(out or "[]")
+
+
+def guard_band(speed):
+    """Nanoseconds a maximum-size frame takes at @speed bps: how long a
+    gate control list keeps all gates closed before a protected window,
+    so no frame started before it can overrun into it"""
+    return -(-WIRE_MAX * 8 * 1_000_000_000 // speed)
 
 
 def root_qdisc(ssh, port):
@@ -196,11 +212,11 @@ def supported_pmd_types(target, port):
 
 
 def slow_port(port, until):
-    """Make the port the bottleneck, return the rate it drains in bit/s
+    """Make the port the bottleneck, return the rate it drains in bps
 
     A port with a PHY that can do 100BASE-TX is negotiated down to it,
     so the queues fill against a real link.  A port without a PHY, as on
-    a virtual rig, gets a 10 Mbit/s rate limit instead, which is what
+    a virtual rig, is shaped to 10 Mbps instead, which is what
     puts its queues under load.  Returns 0 when neither is possible.
     """
     pmd = "ieee802-ethernet-phy-type:pmd-type-100BASE-TX"
@@ -224,20 +240,18 @@ def slow_port(port, until):
                     and scheduler(port.ssh, port.name))
 
         until(linked)
-        print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
         return 100_000_000
 
-    if not pmds:
+    if not pmds and not (port.switched and "egress-shaper" not in port.supported):
         port.target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": port.name,
-                    "infix-interfaces:qos": {"egress": {"rate-limit": {"rate": 10_000_000}}}
+                    "infix-interfaces:qos": {"egress-shaper": {"rate": 10_000_000}}
                 }]
             }
         }})
         until(lambda: (root_qdisc(port.ssh, port.name) or {}).get("kind") == "tbf")
-        show_shaper(port)
         return 10_000_000
 
     return 0
@@ -284,32 +298,17 @@ def dscp_prio(ssh, port, dscp):
     return None
 
 
-def show_offload(port, stage="transmission-selection"):
-    """Log what the fabric took after a change: the offload list and the
-    driver's recent complaints.  A fabric port must still run @stage in
-    hardware, or the measurement that follows means nothing
-    """
-    if port.switched:
-        until(lambda: port.offloads(stage))
-    print(f"{port.name} offload: {port.offload}")
+def wait_offload(port, stage="transmission-selection"):
+    """A switch port must run @stage in hardware before a measurement
 
-    if not port.driver:
+    A port the CPU serves needs no offload, the kernel does the work."""
+    if not port.switched:
         return
-
-    log = port.ssh.runsh(f"sudo dmesg | grep -i '{port.driver}' | tail -5").stdout.strip()
-    if log:
-        print(log)
-
-
-def show_shaper(port):
-    """Log what the rate limit became: the root qdisc with its offloaded
-    flag, and on a fabric port the port registers, where a shaper the
-    driver took shows up as the egress rate control words"""
-    print(json.dumps(root_qdisc(port.ssh, port.name)))
-    print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
-    if port.switched:
-        regs = port.ssh.runsh(f"sudo ethtool -d {port.name}").stdout.strip()
-        print("\n".join(regs.splitlines()[:16]))
+    try:
+        until(lambda: port.offloads(stage))
+    except Exception:
+        raise AssertionError(f"{port.name} does not run {stage} in hardware, "
+                             f"only {', '.join(port.offload) or 'nothing'}") from None
 
 
 class Flow:
@@ -320,20 +319,41 @@ class Flow:
         self.result = None
 
     def throughput(self):
-        """Payload bit rate that arrived, over the flow's duration"""
-        return 8.0 * self.result["packets"] * self.size / self.seconds
+        """Payload bit rate that arrived in the steady state"""
+        return self.result["steady"]
+
+    def shortfall(self):
+        """Share of the offered rate the port held back in the steady state"""
+        return 1.0 - self.throughput() / self.rate
+
+    def require_backlog(self, share=0.1):
+        """The port must hold back this share of the flow; one that was
+        never full proves nothing"""
+        assert self.shortfall() > share, \
+            f"{self.name} got {self.throughput() / 1e6:.2f} of the " \
+            f"{self.rate / 1e6:.2f} Mbps it offered, the port was never full"
 
     def share(self, total):
-        return 100.0 * self.result["packets"] / total if total else 0.0
+        """Percent of total, the steady-state bit rate of a set of flows"""
+        return 100.0 * self.throughput() / total if total else 0.0
 
 
-def run_flows(talker, listener, dst, flows):
-    """Run the flows at once, one server and one client process each
+def _connected(talker, flows, spread=0.5):
+    """Whether the clients' TCP control and UDP data sockets all came up
+    within @spread seconds of each other"""
+    up = {}
+    start = time.monotonic()
+    while len(up) < len(flows) and time.monotonic() - start < 5:
+        peers = talker.runsh("ss -Htun state established").stdout.split()
+        for f in flows:
+            if f.port not in up and sum(p.endswith(f":{f.port}") for p in peers) >= 2:
+                up[f.port] = time.monotonic()
+    return len(up) == len(flows) and max(up.values()) - min(up.values()) <= spread
 
-    Fills in flow.result from the listener side: bytes and packets
-    received, lost packets and the loss in percent.  Returns the total
-    datagrams received across the flows.
-    """
+
+def _start_flows(talker, listener, dst, flows):
+    """One attempt: the servers, and the datagrams each client offered,
+    None for a client that failed or connected late"""
     servers = {}
     for f in flows:
         servers[f.name] = listener.popen(["iperf3", "-s", "-1", "--json", "-p", str(f.port)],
@@ -342,24 +362,68 @@ def run_flows(talker, listener, dst, flows):
     time.sleep(1)
 
     clients = {}
-    for f in flows:
+    for f in sorted(flows, key=lambda f: f.tos):
         clients[f.name] = talker.popen(["iperf3", "-c", dst, "-p", str(f.port), "-u",
                                         "-b", str(f.rate), "-t", str(f.seconds),
                                         "-l", str(f.size), "--tos", str(f.tos), "--json"],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        text=True)
+    in_step = _connected(talker, flows)
 
     offered = {}
     for f in flows:
         out, err = clients[f.name].communicate(timeout=f.seconds + 30)
-        if clients[f.name].returncode:
+        sent = json.loads(out or "{}").get("end", {}).get("sum", {}).get("packets")
+        if clients[f.name].returncode or sent is None:
             print(f"{f.name}: iperf3 client failed: {err.strip() or out.strip()[:200]}")
-        offered[f.name] = json.loads(out)["end"]["sum"]["packets"]
+        offered[f.name] = sent if in_step else None
 
-    total = 0
+    if not in_step:
+        print("iperf3 clients connected too far apart to share their middle seconds")
+    return servers, offered
+
+
+def run_flows(talker, listener, dst, flows):
+    """Run the flows at once, one server and one client process each
+
+    The listener counts until the talker's end-of-test message reaches
+    it over the iperf3 control connection, DSCP 0.  The DUT must
+    classify that traffic behind the data, into the lowest class a
+    flow loads: the message then follows the last datagram out of the
+    port, every datagram the port let through is counted, and the loss
+    is what the port dropped.
+
+    That class starves under a strict class the port cannot drain, so
+    a client still connecting when the data of another fills the port
+    never gets through.  The clients start back to back, lowest marking
+    first, and the flows run again when one fails to connect, or connects
+    so late that the flows' middle seconds no longer line up.
+
+    The steady state is the middle seconds of a flow, after the queues
+    filled and before the talkers stopped.  Shares and throughput are
+    measured there, so the queues draining after the talkers stop do
+    not count towards them.
+
+    Fills in flow.result from the listener side: datagrams offered and
+    received, lost datagrams, the loss in percent and the steady-state
+    payload bit rate.  Returns the total steady-state payload bit rate
+    across the flows.
+    """
+    for _ in range(3):
+        servers, offered = _start_flows(talker, listener, dst, flows)
+        if None not in offered.values():
+            break
+        for server in servers.values():
+            server.kill()
+            server.communicate()
+    else:
+        raise RuntimeError("iperf3 clients failed to connect together three times")
+
+    total = 0.0
     for f in flows:
         out, err = servers[f.name].communicate(timeout=30)
-        end = json.loads(out)["end"]
+        report = json.loads(out)
+        end = report["end"]
         got = end.get("sum_received") or end["sum"]
         # iperf3's receiver keeps its packet count as the highest sequence
         # number seen, so it hides every loss but a tail drop.  The byte
@@ -368,11 +432,30 @@ def run_flows(talker, listener, dst, flows):
         sent = offered[f.name]
         received = got["bytes"] // f.size
         lost = max(sent - received, 0)
-        f.result = {"bytes": got["bytes"], "packets": received,
-                    "offered": sent, "lost": lost,
-                    "lost_percent": 100.0 * lost / sent if sent else 0.0}
-        total += f.result["packets"]
+        middle = report["intervals"][1:f.seconds - 1]
+        steady = 8.0 * sum(iv["sum"]["bytes"] for iv in middle) / len(middle)
+        f.result = {"packets": received, "offered": sent, "lost": lost,
+                    "lost_percent": 100.0 * lost / sent if sent else 0.0,
+                    "steady": steady}
+        total += f.throughput()
         print(f"{f.name}: {f.result['packets']}/{sent} datagrams through, "
-              f"{lost} lost ({f.result['lost_percent']:.1f}%)")
+              f"{lost} lost ({f.result['lost_percent']:.1f}%), "
+              f"{f.throughput() / 1e6:.2f} Mbps in the steady state")
 
     return total
+
+
+def must_reject(what, target, models, *reasons, delete=()):
+    """The commit must fail, and the error must name one of the reasons
+
+    With no reasons any error will do; a rejected delete over RESTCONF
+    carries no message, so the test checks the effect instead."""
+    try:
+        target.put_config_dicts(models, retries=1, delete=delete)
+    except Exception as err:
+        text = getattr(getattr(err, "response", None), "text", None) or str(err)
+        matched = [reason for reason in reasons if reason in text]
+        assert matched or not reasons, f"{what} rejected for another reason:\n{text}"
+        print(f"Rejected as expected: {matched[0] if matched else what}")
+        return
+    raise AssertionError(f"{what} was accepted")

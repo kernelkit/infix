@@ -79,23 +79,21 @@ func (h *ConfigureHandler) Enter(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "running", "candidate"); err != nil {
 		log.Printf("configure enter: %v", err)
 		if restconf.IsAccessDenied(err) {
-			hxTrigger(w, "cfgError", "You do not have permission to change the configuration")
-			w.WriteHeader(http.StatusForbidden)
+			http.Error(w, "You do not have permission to change the configuration",
+				http.StatusForbidden)
 			return
 		}
-		http.Error(w, "Could not initialise candidate datastore", http.StatusBadGateway)
+		http.Error(w, "Could not initialise candidate datastore: "+err.Error(), rcStatus(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // applyError surfaces a failed datastore copy from Apply / Apply&Save / Save.
-// A RESTCONF error means the device answered and rejected the config — almost
+// A RESTCONF error means the device answered and rejected the config, almost
 // always a validation failure (e.g. deleting an interface other nodes still
-// reference). The device is reachable, so report the reason inline via an
-// HX-Trigger and a 200, NOT a 502: the front-end's connection monitor reads
-// 502/503/504 as "device disconnected", which is exactly wrong here. Only a
-// transport failure (no RESTCONF response at all) is a real gateway error.
+// reference), so the reason goes to the toolbar's inline display via an
+// HX-Trigger and a 200.  Anything else is answered by rcStatus.
 func applyError(w http.ResponseWriter, op string, err error) {
 	log.Printf("configure %s: %v", op, err)
 	var re *restconf.Error
@@ -110,7 +108,7 @@ func applyError(w http.ResponseWriter, op string, err error) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	http.Error(w, "Could not reach the device: "+err.Error(), http.StatusBadGateway)
+	http.Error(w, "Could not copy the datastore: "+err.Error(), rcStatus(err))
 }
 
 // Apply copies candidate → running, activating all staged changes atomically,

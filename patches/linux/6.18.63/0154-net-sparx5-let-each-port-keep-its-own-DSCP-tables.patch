@@ -1,0 +1,197 @@
+From 8e46cb3cf6d5cdbe8c4ea165255d9103a7a66edc Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 5 Nov 2026 22:16:31 +0100
+Subject: [PATCH 154/156] net: sparx5: let each port keep its own DSCP tables
+Organization: Wires
+
+A bridge with remarking on its egress port only sent frames with
+DSCP 0.  With
+
+    dcb rewr add dev eth1 prio-dscp 5:40
+    dcb rewr flush dev eth0 prio-dscp
+
+a frame classified to priority 5 left eth1 with DSCP 0, not 40, and
+eth1 had lost its rewrite table.
+
+The chip has one DSCP classification table and one class to DSCP
+table for all ports, so the driver copied every DSCP entry set or
+deleted on a port to all the others, and each port wrote the tables
+from its own copy on every DCB change.  A flush on one port then
+emptied every port, and a port without entries wrote zeros over the
+tables while the ports that remark kept their update enable.
+
+Keep the tables per port, as the operator sets them, and write the
+chip tables only from a port that uses them: the classification
+table from a port that trusts DSCP, the remark table from a port with
+entries.  The copy the CPU remarks its own frames from follows the
+same rule.  Ports with different tables cannot both have theirs, the
+last one applied wins.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_dcb.c    | 52 +++----------------
+ .../ethernet/microchip/sparx5/sparx5_port.c   | 35 ++++++-------
+ 2 files changed, 23 insertions(+), 64 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+index b4bbc886d655..ff0a37f0a553 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_dcb.c
+@@ -216,42 +216,14 @@ static int sparx5_dcb_app_update(struct net_device *dev)
+ 	return sparx5_port_qos_set(port, &qos);
+ }
+ 
+-/* Set or delete DSCP app entry.
+- *
+- * DSCP mapping is global for all ports, so set and delete app entries are
+- * replicated for each port.
++/* The DSCP tables are per port, as the operator sets them, and the ports
++ * that use the one table the chip has write it, see sparx5_port_qos_dscp_set.
+  */
+-static int sparx5_dcb_ieee_dscp_setdel(struct net_device *dev,
+-				       struct dcb_app *app,
+-				       int (*setdel)(struct net_device *,
+-						     struct dcb_app *))
+-{
+-	struct sparx5_port *port = netdev_priv(dev);
+-	struct sparx5 *sparx5 = port->sparx5;
+-	struct sparx5_port *port_itr;
+-	int err, i;
+-
+-	for (i = 0; i < sparx5->data->consts->n_ports; i++) {
+-		port_itr = port->sparx5->ports[i];
+-		if (!port_itr)
+-			continue;
+-		err = setdel(port_itr->ndev, app);
+-		if (err)
+-			return err;
+-	}
+-
+-	return 0;
+-}
+-
+ static int sparx5_dcb_ieee_delapp(struct net_device *dev, struct dcb_app *app)
+ {
+ 	int err;
+ 
+-	if (app->selector == IEEE_8021QAZ_APP_SEL_DSCP)
+-		err = sparx5_dcb_ieee_dscp_setdel(dev, app, dcb_ieee_delapp);
+-	else
+-		err = dcb_ieee_delapp(dev, app);
+-
++	err = dcb_ieee_delapp(dev, app);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -276,11 +248,7 @@ static int sparx5_dcb_ieee_setapp(struct net_device *dev, struct dcb_app *app)
+ 		sparx5_dcb_ieee_delapp(dev, &app_itr);
+ 	}
+ 
+-	if (app->selector == IEEE_8021QAZ_APP_SEL_DSCP)
+-		err = sparx5_dcb_ieee_dscp_setdel(dev, app, dcb_ieee_setapp);
+-	else
+-		err = dcb_ieee_setapp(dev, app);
+-
++	err = dcb_ieee_setapp(dev, app);
+ 	if (err)
+ 		goto out;
+ 
+@@ -323,11 +291,7 @@ static int sparx5_dcb_delrewr(struct net_device *dev, struct dcb_app *app)
+ {
+ 	int err;
+ 
+-	if (app->selector == IEEE_8021QAZ_APP_SEL_DSCP)
+-		err = sparx5_dcb_ieee_dscp_setdel(dev, app, dcb_delrewr);
+-	else
+-		err = dcb_delrewr(dev, app);
+-
++	err = dcb_delrewr(dev, app);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -352,11 +316,7 @@ static int sparx5_dcb_setrewr(struct net_device *dev, struct dcb_app *app)
+ 		sparx5_dcb_delrewr(dev, &app_itr);
+ 	}
+ 
+-	if (app->selector == IEEE_8021QAZ_APP_SEL_DSCP)
+-		err = sparx5_dcb_ieee_dscp_setdel(dev, app, dcb_setrewr);
+-	else
+-		err = dcb_setrewr(dev, app);
+-
++	err = dcb_setrewr(dev, app);
+ 	if (err)
+ 		goto out;
+ 
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index dfe7ecdb8d03..58e545f99e12 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -1342,23 +1342,23 @@ int sparx5_port_qos_dscp_rewr_set(const struct sparx5_port *port,
+ 				  struct sparx5_port_qos_dscp_rewr *qos)
+ {
+ 	struct sparx5 *sparx5 = port->sparx5;
+-	bool rewr = false;
+ 	u16 dscp;
+ 	int i;
+ 
+ 	/* On egress, rewrite DSCP value to either classified DSCP or frame
+ 	 * DSCP. If enabled; classified DSCP, if disabled; frame DSCP.
+ 	 */
+-	if (qos->enable)
+-		rewr = true;
+-
+-	spx5_rmw(REW_DSCP_MAP_DSCP_UPDATE_ENA_SET(rewr),
++	spx5_rmw(REW_DSCP_MAP_DSCP_UPDATE_ENA_SET(qos->enable),
+ 		 REW_DSCP_MAP_DSCP_UPDATE_ENA, sparx5,
+ 		 REW_DSCP_MAP(port->portno));
+ 
+ 	/* On ingress, map each classified QoS class and DP to classified DSCP
+-	 * value. This mapping table is global for all ports.
++	 * value. This mapping table is global for all ports, so a port
++	 * without a table leaves it to the ports that have one.
+ 	 */
++	if (!qos->enable)
++		return 0;
++
+ 	for (i = 0; i < ARRAY_SIZE(qos->map.map); i++) {
+ 		dscp = qos->map.map[i];
+ 		spx5_rmw(ANA_CL_QOS_MAP_CFG_DSCP_REWR_VAL_SET(dscp),
+@@ -1390,24 +1390,23 @@ int sparx5_port_qos_dscp_set(const struct sparx5_port *port,
+ 		 ANA_CL_QOS_CFG_DSCP_KEEP_ENA, sparx5,
+ 		 ANA_CL_QOS_CFG(port->portno));
+ 
+-	/* Map each dscp value to priority and dp */
++	/* Map each dscp value to priority and dp, trusted.  The table is
++	 * one for the chip, so a port that does not classify by DSCP
++	 * leaves it to the ports that do.
++	 */
++	if (!qos->qos_enable)
++		return 0;
++
+ 	for (i = 0; i < ARRAY_SIZE(qos->map.map); i++) {
+ 		spx5_rmw(ANA_CL_DSCP_CFG_DSCP_QOS_VAL_SET(*(dscp + i)) |
+-			 ANA_CL_DSCP_CFG_DSCP_DP_VAL_SET(0),
++			 ANA_CL_DSCP_CFG_DSCP_DP_VAL_SET(0) |
++			 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA_SET(1),
+ 			 ANA_CL_DSCP_CFG_DSCP_QOS_VAL |
+-			 ANA_CL_DSCP_CFG_DSCP_DP_VAL, sparx5,
++			 ANA_CL_DSCP_CFG_DSCP_DP_VAL |
++			 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA, sparx5,
+ 			 ANA_CL_DSCP_CFG(i));
+ 	}
+ 
+-	/* Set per-dscp trust */
+-	for (i = 0; i <  ARRAY_SIZE(qos->map.map); i++) {
+-		if (qos->qos_enable) {
+-			spx5_rmw(ANA_CL_DSCP_CFG_DSCP_TRUST_ENA_SET(1),
+-				 ANA_CL_DSCP_CFG_DSCP_TRUST_ENA, sparx5,
+-				 ANA_CL_DSCP_CFG(i));
+-		}
+-	}
+-
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+

@@ -4,31 +4,36 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_weighted_sharin
 
 ==== Description
 
-Two talkers, one marked EF and one marked CS1, bridged through the DUT
-and out one egress port that cannot carry both.  The port is negotiated
-down to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s
-where it has no PHY.  The ingress port classifies EF to priority 3 and
-CS1 to priority 2, classes 3 and 2 in the default table, both running
-enhanced transmission selection; the two classes below hold five
-percent each and carry nothing, since strict classes must sit above the
-weighted ones.  Each talker offers 80 percent of what the port drains,
-so both classes always have a backlog and the scheduler decides the
-split.
+Weighted sharing divides a full port between traffic classes in the
+proportions configured, so every class keeps its share however much
+the others offer.  This test fills a port with two flows and checks
+that the split follows the weights.
+
+.What the two talkers offer and what the port must deliver
+image::expected.svg[align=center, scaledwidth=90%]
+
+Two talkers, one marked EF and one marked CS1, send through the DUT's
+bridge and out one port.  That port is slowed down so the test's
+traffic can fill it: negotiated down to 100 Mbps, or shaped to
+10 Mbps where it has no PHY.  The port where the traffic enters puts
+the two flows in two traffic classes, both running enhanced
+transmission selection, the weighted algorithm of IEEE 802.1Q.  Each
+talker offers 80 percent of what the port can send, so both classes
+always have frames waiting.
 
 Two measurements:
 
- - equal weights, 45 and 45 percent, must give an even split.  This is
-   the baseline, and fails on its own if the shares are applied to the
-   wrong bands
- - 2:1, configured as 60 and 30 percent, must move the split to match
+ - equal weights must give an even split.  This is the baseline, and
+   fails on its own if the weights land on the wrong classes
+ - weights 2:1 must give one flow two thirds and the other one third
 
-Each flow's share of the delivered datagrams must land within five
-points of its configured share of the two, and both flows must lose more
-than a tenth of their frames in both measurements; a port that was never
-full proves nothing.  The test's own iperf3 control traffic, DSCP 0, is
-classified to priority 7.  Skipped on a switch fabric whose scheduler is
-not offloaded, where forwarded frames never meet the configured
-algorithm.
+Each flow's share of what the port delivers must be within five points
+of its weight.  Both flows must also be held back by more than a tenth
+of what they offer, which shows the port was full.
+
+The weights are set as 45 and 45 percent, then 60 and 30.  Every class
+below a weighted one must be weighted too, so the two classes below
+get the remaining ten percent, five each, and carry no traffic.
 
 ==== Topology
 

@@ -1883,6 +1883,8 @@ class Iface:
                         print(f"    {'transfer rx':<{18}}: {rx} bytes")
 
 
+        Qos(self.data).pr_detail()
+
         frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
                               'statistics', 'frame')
         if frame:
@@ -2042,6 +2044,157 @@ def pr_interface_list(json):
         else:
             iface.add_ethernet(table)
 
+    table.print()
+
+
+def qos_rate(bps):
+    """Bit rate with the largest unit that leaves a whole part"""
+    bps = int(bps)
+    for unit, scale in (("Gbps", 10**9), ("Mbps", 10**6), ("kbps", 10**3)):
+        if bps >= scale:
+            return f"{bps / scale:g} {unit}"
+    return f"{bps} bps"
+
+
+def qos_time(ns):
+    """Duration in nanoseconds with the largest unit that leaves a whole part"""
+    ns = int(ns)
+    for unit, scale in (("s", 10**9), ("ms", 10**6), ("µs", 10**3)):
+        if ns >= scale:
+            return f"{ns / scale:g} {unit}"
+    return f"{ns} ns"
+
+
+def qos_ranges(numbers):
+    """Sorted numbers as ranges, e.g., 0-4,6-7"""
+    runs = []
+    for num in sorted(numbers):
+        if runs and runs[-1][1] == num - 1:
+            runs[-1][1] = num
+        else:
+            runs.append([num, num])
+    return ",".join(str(a) if a == b else f"{a}-{b}" for a, b in runs)
+
+
+def qos_classes(mask, count=8):
+    """Traffic classes of a gate mask as ranges, none when all are closed"""
+    return qos_ranges(tc for tc in range(count) if int(mask) & (1 << tc)) or "none"
+
+
+class Qos:
+    """QoS state of one interface, as its hardware or the kernel runs it"""
+
+    OFFLOAD = {
+        "classification": "classify",
+        "remarking": "remark",
+        "transmission-selection": "select",
+        "egress-shaper": "shaper",
+        "credit-based-shaper": "cbs",
+        "time-aware-shaper": "tas",
+    }
+
+    def __init__(self, iface):
+        self.name = iface.get("name", "")
+        self.qos = iface.get("infix-interfaces:qos")
+        self.caps = (self.qos or {}).get("capabilities", {})
+        self.profile = (self.qos or {}).get("active-profile")
+        self.ingress = (self.qos or {}).get("ingress", {})
+        self.egress = (self.qos or {}).get("egress", {})
+        self.shaper = (self.qos or {}).get("egress-shaper", {})
+        self.offload = self.caps.get("offload", [])
+
+        cbsa = iface.get("ieee802-dot1dc-cbsa-if:cbsa", {})
+        self.cbs = {int(c["traffic-class"]): c for c in cbsa.get("cbsa-parameter-table", [])}
+        self.gates = iface.get("ieee802-dot1dc-sched-if:gate-parameter-table", {})
+        self.schedule = self.gates.get("oper-control-list", {}).get("gate-control-entry", [])
+
+    def trust(self):
+        return self.ingress.get("trust", "")
+
+    def priorities(self, tc):
+        """Priorities the traffic class table sends to a class"""
+        table = self.egress.get("traffic-class-table", {})
+        return qos_ranges(prio for prio in range(8) if table.get(f"priority{prio}") == tc)
+
+    def slope(self, tc):
+        """Reserved rate of a class, the running one when it differs"""
+        entry = self.cbs.get(tc, {})
+        slope = entry.get("oper-idle-slope") or entry.get("admin-idle-slope")
+        return qos_rate(slope) if slope else ""
+
+    def cycle(self):
+        frac = self.gates.get("oper-cycle-time")
+        if not frac or not frac.get("denominator"):
+            return ""
+        return qos_time(10**9 * int(frac["numerator"]) // int(frac["denominator"]))
+
+    def pr_detail(self):
+        if self.qos is None:
+            return
+        Decore.title("Quality of Service")
+        if self.profile:
+            print(f"{'profile':<{19}}: {self.profile}")
+        if self.trust():
+            print(f"{'trust':<{19}}: {self.trust()}")
+        if "default-priority" in self.ingress:
+            print(f"{'default priority':<{19}}: {self.ingress['default-priority']}")
+        remark = [f"{k} {v}" for k, v in self.egress.get("remark", {}).items() if v != "none"]
+        if remark:
+            print(f"{'remark':<{19}}: {', '.join(remark)}")
+        if rate := self.shaper.get("rate"):
+            burst = self.shaper.get("burst")
+            print(f"{'egress shaper':<{19}}: {qos_rate(rate)}" + (f", burst {burst} bytes" if burst else ""))
+        if supported := self.caps.get("supported-offload"):
+            idle = [stage for stage in supported if stage not in self.offload]
+            print(f"{'hardware offload':<{19}}: {', '.join(self.offload) or 'none'}")
+            if idle:
+                print(f"{'available offload':<{19}}: {', '.join(idle)}")
+
+        classes = {int(c["id"]): c for c in self.egress.get("traffic-class", [])}
+        ids = set(classes) | set(self.cbs)
+        if ids:
+            print()
+            table = SimpleTable([Column('CLASS', 'right'), Column('PRIORITIES'), Column('ALGORITHM'),
+                                 Column('SHARE', 'right'), Column('RESERVED', 'right')])
+            for tc in sorted(ids, reverse=True):
+                tclass = classes.get(tc, {})
+                algo = remove_yang_prefix(tclass.get("algorithm", ""))
+                share = f"{tclass['bandwidth']}%" if "bandwidth" in tclass else ""
+                table.row(tc, self.priorities(tc), algo, share, self.slope(tc))
+            table.print()
+
+        if self.schedule:
+            print()
+            base = self.gates.get("oper-base-time", {})
+            print(f"{'gate schedule':<{19}}: running" +
+                  (", a new one is pending" if self.gates.get("config-pending") else ""))
+            print(f"{'cycle time':<{19}}: {self.cycle()}")
+            print(f"{'base time':<{19}}: {base.get('seconds', 0)}.{int(base.get('nanoseconds', 0)):09d} s")
+            print()
+            table = SimpleTable([Column('ENTRY', 'right'), Column('OPEN CLASSES'),
+                                 Column('INTERVAL', 'right')])
+            for entry in self.schedule:
+                table.row(entry.get("index"), qos_classes(entry.get("gate-states-value", 0)),
+                          qos_time(entry.get("time-interval-value", 0)))
+            table.print()
+
+
+def show_qos(json):
+    """One line per port with QoS: what it classifies on and how it sends"""
+    ports = [Qos(i) for i in json.get("ietf-interfaces:interfaces", {}).get("interface", [])]
+    ports = [p for p in ports if p.qos is not None]
+    if not ports:
+        print("No interface has QoS settings or capabilities.")
+        return
+
+    table = SimpleTable([Column('PORT'), Column('PROFILE'), Column('TRUST'),
+                         Column('SHAPER', 'right'), Column('RESERVED'),
+                         Column('SCHEDULE', 'right'), Column('HARDWARE OFFLOAD')])
+    for p in sorted(ports, key=lambda p: natural_key(p.name)):
+        reserved = ", ".join(f"{tc}: {p.slope(tc)}" for tc in sorted(p.cbs, reverse=True))
+        rate = p.shaper.get("rate")
+        table.row(p.name, p.profile or "", p.trust(), qos_rate(rate) if rate else "",
+                  reserved, p.cycle(), " ".join(Qos.OFFLOAD.get(o, o) for o in p.offload))
     table.print()
 
 
@@ -2969,7 +3122,7 @@ def show_hardware_detail(json, ref):
         ("Hardware Rev",  comp.get("hardware-rev", "")),
         ("USB ID",        _usb_id(ms) or dev.id),
         ("USB Version",   usb.get("usb-version", "")),
-        ("Speed",         f"{usb['speed']} Mbit/s" if usb.get("speed") else ""),
+        ("Speed",         f"{usb['speed']} Mbps" if usb.get("speed") else ""),
         ("Authorized",    dev.authorized),
         ("URI",           ", ".join(comp.get("uri", []))),
         ("Admin State",   state.get("admin-state", "")),
@@ -5865,7 +6018,7 @@ def show_ospf(json_data):
     print(f" OSPF Routing Process, Router ID: {router_id}")
     refbw = ospf.get('auto-cost', {}).get('reference-bandwidth')
     if refbw is not None:
-        print(f" Reference bandwidth: {refbw} Mbit/s")
+        print(f" Reference bandwidth: {refbw} Mbps")
     print(f" Number of areas attached to this router: {len(areas)}")
     print()
 
@@ -6928,6 +7081,8 @@ def main():
     ks_parser.add_argument('-t', '--type', help='Key type (symmetric or asymmetric)')
     ks_parser.add_argument('-n', '--name', help='Key name')
 
+    subparsers.add_parser('show-qos', help='Show QoS overview of all ports')
+
     subparsers.add_parser('show-ptp', help='Show PTP instance status') \
               .add_argument('instance', nargs='?', help='Instance index (optional)')
 
@@ -7020,6 +7175,8 @@ def main():
         show_nacm_user(json_data)
     elif args.command == "show-keystore":
         show_keystore(json_data, getattr(args, 'type', None), args.name)
+    elif args.command == "show-qos":
+        show_qos(json_data)
     elif args.command == "show-ptp":
         show_ptp(json_data, getattr(args, 'instance', None))
     elif args.command == "show-ntp":
