@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -213,6 +214,31 @@ func TestTransformNeighborsRawControlByte(t *testing.T) {
 	}
 }
 
+// Ids outside the YANG types are left out, the neighbor stays.
+func TestTransformNeighborsInvalidIDs(t *testing.T) {
+	long := strings.Repeat("a", 256)
+	in := `{"lldp": [{"interface": [
+	  {"name": "e1", "rid": "1", "age": "0 day, 00:00:10",
+	   "chassis": [{"id": [{"type": "unhandled", "value": ""}]}],
+	   "port": [{"id": [{"type": "local", "value": "x\u0001y"}]}]},
+	  {"name": "e2", "rid": "2", "age": "0 day, 00:00:10",
+	   "chassis": [{"id": [{"type": "mac", "value": "` + long + `"}]}],
+	   "port": [{"id": [{"type": "ifname", "value": "p2"}]}]}
+	]}]}`
+	out := decode(t, transform(t, in))
+	if len(out.Port) != 2 {
+		t.Fatalf("got %d ports, want 2", len(out.Port))
+	}
+	r := out.Port[0].RemoteSystems[0]
+	if r.ChassisIDSubtype != "" || r.ChassisID != "" || r.PortIDSubtype != "local" || r.PortID != "" {
+		t.Errorf("e1 remote: %#v", r)
+	}
+	r = out.Port[1].RemoteSystems[0]
+	if r.ChassisIDSubtype != "mac-address" || r.ChassisID != "" || r.PortID != "p2" {
+		t.Errorf("e2 remote: %#v", r)
+	}
+}
+
 // A neighbor that disappears between reads must vanish from the tree:
 // every update is a full-table replace.
 func TestUpdateTreeClearsRemovedNeighbors(t *testing.T) {
@@ -321,7 +347,8 @@ func TestSubtypeMappings(t *testing.T) {
 		{name: "ip", in: "ip", want: "network-address"},
 		{name: "ifname", in: "ifname", want: "interface-name"},
 		{name: "local", in: "local", want: "local"},
-		{name: "unknown", in: "foo", want: "unknown"},
+		{name: "unhandled", in: "unhandled", want: ""},
+		{name: "unknown", in: "foo", want: ""},
 	}
 
 	for _, tt := range tests {

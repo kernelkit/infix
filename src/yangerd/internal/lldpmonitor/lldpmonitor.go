@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -365,10 +366,10 @@ func transformNeighbors(data []byte) (json.RawMessage, error) {
 	type remoteEntry struct {
 		TimeMark         int    `json:"time-mark"`
 		RemoteIndex      int    `json:"remote-index"`
-		ChassisIDSubtype string `json:"chassis-id-subtype"`
-		ChassisID        string `json:"chassis-id"`
-		PortIDSubtype    string `json:"port-id-subtype"`
-		PortID           string `json:"port-id"`
+		ChassisIDSubtype string `json:"chassis-id-subtype,omitempty"`
+		ChassisID        string `json:"chassis-id,omitempty"`
+		PortIDSubtype    string `json:"port-id-subtype,omitempty"`
+		PortID           string `json:"port-id,omitempty"`
 	}
 	type portEntry struct {
 		Name           string        `json:"name"`
@@ -421,9 +422,9 @@ func transformNeighbors(data []byte) (json.RawMessage, error) {
 			TimeMark:         timeMark,
 			RemoteIndex:      rid,
 			ChassisIDSubtype: chassisIDSubtype(iface.Chassis.ID.Type),
-			ChassisID:        iface.Chassis.ID.Value,
+			ChassisID:        idValue(iface.Chassis.ID.Value),
 			PortIDSubtype:    portIDSubtype(iface.Port.ID.Type),
-			PortID:           iface.Port.ID.Value,
+			PortID:           idValue(iface.Port.ID.Value),
 		})
 	}
 
@@ -440,6 +441,10 @@ func transformNeighbors(data []byte) (json.RawMessage, error) {
 	return json.RawMessage(out), nil
 }
 
+// idSubtypeMap maps the subtype names lldpcli prints to the YANG enums.
+// lldpd prints "unhandled" for the component and circuit id subtypes
+// and "unknown" for reserved values; those have no enum and are left
+// out, as is the id they belong to.
 var idSubtypeMap = map[string]string{
 	"ifalias": "interface-alias",
 	"mac":     "mac-address",
@@ -449,17 +454,49 @@ var idSubtypeMap = map[string]string{
 }
 
 func chassisIDSubtype(t string) string {
-	if v, ok := idSubtypeMap[t]; ok {
-		return v
-	}
-	return "unknown"
+	return idSubtypeMap[t]
 }
 
 func portIDSubtype(t string) string {
-	if v, ok := idSubtypeMap[t]; ok {
-		return v
+	return idSubtypeMap[t]
+}
+
+const maxIDLen = 255
+
+// idValue returns the chassis or port id when it fits the YANG type,
+// a string of 1..255 characters libyang accepts, else "".
+func idValue(s string) string {
+	if !utf8.ValidString(s) {
+		return ""
 	}
-	return "unknown"
+	n := 0
+	for _, r := range s {
+		if !yangChar(r) {
+			return ""
+		}
+		n++
+	}
+	if n == 0 || n > maxIDLen {
+		return ""
+	}
+	return s
+}
+
+// yangChar tells whether r may appear in a YANG string: the XML
+// character range, which excludes the control characters but tab,
+// newline and carriage return.
+func yangChar(r rune) bool {
+	switch {
+	case r == '\t' || r == '\n' || r == '\r':
+		return true
+	case r < 0x20:
+		return false
+	case r >= 0xd800 && r <= 0xdfff:
+		return false
+	case r == 0xfffe || r == 0xffff:
+		return false
+	}
+	return true
 }
 
 var ageRe = regexp.MustCompile(`(\d+)\s*day[s]*,\s*(\d+):(\d+):(\d+)`)
