@@ -11,13 +11,16 @@ package lldpmonitor
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/netip"
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -229,8 +232,42 @@ type j0Iface struct {
 	Name    string      `json:"name"`
 	RID     interface{} `json:"rid"`
 	Age     string      `json:"age"`
-	Chassis j0IDHolder  `json:"chassis"`
+	Chassis j0Chassis   `json:"chassis"`
 	Port    j0IDHolder  `json:"port"`
+}
+
+// j0Value is a plain text element: {"value": "..."}.
+type j0Value struct {
+	Value string `json:"value"`
+}
+
+// j0Chassis is the chassis node: its id and, in json0 form, the system
+// name and management addresses.
+type j0Chassis struct {
+	j0IDHolder
+	Name    string
+	MgmtIPs []string
+}
+
+func (c *j0Chassis) UnmarshalJSON(data []byte) error {
+	c.j0IDHolder.UnmarshalJSON(data)
+
+	var nodes []struct {
+		Name   []j0Value `json:"name"`
+		MgmtIP []j0Value `json:"mgmt-ip"`
+	}
+	if err := json.Unmarshal(data, &nodes); err != nil {
+		return nil
+	}
+	for _, n := range nodes {
+		if c.Name == "" && len(n.Name) > 0 {
+			c.Name = n.Name[0].Value
+		}
+		for _, ip := range n.MgmtIP {
+			c.MgmtIPs = append(c.MgmtIPs, ip.Value)
+		}
+	}
+	return nil
 }
 
 // j0IDHolder extracts the first id from a chassis/port node in either
@@ -364,12 +401,14 @@ func collectIfaces(data []byte) ([]j0Iface, error) {
 // module envelope when serving the key).
 func transformNeighbors(data []byte) (json.RawMessage, error) {
 	type remoteEntry struct {
-		TimeMark         int    `json:"time-mark"`
-		RemoteIndex      int    `json:"remote-index"`
-		ChassisIDSubtype string `json:"chassis-id-subtype,omitempty"`
-		ChassisID        string `json:"chassis-id,omitempty"`
-		PortIDSubtype    string `json:"port-id-subtype,omitempty"`
-		PortID           string `json:"port-id,omitempty"`
+		TimeMark         int        `json:"time-mark"`
+		RemoteIndex      int        `json:"remote-index"`
+		ChassisIDSubtype string     `json:"chassis-id-subtype,omitempty"`
+		ChassisID        string     `json:"chassis-id,omitempty"`
+		PortIDSubtype    string     `json:"port-id-subtype,omitempty"`
+		PortID           string     `json:"port-id,omitempty"`
+		SystemName       string     `json:"system-name,omitempty"`
+		MgmtAddress      []mgmtAddr `json:"management-address,omitempty"`
 	}
 	type portEntry struct {
 		Name           string        `json:"name"`
@@ -425,6 +464,8 @@ func transformNeighbors(data []byte) (json.RawMessage, error) {
 			ChassisID:        idValue(iface.Chassis.ID.Value),
 			PortIDSubtype:    portIDSubtype(iface.Port.ID.Type),
 			PortID:           idValue(iface.Port.ID.Value),
+			SystemName:       idValue(iface.Chassis.Name),
+			MgmtAddress:      mgmtAddrs(iface.Chassis.MgmtIPs),
 		})
 	}
 
@@ -461,10 +502,40 @@ func portIDSubtype(t string) string {
 	return idSubtypeMap[t]
 }
 
+// mgmtAddr is one management-address list entry.  The address is the
+// raw address in upper case hex, as man-addr-type requires.
+type mgmtAddr struct {
+	Subtype string `json:"address-subtype"`
+	Address string `json:"address"`
+}
+
+// mgmtAddrs converts the addresses lldpcli prints, leaving out any that
+// do not parse and any repeated one.
+func mgmtAddrs(ips []string) []mgmtAddr {
+	var out []mgmtAddr
+	seen := make(map[mgmtAddr]bool)
+	for _, ip := range ips {
+		addr, err := netip.ParseAddr(ip)
+		if err != nil || addr.Zone() != "" {
+			continue
+		}
+		subtype := "ietf-routing:ipv6"
+		if addr.Is4() {
+			subtype = "ietf-routing:ipv4"
+		}
+		m := mgmtAddr{subtype, strings.ToUpper(hex.EncodeToString(addr.AsSlice()))}
+		if !seen[m] {
+			seen[m] = true
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
 const maxIDLen = 255
 
-// idValue returns the chassis or port id when it fits the YANG type,
-// a string of 1..255 characters libyang accepts, else "".
+// idValue returns a chassis id, port id or system name when it fits the
+// YANG type, a string of 1..255 characters libyang accepts, else "".
 func idValue(s string) string {
 	if !utf8.ValidString(s) {
 		return ""

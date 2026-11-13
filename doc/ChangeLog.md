@@ -49,6 +49,8 @@ All notable changes to the project are documented in this file.
   `detailed` keywords are removed
 - Interfaces now report their multicast, discard and error counters,
   not only the octet counters
+- LLDP neighbors now report their system name and management
+  addresses in the operational data
 
 ### Fixes
 

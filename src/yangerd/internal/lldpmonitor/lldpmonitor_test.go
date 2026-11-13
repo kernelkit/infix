@@ -409,3 +409,46 @@ func TestTransformNeighborsUniqueKeys(t *testing.T) {
 		t.Errorf("eth1 must not be nudged: %#v", eth1)
 	}
 }
+
+func TestTransformNeighborsSystemNameAndMgmt(t *testing.T) {
+	in := `{"lldp": [{"interface": [{"name": "e1", "rid": "1", "age": "0 day, 00:00:10",
+	  "chassis": [{"id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}],
+	    "name": [{"value": "switch1"}],
+	    "mgmt-ip": [{"value": "192.168.1.10"}, {"value": "fe80::1"},
+	                {"value": "192.168.1.10"}, {"value": "bogus"}],
+	    "mgmt-iface": [{"value": "2"}]}],
+	  "port": [{"id": [{"type": "ifname", "value": "swp1"}]}]}]}]}`
+
+	var out struct {
+		Port []struct {
+			Remote []struct {
+				SystemName string     `json:"system-name"`
+				Mgmt       []mgmtAddr `json:"management-address"`
+			} `json:"remote-systems-data"`
+		} `json:"port"`
+	}
+	if err := json.Unmarshal(transform(t, in), &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Port) != 1 || len(out.Port[0].Remote) != 1 {
+		t.Fatalf("unexpected shape: %+v", out)
+	}
+	r := out.Port[0].Remote[0]
+	if r.SystemName != "switch1" {
+		t.Errorf("system-name = %q, want switch1", r.SystemName)
+	}
+	want := []mgmtAddr{
+		{"ietf-routing:ipv4", "C0A8010A"},
+		{"ietf-routing:ipv6", "FE800000000000000000000000000001"},
+	}
+	if !reflect.DeepEqual(r.Mgmt, want) {
+		t.Errorf("management-address = %+v, want %+v", r.Mgmt, want)
+	}
+}
+
+func TestTransformNeighborsNoMgmt(t *testing.T) {
+	raw := transform(t, showNeighborsJSON0)
+	if strings.Contains(string(raw), "management-address") {
+		t.Errorf("management-address present without mgmt-ip: %s", raw)
+	}
+}
