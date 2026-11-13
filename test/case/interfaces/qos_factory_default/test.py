@@ -65,7 +65,7 @@ with infamy.Test() as test:
         caps = infamy.capability.Port(target, port, tgtssh).caps
         queues = tx_queues(tgtssh, port)
         expected = min(queues, 8) if queues > 1 else 8
-        print(f"{port}: {queues} tx queues, capabilities {caps}")
+        print(f"{port}: {queues} tx queues")
         assert caps.get("max-traffic-classes", 8) == expected, caps
         num_tc = expected
 
@@ -80,7 +80,6 @@ with infamy.Test() as test:
                         opts.get("priomap", [])[:8] == [num_tc - 1 - tc for tc in TABLE_8_5[num_tc]])
             return False
         until(default_table)
-        print(json.dumps(root_qdisc(tgtssh, port)))
 
     with test.step("Verify classification trusts PCP by default"):
         if caps.get("supported-trust-order"):

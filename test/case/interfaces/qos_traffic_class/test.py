@@ -121,7 +121,6 @@ with infamy.Test() as test:
     with test.step("Verify the root qdisc carries the custom map and shares"):
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, custom, num_tc - 2,
                                     [67 * 1514, 33 * 1514]))
-        print(json.dumps(root_qdisc(tgtssh, port)))
 
     with test.step("Verify the offload capability matches the qdisc"):
         taken = root_qdisc(tgtssh, port).get("offloaded", False)
@@ -160,7 +159,6 @@ with infamy.Test() as test:
             return (root and root[0]["kind"] == "tbf" and root[0]["options"]["rate"] == 1250000
                     and child and qdisc_matches(child[0], num_tc, TABLE_34_1[num_tc], num_tc, []))
         until(shaped)
-        print(tgtssh.runsh(f"tc -j qdisc show dev {port}").stdout)
 
     with test.step("Remove the egress shaper and verify the scheduler is the root again"):
         target.put_config_dicts({}, delete=[qos_xpath(port, "/egress-shaper")])
