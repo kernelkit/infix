@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -71,6 +72,9 @@ func (m *LLDPMonitor) Run(ctx context.Context) error {
 }
 
 func (m *LLDPMonitor) runOnce(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, "lldpcli", "-f", "json0", "watch")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -79,19 +83,55 @@ func (m *LLDPMonitor) runOnce(ctx context.Context) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start lldpcli watch: %w", err)
 	}
-	defer cmd.Wait()
 
 	// Pick up neighbors that existed before we attached.
 	m.triggerRefresh()
 
-	return m.readEvents(stdout)
+	err = m.readEvents(stdout)
+	cancel()
+	cmd.Wait()
+	return err
+}
+
+// isRawControl tells whether lldpcli's JSON writer passes byte c through
+// unescaped although JSON forbids it: it escapes c < 0x1f, so 0x1f
+// itself leaks.  Line breaks and tabs are legal between tokens.
+func isRawControl(c byte) bool {
+	return c < 0x20 && c != '\t' && c != '\n' && c != '\r'
+}
+
+// sanitize drops those bytes from p in place and returns the rest.
+func sanitize(p []byte) []byte {
+	kept := 0
+	for _, c := range p {
+		if !isRawControl(c) {
+			p[kept] = c
+			kept++
+		}
+	}
+	return p[:kept]
+}
+
+// controlFilter is a reader that drops the same bytes from a stream.
+type controlFilter struct {
+	r io.Reader
+}
+
+func (f controlFilter) Read(p []byte) (int, error) {
+	for {
+		n, err := f.r.Read(p)
+		kept := len(sanitize(p[:n]))
+		if kept > 0 || err != nil || n == 0 {
+			return kept, err
+		}
+	}
 }
 
 // readEvents dispatches each JSON value lldpcli prints.  A decoder, not
 // line or brace counting, frames them: neighbor descriptions are free
 // text from the peer and may hold anything.
 func (m *LLDPMonitor) readEvents(r io.Reader) error {
-	dec := json.NewDecoder(r)
+	dec := json.NewDecoder(controlFilter{r})
 	for {
 		var ev json.RawMessage
 		if err := dec.Decode(&ev); err != nil {
@@ -157,7 +197,7 @@ func (m *LLDPMonitor) refreshLoop(ctx context.Context) {
 }
 
 // updateTree reads the full neighbor table and replaces the subtree.
-// On a query error the previous data is left untouched.
+// On a query or parse error the previous data is left untouched.
 func (m *LLDPMonitor) updateTree(ctx context.Context) {
 	out, err := m.query(ctx)
 	if err != nil {
@@ -165,7 +205,13 @@ func (m *LLDPMonitor) updateTree(ctx context.Context) {
 		return
 	}
 
-	m.tree.Set(treeKey, transformNeighbors(out))
+	data, err := transformNeighbors(out)
+	if err != nil {
+		m.log.Warn("lldp monitor: parse neighbors", "err", err)
+		return
+	}
+
+	m.tree.Set(treeKey, data)
 	m.log.Debug("lldp monitor: tree updated")
 }
 
@@ -239,7 +285,7 @@ func parseID(raw json.RawMessage) (j0ID, bool) {
 // neighbors document, accepting both json0 ("lldp" is an array, entries
 // carry a "name" field) and json ("lldp" is an object, entries are keyed
 // by interface name) output formats.
-func collectIfaces(data []byte) []j0Iface {
+func collectIfaces(data []byte) ([]j0Iface, error) {
 	var ifaces []j0Iface
 
 	addRaw := func(name string, raw json.RawMessage) {
@@ -286,12 +332,12 @@ func collectIfaces(data []byte) []j0Iface {
 	}
 
 	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil
+	if err := json.Unmarshal(sanitize(append([]byte(nil), data...)), &doc); err != nil {
+		return nil, err
 	}
 	lldpRaw, ok := doc["lldp"]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	// json0: "lldp" is an array of {"interface": [...]}; json: an object.
@@ -302,7 +348,7 @@ func collectIfaces(data []byte) []j0Iface {
 				collectInterfaceNode(ifRaw)
 			}
 		}
-		return ifaces
+		return ifaces, nil
 	}
 	var lldpObject map[string]json.RawMessage
 	if err := json.Unmarshal(lldpRaw, &lldpObject); err == nil {
@@ -310,20 +356,20 @@ func collectIfaces(data []byte) []j0Iface {
 			collectInterfaceNode(ifRaw)
 		}
 	}
-	return ifaces
+	return ifaces, nil
 }
 
 // transformNeighbors converts `lldpcli show neighbors` output to the
 // YANG ieee802-dot1ab-lldp subtree (unwrapped -- the IPC layer adds the
 // module envelope when serving the key).
-func transformNeighbors(data []byte) json.RawMessage {
+func transformNeighbors(data []byte) (json.RawMessage, error) {
 	type remoteEntry struct {
 		TimeMark         int    `json:"time-mark"`
 		RemoteIndex      int    `json:"remote-index"`
-		ChassisIDSubtype string `json:"chassis-id-subtype"`
-		ChassisID        string `json:"chassis-id"`
-		PortIDSubtype    string `json:"port-id-subtype"`
-		PortID           string `json:"port-id"`
+		ChassisIDSubtype string `json:"chassis-id-subtype,omitempty"`
+		ChassisID        string `json:"chassis-id,omitempty"`
+		PortIDSubtype    string `json:"port-id-subtype,omitempty"`
+		PortID           string `json:"port-id,omitempty"`
 	}
 	type portEntry struct {
 		Name           string        `json:"name"`
@@ -331,11 +377,16 @@ func transformNeighbors(data []byte) json.RawMessage {
 		RemoteSystems  []remoteEntry `json:"remote-systems-data"`
 	}
 
+	ifaces, err := collectIfaces(data)
+	if err != nil {
+		return nil, err
+	}
+
 	portMap := make(map[string]*portEntry)
 	seen := make(map[string]map[[2]int]bool) // per port: {time-mark, rid}
 	var order []string
 
-	for _, iface := range collectIfaces(data) {
+	for _, iface := range ifaces {
 		port, ok := portMap[iface.Name]
 		if !ok {
 			port = &portEntry{
@@ -371,9 +422,9 @@ func transformNeighbors(data []byte) json.RawMessage {
 			TimeMark:         timeMark,
 			RemoteIndex:      rid,
 			ChassisIDSubtype: chassisIDSubtype(iface.Chassis.ID.Type),
-			ChassisID:        iface.Chassis.ID.Value,
+			ChassisID:        idValue(iface.Chassis.ID.Value),
 			PortIDSubtype:    portIDSubtype(iface.Port.ID.Type),
-			PortID:           iface.Port.ID.Value,
+			PortID:           idValue(iface.Port.ID.Value),
 		})
 	}
 
@@ -383,13 +434,17 @@ func transformNeighbors(data []byte) json.RawMessage {
 	}
 
 	if len(ports) == 0 {
-		return json.RawMessage(`{}`)
+		return json.RawMessage(`{}`), nil
 	}
 
 	out, _ := json.Marshal(map[string]interface{}{"port": ports})
-	return json.RawMessage(out)
+	return json.RawMessage(out), nil
 }
 
+// idSubtypeMap maps the subtype names lldpcli prints to the YANG enums.
+// lldpd prints "unhandled" for the component and circuit id subtypes
+// and "unknown" for reserved values; those have no enum and are left
+// out, as is the id they belong to.
 var idSubtypeMap = map[string]string{
 	"ifalias": "interface-alias",
 	"mac":     "mac-address",
@@ -399,17 +454,49 @@ var idSubtypeMap = map[string]string{
 }
 
 func chassisIDSubtype(t string) string {
-	if v, ok := idSubtypeMap[t]; ok {
-		return v
-	}
-	return "unknown"
+	return idSubtypeMap[t]
 }
 
 func portIDSubtype(t string) string {
-	if v, ok := idSubtypeMap[t]; ok {
-		return v
+	return idSubtypeMap[t]
+}
+
+const maxIDLen = 255
+
+// idValue returns the chassis or port id when it fits the YANG type,
+// a string of 1..255 characters libyang accepts, else "".
+func idValue(s string) string {
+	if !utf8.ValidString(s) {
+		return ""
 	}
-	return "unknown"
+	n := 0
+	for _, r := range s {
+		if !yangChar(r) {
+			return ""
+		}
+		n++
+	}
+	if n == 0 || n > maxIDLen {
+		return ""
+	}
+	return s
+}
+
+// yangChar tells whether r may appear in a YANG string: the XML
+// character range, which excludes the control characters but tab,
+// newline and carriage return.
+func yangChar(r rune) bool {
+	switch {
+	case r == '\t' || r == '\n' || r == '\r':
+		return true
+	case r < 0x20:
+		return false
+	case r >= 0xd800 && r <= 0xdfff:
+		return false
+	case r == 0xfffe || r == 0xffff:
+		return false
+	}
+	return true
 }
 
 var ageRe = regexp.MustCompile(`(\d+)\s*day[s]*,\s*(\d+):(\d+):(\d+)`)

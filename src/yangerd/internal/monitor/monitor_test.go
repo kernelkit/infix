@@ -818,3 +818,20 @@ func TestTrackCarrierRestartClearsLeftover(t *testing.T) {
 		t.Fatalf("calls = %v", log)
 	}
 }
+
+func TestBatchSafe(t *testing.T) {
+	for name, want := range map[string]bool{
+		"eth0":    true,
+		"br0.100": true,
+		"":        false,
+		"a#b":     false,
+		`a"b`:     false,
+		"a'b":     false,
+		`eth0\`:   false,
+		"a b":     false,
+	} {
+		if got := batchSafe(name); got != want {
+			t.Errorf("batchSafe(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

@@ -23,7 +23,9 @@ const showInterfacesJSON = `[
   {"interface": "br1.20", "family": "ipv4", "state": "up", "querier": "192.168.20.1",
    "interval": 125, "router-timeout": 255, "mrd": false, "version": 3},
   {"interface": "br2", "family": "ipv4", "state": "proxy", "querier": "0.0.0.0",
-   "interval": 30, "router-timeout": 255, "mrd": false, "version": 3}
+   "interval": 30, "router-timeout": 255, "mrd": false, "version": 3},
+  {"interface": "br4", "family": "ipv4", "state": "up", "querier": "10.0.0.9",
+   "timeout": -3, "interval": 31744, "router-timeout": 255, "mrd": false, "version": 3}
 ]`
 
 func queriers(t *testing.T) []Querier {
@@ -87,6 +89,15 @@ func TestApply(t *testing.T) {
 		{
 			name: "no querier", bridge: "br3",
 			want: map[string]any{"querier": "off"},
+		},
+		{
+			name: "elected querier with values outside the leaf ranges", bridge: "br4",
+			want: map[string]any{
+				"querier": "auto",
+				"active-querier": []any{
+					map[string]any{"family": "ipv4", "address": "10.0.0.9", "local": false, "version": 3, "query-interval": 31744},
+				},
+			},
 		},
 	}
 

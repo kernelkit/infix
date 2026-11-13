@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -90,8 +91,17 @@ func decode(t *testing.T, raw json.RawMessage) outShape {
 	return out
 }
 
+func transform(t *testing.T, in string) json.RawMessage {
+	t.Helper()
+	raw, err := transformNeighbors([]byte(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
 func TestTransformNeighborsJSON0(t *testing.T) {
-	out := decode(t, transformNeighbors([]byte(showNeighborsJSON0)))
+	out := decode(t, transform(t, showNeighborsJSON0))
 
 	if len(out.Port) != 2 {
 		t.Fatalf("port count = %d, want 2", len(out.Port))
@@ -138,7 +148,7 @@ func TestTransformNeighborsJSON0(t *testing.T) {
 }
 
 func TestTransformNeighborsKeyedJSON(t *testing.T) {
-	out := decode(t, transformNeighbors([]byte(showNeighborsJSON)))
+	out := decode(t, transform(t, showNeighborsJSON))
 
 	if len(out.Port) != 1 {
 		t.Fatalf("port count = %d, want 1", len(out.Port))
@@ -157,12 +167,75 @@ func TestTransformNeighborsEmpty(t *testing.T) {
 	for name, in := range map[string]string{
 		"empty table json0": `{"lldp": [{}]}`,
 		"empty object":      `{}`,
-		"malformed":         `{not-json`,
 	} {
-		raw := transformNeighbors([]byte(in))
+		raw := transform(t, in)
 		if string(raw) != "{}" {
 			t.Errorf("%s: got %s, want {}", name, raw)
 		}
+	}
+	if _, err := transformNeighbors([]byte(`{not-json`)); err == nil {
+		t.Error("malformed input gave no error")
+	}
+}
+
+// An unparseable answer must leave the previous data untouched.
+func TestUpdateTreeParseErrorKeepsData(t *testing.T) {
+	tr := tree.New()
+	m := New(tr, nil)
+
+	m.query = func(context.Context) ([]byte, error) {
+		return []byte(showNeighborsJSON0), nil
+	}
+	m.updateTree(context.Background())
+	before := string(tr.Get(treeKey))
+
+	m.query = func(context.Context) ([]byte, error) {
+		return []byte(`{not-json`), nil
+	}
+	m.updateTree(context.Background())
+
+	if after := string(tr.Get(treeKey)); after != before {
+		t.Fatal("parse error overwrote existing lldp data")
+	}
+}
+
+// lldpcli escapes control characters below 0x1f only, so a peer can
+// put a raw 0x1f into the JSON.  It is dropped, the rest is kept.
+func TestTransformNeighborsRawControlByte(t *testing.T) {
+	in := `{"lldp": [{"interface": [{"name": "e1", "rid": "1", "age": "0 day, 00:00:10",
+	  "chassis": [{"descr": [{"value": "bad` + "\x1f" + `peer"}], "id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}]}],
+	  "port": [{"id": [{"type": "ifname", "value": "p1"}]}]}]}]}`
+	out := decode(t, transform(t, in))
+	if len(out.Port) != 1 || len(out.Port[0].RemoteSystems) != 1 {
+		t.Fatalf("got %+v", out)
+	}
+	if r := out.Port[0].RemoteSystems[0]; r.ChassisID != "aa:bb:cc:dd:ee:ff" || r.PortID != "p1" {
+		t.Fatalf("unexpected remote: %#v", r)
+	}
+}
+
+// Ids outside the YANG types are left out, the neighbor stays.
+func TestTransformNeighborsInvalidIDs(t *testing.T) {
+	long := strings.Repeat("a", 256)
+	in := `{"lldp": [{"interface": [
+	  {"name": "e1", "rid": "1", "age": "0 day, 00:00:10",
+	   "chassis": [{"id": [{"type": "unhandled", "value": ""}]}],
+	   "port": [{"id": [{"type": "local", "value": "x\u0001y"}]}]},
+	  {"name": "e2", "rid": "2", "age": "0 day, 00:00:10",
+	   "chassis": [{"id": [{"type": "mac", "value": "` + long + `"}]}],
+	   "port": [{"id": [{"type": "ifname", "value": "p2"}]}]}
+	]}]}`
+	out := decode(t, transform(t, in))
+	if len(out.Port) != 2 {
+		t.Fatalf("got %d ports, want 2", len(out.Port))
+	}
+	r := out.Port[0].RemoteSystems[0]
+	if r.ChassisIDSubtype != "" || r.ChassisID != "" || r.PortIDSubtype != "local" || r.PortID != "" {
+		t.Errorf("e1 remote: %#v", r)
+	}
+	r = out.Port[1].RemoteSystems[0]
+	if r.ChassisIDSubtype != "mac-address" || r.ChassisID != "" || r.PortID != "p2" {
+		t.Errorf("e2 remote: %#v", r)
 	}
 }
 
@@ -274,7 +347,8 @@ func TestSubtypeMappings(t *testing.T) {
 		{name: "ip", in: "ip", want: "network-address"},
 		{name: "ifname", in: "ifname", want: "interface-name"},
 		{name: "local", in: "local", want: "local"},
-		{name: "unknown", in: "foo", want: "unknown"},
+		{name: "unhandled", in: "unhandled", want: ""},
+		{name: "unknown", in: "foo", want: ""},
 	}
 
 	for _, tt := range tests {
@@ -315,7 +389,7 @@ func TestTransformNeighborsUniqueKeys(t *testing.T) {
     ]
   }]
 }`
-	out := decode(t, transformNeighbors([]byte(twoPorts)))
+	out := decode(t, transform(t, twoPorts))
 
 	byIf := make(map[string]port)
 	for _, p := range out.Port {

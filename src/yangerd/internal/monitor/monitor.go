@@ -831,6 +831,10 @@ func (m *NLMonitor) requestRedump() {
 }
 
 func (m *NLMonitor) refreshInterface(index int, name string) bool {
+	if !batchSafe(name) {
+		m.log.Warn("interface name cannot be queried, skipping", "ifname", name, "ifindex", index)
+		return false
+	}
 	linkRaw, err := m.query(m.linkBatch, "link show dev "+name)
 	if errors.Is(err, ipbatch.ErrCommandFailed) {
 		if _, gone := net.InterfaceByIndex(index); gone != nil {
@@ -1550,6 +1554,13 @@ func isBridgeFDB(update netlink.NeighUpdate) bool {
 // sends the name to the kernel and does not accept this form.
 func devRef(index int) string {
 	return "if" + strconv.Itoa(index)
+}
+
+// batchSafe tells whether name can go on a batch line as is.  The
+// kernel allows what the batch parser treats as quoting, comment and
+// line continuation.
+func batchSafe(name string) bool {
+	return name != "" && !strings.ContainsAny(name, "#\"'\\ \t\r\n")
 }
 
 // validateAddrData checks whether a JSON response from "addr show" contains

@@ -87,6 +87,16 @@ func TestParseDnsmasqLeases(t *testing.T) {
 			input: "abc aa:bb:cc:dd:ee:ff 192.168.1.100 host *",
 			want:  []map[string]any{},
 		},
+		{
+			name:  "non-Ethernet hardware address left out",
+			input: "0 06-aa:bb:cc:dd:ee:ff 192.168.1.100 host *",
+			want: []map[string]any{{
+				"expires":   "never",
+				"address":   "192.168.1.100",
+				"hostname":  "host",
+				"client-id": "",
+			}},
+		},
 	}
 
 	for _, tc := range tests {
