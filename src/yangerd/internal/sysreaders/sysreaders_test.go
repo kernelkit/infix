@@ -34,13 +34,14 @@ func TestReadHostname(t *testing.T) {
 // Static resolvers come from resolv.conf.head, DHCP ones from the
 // per-interface resolvconf files, tagged with the interface they were
 // learned on.  A server listed twice is reported once, it is the key.
+// A search domain that is not a domain name is dropped.
 func TestReadDNSResolver(t *testing.T) {
 	dir := t.TempDir()
 	head := filepath.Join(dir, "resolv.conf.head")
 	ifaces := filepath.Join(dir, "interfaces")
 	write(t, head, "nameserver 1.1.1.1\nsearch example.com\noptions timeout:2 attempts:3\n")
 	write(t, filepath.Join(ifaces, "e1.conf"),
-		"search lan # e1\nnameserver 192.168.1.1 # e1\nnameserver 1.1.1.1 # e1\n")
+		"search lan bad!name -x.example x- # e1\nnameserver 192.168.1.1 # e1\nnameserver 1.1.1.1 # e1\n")
 	write(t, filepath.Join(ifaces, "e2-ipv6.conf"), "nameserver fe80::1\n")
 
 	raw, err := readDNSResolver(head, ifaces)

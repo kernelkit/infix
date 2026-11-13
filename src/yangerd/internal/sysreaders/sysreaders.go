@@ -215,6 +215,12 @@ type resolver struct {
 	seen    map[string]bool
 }
 
+// inet:domain-name, which a search domain from a DHCP server must fit.
+var domainNameRe = regexp.MustCompile(`^(([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*` +
+	`([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?$|^\.$`)
+
+const maxDomainName = 253
+
 // parse reads resolv.conf syntax.  The DHCP scripts tag each line with
 // "# <ifname>", which names the interface when present.
 func (r *resolver) parse(data, origin, iface string) {
@@ -243,7 +249,11 @@ func (r *resolver) parse(data, origin, iface string) {
 			}
 			r.servers = append(r.servers, server)
 		case "search":
-			r.search = append(r.search, fields[1:]...)
+			for _, name := range fields[1:] {
+				if domainNameRe.MatchString(name) && len(name) <= maxDomainName {
+					r.search = append(r.search, name)
+				}
+			}
 		case "options":
 			for _, opt := range fields[1:] {
 				key, val, ok := strings.Cut(opt, ":")
