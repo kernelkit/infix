@@ -217,7 +217,7 @@ type cfgQoSPageData struct {
 
 // qosTemplate is a starting point for a new profile: what the role
 // changes from the model's defaults, nothing more.  doc/qos.md has the
-// same profiles as CLI recipes; keep the two in step.
+// same profiles as CLI examples; keep the two in step.
 type qosTemplate struct {
 	Key, Label, Help string
 	ingress, egress  map[string]any

@@ -445,7 +445,7 @@ the `egress-shaper`, the credit-based shaper reservations and the gate
 control list.  The operational datastore shows the profile a port
 runs under `qos profile`.
 
-### Recipes
+### Profiles for Common Port Roles
 
 Three profiles cover the common port roles, each setting only what the
 role changes from the defaults.  The WebUI offers the same three as
@@ -473,7 +473,7 @@ admin@example:/config/system/…/edge/> <b>leave</b>
 
 A *stream reservation* port puts SR classes A and B on the two highest
 traffic classes, the layout of [Stream Reservation
-Layout](#stream-reservation-layout).  The recipe carries the layout
+Layout](#stream-reservation-layout).  This profile carries the layout
 only.  To shape the SR classes, set their `algorithm` to
 `credit-based-shaper` in the profile, see [TSN](tsn.md#credit-based-shaper), and give every port that uses it
 a reservation per shaped class; a shaped class without one is

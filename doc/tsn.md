@@ -26,7 +26,7 @@ The shapers act on traffic classes, so the port's classification and
 class table come first, see [Quality of Service](qos.md).
 
 
-## A Worked Example
+## Setting Up a Scheduled Port
 
 One port, `e2`, carries three kinds of traffic toward a machine cell:
 control traffic that must arrive within a fixed part of every
