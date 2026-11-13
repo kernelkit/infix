@@ -71,6 +71,9 @@ func (m *LLDPMonitor) Run(ctx context.Context) error {
 }
 
 func (m *LLDPMonitor) runOnce(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, "lldpcli", "-f", "json0", "watch")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -79,19 +82,55 @@ func (m *LLDPMonitor) runOnce(ctx context.Context) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start lldpcli watch: %w", err)
 	}
-	defer cmd.Wait()
 
 	// Pick up neighbors that existed before we attached.
 	m.triggerRefresh()
 
-	return m.readEvents(stdout)
+	err = m.readEvents(stdout)
+	cancel()
+	cmd.Wait()
+	return err
+}
+
+// isRawControl tells whether lldpcli's JSON writer passes byte c through
+// unescaped although JSON forbids it: it escapes c < 0x1f, so 0x1f
+// itself leaks.  Line breaks and tabs are legal between tokens.
+func isRawControl(c byte) bool {
+	return c < 0x20 && c != '\t' && c != '\n' && c != '\r'
+}
+
+// sanitize drops those bytes from p in place and returns the rest.
+func sanitize(p []byte) []byte {
+	kept := 0
+	for _, c := range p {
+		if !isRawControl(c) {
+			p[kept] = c
+			kept++
+		}
+	}
+	return p[:kept]
+}
+
+// controlFilter is a reader that drops the same bytes from a stream.
+type controlFilter struct {
+	r io.Reader
+}
+
+func (f controlFilter) Read(p []byte) (int, error) {
+	for {
+		n, err := f.r.Read(p)
+		kept := len(sanitize(p[:n]))
+		if kept > 0 || err != nil || n == 0 {
+			return kept, err
+		}
+	}
 }
 
 // readEvents dispatches each JSON value lldpcli prints.  A decoder, not
 // line or brace counting, frames them: neighbor descriptions are free
 // text from the peer and may hold anything.
 func (m *LLDPMonitor) readEvents(r io.Reader) error {
-	dec := json.NewDecoder(r)
+	dec := json.NewDecoder(controlFilter{r})
 	for {
 		var ev json.RawMessage
 		if err := dec.Decode(&ev); err != nil {
@@ -157,7 +196,7 @@ func (m *LLDPMonitor) refreshLoop(ctx context.Context) {
 }
 
 // updateTree reads the full neighbor table and replaces the subtree.
-// On a query error the previous data is left untouched.
+// On a query or parse error the previous data is left untouched.
 func (m *LLDPMonitor) updateTree(ctx context.Context) {
 	out, err := m.query(ctx)
 	if err != nil {
@@ -165,7 +204,13 @@ func (m *LLDPMonitor) updateTree(ctx context.Context) {
 		return
 	}
 
-	m.tree.Set(treeKey, transformNeighbors(out))
+	data, err := transformNeighbors(out)
+	if err != nil {
+		m.log.Warn("lldp monitor: parse neighbors", "err", err)
+		return
+	}
+
+	m.tree.Set(treeKey, data)
 	m.log.Debug("lldp monitor: tree updated")
 }
 
@@ -239,7 +284,7 @@ func parseID(raw json.RawMessage) (j0ID, bool) {
 // neighbors document, accepting both json0 ("lldp" is an array, entries
 // carry a "name" field) and json ("lldp" is an object, entries are keyed
 // by interface name) output formats.
-func collectIfaces(data []byte) []j0Iface {
+func collectIfaces(data []byte) ([]j0Iface, error) {
 	var ifaces []j0Iface
 
 	addRaw := func(name string, raw json.RawMessage) {
@@ -286,12 +331,12 @@ func collectIfaces(data []byte) []j0Iface {
 	}
 
 	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil
+	if err := json.Unmarshal(sanitize(append([]byte(nil), data...)), &doc); err != nil {
+		return nil, err
 	}
 	lldpRaw, ok := doc["lldp"]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	// json0: "lldp" is an array of {"interface": [...]}; json: an object.
@@ -302,7 +347,7 @@ func collectIfaces(data []byte) []j0Iface {
 				collectInterfaceNode(ifRaw)
 			}
 		}
-		return ifaces
+		return ifaces, nil
 	}
 	var lldpObject map[string]json.RawMessage
 	if err := json.Unmarshal(lldpRaw, &lldpObject); err == nil {
@@ -310,13 +355,13 @@ func collectIfaces(data []byte) []j0Iface {
 			collectInterfaceNode(ifRaw)
 		}
 	}
-	return ifaces
+	return ifaces, nil
 }
 
 // transformNeighbors converts `lldpcli show neighbors` output to the
 // YANG ieee802-dot1ab-lldp subtree (unwrapped -- the IPC layer adds the
 // module envelope when serving the key).
-func transformNeighbors(data []byte) json.RawMessage {
+func transformNeighbors(data []byte) (json.RawMessage, error) {
 	type remoteEntry struct {
 		TimeMark         int    `json:"time-mark"`
 		RemoteIndex      int    `json:"remote-index"`
@@ -331,11 +376,16 @@ func transformNeighbors(data []byte) json.RawMessage {
 		RemoteSystems  []remoteEntry `json:"remote-systems-data"`
 	}
 
+	ifaces, err := collectIfaces(data)
+	if err != nil {
+		return nil, err
+	}
+
 	portMap := make(map[string]*portEntry)
 	seen := make(map[string]map[[2]int]bool) // per port: {time-mark, rid}
 	var order []string
 
-	for _, iface := range collectIfaces(data) {
+	for _, iface := range ifaces {
 		port, ok := portMap[iface.Name]
 		if !ok {
 			port = &portEntry{
@@ -383,11 +433,11 @@ func transformNeighbors(data []byte) json.RawMessage {
 	}
 
 	if len(ports) == 0 {
-		return json.RawMessage(`{}`)
+		return json.RawMessage(`{}`), nil
 	}
 
 	out, _ := json.Marshal(map[string]interface{}{"port": ports})
-	return json.RawMessage(out)
+	return json.RawMessage(out), nil
 }
 
 var idSubtypeMap = map[string]string{

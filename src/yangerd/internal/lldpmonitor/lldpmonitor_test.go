@@ -90,8 +90,17 @@ func decode(t *testing.T, raw json.RawMessage) outShape {
 	return out
 }
 
+func transform(t *testing.T, in string) json.RawMessage {
+	t.Helper()
+	raw, err := transformNeighbors([]byte(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
 func TestTransformNeighborsJSON0(t *testing.T) {
-	out := decode(t, transformNeighbors([]byte(showNeighborsJSON0)))
+	out := decode(t, transform(t, showNeighborsJSON0))
 
 	if len(out.Port) != 2 {
 		t.Fatalf("port count = %d, want 2", len(out.Port))
@@ -138,7 +147,7 @@ func TestTransformNeighborsJSON0(t *testing.T) {
 }
 
 func TestTransformNeighborsKeyedJSON(t *testing.T) {
-	out := decode(t, transformNeighbors([]byte(showNeighborsJSON)))
+	out := decode(t, transform(t, showNeighborsJSON))
 
 	if len(out.Port) != 1 {
 		t.Fatalf("port count = %d, want 1", len(out.Port))
@@ -157,12 +166,50 @@ func TestTransformNeighborsEmpty(t *testing.T) {
 	for name, in := range map[string]string{
 		"empty table json0": `{"lldp": [{}]}`,
 		"empty object":      `{}`,
-		"malformed":         `{not-json`,
 	} {
-		raw := transformNeighbors([]byte(in))
+		raw := transform(t, in)
 		if string(raw) != "{}" {
 			t.Errorf("%s: got %s, want {}", name, raw)
 		}
+	}
+	if _, err := transformNeighbors([]byte(`{not-json`)); err == nil {
+		t.Error("malformed input gave no error")
+	}
+}
+
+// An unparseable answer must leave the previous data untouched.
+func TestUpdateTreeParseErrorKeepsData(t *testing.T) {
+	tr := tree.New()
+	m := New(tr, nil)
+
+	m.query = func(context.Context) ([]byte, error) {
+		return []byte(showNeighborsJSON0), nil
+	}
+	m.updateTree(context.Background())
+	before := string(tr.Get(treeKey))
+
+	m.query = func(context.Context) ([]byte, error) {
+		return []byte(`{not-json`), nil
+	}
+	m.updateTree(context.Background())
+
+	if after := string(tr.Get(treeKey)); after != before {
+		t.Fatal("parse error overwrote existing lldp data")
+	}
+}
+
+// lldpcli escapes control characters below 0x1f only, so a peer can
+// put a raw 0x1f into the JSON.  It is dropped, the rest is kept.
+func TestTransformNeighborsRawControlByte(t *testing.T) {
+	in := `{"lldp": [{"interface": [{"name": "e1", "rid": "1", "age": "0 day, 00:00:10",
+	  "chassis": [{"descr": [{"value": "bad` + "\x1f" + `peer"}], "id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}]}],
+	  "port": [{"id": [{"type": "ifname", "value": "p1"}]}]}]}]}`
+	out := decode(t, transform(t, in))
+	if len(out.Port) != 1 || len(out.Port[0].RemoteSystems) != 1 {
+		t.Fatalf("got %+v", out)
+	}
+	if r := out.Port[0].RemoteSystems[0]; r.ChassisID != "aa:bb:cc:dd:ee:ff" || r.PortID != "p1" {
+		t.Fatalf("unexpected remote: %#v", r)
 	}
 }
 
@@ -315,7 +362,7 @@ func TestTransformNeighborsUniqueKeys(t *testing.T) {
     ]
   }]
 }`
-	out := decode(t, transformNeighbors([]byte(twoPorts)))
+	out := decode(t, transform(t, twoPorts))
 
 	byIf := make(map[string]port)
 	for _, p := range out.Port {

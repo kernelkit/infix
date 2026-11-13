@@ -30,3 +30,20 @@ func TestReadEventsBraceInDescription(t *testing.T) {
 		t.Fatalf("refreshes triggered = %d, want 2", n)
 	}
 }
+
+// A raw 0x1f from a peer must not end the event stream.
+func TestReadEventsRawControlByte(t *testing.T) {
+	m := New(tree.New(), nil)
+	m.refresh = make(chan struct{}, 8)
+
+	stream := "{\"lldp-added\": {\"lldp\": [{\"interface\": [{\"name\": \"e1\",\n" +
+		"  \"chassis\": [{\"descr\": [{\"value\": \"bad\x1fpeer\"}]}]}]}]}}\n" +
+		"{\"lldp-deleted\": {\"lldp\": []}}\n"
+	err := m.readEvents(strings.NewReader(stream))
+	if err == nil || !strings.Contains(err.Error(), "exited") {
+		t.Fatalf("readEvents at EOF = %v", err)
+	}
+	if n := len(m.refresh); n != 2 {
+		t.Fatalf("refreshes triggered = %d, want 2", n)
+	}
+}
