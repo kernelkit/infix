@@ -25,7 +25,8 @@ module infix-hardware {
 
   revision 2026-11-04 {
     description "Add cpu container with the cores and clock frequencies of
-                 the CPU.";
+                 the CPU.  Restrict the VPD vendor-extension list to
+                 administrators, it may hold the factory password hash.";
     reference "internal";
   }
 
@@ -661,6 +662,7 @@ module infix-hardware {
 	type string;
       }
       list vendor-extension {
+	nacm:default-deny-all;
 	leaf iana-enterprise-number {
 	  type uint32;
 	}
