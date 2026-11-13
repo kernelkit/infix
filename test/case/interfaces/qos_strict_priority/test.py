@@ -108,7 +108,7 @@ with infamy.Test() as test:
             }})
             until(lambda: qos.dscp_prio(tgtssh, td0, 46) == ef_prio and
                   qos.dscp_prio(tgtssh, td0, 8) == cs1_prio)
-            qos.show_offload(port)
+            qos.wait_offload(port)
             ns0.must_reach("192.168.20.2")
 
         def measure(high_rate, low_rate=0.8):

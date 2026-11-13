@@ -240,7 +240,6 @@ def slow_port(port, until):
                     and scheduler(port.ssh, port.name))
 
         until(linked)
-        print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
         return 100_000_000
 
     if not pmds and not (port.switched and "egress-shaper" not in port.supported):
@@ -253,7 +252,6 @@ def slow_port(port, until):
             }
         }})
         until(lambda: (root_qdisc(port.ssh, port.name) or {}).get("kind") == "tbf")
-        show_shaper(port)
         return 10_000_000
 
     return 0
@@ -300,32 +298,17 @@ def dscp_prio(ssh, port, dscp):
     return None
 
 
-def show_offload(port, stage="transmission-selection"):
-    """Log what the fabric took after a change: the offload list and the
-    driver's recent complaints.  A fabric port must still run @stage in
-    hardware, or the measurement that follows means nothing
-    """
-    if port.switched:
-        until(lambda: port.offloads(stage))
-    print(f"{port.name} offload: {port.offload}")
+def wait_offload(port, stage="transmission-selection"):
+    """A switch port must run @stage in hardware before a measurement
 
-    if not port.driver:
+    A port the CPU serves needs no offload, the kernel does the work."""
+    if not port.switched:
         return
-
-    log = port.ssh.runsh(f"sudo dmesg | grep -i '{port.driver}' | tail -5").stdout.strip()
-    if log:
-        print(log)
-
-
-def show_shaper(port):
-    """Log what the egress shaper became: the root qdisc with its offloaded
-    flag, and on a fabric port the port registers, where a shaper the
-    driver took shows up as the egress rate control words"""
-    print(json.dumps(root_qdisc(port.ssh, port.name)))
-    print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
-    if port.switched:
-        regs = port.ssh.runsh(f"sudo ethtool -d {port.name}").stdout.strip()
-        print("\n".join(regs.splitlines()[:16]))
+    try:
+        until(lambda: port.offloads(stage))
+    except Exception:
+        raise AssertionError(f"{port.name} does not run {stage} in hardware, "
+                             f"only {', '.join(port.offload) or 'nothing'}") from None
 
 
 class Flow:

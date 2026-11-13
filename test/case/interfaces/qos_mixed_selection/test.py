@@ -85,7 +85,7 @@ with infamy.Test() as test:
         until(lambda: qos.scheduler_matches(qos.scheduler(tgtssh, td1), num_tc,
                                             qos.TABLE_8_5[num_tc],
                                             strict=num_tc - len(SHARES), quanta=quanta))
-        qos.show_offload(port)
+        qos.wait_offload(port)
 
     with test.step("Slow the egress port so its queues can fill"):
         drain = qos.slow_port(port, until)

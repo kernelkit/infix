@@ -121,7 +121,7 @@ with infamy.Test() as test:
             until(lambda: qos.scheduler_matches(qos.scheduler(tgtssh, td1), num_tc,
                                                 qos.TABLE_8_5[num_tc],
                                                 strict=num_tc - 2 - LOW, quanta=quanta))
-            qos.show_offload(port)
+            qos.wait_offload(port)
             ns0.must_reach("192.168.20.2")
 
         def measure(high, low):

@@ -184,7 +184,7 @@ with infamy.Test() as test:
         wins = windows(int(dut.get_iface(dnlink)["speed"]))
         dut.put_config_dicts(schedule(dnlink, wins))
         until(lambda: "taprio" in {q.get("kind") for q in qos.qdiscs(dutssh, dnlink)})
-        qos.show_offload(port, "time-aware-shaper")
+        qos.wait_offload(port, "time-aware-shaper")
 
     try:
         with test.step("Start a ptping sink on the listener"):
