@@ -116,7 +116,7 @@ static int save_json(const char *path, json_t *obj)
 	}
 	if (rename(tmp, path)) {
 		ERRNO("failed renaming %s", tmp);
-		remove(tmp);
+		(void)remove(tmp);
 		return -1;
 	}
 	return 0;
@@ -157,7 +157,10 @@ int alarm_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_
 
 	alarms = lydx_get_xpathf(config, ALARM_XPATH);
 	if (!alarms) {
-		remove(ALARM_CONFIG);
+		if (remove(ALARM_CONFIG) && errno != ENOENT) {
+			ERRNO("failed removing %s", ALARM_CONFIG);
+			return SR_ERR_SYS;
+		}
 		return SR_ERR_OK;
 	}
 
@@ -366,13 +369,23 @@ static int alarm_match(const struct alarm_filter *f, const char *typ, const char
 }
 
 /* Splits .../entry/<typ>/<name> in a copy of the path */
-static void entry_type_name(char *copy, size_t len, const char *path, char **typ, char **name)
+static int entry_type_name(char *copy, size_t len, const char *path, char **typ, char **name)
 {
+	char *p;
+
 	snprintf(copy, len, "%s", path);
-	*name = strrchr(copy, '/');
-	**name = 0;
-	(*name)++;
-	*typ = strrchr(copy, '/') + 1;
+	p = strrchr(copy, '/');
+	if (!p)
+		return -1;
+	*p = 0;
+	*name = p + 1;
+
+	p = strrchr(copy, '/');
+	if (!p)
+		return -1;
+	*typ = p + 1;
+
+	return 0;
 }
 
 /* The alarm-list action of infix-alarms: one operator state on every
@@ -409,8 +422,8 @@ static int set_operator_states(sr_session_ctx_t *session, uint32_t sub_id, const
 			if (!entry)
 				continue;
 
-			entry_type_name(copy, sizeof(copy), path, &typ, &name);
-			if (alarm_match(&filter, typ, name, entry, now)) {
+			if (!entry_type_name(copy, sizeof(copy), path, &typ, &name) &&
+			    alarm_match(&filter, typ, name, entry, now)) {
 				last_operator_state(typ, name, &last, &user, &history);
 				same = !strcmp(last, state);
 				json_decref(history);
@@ -458,13 +471,17 @@ static int purge_alarms(sr_session_ctx_t *session, uint32_t sub_id, const char *
 			if (!entry)
 				continue;
 
-			entry_type_name(copy, sizeof(copy), path, &typ, &name);
-			if (alarm_match(&filter, typ, name, entry, now)) {
-				remove(path);
+			if (!entry_type_name(copy, sizeof(copy), path, &typ, &name) &&
+			    alarm_match(&filter, typ, name, entry, now)) {
+				if (remove(path)) {
+					ERRNO("failed removing %s", path);
+					json_decref(entry);
+					continue;
+				}
 				snprintf(other, sizeof(other), ALARM_DIR "/state/%s/%s", typ, name);
-				remove(other);
+				(void)remove(other);
 				snprintf(other, sizeof(other), ALARM_DIR "/active/%s/%s", typ, name);
-				remove(other);
+				(void)remove(other);
 				purged++;
 			}
 			json_decref(entry);
