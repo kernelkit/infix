@@ -49,9 +49,13 @@ All notable changes to the project are documented in this file.
   `detailed` keywords are removed
 - Interfaces now report their multicast, discard and error counters,
   not only the octet counters
+- LLDP neighbors now report their system name and management
+  addresses in the operational data
 
 ### Fixes
 
+- LLDP: a device with a Wi-Fi interface announced its WLAN access
+  point capability as disabled
 - A container `command` containing `$(...)` or `$VAR` was
   expanded on the host before the container started.  The command now
   reaches the container exactly as configured.  Reported by Dave Seddon

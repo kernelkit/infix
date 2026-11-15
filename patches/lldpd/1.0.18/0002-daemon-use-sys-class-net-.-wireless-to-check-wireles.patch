@@ -1,0 +1,155 @@
+From 89df90574c11262e3066d0f3f2bca11cc1c2ad67 Mon Sep 17 00:00:00 2001
+From: Vincent Bernat <vincent@bernat.ch>
+Date: Tue, 10 Mar 2026 17:10:51 +0100
+Subject: [PATCH 2/3] daemon: use /sys/class/net/.../wireless to check wireless
+ interface
+
+IFLA_INFO_KIND never is "wireless" as wireless interfaces do not
+implement `rtnl_link_ops`.
+
+Fix #738
+
+(cherry picked from commit 6093ce4b65bb8d94f1bdb1b858be2617182c4d32)
+---
+ src/daemon/interfaces-linux.c | 19 ++++++++++++
+ src/daemon/lldpd.h            |  3 ++
+ src/daemon/priv-linux.c       | 55 +++++++++++++++++++++++++++++++++++
+ src/daemon/priv.c             |  1 +
+ 4 files changed, 78 insertions(+)
+
+diff --git a/src/daemon/interfaces-linux.c b/src/daemon/interfaces-linux.c
+index e764943..9f8142b 100644
+--- a/src/daemon/interfaces-linux.c
++++ b/src/daemon/interfaces-linux.c
+@@ -879,6 +879,24 @@ iflinux_add_wireless(struct lldpd *cfg, struct interfaces_device_list *interface
+ {
+ 	struct interfaces_device *iface;
+ 	TAILQ_FOREACH (iface, interfaces, next) {
++		if (iface->type &
++		    (IFACE_VLAN_T | IFACE_BOND_T | IFACE_BRIDGE_T | IFACE_WIRELESS_T))
++			continue;
++		char path[IFNAMSIZ + sizeof(SYSFS_CLASS_NET) + sizeof("/wireless")];
++		snprintf(path, sizeof(path), SYSFS_CLASS_NET "%s/wireless",
++		    iface->name);
++		if (priv_exist(path) == 0) {
++			log_debug("interfaces", "%s is wireless", iface->name);
++			iface->type |= IFACE_WIRELESS_T | IFACE_PHYSICAL_T;
++		}
++	}
++#ifdef ENABLE_OLDIES
++	/* Fallback to wireless extensions ioctl for old kernels without
++	 * /sys/class/net/<name>/wireless. */
++	TAILQ_FOREACH (iface, interfaces, next) {
++		if (iface->type &
++		    (IFACE_VLAN_T | IFACE_BOND_T | IFACE_BRIDGE_T | IFACE_WIRELESS_T))
++			continue;
+ 		struct iwreq iwr = {};
+ 		strlcpy(iwr.ifr_name, iface->name, IFNAMSIZ);
+ 		if (ioctl(cfg->g_sock, SIOCGIWNAME, &iwr) >= 0) {
+@@ -886,6 +904,7 @@ iflinux_add_wireless(struct lldpd *cfg, struct interfaces_device_list *interface
+ 			iface->type |= IFACE_WIRELESS_T | IFACE_PHYSICAL_T;
+ 		}
+ 	}
++#endif
+ }
+ 
+ /* Query each interface to see if it is a bridge */
+diff --git a/src/daemon/lldpd.h b/src/daemon/lldpd.h
+index 2fc381b..e75680e 100644
+--- a/src/daemon/lldpd.h
++++ b/src/daemon/lldpd.h
+@@ -203,6 +203,8 @@ char *priv_gethostname(void);
+ #ifdef HOST_OS_LINUX
+ int priv_open(const char *);
+ void asroot_open(void);
++int priv_exist(const char *);
++void asroot_exist(void);
+ #endif
+ int priv_iface_init(int, char *);
+ int asroot_iface_init_os(int, char *, int *);
+@@ -218,6 +220,7 @@ enum priv_cmd {
+ 	PRIV_DELETE_CTL_SOCKET,
+ 	PRIV_GET_HOSTNAME,
+ 	PRIV_OPEN,
++	PRIV_EXIST,
+ 	PRIV_IFACE_INIT,
+ 	PRIV_IFACE_MULTICAST,
+ 	PRIV_IFACE_DESCRIPTION,
+diff --git a/src/daemon/priv-linux.c b/src/daemon/priv-linux.c
+index 9a6f90a..00d9cbf 100644
+--- a/src/daemon/priv-linux.c
++++ b/src/daemon/priv-linux.c
+@@ -114,6 +114,61 @@ asroot_open()
+ 	close(fd);
+ }
+ 
++/* Proxy for checking file existence */
++int
++priv_exist(const char *file)
++{
++	int len, rc;
++	enum priv_cmd cmd = PRIV_EXIST;
++	must_write(PRIV_UNPRIVILEGED, &cmd, sizeof(enum priv_cmd));
++	len = strlen(file);
++	must_write(PRIV_UNPRIVILEGED, &len, sizeof(int));
++	must_write(PRIV_UNPRIVILEGED, file, len);
++	priv_wait();
++	must_read(PRIV_UNPRIVILEGED, &rc, sizeof(int));
++	return rc;
++}
++
++void
++asroot_exist()
++{
++	const char *authorized[] = {
++		"^" SYSFS_CLASS_NET "[^/]*/wireless" "$",
++		NULL,
++	};
++	const char **f;
++	char *file;
++	int len, rc;
++	regex_t preg;
++	struct stat st;
++
++	must_read(PRIV_PRIVILEGED, &len, sizeof(len));
++	if (len < 0 || len > PATH_MAX) fatalx("privsep", "too large value requested");
++	if ((file = (char *)malloc(len + 1)) == NULL) fatal("privsep", NULL);
++	must_read(PRIV_PRIVILEGED, file, len);
++	file[len] = '\0';
++
++	for (f = authorized; *f != NULL; f++) {
++		if (regcomp(&preg, *f, REG_NOSUB) != 0)
++			fatal("privsep", "unable to compile a regex");
++		if (regexec(&preg, file, 0, NULL, 0) == 0) {
++			regfree(&preg);
++			break;
++		}
++		regfree(&preg);
++	}
++	if (*f == NULL || strstr(file, "/..")) {
++		log_warnx("privsep", "not authorized to check %s", file);
++		rc = -1;
++		must_write(PRIV_PRIVILEGED, &rc, sizeof(int));
++		free(file);
++		return;
++	}
++	rc = stat(file, &st) == 0 ? 0 : -1;
++	must_write(PRIV_PRIVILEGED, &rc, sizeof(int));
++	free(file);
++}
++
+ /* Quirks needed by some additional interfaces. Currently, this is limited to
+  * disabling LLDP firmware for i40e. */
+ static void
+diff --git a/src/daemon/priv.c b/src/daemon/priv.c
+index d642328..483c79b 100644
+--- a/src/daemon/priv.c
++++ b/src/daemon/priv.c
+@@ -388,6 +388,7 @@ static struct dispatch_actions actions[] = { { PRIV_PING, asroot_ping },
+ 	{ PRIV_GET_HOSTNAME, asroot_gethostname },
+ #ifdef HOST_OS_LINUX
+ 	{ PRIV_OPEN, asroot_open },
++	{ PRIV_EXIST, asroot_exist },
+ #endif
+ 	{ PRIV_IFACE_INIT, asroot_iface_init },
+ 	{ PRIV_IFACE_MULTICAST, asroot_iface_multicast },
