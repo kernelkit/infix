@@ -23,6 +23,12 @@ mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
 
+topology-qeneth := $(or $(QTOPOLOGY),$(test-dir)/virt/quad)/topology.dot.in
+topology-host   := $(or $(TOPOLOGY),/etc/infamy.dot)
+topology-run    := $(BINARIES_DIR)/qemu.dot
+topology        := $(topology-$(TEST_MODE))
+topology-saved  := $(test-dir)/.log/last/topology.dot
+
 pkg-$(ARCH)      := -p $(O)/images/$(INFIX_ARTIFACT).pkg
 binaries-$(ARCH) := $(INFIX_ARTIFACT).disk
 binaries         := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
@@ -43,7 +49,10 @@ test:
 		           $(test-dir)/.log/last/xpath_coverage.log \
 		           $(test-dir)/.log/last/xpath_coverage_report.md \
 		           2>/dev/null || true; \
-		       exit $$rc'
+		       exit $$rc'; rc=$$?; \
+	cp $(topology) $(topology-saved); \
+	cp $(basename $(topology:.in=)).svg $(topology-saved:.dot=.svg) 2>/dev/null; \
+	exit $$rc
 
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
@@ -66,11 +75,13 @@ test-spec:
 	 	-o $(test-specification) $(spec-dir)/Readme.adoc
 
 test-report:
-	$(ninepm_report) pdf $(test-dir)/.log/last/result.json \
-		--theme $(spec-dir)/theme.yml \
-		--fontsdir $(spec-dir)/fonts \
-		--logo "$(LOGO)" \
-		-o $(test-report)
+	$(ninepm_report) asciidoc $(test-dir)/.log/last/result.json
+	$(test-dir)/utils/report_system.py -t $(or $(wildcard $(topology-saved)),$(topology)) \
+		-o $(test-dir)/.log/last/report-system.adoc $(test-dir)/.log/last/report.adoc
+	asciidoctor-pdf --theme $(spec-dir)/theme.yml \
+		-a logo="image:$(LOGO)" \
+		-a pdf-fontsdir=$(spec-dir)/fonts \
+		-o $(test-report) $(test-dir)/.log/last/report-system.adoc
 
 xpath_coverage_report_md   := $(test-dir)/.log/last/xpath_coverage_report.md
 xpath_coverage_report_css  := $(test-dir)/utils/coverage_report.css
