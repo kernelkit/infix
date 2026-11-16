@@ -4,7 +4,9 @@ Bridge STP on a VLAN filtering bridge
 
 Spanning tree is enabled on a VLAN filtering bridge whose port already
 is a member of a VLAN.  The port has to keep its VLAN, and later
-changes to the bridge, here a second VLAN, have to be applied.
+changes to the bridge, here a second VLAN, have to be applied.  The
+port also has to keep forwarding in its VLANs when spanning tree is
+disabled again.
 """
 import infamy
 import infamy.iface as iface
@@ -104,6 +106,16 @@ with infamy.Test() as test:
             }})
 
         with test.step("Verify target:data is a tagged member of VLAN 20"):
+            until(lambda: tport in iface.bridge_vlan_members(target, "br0", 20, "tagged"))
+
+        with test.step("Verify host:data reaches 10.0.0.2"):
+            ns.must_reach("10.0.0.2")
+
+        with test.step("Disable spanning tree on br0"):
+            target.put_config_dicts({}, delete=[iface.get_xpath("br0", "infix-interfaces:bridge/stp")])
+
+        with test.step("Verify target:data is an untagged member of VLAN 10 and a tagged member of VLAN 20"):
+            until(lambda: tport in iface.bridge_vlan_members(target, "br0", 10, "untagged"))
             until(lambda: tport in iface.bridge_vlan_members(target, "br0", 20, "tagged"))
 
         with test.step("Verify host:data reaches 10.0.0.2"):

@@ -415,6 +415,18 @@ static int gen_stp(struct ixif_br *br)
 	stp = lydx_get_descendant(lyd_child(br->cif), "bridge", "stp", NULL);
 	if (!stp) {
 		fputs(" stp_state 0", br->bropts.fp);
+
+		/* Leave user STP mode before mstpd is stopped */
+		if (lydx_had_descendant(lyd_child(br->dif), lyd_child(br->cif), "bridge", "stp", NULL)) {
+			mstpctl = dagger_fopen_net_exit(&confd.netdag, br->name,
+							NETDAG_EXIT_PROTO, "exit-stp.ip");
+			if (!mstpctl)
+				return -EIO;
+
+			fprintf(mstpctl, "link set dev %s type bridge stp_state 0\n", br->name);
+			fclose(mstpctl);
+		}
+
 		return 0;
 	}
 

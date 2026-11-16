@@ -60,6 +60,8 @@ All notable changes to the project are documented in this file.
   point capability as disabled
 - A change to a VLAN filtering bridge with spanning tree enabled was
   not applied once its ports were members of a VLAN
+- Disabling spanning tree on a bridge left its ports disabled, and the
+  bridge stopped forwarding
 - A container `command` containing `$(...)` or `$VAR` was
   expanded on the host before the container started.  The command now
   reaches the container exactly as configured.  Reported by Dave Seddon
