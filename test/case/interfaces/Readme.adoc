@@ -70,6 +70,10 @@ include::bridge_stp_basic/Readme.adoc[]
 
 <<<
 
+include::bridge_stp_vlan/Readme.adoc[]
+
+<<<
+
 include::bridge_veth/Readme.adoc[]
 
 <<<

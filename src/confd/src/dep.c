@@ -194,6 +194,7 @@ static void dep_references(struct dep *d)
 
 static void (*const dep_rules[])(struct dep *) = {
 	dep_references,
+	bridge_dep,
 	wifi_dep,
 	schedule_dep,
 };

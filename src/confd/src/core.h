@@ -252,6 +252,7 @@ int  dep_resolve(struct lyd_node **diff, struct lyd_node *config);
 void dep_add(struct dep *d, const char *value, const char *fmt, ...) __attribute__ ((format (printf, 3, 4)));
 void dep_add_node(struct dep *d, struct lyd_node *node);
 void wifi_dep(struct dep *d);
+void bridge_dep(struct dep *d);
 void schedule_dep(struct dep *d);
 
 /* interfaces.c */

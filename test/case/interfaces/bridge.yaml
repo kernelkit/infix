@@ -29,3 +29,6 @@
 
 - name: Bridge port keeps its VLANs when recreated
   case: bridge_vlan_port_recreate/test.py
+
+- name: Bridge STP on a VLAN filtering bridge
+  case: bridge_stp_vlan/test.py

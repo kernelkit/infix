@@ -267,6 +267,21 @@ static int gen_mcast(struct ixif_br *br)
 
 /* VLAN */
 
+/* MSTP compatible management of port states, instead of per VLAN */
+static bool mst_enabled(struct lyd_node *cif)
+{
+	return lydx_get_descendant(lyd_child(cif), "bridge", "stp", NULL) &&
+		lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
+}
+
+static bool mst_changed(struct lyd_node *dif, struct lyd_node *cif)
+{
+	bool was = lydx_had_descendant(lyd_child(dif), lyd_child(cif), "bridge", "stp", NULL) &&
+		lydx_had_descendant(lyd_child(dif), lyd_child(cif), "bridge", "vlans", NULL);
+
+	return was != mst_enabled(cif);
+}
+
 static int gen_vlan_membership(struct ixif_br *br, struct lyd_node *vlan, const char *mode)
 {
 	struct lyd_node *portentry;
@@ -290,6 +305,11 @@ static int gen_vlan_membership(struct ixif_br *br, struct lyd_node *vlan, const 
 				 * particular port was removed.
 				 */
 				goto delete;
+
+			/* The kernel only changes MST mode while no port is in a VLAN */
+			if (pop != LYDX_OP_CREATE && strcmp(br->name, iface) &&
+			    mst_changed(br->dif, br->cif))
+				fprintf(br->exit.vlan.fp, "vlan del vid %d dev %s\n", vid, iface);
 
 			pvid = 0;
 			srx_get_int(confd.netdag.session, &pvid, SR_UINT16_T,
@@ -389,6 +409,9 @@ static int gen_stp(struct ixif_br *br)
 	struct lyd_node *stp;
 	FILE *mstpctl;
 
+	if (mst_changed(br->dif, br->cif))
+		fprintf(br->bropts.fp, " mst_enabled %d", mst_enabled(br->cif));
+
 	stp = lydx_get_descendant(lyd_child(br->cif), "bridge", "stp", NULL);
 	if (!stp) {
 		fputs(" stp_state 0", br->bropts.fp);
@@ -396,12 +419,6 @@ static int gen_stp(struct ixif_br *br)
 	}
 
 	fputs(" stp_state 1", br->bropts.fp);
-
-	if (lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL))
-		/* Use the MSTP compatible mode of managing port
-		 * states, rather then the legacy (and default)
-		 * per-VLAN mode. */
-		fputs(" mst_enabled 1", br->bropts.fp);
 
 	mstpctl = dagger_fopen_net_init(&confd.netdag, br->name,
 					NETDAG_INIT_DAEMON, "init-br.mstpctl");
@@ -574,6 +591,35 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 out:
 	err = collect_snippets(&br);
 	return err;
+}
+
+/* A changed MST mode pulls the VLAN memberships of the ports into the diff */
+void bridge_dep(struct dep *d)
+{
+	static const char *modes[] = { "tagged", "untagged", NULL };
+	struct ly_set *bridges, *nodes;
+	const char **mode;
+	uint32_t i, j;
+
+	bridges = lydx_find_xpathf(*d->diff, IF_XPATH "/infix-interfaces:bridge");
+	for (i = 0; bridges && i < bridges->count; i++) {
+		struct lyd_node *dif = lyd_parent(bridges->dnodes[i]);
+		const char *name = lydx_get_cattr(dif, "name");
+		struct lyd_node *cif;
+
+		cif = lydx_get_xpathf(d->config, IF_XPATH "[name='%s']", name);
+		if (!cif || lydx_get_op(dif) == LYDX_OP_CREATE || !mst_changed(dif, cif))
+			continue;
+
+		for (mode = modes; *mode; mode++) {
+			nodes = lydx_find_xpathf(d->config, IF_XPATH "[name='%s']"
+						 "/infix-interfaces:bridge/vlans/vlan/%s", name, *mode);
+			for (j = 0; nodes && j < nodes->count; j++)
+				dep_add_node(d, nodes->dnodes[j]);
+			ly_set_free(nodes, NULL);
+		}
+	}
+	ly_set_free(bridges, NULL);
 }
 
 int bridge_add_deps(struct lyd_node *cif)

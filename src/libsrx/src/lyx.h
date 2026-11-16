@@ -37,6 +37,7 @@ struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name);
 struct lyd_node *lydx_get_child(struct lyd_node *parent, const char *name);
 struct lyd_node *lydx_vdescend(struct lyd_node *from, va_list ap);
 struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...);
+bool lydx_had_descendant(struct lyd_node *diff, struct lyd_node *config, ...);
 struct lyd_node *lydx_find_by_name(struct lyd_node *from, const char *by, const char *name);
 
 struct ly_set *lydx_find_vxpathf(struct lyd_node *ctx, const char *xpfmt, va_list ap);
