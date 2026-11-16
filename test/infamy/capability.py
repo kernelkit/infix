@@ -57,7 +57,7 @@ class Port:
         if self._switched is None:
             out = self.ssh.runsh(
                 f"cat /sys/class/net/{self.name}/phys_switch_id 2>/dev/null; echo ---; "
-                f"cat /sys/class/net/{self.name}/uevent").stdout
+                f"cat /sys/class/net/{self.name}/uevent", retry=True).stdout
             switch_id, _, uevent = out.partition("---")
             self._switched = bool(switch_id.strip()) or "DEVTYPE=dsa" in uevent.split()
 
@@ -68,8 +68,8 @@ class Port:
         """The driver bound to the port, None when it has no device"""
         if self._driver is None:
             self._driver = self.ssh.runsh(
-                f"sed -n 's/^DRIVER=//p' /sys/class/net/{self.name}/device/uevent"
-            ).stdout.strip()
+                f"sed -n 's/^DRIVER=//p' /sys/class/net/{self.name}/device/uevent",
+                retry=True).stdout.strip()
 
         return self._driver or None
 
@@ -78,7 +78,7 @@ class Port:
         """How many transmit queues the port has"""
         if self._tx_queues is None:
             self._tx_queues = int(self.ssh.runsh(
-                f"ls -d /sys/class/net/{self.name}/queues/tx-* | wc -l").stdout)
+                f"ls -d /sys/class/net/{self.name}/queues/tx-* | wc -l", retry=True).stdout)
 
         return self._tx_queues
 
