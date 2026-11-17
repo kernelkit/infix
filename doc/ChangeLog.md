@@ -63,9 +63,9 @@ All notable changes to the project are documented in this file.
     the IEEE 802.1DC interface modules
   - QoS profiles, the classification and traffic class settings of a
     port defined once as a `system qos-profile` and shared by any
-    number of ports.  The WebUI offers trunk, edge and stream
-    reservation templates for new profiles, and the QoS guide has the
-    same three as CLI examples
+    number of ports.  The WebUI offers trunk and edge templates for
+    new profiles, and the QoS guide has those and a stream reservation
+    profile as CLI examples
   - Microchip LAN969x (Laguna) switch ports offload the traffic class
     table and the credit-based and time-aware shapers to the switch,
     including the time-aware shaper's `queue-max-sdu`.  A gate closes

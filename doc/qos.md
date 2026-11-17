@@ -449,9 +449,10 @@ see [Checking the Result](#checking-the-result).
 ### Profiles for Common Port Roles
 
 Three profiles cover the common port roles, each setting only what the
-role changes from the defaults.  The WebUI offers the same three as
-templates when adding a profile; either way the result is an ordinary
-profile, to be changed as the network needs.
+role changes from the defaults.  The WebUI offers the first two as
+templates when adding a profile, and sets up ports for reserved
+streams with *Reserve bandwidth* on its TSN page; either way the
+result is an ordinary profile, to be changed as the network needs.
 
 A *trunk* port between switches classifies by the PCP of tagged frames and
 uses the IEEE 802.1Q traffic classes, which are the defaults.  The

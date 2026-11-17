@@ -456,6 +456,7 @@ func New(
 	mux.HandleFunc("GET /configure/qos/ports", cfgIf.OverviewQoSPorts)
 	mux.HandleFunc("POST /configure/qos/ports/{name}", cfgIf.SaveQoSPort)
 	mux.HandleFunc("GET /configure/tsn", cfgIf.OverviewTSN)
+	mux.HandleFunc("POST /configure/tsn/reserve", cfgIf.ReserveBandwidth)
 	mux.HandleFunc("POST /configure/interfaces/{name}/cbs", cfgIf.SaveCBS)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/cbs/{class}", cfgIf.ResetCBS)
 	mux.HandleFunc("POST /configure/interfaces/{name}/gates", cfgIf.SaveGates)

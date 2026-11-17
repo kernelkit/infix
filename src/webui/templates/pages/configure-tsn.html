@@ -25,6 +25,53 @@
   <p class="text-muted" style="margin:0.6rem 1rem">A reservation guarantees a traffic class a rate on a port.  A gate
     schedule gives classes time slots of their own in a repeating cycle; it runs on the port's clock, so the devices
     in the path need <a href="/configure/ptp" hx-get="/configure/ptp" hx-target="#content" hx-push-url="true">PTP</a>.</p>
+  <div style="padding:0 1rem 0.5rem">
+    <button type="button" class="btn-add-row" data-show="tsn-reserve">+ Reserve bandwidth</button>
+  </div>
+  <div id="tsn-reserve" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/tsn/reserve" hx-swap="none">
+      <p class="text-muted" style="margin:0 0 0.5rem">Guarantees a traffic class a rate on the ports chosen.  The class
+        is shaped to that rate, in the port's profile or its own settings, and sits above the classes that are not shaped.</p>
+      <table class="info-table">
+        <tr>
+          <th>Ports</th>
+          <td>
+            <div style="display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; max-width:46rem; white-space:normal">
+              {{range .Ports}}
+              <label class="diag-check"><input type="checkbox" name="port" value="{{.Row.Name}}"> {{.Row.Name}}</label>
+              {{end}}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <th>Traffic class</th>
+          <td>
+            <select class="cfg-input" name="class" style="width:auto">
+              {{range .Classes}}<option value="{{.}}">{{.}}</option>{{end}}
+            </select>
+            <span class="text-muted">Start with the highest; a shaped class has only shaped classes above it.</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Rate <span class="unit">(Mbps)</span>{{template "field-info" (index $d "tsn-idle")}}</th>
+          <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{.QoSBounds.SlopeHi}}" step="any" name="rate"
+                     required aria-label="Rate" style="width:8rem"></td>
+        </tr>
+        {{if .SRTable}}
+        <tr>
+          <th>Class table</th>
+          <td style="white-space:normal">
+            <label class="diag-check"><input type="checkbox" name="sr-table" value="on" checked> Use the stream reservation class table</label>
+            <p class="text-muted" style="margin:0.3rem 0 0; max-width:46rem">{{.SRTable}}</p>
+          </td>
+        </tr>
+        {{end}}
+      </table>
+      <div style="margin-top:0.5rem">
+        <button class="btn btn-primary btn-sm" type="submit">Reserve</button>
+      </div>
+    </form>
+  </div>
   <div class="data-table-wrap">
     <table class="data-table cfg-table">
       <thead>

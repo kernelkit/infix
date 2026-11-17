@@ -44,6 +44,8 @@ type cfgTSNPageData struct {
 	Error     string
 	Loading   bool
 	Ports     []tsnPortRow
+	Classes   []int  // the classes a reservation can be for, top down
+	SRTable   string // what the stream reservation class table does, from the model
 	QoSBounds qosBounds
 	Desc      map[string]string
 }
@@ -280,6 +282,14 @@ func (h *ConfigureInterfacesHandler) OverviewTSN(w http.ResponseWriter, r *http.
 			"tsn-extension": schema.DescriptionOf(mgr, gates+"/admin-cycle-time-extension"),
 			"tsn-max-sdu":   schema.DescriptionOf(mgr, gates+"/queue-max-sdu-table/queue-max-sdu"),
 		}
+		for _, o := range schema.OptionsFor(mgr, qosProfileLeafs().TablePreset) {
+			if o.Value == qosTableSR {
+				data.SRTable = o.Description
+			}
+		}
+	}
+	for c := qosNumClasses - 1; c >= 0; c-- {
+		data.Classes = append(data.Classes, c)
 	}
 
 	ifaces, oper, profiles, err := h.qosPortData(context.WithoutCancel(r.Context()))

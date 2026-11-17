@@ -228,8 +228,6 @@ var qosTemplates = []qosTemplate{
 	{Key: "edge", Label: "Edge", Help: "Port facing hosts, classified by DSCP.",
 		ingress: map[string]any{"trust": "dscp"},
 		egress:  map[string]any{"remark": map[string]any{"pcp": "from-priority"}}},
-	{Key: "stream-reservation", Label: "Stream reservation", Help: "Port carrying reserved streams.",
-		egress: map[string]any{"traffic-class-table": map[string]any{"preset": "ieee-sr"}}},
 }
 
 // qosAlgoIs compares two transmission selection identities without
