@@ -41,7 +41,8 @@ endif
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) \
 		sh -c 'test -f $(xpaths_all_csv) || python3 $(yang_extractor) $(YANG_DIR) $(xpaths_all_csv) || true; \
-		       $(ninepm) -v $(TESTS); rc=$$?; \
+		       INFAMY_ARGS="$$INFAMY_ARGS --support-dir $(test-dir)/.log/last/support" \
+		           $(ninepm) -v $(TESTS); rc=$$?; \
 		       $(ninepm_report) github   $(test-dir)/.log/last/result.json; \
 		       $(ninepm_report) asciidoc $(test-dir)/.log/last/result.json; \
 		       python3 $(coverage_reporter) \

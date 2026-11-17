@@ -59,6 +59,8 @@ Some of the core functions provided by Infamy are:
   NETCONF
 - Pushing/pulling NETCONF data to/from a device
 - Generating TAP compliant output
+- Saving the support bundle of each device when a test fails, see
+  [Support Bundles From Failed Tests](testing.md#support-bundles-from-failed-tests)
 
 ### 9PM
 
