@@ -37,7 +37,8 @@ of the page.
 ## Getting Started
 
 Four common tasks, each a few lines.  The sections after this one
-describe every setting.
+describe every setting.  In the WebUI the same settings are on
+*Configure > QoS*, per port or in a profile shared by several ports.
 
 **Give voice priority on a port facing hosts.**  Hosts mark their
 traffic with a DSCP, e.g. EF for voice.  Trusting the DSCP on the port

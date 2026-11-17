@@ -37,8 +37,32 @@ millisecond, a video stream that needs 50 Mbps, and everything else.
 The timetable of the example, one 1 ms cycle.
 ///
 
-First the clock.  The device is the gPTP grandmaster on the port, and
-the stations follow it:
+The setup takes four steps, each with its own page in the WebUI and a
+few lines in the CLI.  In the WebUI every step changes the candidate
+configuration, and *Apply* at the bottom of the page activates them
+together.
+
+| Step                         | WebUI page                           |
+|------------------------------|--------------------------------------|
+| Synchronise the clocks       | *Configure > PTP*                    |
+| Reserve bandwidth            | *Configure > TSN*, Reserve bandwidth |
+| Schedule the port            | *Configure > TSN*, Time schedule     |
+| Check what the port runs     | *Status > PTP* and *Status > QoS*    |
+/// table-caption
+The steps of the example and where each is done in the WebUI.
+///
+
+### Synchronise the Clocks
+
+A timetable only means something when every device counts the cycle
+from the same clock.  The device is the gPTP grandmaster on the port,
+and the stations follow it.
+
+In the WebUI, open *Configure > PTP* and select *Add instance*.  Choose
+the `ieee802-dot1as` profile and tick `e2`.  Then open the instance and
+set *Priority 1* to 1, the lowest in the network becomes grandmaster.
+
+In the CLI:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit ptp instance 0</b>
 admin@example:/config/ptp/instance/0/> <b>set default-ds profile ieee802-dot1as</b>
@@ -49,10 +73,25 @@ admin@example:/config/ptp/…/0/port/1/> <b>set underlying-interface e2</b>
 admin@example:/config/ptp/…/0/port/1/> <b>leave</b>
 </code></pre>
 
-Then the traffic classes.  The `ieee-sr` preset is the layout IEEE
-802.1Q recommends for a port with reserved streams: the video stream,
-priority 3, goes to class 7, and the control traffic, priority 5, to
-class 3.  Class 7 gets a reservation of 50 Mbps:
+See [PTP](ptp.md) for the roles a device can have and the settings
+of each profile.
+
+### Reserve Bandwidth
+
+The video stream gets a traffic class of its own with a reservation
+of 50 Mbps.  The `ieee-sr` preset is the layout IEEE 802.1Q recommends
+for a port with reserved streams: the video stream, priority 3, goes
+to class 7, and the control traffic, priority 5, to class 3.
+
+In the WebUI, open *Configure > TSN* and select *Reserve bandwidth*.
+Tick `e2`, choose traffic class 7, enter 50 Mbps and leave the stream
+reservation class table ticked.  This sets all three things the CLI
+example below does.  On a port that uses a QoS profile the class
+settings change in the profile, for all its ports, and the page says
+so.  A class can only be reserved when the classes above it are, so
+start with the highest.
+
+In the CLI:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e2</b>
 admin@example:/config/interface/e2/> <b>set qos egress traffic-class-table preset ieee-sr</b>
@@ -60,9 +99,40 @@ admin@example:/config/interface/e2/> <b>set qos egress traffic-class 7 algorithm
 admin@example:/config/interface/e2/> <b>set cbsa-parameter-table 7 admin-idle-slope 50M</b>
 </code></pre>
 
+### Schedule the Port
+
 Last the timetable: 200 µs for class 3, 600 µs for class 7, the rest
 of the cycle for the other classes, and a guard band of 12.4 µs with
 all gates closed before the cycle starts over.
+
+In the WebUI, select *Time schedule* on *Configure > TSN*.  Tick `e2`,
+set the cycle to 1000 µs, the traffic class to 3 and its window to
+200 µs:
+
+![The Time schedule form](img/webui-tsn-schedule.png){ width=600 }
+/// figure-caption
+Time schedule, filled in for the control traffic of the example.
+///
+
+*Create schedule* writes a gate control list with three entries: the
+window for class 3, the rest of the cycle for the other classes, and
+the guard band.  It then opens the port's schedule editor, where the
+list can be changed.  The editor draws one cycle with a row per
+traffic class, and says below it whether the entries fill the cycle.
+To give the video stream its 600 µs, change entry 1 to class 7 alone
+for 600 µs and entry 2 to the remaining classes for 187.6 µs, then
+select *Guard band* to add the last entry:
+
+![The schedule editor](img/webui-tsn-editor.png){ width=600 }
+/// figure-caption
+The schedule of the example in the editor.
+///
+
+The guard band is as long as a full-size frame takes at the port's
+link speed.  A port without link gets it for the highest speed the
+port supports, so a device can be set up before it is connected.
+
+In the CLI:
 
 <pre class="cli"><code>admin@example:/config/interface/e2/> <b>edit gate-parameter-table</b>
 admin@example:/config/interface/…/gate-parameter-table/> <b>set gate-enabled true</b>
@@ -74,9 +144,16 @@ admin@example:/config/interface/…/gate-parameter-table/> <b>set gate-control-e
 admin@example:/config/interface/…/gate-parameter-table/> <b>leave</b>
 </code></pre>
 
-`show interface` then lists what the port runs: the reservation of
-each shaped class, and the gate schedule with the traffic classes each
-entry opens.
+### Check What the Port Runs
+
+In the WebUI, *Status > PTP* shows whether the device is grandmaster
+or which clock it follows, and how far off it is.  *Status > QoS*
+lists the reservations and the gate schedule every port runs, and the
+page of an interface has the running list entry by entry.
+
+In the CLI, `show interface` lists what the port runs: the
+reservation of each shaped class, and the gate schedule with the
+traffic classes each entry opens.
 
 <pre class="cli"><code>admin@example:/> <b>show interface e2</b>
 …

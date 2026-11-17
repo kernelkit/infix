@@ -70,6 +70,14 @@ All notable changes to the project are documented in this file.
     table and the credit-based and time-aware shapers to the switch,
     including the time-aware shaper's `queue-max-sdu`.  A gate closes
     early enough for a full-size frame to finish before the next window
+  - WebUI: QoS and TSN settings have pages of their own under
+    Configure.  The TSN page sets up a reservation with *Reserve
+    bandwidth* and a gate schedule with *Time schedule*, and its
+    schedule editor draws the cycle and checks the entries against it.
+    The QoS status page lists the trust mode, reservations and gate
+    schedule of every port
+  - WebUI: new PTP pages, under Configure for the instances and their
+    ports, and under Status for the grandmaster, offset and port states
   - New CLI command `show qos` with an overview of all ports: profile,
     trust mode, shaper, reservations, gate schedule and hardware
     offload.  `show interface NAME` lists the QoS state of the port,
