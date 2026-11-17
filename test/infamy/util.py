@@ -31,9 +31,19 @@ class ParallelFn(threading.Thread):
         return self._return
 
 
-def parallel(*fns):
+def parallel(*fns, timeout=None):
     ths = [ParallelFn(target=fn) for fn in fns]
-    [th.start() for th in ths]
+    for th in ths:
+        th.daemon = timeout is not None
+        th.start()
+
+    if timeout is not None:
+        deadline = time.monotonic() + timeout
+        for th in ths:
+            threading.Thread.join(th, max(0, deadline - time.monotonic()))
+        if any(th.is_alive() for th in ths):
+            raise TimeoutError(f"Not done within {timeout} s")
+
     return [th.join() for th in ths]
 
 
