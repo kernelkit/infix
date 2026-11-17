@@ -438,6 +438,21 @@ func usField(r *http.Request, field, what string) (int64, bool, error) {
 	return int64(math.Round(us * 1e3)), true, nil
 }
 
+func gateEntryBody(index, mask int, ns int64) map[string]any {
+	return map[string]any{
+		"index":               index,
+		"operation-name":      setGates,
+		"gate-states-value":   mask,
+		"time-interval-value": ns,
+	}
+}
+
+// cycleTimeBody is ns as the fraction of a second the model takes.
+func cycleTimeBody(ns int64) map[string]any {
+	g := gcd(ns, 1e9)
+	return map[string]any{"numerator": ns / g, "denominator": int64(1e9) / g}
+}
+
 // qosGatesFromForm builds the gate-parameter-table container from the
 // form.  It returns nil when the form holds nothing to store.
 func qosGatesFromForm(r *http.Request) (map[string]any, error) {
@@ -469,12 +484,7 @@ func qosGatesFromForm(r *http.Request) (map[string]any, error) {
 				mask |= 1 << bit
 			}
 		}
-		entries = append(entries, map[string]any{
-			"index":               len(entries),
-			"operation-name":      setGates,
-			"gate-states-value":   mask,
-			"time-interval-value": ns,
-		})
+		entries = append(entries, gateEntryBody(len(entries), mask, ns))
 	}
 	if len(entries) > 0 {
 		table["admin-control-list"] = map[string]any{"gate-control-entry": entries}
@@ -483,8 +493,7 @@ func qosGatesFromForm(r *http.Request) (map[string]any, error) {
 	if ns, ok, err := usField(r, "cycle", "the cycle"); err != nil {
 		return nil, err
 	} else if ok && ns > 0 {
-		g := gcd(ns, 1e9)
-		table["admin-cycle-time"] = map[string]any{"numerator": ns / g, "denominator": int64(1e9) / g}
+		table["admin-cycle-time"] = cycleTimeBody(ns)
 	}
 	if ns, ok, err := usField(r, "extension", "the cycle time extension"); err != nil {
 		return nil, err

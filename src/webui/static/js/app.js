@@ -1755,6 +1755,24 @@ function markActiveOpt(cls, attr, value) {
   });
 })();
 
+// ?open=NAME in the address opens that fold-out row, once
+(function() {
+  function openNamed() {
+    var params = new URLSearchParams(window.location.search);
+    var name = params.get('open');
+    if (!name) return;
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="false"]').forEach(function(btn) {
+      if (btn.textContent.replace('▶', '').trim() === name) btn.click();
+    });
+    params.delete('open');
+    var query = params.toString();
+    history.replaceState(history.state, '', window.location.pathname + (query ? '?' + query : ''));
+  }
+  document.addEventListener('DOMContentLoaded', openNamed);
+  document.addEventListener('htmx:afterSettle', openNamed);
+  document.addEventListener('htmx:pushedIntoHistory', openNamed);
+})();
+
 // A morph swap keeps a <dialog> node and only strips its open attribute,
 // which leaves the page inert after a modal in Chrome.  Close the dialogs
 // in the target the proper way before the swap.

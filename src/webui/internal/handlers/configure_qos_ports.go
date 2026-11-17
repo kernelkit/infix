@@ -278,6 +278,7 @@ func (h *ConfigureInterfacesHandler) OverviewTSN(w http.ResponseWriter, r *http.
 			"tsn-gates":     schema.DescriptionOf(mgr, gates),
 			"tsn-list":      schema.DescriptionOf(mgr, gates+"/admin-control-list"),
 			"tsn-cycle":     schema.DescriptionOf(mgr, gates+"/admin-cycle-time"),
+			"tsn-interval":  schema.DescriptionOf(mgr, gates+"/admin-control-list/gate-control-entry/time-interval-value"),
 			"tsn-base":      schema.DescriptionOf(mgr, gates+"/admin-base-time"),
 			"tsn-extension": schema.DescriptionOf(mgr, gates+"/admin-cycle-time-extension"),
 			"tsn-max-sdu":   schema.DescriptionOf(mgr, gates+"/queue-max-sdu-table/queue-max-sdu"),

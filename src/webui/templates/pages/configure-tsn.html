@@ -27,6 +27,7 @@
     in the path need <a href="/configure/ptp" hx-get="/configure/ptp" hx-target="#content" hx-push-url="true">PTP</a>.</p>
   <div style="padding:0 1rem 0.5rem">
     <button type="button" class="btn-add-row" data-show="tsn-reserve">+ Reserve bandwidth</button>
+    <button type="button" class="btn-add-row" data-show="tsn-schedule">+ Time schedule</button>
   </div>
   <div id="tsn-reserve" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
     <form hx-post="/configure/tsn/reserve" hx-swap="none">
@@ -36,11 +37,7 @@
         <tr>
           <th>Ports</th>
           <td>
-            <div style="display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; max-width:46rem; white-space:normal">
-              {{range .Ports}}
-              <label class="diag-check"><input type="checkbox" name="port" value="{{.Row.Name}}"> {{.Row.Name}}</label>
-              {{end}}
-            </div>
+            {{template "tsn-port-checks" .Ports}}
           </td>
         </tr>
         <tr>
@@ -69,6 +66,53 @@
       </table>
       <div style="margin-top:0.5rem">
         <button class="btn btn-primary btn-sm" type="submit">Reserve</button>
+      </div>
+    </form>
+  </div>
+  <div id="tsn-schedule" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/tsn/schedule" hx-swap="none">
+      <p class="text-muted" style="margin:0 0 0.5rem; max-width:52rem; white-space:normal">Gives a traffic class the start of every
+        cycle to itself and the rest of the cycle to the other classes.  This replaces the gate control list of the
+        ports chosen; adjust it afterwards in the port's editor below.</p>
+      <table class="info-table">
+        <tr>
+          <th>Ports</th>
+          <td>
+            {{template "tsn-port-checks" .Ports}}
+          </td>
+        </tr>
+        <tr>
+          <th>Cycle <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-cycle")}}</th>
+          <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" step="any" name="cycle"
+                     required value="1000" aria-label="Cycle" style="width:8rem">
+            <span class="text-muted">How often the time-critical traffic is sent.</span></td>
+        </tr>
+        <tr>
+          <th>Traffic class</th>
+          <td>
+            <select class="cfg-input" name="class" style="width:auto">
+              {{range .Classes}}<option value="{{.}}">{{.}}</option>{{end}}
+            </select>
+            <span class="text-muted">The class of the time-critical traffic.</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Window <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-interval")}}</th>
+          <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{.QoSBounds.IntervalHi}}" step="any" name="window"
+                     required aria-label="Window" style="width:8rem">
+            <span class="text-muted">The class's share of each cycle.</span></td>
+        </tr>
+        <tr>
+          <th>Guard band</th>
+          <td style="white-space:normal">
+            <label class="diag-check"><input type="checkbox" name="guard" value="on" checked> Close all gates before the window</label>
+            <p class="text-muted" style="margin:0.3rem 0 0; max-width:46rem">Long enough for a full-size frame at the port's
+              speed, so a frame of another class that started late is off the wire when the window opens.</p>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:0.5rem">
+        <button class="btn btn-primary btn-sm" type="submit">Create schedule</button>
       </div>
     </form>
   </div>
@@ -111,4 +155,12 @@
 {{template "configure-toolbar" .}}
 </div>
 {{end}}
+{{end}}
+
+{{define "tsn-port-checks"}}
+<div style="display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; max-width:46rem; white-space:normal">
+  {{range .}}
+  <label class="diag-check"><input type="checkbox" name="port" value="{{.Row.Name}}"> {{.Row.Name}}</label>
+  {{end}}
+</div>
 {{end}}

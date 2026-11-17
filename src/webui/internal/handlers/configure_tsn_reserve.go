@@ -125,16 +125,27 @@ func qosTablePreset(eg *qosEgressJSON) string {
 	return eg.Table.Preset
 }
 
-func reservationFromForm(r *http.Request) (reservation, error) {
-	res := reservation{Ports: r.Form["port"], SRTable: r.FormValue("sr-table") == "on"}
-	if len(res.Ports) == 0 {
-		return res, fmt.Errorf("pick at least one port")
+// wizardPortsClass reads a TSN wizard's ports, in natural order, and class.
+func wizardPortsClass(r *http.Request) ([]string, int, error) {
+	ports := r.Form["port"]
+	if len(ports) == 0 {
+		return nil, 0, fmt.Errorf("pick at least one port")
 	}
 	class, err := strconv.Atoi(r.FormValue("class"))
 	if err != nil || class < 0 || class >= qosNumClasses {
-		return res, fmt.Errorf("pick a traffic class")
+		return nil, 0, fmt.Errorf("pick a traffic class")
 	}
-	res.Class = class
+	ports = append([]string(nil), ports...)
+	sort.Slice(ports, func(i, j int) bool { return naturalLess(ports[i], ports[j]) })
+	return ports, class, nil
+}
+
+func reservationFromForm(r *http.Request) (reservation, error) {
+	res := reservation{SRTable: r.FormValue("sr-table") == "on"}
+	var err error
+	if res.Ports, res.Class, err = wizardPortsClass(r); err != nil {
+		return res, err
+	}
 	res.Bits, err = mbitField(strings.TrimSpace(r.FormValue("rate")), "the rate")
 	return res, err
 }
@@ -193,9 +204,7 @@ func (h *ConfigureInterfacesHandler) ReserveBandwidth(w http.ResponseWriter, r *
 		}
 	}
 
-	ports := append([]string(nil), res.Ports...)
-	sort.Slice(ports, func(i, j int) bool { return naturalLess(ports[i], ports[j]) })
-	msg := fmt.Sprintf("Reserved %s Mbps for class %d on %s", strings.TrimSpace(r.FormValue("rate")), res.Class, strings.Join(ports, ", "))
+	msg := fmt.Sprintf("Reserved %s Mbps for class %d on %s", strings.TrimSpace(r.FormValue("rate")), res.Class, strings.Join(res.Ports, ", "))
 	if len(plan.Notes) > 0 {
 		msg += "; " + strings.Join(plan.Notes, "; ")
 	}
