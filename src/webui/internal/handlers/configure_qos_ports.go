@@ -235,6 +235,18 @@ func (h *ConfigureInterfacesHandler) SaveQoSPort(w http.ResponseWriter, r *http.
 	renderSavedRedirect(w, "QoS saved", "/configure/qos/ports")
 }
 
+// scheduleText names a gate control list: "1000 µs cycle, 4 entries".
+func scheduleText(cycleUs string, n int) string {
+	text := fmt.Sprintf("%d entries", n)
+	if n == 1 {
+		text = "1 entry"
+	}
+	if cycleUs != "" {
+		text = cycleUs + " µs cycle, " + text
+	}
+	return text
+}
+
 // tsnSummary says in a few words what reservations and schedule a port
 // is configured with.
 func tsnSummary(row cfgIfaceRow) (reserved, schedule string) {
@@ -246,14 +258,7 @@ func tsnSummary(row cfgIfaceRow) (reserved, schedule string) {
 	}
 	reserved = strings.Join(parts, ", ")
 	if g := row.QoSGates; len(g.Entries) > 0 {
-		entries := "entries"
-		if len(g.Entries) == 1 {
-			entries = "entry"
-		}
-		schedule = fmt.Sprintf("%d %s", len(g.Entries), entries)
-		if g.CycleUs != "" {
-			schedule = g.CycleUs + " µs cycle, " + schedule
-		}
+		schedule = scheduleText(g.CycleUs, len(g.Entries))
 		if !g.Enabled {
 			schedule += ", off"
 		}

@@ -23,8 +23,11 @@
           {{$d := .Desc}}
           <th>Port</th>
           <th>QoS profile{{template "field-info" (index $d "profile")}}</th>
+          <th>Trust{{template "field-info" (index $d "trust")}}</th>
           <th>Traffic classes{{template "field-info" (index $d "classes")}}</th>
           <th>Egress shaper{{template "field-info" (index $d "egress-shaper")}}</th>
+          <th>Reserved{{template "field-info" (index $d "reserved")}}</th>
+          <th>Gate schedule{{template "field-info" (index $d "schedule")}}</th>
           <th>Offload{{template "field-info" (index $d "offload")}}</th>
         </tr>
       </thead>
@@ -33,8 +36,11 @@
         <tr>
           <td><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
           <td>{{if .Profile}}{{.Profile}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .Trust}}{{.Trust}}{{else}}<span class="text-muted">—</span>{{end}}</td>
           <td>{{.TrafficClasses}}</td>
           <td>{{if .Shaper}}{{.Shaper}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .Reserved}}{{.Reserved}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .Schedule}}{{.Schedule}}{{else}}<span class="text-muted">—</span>{{end}}</td>
           <td>{{.Offload}}</td>
         </tr>
         {{end}}
