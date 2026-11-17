@@ -217,6 +217,28 @@ Use them from a browser or a terminal on the host.  Docker also
 publishes the ports on the host itself, run `docker port infamy0 9011`
 to see where.
 
+### Reading DUT Logs
+
+When a test fails, the DUTs' logs often show why.  The test environment
+saves the logs of all DUTs in test mode in one file per run, see
+[DUT Logs](test-arch.md#dut-logs).  Its name is in `$TEST_SYSLOG` inside
+the environment:
+
+```
+11:42:54 infamy0:test # tail -f $TEST_SYSLOG
+```
+
+Filter it on a test, a device, or both:
+
+```
+11:42:54 infamy0:test # utils/syslog_split.py -t 0006-test -d dut1 $TEST_SYSLOG
+```
+
+After `make test`, the logs of each test and device are also in
+`test/.log/last/syslog/<test>/<device>.log`, and packed in
+`test/.log/last/logs.tar.gz`.  In CI, download the `dut-syslog`
+artifact.
+
 ### Support Bundles From Failed Tests
 
 When a test fails, the DUTs are reset before anyone can look at them.
