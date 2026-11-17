@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.63 (LTS)
+- Upgrade firewalld to 2.3.4, fixes CVE-2026-4948
 - New alarm list, RFC 8632 `ietf-alarms`, with alarms for failed
   startup configuration, boot fallback, software partition and update
   state, ports without link, and alarms raised by scripts.  Alarms can

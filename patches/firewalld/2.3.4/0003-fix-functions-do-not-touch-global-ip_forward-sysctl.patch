@@ -1,5 +1,5 @@
-From 9899169d6dcb07aaecdde09c77ef59b56f66e3e5 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+From 3b962daf3cc3b8de330de01b0ae1793de66a39d9 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
 Date: Fri, 5 Jun 2026 09:10:15 +0200
 Subject: [PATCH 3/3] fix(functions): do not touch global ip_forward sysctl
 MIME-Version: 1.0
@@ -26,7 +26,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 8 insertions(+), 5 deletions(-)
 
 diff --git a/src/firewall/functions.py b/src/firewall/functions.py
-index 1b8a32c..cd87f5d 100644
+index 1b8a32ce..cd87f5de 100644
 --- a/src/firewall/functions.py
 +++ b/src/firewall/functions.py
 @@ -495,11 +495,14 @@ def writefile(filename, line):
@@ -49,6 +49,3 @@ index 1b8a32c..cd87f5d 100644
  
  
  def get_nf_conntrack_short_name(module):
--- 
-2.43.0
-

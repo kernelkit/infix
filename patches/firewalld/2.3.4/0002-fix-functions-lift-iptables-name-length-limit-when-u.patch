@@ -1,7 +1,7 @@
-From 6ab218fe7f2c7027cc5347e3b082285870c502e6 Mon Sep 17 00:00:00 2001
+From 211b752a68f82f3310ee49fb07a91906f913c5af Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 6 Mar 2026 07:44:38 +0100
-Subject: [PATCH 2/2] fix(functions): lift iptables name length limit when
+Subject: [PATCH 2/3] fix(functions): lift iptables name length limit when
  using nftables
 Organization: Wires
 
@@ -90,6 +90,3 @@ index 27c862fd..1b8a32ce 100644
      from firewall.core.base import SHORTCUTS
  
      longest_shortcut = max(map(len, SHORTCUTS.values()))
--- 
-2.43.0
-
