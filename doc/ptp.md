@@ -203,6 +203,15 @@ admin@example:/config/ptp/…/0/port/1/> <b>leave</b>
 > measurement globally, as required by IEEE 802.1AS-2020.  Per-port
 > `delay-mechanism` settings have no effect for 802.1AS instances.
 
+The same instance in the WebUI, on *Configure > PTP*.  *Add instance*
+asks for the profile and the ports, and the other settings are in the
+instance's row:
+
+![An 802.1AS instance on Configure > PTP](img/webui-ptp-configure.png){ width=600 }
+/// figure-caption
+A time-receiver only 802.1AS instance on port `e4`.
+///
+
 ## Multiple Instances
 
 Multiple PTP instances can run simultaneously, one per domain or profile
@@ -292,6 +301,17 @@ available.
 
 <pre class="cli"><code>admin@example:/> <b>show ptp 0</b>
 </code></pre>
+
+### In the WebUI
+
+*Status > PTP* has a card for each instance.  The first row says whether
+the instance is the grandmaster, follows one, or is not synchronized.
+Below it are the same data sets and port table as in `show ptp`:
+
+![Status > PTP](img/webui-ptp-status.png){ width=600 }
+/// figure-caption
+An instance that follows a grandmaster one step away.
+///
 
 ## Tuning port intervals
 
