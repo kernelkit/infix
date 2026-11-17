@@ -71,7 +71,8 @@ All notable changes to the project are documented in this file.
   the hardware operational data, shown by `show hardware`, `show system`
   and the WebUI Overview and Hardware pages, see [Hardware][hw]
 - WebUI: the DHCP leases are grouped by subnet, in address order
-- WebUI: uses less memory
+- WebUI: uses less memory.  The network browser at network.local is now
+  served by the same program
 - `show dhcp-server` now shows the server statistics with the leases,
   and `show dhcp-server brief` only the leases.  The `statistics` and
   `detailed` keywords are removed

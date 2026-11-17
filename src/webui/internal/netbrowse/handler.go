@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: MIT
-package main
+
+// Package netbrowse serves the mDNS network browser, the page behind
+// https://network.local.  It needs no login and has a listener of its own.
+package netbrowse
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
-	"flag"
-	"io/fs"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 //go:embed browse.html
@@ -37,13 +33,11 @@ func dataHandler(scanFn func() map[string]Host) http.HandlerFunc {
 	}
 }
 
-func main() {
-	listen  := flag.String("l", "127.0.0.1:8000", "listen address:port")
-	backend := flag.String("backend", "auto", "discovery backend: auto, avahi, or operational")
-	flag.Parse()
-
+// New returns the handler for the network browser.  The discovery backend
+// is auto, avahi or operational.
+func New(backend string) http.Handler {
 	var scanFn func() map[string]Host
-	switch *backend {
+	switch backend {
 	case "operational":
 		scanFn = scanOperational
 	case "avahi":
@@ -57,32 +51,7 @@ func main() {
 	mux.HandleFunc("/netbrowse", browseHandler)
 	mux.HandleFunc("/data", dataHandler(scanFn))
 	mux.HandleFunc("/netbrowse/data", dataHandler(scanFn))
+	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
 
-	staticSub, err := fs.Sub(staticFS, "static")
-	if err != nil {
-		log.Fatal(err)
-	}
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
-
-	srv := &http.Server{
-		Addr:              *listen,
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-
-	go func() {
-		sigch := make(chan os.Signal, 1)
-		signal.Notify(sigch, syscall.SIGTERM, syscall.SIGINT)
-		<-sigch
-		log.Println("shutting down")
-		srv.Shutdown(context.Background())
-	}()
-
-	log.Printf("listening on %s", *listen)
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
+	return mux
 }

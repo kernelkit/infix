@@ -57,6 +57,7 @@ GOOS=linux GOARCH=arm64 make build
 | `--yang-cache-dir` | `/var/cache/webui/yang`          | YANG files fetched from the device        |
 | `--schema`        | `/usr/share/webui/schema.json`    | Compiled schema, used when the file exists |
 | `--compile-schema` |                                  | Compile the YANG files in a directory to the `--schema` file and exit |
+| `--netbrowse`     |                                   | Address the mDNS network browser listens on, off when empty |
 
 The RESTCONF URL can also be set via the `RESTCONF_URL` environment
 variable.
@@ -197,6 +198,7 @@ internal/
     keystore.go                    Key display
     system.go                      Firmware, reboot, config download
   schema/                        Compiled YANG schema and its queries
+  netbrowse/                     mDNS network browser, on its own listener
   server/
     server.go                    Route registration, template wiring, middleware
 templates/

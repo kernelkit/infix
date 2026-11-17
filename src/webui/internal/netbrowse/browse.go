@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-package main
+package netbrowse
 
 import (
 	"encoding/json"

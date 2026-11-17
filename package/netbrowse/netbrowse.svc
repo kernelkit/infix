@@ -1,3 +1,0 @@
-service <!> name:netbrowse log:prio:daemon.debug,tag:netbrowse \
-	[2345] netbrowse -l 127.0.0.1:8000 \
-	-- Network browser

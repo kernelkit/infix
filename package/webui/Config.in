@@ -8,3 +8,12 @@ config BR2_PACKAGE_WEBUI
 	  Web management interface for Infix, a Go+HTMX application
 	  that provides browser-based configuration and monitoring
 	  via RESTCONF.
+
+config BR2_PACKAGE_NETBROWSE
+	bool "netbrowse"
+	depends on BR2_PACKAGE_WEBUI
+	help
+	  Browse mDNS hosts on your network from https://network.local
+
+	  The browser is part of webui, this makes it available in the
+	  web services configuration.
