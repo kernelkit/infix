@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	algoStrict = "ieee802-dot1q-types:strict-priority"
-	algoETS    = "ieee802-dot1q-types:enhanced-transmission-selection"
-	algoCBS    = "ieee802-dot1q-types:credit-based-shaper"
+	algoStrict = "infix-qos:strict-priority"
+	algoETS    = "infix-qos:enhanced-transmission-selection"
+	algoCBS    = "infix-qos:credit-based-shaper"
 
 	// prefDefault is the catch-all confd ends a port's software
 	// classification with; the trusted fields come before it, one

@@ -31,6 +31,47 @@ module infix-qos {
   }
 
   /*
+   * Identities
+   */
+
+  identity algorithm {
+    description "Transmission selection algorithm the system supports.
+
+       Each is also derived from its IEEE 802.1Q identity, so the two
+       algorithms of ieee802-dot1q-types the system does not implement,
+       asynchronous traffic shaping and vendor specific, are not
+       accepted.";
+  }
+
+  identity strict-priority {
+    base algorithm;
+    base dot1q-types:strict-priority;
+    description "Strict priority.
+
+       The class is served before every lower class.";
+    reference "8.6.8.1 of IEEE Std 802.1Q-2022";
+  }
+
+  identity credit-based-shaper {
+    base algorithm;
+    base dot1q-types:credit-based-shaper;
+    description "Credit-based shaper.
+
+       The class is held to its reserved rate.";
+    reference "8.6.8.2 of IEEE Std 802.1Q-2022";
+  }
+
+  identity enhanced-transmission-selection {
+    base algorithm;
+    base dot1q-types:enhanced-transmission-selection;
+    description "Enhanced transmission selection.
+
+       The class shares the bandwidth the classes above leave, by
+       weight.";
+    reference "8.6.8.3 of IEEE Std 802.1Q-2022";
+  }
+
+  /*
    * Features
    */
 
@@ -377,9 +418,9 @@ module infix-qos {
 
         leaf algorithm {
           type identityref {
-            base dot1q-types:transmission-selection-algorithm;
+            base algorithm;
           }
-          default "dot1q-types:strict-priority";
+          default "strict-priority";
           description "Transmission selection algorithm.
 
              Selecting credit-based-shaper turns the shaper on; its
@@ -390,14 +431,14 @@ module infix-qos {
 
         /* Applied as a tc ets quantum: the share times a full-size frame. */
         leaf bandwidth {
-          when "derived-from-or-self(../algorithm, 'dot1q-types:"
+          when "derived-from-or-self(../algorithm, 'qos:"
              + "enhanced-transmission-selection')";
           type uint8 {
             range "1..100";
           }
           units "percent";
           must "sum(../../traffic-class[derived-from-or-self("
-             + "algorithm, 'dot1q-types:enhanced-transmission-"
+             + "algorithm, 'qos:enhanced-transmission-"
              + "selection')]/bandwidth) = 100" {
             error-message "The ETS shares on a port must sum to 100.";
           }

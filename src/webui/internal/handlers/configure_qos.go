@@ -24,9 +24,9 @@ import (
 const (
 	qosSystemPath   = "/ietf-system:system"
 	qosProfilesPath = qosSystemPath + "/infix-qos:qos-profile"
-	qosAlgoStrict   = "ieee802-dot1q-types:strict-priority"
-	qosAlgoETS      = "ieee802-dot1q-types:enhanced-transmission-selection"
-	qosAlgoCBS      = "ieee802-dot1q-types:credit-based-shaper"
+	qosAlgoStrict   = "infix-qos:strict-priority"
+	qosAlgoETS      = "infix-qos:enhanced-transmission-selection"
+	qosAlgoCBS      = "infix-qos:credit-based-shaper"
 	qosNumClasses   = 8
 )
 

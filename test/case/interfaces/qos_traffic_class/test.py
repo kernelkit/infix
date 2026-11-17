@@ -31,6 +31,7 @@ single-queue port.
 """
 import json
 import infamy
+import infamy.qos as qos
 from infamy.util import until
 
 # IEEE 802.1Q-2022 Table 8-5 and Table 34-1, indexed by class count
@@ -107,9 +108,9 @@ with infamy.Test() as test:
                         "egress": {
                             "traffic-class-table": table,
                             "traffic-class": [
-                                {"id": 1, "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                                {"id": 1, "algorithm": qos.ETS,
                                  "bandwidth": 67},
-                                {"id": 0, "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                                {"id": 0, "algorithm": qos.ETS,
                                  "bandwidth": 33},
                             ]
                         }

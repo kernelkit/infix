@@ -71,36 +71,36 @@
           "egress": {
             "traffic-class": [
               {
-                "algorithm": "ieee802-dot1q-types:credit-based-shaper",
+                "algorithm": "infix-qos:credit-based-shaper",
                 "id": 7
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 6
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 5
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 4
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 3
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 2
               },
               {
-                "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                "algorithm": "infix-qos:enhanced-transmission-selection",
                 "bandwidth": 70,
                 "id": 1
               },
               {
-                "algorithm": "ieee802-dot1q-types:enhanced-transmission-selection",
+                "algorithm": "infix-qos:enhanced-transmission-selection",
                 "bandwidth": 30,
                 "id": 0
               }
@@ -160,35 +160,35 @@
             },
             "traffic-class": [
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 7
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 6
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 5
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 4
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 3
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 2
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 1
               },
               {
-                "algorithm": "ieee802-dot1q-types:strict-priority",
+                "algorithm": "infix-qos:strict-priority",
                 "id": 0
               }
             ],

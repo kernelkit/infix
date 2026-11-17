@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -95,7 +96,7 @@ func TestConfigureQoSOverview(t *testing.T) {
 		// the schema's defaults fill what the profile leaves out
 		`value="pcp" title="PCP of tagged frames, then the port default." selected`,
 		`value="ietf" title="RFC 4594`, `value="none" title="Leave DSCP untouched." selected`,
-		`value="` + qosAlgoStrict + `" title="Indicates the strict priority transmission selection algorithm." selected`,
+		`value="` + qosAlgoStrict + `" title="Strict priority.`,
 		`value="` + qosAlgoCBS + `"`, `value="ieee" title="PCP n maps to priority n.`,
 		`path=/ietf-system:system/infix-qos:qos-profile=edge/ingress/trust&redirect=/configure/qos`,
 		`path=/ietf-system:system/infix-qos:qos-profile=edge/egress/traffic-class=1&redirect=/configure/qos`,
@@ -103,6 +104,9 @@ func TestConfigureQoSOverview(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+	if !regexp.MustCompile(`value="`+qosAlgoStrict+`"[^>]* selected`).MatchString(body) {
+		t.Error("the model's default algorithm is not the one selected")
 	}
 }
 

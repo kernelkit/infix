@@ -316,10 +316,10 @@ func TestSaveCBSShapesClasses(t *testing.T) {
 		name, qos string
 		want      []string
 	}{
-		{"own settings", `{"egress":{"traffic-class":[{"id":6,"algorithm":"ieee802-dot1q-types:credit-based-shaper"}]}}`, []string{
+		{"own settings", `{"egress":{"traffic-class":[{"id":6,"algorithm":"infix-qos:credit-based-shaper"}]}}`, []string{
 			"GET /ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos",
 			"DELETE /ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos/egress/traffic-class=6/algorithm",
-			`PATCH /ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos {"infix-interfaces:qos":{"egress":{"traffic-class":[{"algorithm":"ieee802-dot1q-types:credit-based-shaper","id":7}]}}}`,
+			`PATCH /ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos {"infix-interfaces:qos":{"egress":{"traffic-class":[{"algorithm":"infix-qos:credit-based-shaper","id":7}]}}}`,
 			`PUT /ds/ietf-datastores:candidate/ietf-interfaces:interfaces/interface=e1/ieee802-dot1dc-cbsa-if:cbsa {"ieee802-dot1dc-cbsa-if:cbsa":{"cbsa-parameter-table":[{"admin-idle-slope":"20000000","traffic-class":7}]}}`,
 		}},
 		{"profile", `{"profile":"tsn-ring"}`, []string{
@@ -369,7 +369,7 @@ func TestQoSCustom(t *testing.T) {
 		want bool
 	}{
 		{`{"egress": {"traffic-class-table": {}, "remark": {}}}`, false},
-		{`{"egress": {"traffic-class": [{"id": 7, "algorithm": "ieee802-dot1q-types:credit-based-shaper"}]}}`, true},
+		{`{"egress": {"traffic-class": [{"id": 7, "algorithm": "infix-qos:credit-based-shaper"}]}}`, true},
 		{`{"ingress": {"trust": "dscp"}}`, true},
 		{`{"profile": "edge"}`, false},
 	} {
@@ -424,7 +424,7 @@ func TestResetCBS(t *testing.T) {
 				io.WriteString(w, `{"ietf-interfaces:interfaces":{"interface":[{"name":"e1","ieee802-dot1dc-cbsa-if:cbsa":{"cbsa-parameter-table":[{"traffic-class":7,"admin-idle-slope":"20000000"},{"traffic-class":6,"admin-idle-slope":"1000000"}]}}]}}`) //nolint:errcheck
 				return
 			}
-			io.WriteString(w, `{"ietf-interfaces:interfaces":{"interface":[{"name":"e1","infix-interfaces:qos":{"egress":{"traffic-class":[{"id":7,"algorithm":"ieee802-dot1q-types:credit-based-shaper"},{"id":6,"algorithm":"ieee802-dot1q-types:credit-based-shaper"}]}}}]}}`) //nolint:errcheck
+			io.WriteString(w, `{"ietf-interfaces:interfaces":{"interface":[{"name":"e1","infix-interfaces:qos":{"egress":{"traffic-class":[{"id":7,"algorithm":"infix-qos:credit-based-shaper"},{"id":6,"algorithm":"infix-qos:credit-based-shaper"}]}}}]}}`) //nolint:errcheck
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

@@ -23,7 +23,6 @@ RESERVE = 10_000_000           # bps, the idle slope
 EF = 46 << 2                   # TOS byte of the flow
 SIZE = 1000                    # UDP payload, 1042 bytes on the wire
 TOLERANCE = 0.2
-CBS = "ieee802-dot1q-types:credit-based-shaper"
 
 
 def config(td0, td1, top, egress, cbsa):
@@ -84,7 +83,7 @@ with infamy.Test() as test:
 
     with test.step("Reject a credit-based-shaper class without a reservation"):
         must_reject(target, config(td0, td1, top,
-                                   {"traffic-class": [{"id": top, "algorithm": CBS}]}, {}),
+                                   {"traffic-class": [{"id": top, "algorithm": qos.CBS}]}, {}),
                     "credit-based-shaper without admin-idle-slope",
                     "needs an admin-idle-slope")
 
@@ -98,7 +97,7 @@ with infamy.Test() as test:
     with test.step("Bridge the two ports, reserve 10 Mbps for the top class on the egress port"):
         target.put_config_dicts(config(
             td0, td1, top,
-            {"traffic-class": [{"id": top, "algorithm": CBS}]},
+            {"traffic-class": [{"id": top, "algorithm": qos.CBS}]},
             {"cbsa-parameter-table": [{"traffic-class": top, "admin-idle-slope": RESERVE}]}))
         until(lambda: any(q.get("kind") == "cbs" for q in qos.qdiscs(tgtssh, td1)))
         qos.wait_offload(port, "credit-based-shaper")

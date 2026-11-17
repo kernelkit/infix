@@ -55,7 +55,6 @@ RESERVE = 50_000_000                         # bps, idle slope of the video clas
 SIZE = 1000                                  # UDP payload
 OVERHEAD = 46 + qos.WIRE_OVERHEAD             # UDP, IP, Ethernet and FCS, then the wire
 TOLERANCE = 0.1
-CBS = "ieee802-dot1q-types:credit-based-shaper"
 SET_GATES = "ieee802-dot1q-sched:set-gate-states"
 
 
@@ -100,7 +99,7 @@ def schedule(td1, wins):
         "name": td1,
         "infix-interfaces:qos": {
             "egress": {"traffic-class-table": {"preset": "ieee-sr"},
-                       "traffic-class": [{"id": VIDEO, "algorithm": CBS}]}
+                       "traffic-class": [{"id": VIDEO, "algorithm": qos.CBS}]}
         },
         "ieee802-dot1dc-cbsa-if:cbsa": {
             "cbsa-parameter-table": [{"traffic-class": VIDEO, "admin-idle-slope": RESERVE}]

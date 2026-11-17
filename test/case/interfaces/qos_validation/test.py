@@ -17,10 +17,6 @@ layout must still be accepted afterwards.
 import infamy
 import infamy.qos as qos
 
-STRICT = "ieee802-dot1q-types:strict-priority"
-ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
-CBS = "ieee802-dot1q-types:credit-based-shaper"
-
 
 def egress_config(port, egress):
     return {"ietf-interfaces": {
@@ -51,8 +47,8 @@ with infamy.Test() as test:
     with test.step("Reject strict-priority class below a weighted class"):
         must_reject(target, port, {
             "traffic-class": [
-                {"id": top, "algorithm": ETS, "bandwidth": 100},
-                {"id": top - 1, "algorithm": STRICT},
+                {"id": top, "algorithm": qos.ETS, "bandwidth": 100},
+                {"id": top - 1, "algorithm": qos.STRICT},
             ]
         }, "strict class below weighted class",
            "then strict-priority, then weighted")
@@ -62,14 +58,14 @@ with infamy.Test() as test:
         # message, the RESTCONF error body only says validation failed
         must_reject(target, port, {
             "traffic-class": [
-                {"id": 1, "algorithm": ETS, "bandwidth": 60},
-                {"id": 0, "algorithm": ETS, "bandwidth": 30},
+                {"id": 1, "algorithm": qos.ETS, "bandwidth": 60},
+                {"id": 0, "algorithm": qos.ETS, "bandwidth": 30},
             ]
         }, "shares summing to 90", "must sum to 100", "Validation failed")
 
     with test.step("Reject credit-based-shaper class without a reservation"):
         must_reject(target, port, {
-            "traffic-class": [{"id": top, "algorithm": CBS}]
+            "traffic-class": [{"id": top, "algorithm": qos.CBS}]
         }, "credit-based-shaper without admin-idle-slope",
            "needs an admin-idle-slope")
 
@@ -89,9 +85,9 @@ with infamy.Test() as test:
     with test.step("Accept a valid layout with strict classes above weighted"):
         target.put_config_dicts(egress_config(port, {
             "traffic-class": [
-                {"id": top, "algorithm": STRICT},
-                {"id": 1, "algorithm": ETS, "bandwidth": 67},
-                {"id": 0, "algorithm": ETS, "bandwidth": 33},
+                {"id": top, "algorithm": qos.STRICT},
+                {"id": 1, "algorithm": qos.ETS, "bandwidth": 67},
+                {"id": 0, "algorithm": qos.ETS, "bandwidth": 33},
             ]
         }))
 

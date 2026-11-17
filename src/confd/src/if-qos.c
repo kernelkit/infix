@@ -64,7 +64,6 @@ enum tsa {
 	TSA_ETS,
 	TSA_STRICT,
 	TSA_CBS,
-	TSA_UNSUPPORTED,
 };
 
 /* The IEEE 802.1Qbv gate control list, times in nanoseconds. */
@@ -290,14 +289,12 @@ static enum tsa tsa_from_str(const char *val)
 
 	id = id ? id + 1 : val;
 
-	if (!strcmp(id, "strict-priority"))
-		return TSA_STRICT;
 	if (!strcmp(id, "enhanced-transmission-selection"))
 		return TSA_ETS;
 	if (!strcmp(id, "credit-based-shaper"))
 		return TSA_CBS;
 
-	return TSA_UNSUPPORTED;
+	return TSA_STRICT;
 }
 
 /* The trust leaf as dcb apptrust order words, none as an empty order. */
@@ -805,15 +802,6 @@ static int qos_validate_port(sr_session_ctx_t *session, struct lyd_node *cif,
 		if (id >= eg->num_tc) {
 			sr_session_set_error_message(session, "%s: traffic class %d, port has "
 						     "%d classes", label, id, eg->num_tc);
-			return -EINVAL;
-		}
-
-		if (eg->algo[id] == TSA_UNSUPPORTED) {
-			sr_session_set_error_message(session, "%s: traffic class %d: algorithm %s "
-						     "not supported, use strict-priority, "
-						     "enhanced-transmission-selection or "
-						     "credit-based-shaper", label, id,
-						     lydx_get_cattr(tc, "algorithm"));
 			return -EINVAL;
 		}
 	}

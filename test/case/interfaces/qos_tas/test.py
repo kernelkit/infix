@@ -26,7 +26,6 @@ import infamy
 import infamy.qos as qos
 from infamy.util import until
 
-ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 SET_GATES = "ieee802-dot1q-sched:set-gate-states"
 
 
@@ -85,7 +84,7 @@ with infamy.Test() as test:
 
     with test.step("Reject a gate control list together with a weighted class"):
         must_reject(target, config(port, gates(port, entries),
-                                   {"egress": {"traffic-class": [{"id": 0, "algorithm": ETS, "bandwidth": 100}]}}),
+                                   {"egress": {"traffic-class": [{"id": 0, "algorithm": qos.ETS, "bandwidth": 100}]}}),
                     "gates with a weighted class", "cannot be gated")
 
     with test.step("Reject an empty gate control list"):

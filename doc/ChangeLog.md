@@ -89,6 +89,12 @@ All notable changes to the project are documented in this file.
     a port runs
   - `qos capabilities` lists `supported-offload`, the stages a port's
     switch fabric can run, next to `offload`, those it runs right now
+  - The `algorithm` of a traffic class only accepts the three the
+    system runs: `strict-priority`, `enhanced-transmission-selection`
+    and `credit-based-shaper`.  Over NETCONF and RESTCONF the values
+    are now identities of `infix-qos`, e.g.
+    `infix-qos:credit-based-shaper`, each derived from its IEEE 802.1Q
+    identity.  Saved configurations are migrated
   - The port's `qos egress rate-limit` is now `qos egress-shaper`, and
     the offload stage and feature of the same name are renamed with it.
     Saved configurations are migrated

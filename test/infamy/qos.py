@@ -34,8 +34,9 @@ TABLE_34_1 = {
     8: [1, 0, 6, 7, 2, 3, 4, 5],
 }
 
-STRICT = "ieee802-dot1q-types:strict-priority"
-ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
+STRICT = "infix-qos:strict-priority"
+ETS = "infix-qos:enhanced-transmission-selection"
+CBS = "infix-qos:credit-based-shaper"
 
 ETS_QUANTUM_UNIT = 1514        # one frame per percent of bandwidth, as configured
 WIRE_OVERHEAD = 20             # preamble, SFD and interframe gap
