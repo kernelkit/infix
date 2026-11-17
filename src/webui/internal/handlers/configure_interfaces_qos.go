@@ -75,9 +75,42 @@ type qosGatesRow struct {
 	BaseSeconds string
 	BaseNs      int
 	ExtensionUs string
+	GuardUs     string // time a full-size frame takes at the port's speed, empty when unknown
+	GuardSpeed  string // "1 Gbps", the speed the guard band is sized for
+	GuardMax    bool   // no link: sized for the port's highest speed
 	Entries     []qosGateEntryRow
 	MaxSDU      [qosNumClasses]string // by class
 	AllOpen     [qosNumClasses]bool   // the gates of a new entry
+}
+
+// guardFrameBits is a full-size frame on the wire: 1500 bytes of
+// payload, header, two VLAN tags and FCS, with preamble and gap.
+const guardFrameBits = (1500 + 14 + 8 + 4 + 8 + 12) * 8
+
+// guardBandNs is the time a full-size frame takes at speed bits per
+// second, rounded up to 100 ns.
+func guardBandNs(speed int64) int64 {
+	ns := (guardFrameBits*1e9 + speed - 1) / speed
+	return (ns + 99) / 100 * 100
+}
+
+// guardSpeed is the bit rate a guard band is sized for: the link's, or
+// without link the highest the port supports.
+func guardSpeed(oper *ifaceJSON) (bps int64, highest bool) {
+	if oper == nil {
+		return 0, false
+	}
+	if oper.Speed > 0 {
+		return int64(oper.Speed), false
+	}
+	if oper.Ethernet != nil {
+		for _, pmd := range oper.Ethernet.SupportedPMDs {
+			if s := int64(pmdSpeedMbps(ShortenPMD(pmd))) * 1e6; s > bps {
+				bps = s
+			}
+		}
+	}
+	return bps, true
 }
 
 func usText(ns int64) string {
@@ -206,6 +239,11 @@ func rationalNs(r *rationalJSON) int64 {
 
 func qosGatesRowOf(iface, oper *ifaceJSON) qosGatesRow {
 	row := qosGatesRow{Classes: qosClassesOf(oper), BaseSeconds: "0"}
+	if bps, highest := guardSpeed(oper); bps > 0 {
+		row.GuardUs = usText(guardBandNs(bps))
+		row.GuardSpeed = formatBitRate(uint64(bps))
+		row.GuardMax = highest
+	}
 	for c := range row.AllOpen {
 		row.AllOpen[c] = true
 	}

@@ -161,7 +161,7 @@
                 {{/* ── Time-Aware Shaper ────────────────────────────── */}}
                 {{$g := .QoSGates}}
                 <h4 class="cfg-section-head" style="margin-top:1rem">Time-Aware Shaper{{template "field-info" (index $d "tsn-gates")}}</h4>
-                <form hx-post="/configure/interfaces/{{.Name}}/gates" hx-swap="none">
+                <form hx-post="/configure/interfaces/{{.Name}}/gates" hx-swap="none" data-gate-editor>
                   <table class="info-table">
                     <tr>
                       <th>Enabled</th>
@@ -173,14 +173,6 @@
                       <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="cycle"
                                  value="{{$g.CycleUs}}" placeholder="sum of entries" style="width:9rem"></td>
                       {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time" $qp) "Back" "/configure/tsn" "What" "the cycle")}}
-                    </tr>
-                    <tr>
-                      <th>Base time{{template "field-info" (index $d "tsn-base")}}</th>
-                      <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="1" name="base_s"
-                                 value="{{$g.BaseSeconds}}" aria-label="Base time seconds" style="width:9rem"> <span class="text-muted">s</span>
-                        <input class="cfg-input cfg-input-sm" type="number" min="0" max="999999999" step="1" name="base_ns"
-                               value="{{$g.BaseNs}}" aria-label="Base time nanoseconds" style="width:9rem;margin-left:0.5rem"> <span class="text-muted">ns</span></td>
-                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time" $qp) "Back" "/configure/tsn" "What" "the base time")}}
                     </tr>
                   </table>
                   <div class="cfg-subsection-head" style="margin-top:0.75rem">Gate control list{{template "field-info" (index $d "tsn-list")}}</div>
@@ -198,10 +190,26 @@
                     {{template "gate-entry" (dict "N" "__N__" "Classes" $g.Classes "Open" $g.AllOpen "Interval" "" "Max" $page.QoSBounds.IntervalHi)}}
                   </template>
                   <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}">+ Add entry</button>
+                  {{if $g.GuardUs}}
+                  <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}"
+                          data-guard-us="{{$g.GuardUs}}" title="An entry with every gate closed, long enough for a full-size frame at {{$g.GuardSpeed}} to finish before the cycle starts over">+ Guard band ({{$g.GuardUs}} µs)</button>
+                  {{if $g.GuardMax}}<span class="text-muted">No link: sized for the port's highest speed, {{$g.GuardSpeed}}.</span>{{end}}
+                  {{end}}
+                  <div class="gate-timeline" data-classes="{{len $g.Classes}}" role="img" aria-label="One cycle of the gate control list"></div>
+                  <p class="gate-sum text-muted" style="margin:0.3rem 0 0"></p>
 
                   <details style="margin-top:0.5rem">
                     <summary>Advanced</summary>
                     <table class="info-table">
+                      <tr>
+                        <th>Base time{{template "field-info" (index $d "tsn-base")}}</th>
+                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="1" name="base_s"
+                                   value="{{$g.BaseSeconds}}" aria-label="Base time seconds" style="width:9rem"> <span class="text-muted">s</span>
+                          <input class="cfg-input cfg-input-sm" type="number" min="0" max="999999999" step="1" name="base_ns"
+                                 value="{{$g.BaseNs}}" aria-label="Base time nanoseconds" style="width:9rem;margin-left:0.5rem"> <span class="text-muted">ns</span>
+                          <div class="text-muted" style="white-space:normal">At 0 the cycles line up with the clock's epoch, the same on every synchronized device.</div></td>
+                        {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time" $qp) "Back" "/configure/tsn" "What" "the base time")}}
+                      </tr>
                       <tr>
                         <th>Cycle time extension <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-extension")}}</th>
                         <td><input class="cfg-input cfg-input-sm" type="number" min="0" max="{{$page.QoSBounds.ExtensionHi}}" step="any" name="extension"

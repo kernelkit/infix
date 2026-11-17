@@ -38,7 +38,7 @@ const tsnIfaceFixture = `{"ietf-interfaces:interfaces": {"interface": [
 ]}}`
 
 const tsnOperFixture = `{"ietf-interfaces:interfaces": {"interface": [
-  {"name": "e1", "type": "infix-if-type:ethernet",
+  {"name": "e1", "type": "infix-if-type:ethernet", "speed": "1000000000",
    "infix-interfaces:qos": {"capabilities": {"max-traffic-classes": 8}},
    "ieee802-dot1dc-cbsa-if:cbsa": {"cbsa-parameter-table": [{"traffic-class": 7, "oper-idle-slope": "20000000"}]},
    "ieee802-dot1dc-sched-if:gate-parameter-table": {
@@ -111,7 +111,8 @@ func TestQoSTSNRows(t *testing.T) {
 	}
 }
 
-func TestConfigureTSNRenders(t *testing.T) {
+func renderTSN(t *testing.T) string {
+	t.Helper()
 	tmpl := pageTemplate(t, "configure-tsn.html")
 	var ports []tsnPortRow
 	for _, row := range tsnRows(t) {
@@ -129,7 +130,11 @@ func TestConfigureTSNRenders(t *testing.T) {
 	if err := tmpl.ExecuteTemplate(&buf, "content", data); err != nil {
 		t.Fatalf("render: %v", err)
 	}
-	out := buf.String()
+	return buf.String()
+}
+
+func TestConfigureTSNRenders(t *testing.T) {
+	out := renderTSN(t)
 	for _, gone := range []string{"running 2 entries", "not running", "In effect", "Gate Control List"} {
 		if strings.Contains(out, gone) {
 			t.Errorf("status %q on the configure page", gone)
@@ -138,7 +143,8 @@ func TestConfigureTSNRenders(t *testing.T) {
 	for _, want := range []string{
 		`<td>class 7: 20 Mbps, class 5: 1 Mbps</td>`, `<td>100 µs cycle, 2 entries</td>`,
 		`hx-post="/configure/interfaces/e1/cbs"`, `name="idle_7"`, `value="20"`, `(not shaped by the profile)`,
-		`hx-post="/configure/interfaces/e1/gates"`, `name="gate_enabled" value="on" checked`,
+		`hx-post="/configure/interfaces/e1/gates" hx-swap="none" data-gate-editor`, `name="gate_enabled" value="on" checked`,
+		`data-guard-us="12.4"`, `+ Guard band (12.4 µs)`, `class="gate-timeline" data-classes="8"`,
 		`name="cycle"`, `name="entry_open_1" value="5" checked`, `name="entry_interval_0"`,
 		`id="gate-entry-tpl-e1"`, `data-template="gate-entry-tpl-e1"`, `name="entry_interval___N__"`, `name="maxsdu_5"`,
 		`hx-post="/configure/interfaces/e2/cbs"`, `name="idle_3"`, `hx-post="/configure/interfaces/e2/gates"`,
@@ -538,5 +544,44 @@ func TestSaveGatesKeepsUnknown(t *testing.T) {
 	}
 	if _, ok := table["admin-cycle-time-extension"]; ok {
 		t.Errorf("a cleared field came back: %v", table)
+	}
+}
+
+func TestGuardBand(t *testing.T) {
+	for speed, want := range map[int64]int64{1e9: 12400, 1e8: 123700, 1e10: 1300, 25e8: 5000} {
+		if got := guardBandNs(speed); got != want {
+			t.Errorf("%d bps: got %d ns, want %d", speed, got, want)
+		}
+	}
+	if strings.Count(renderTSN(t), "+ Guard band") != 1 {
+		t.Error("guard band offered on a port without a known speed, or not at all")
+	}
+}
+
+func TestGuardSpeed(t *testing.T) {
+	eth := &ethernetJSON{SupportedPMDs: []string{
+		"ieee802-ethernet-phy-type:pmd-type-1000BASE-T",
+		"ieee802-ethernet-phy-type:pmd-type-2.5GBASE-T",
+		"ieee802-ethernet-phy-type:pmd-type-100BASE-TX",
+	}}
+	for _, tc := range []struct {
+		name    string
+		oper    *ifaceJSON
+		bps     int64
+		highest bool
+	}{
+		{"link up", &ifaceJSON{Speed: 1e8, Ethernet: eth}, 1e8, false},
+		{"link down", &ifaceJSON{Ethernet: eth}, 25e8, true},
+		{"nothing known", &ifaceJSON{}, 0, true},
+		{"no data", nil, 0, false},
+	} {
+		bps, highest := guardSpeed(tc.oper)
+		if bps != tc.bps || highest != tc.highest {
+			t.Errorf("%s: got %d bps, highest %v", tc.name, bps, highest)
+		}
+	}
+	row := qosGatesRowOf(&ifaceJSON{}, &ifaceJSON{Ethernet: eth})
+	if row.GuardUs != "5" || row.GuardSpeed != "2.5 Gbps" || !row.GuardMax {
+		t.Errorf("link down: guard %q at %q, highest %v", row.GuardUs, row.GuardSpeed, row.GuardMax)
 	}
 }

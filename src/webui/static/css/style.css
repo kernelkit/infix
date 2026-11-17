@@ -3620,3 +3620,13 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
 
 /* A configure page while the candidate is reset and the page reloaded */
 .cfg-entering { opacity: 0.5; pointer-events: none; }
+
+/* Gate schedule timeline on Configure > TSN */
+.gate-timeline { margin-top: 0.75rem; max-width: 60rem; }
+.gate-timeline svg { display: block; width: 100%; height: auto; }
+.gate-timeline text { fill: var(--fg-muted); font-size: 9px; font-family: var(--font-mono); }
+.gate-lane { fill: var(--surface); }
+.gate-open { fill: var(--primary); }
+.gate-hold { fill: var(--primary); opacity: 0.35; }
+.gate-edge { stroke: var(--border); stroke-width: 1; }
+.gate-sum-over { color: var(--danger); }
