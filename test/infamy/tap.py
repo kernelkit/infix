@@ -47,6 +47,7 @@ class Test:
 
         self.test_cleanup=[]
         self.fail_hooks = []
+        self.step_hooks = []
         self.steps = 0
 
     def push_test_cleanup(self, fn):
@@ -55,6 +56,10 @@ class Test:
     def push_fail_hook(self, fn):
         """Call fn() if the test fails, before the cleanup"""
         self.fail_hooks.append(fn)
+
+    def push_step_hook(self, fn):
+        """Call fn(num, msg) when a step starts"""
+        self.step_hooks.append(fn)
 
     def cleanup(self):
         infamy.netns.IsolatedMacVlans.Cleanup()
@@ -103,6 +108,8 @@ class Test:
 
     @contextlib.contextmanager
     def step(self, msg):
+        for hook in self.step_hooks:
+            hook(self.steps + 1, msg)
         try:
             yield
             self._ok(msg)
