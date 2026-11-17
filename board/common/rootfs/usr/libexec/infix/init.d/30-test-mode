@@ -1,8 +1,9 @@
 #!/bin/sh
 # In test mode, forward all logs to the test controller's syslog sink.
 #
-# The test mode settings are a JSON object, from qemu (fw_cfg) or the
-# test-mode file on aux, which is an empty marker on older setups:
+# Test mode is on when /mnt/aux/test-mode exists.  On qemu the settings
+# come over fw_cfg and are copied there.  The file holds the settings as
+# JSON, or is empty on older setups:
 #
 #   { "management-interface": "e1", "physical-name": "dut1" }
 
@@ -10,11 +11,13 @@ ident=$(basename "$0")
 conf=/etc/syslog.d/test-mode.conf
 group=ff02::161
 
-[ -f /mnt/aux/test-mode ] || exit 0
+file=/mnt/aux/test-mode
+fwcfg=/sys/firmware/qemu_fw_cfg/by_name/opt/test-mode/raw
 
-# Qemu settings (for testing) take precedence over the test-mode file
-file=/sys/firmware/qemu_fw_cfg/by_name/opt/test-mode/raw
-[ -f "$file" ] || file=/mnt/aux/test-mode
+if [ -f "$fwcfg" ]; then
+    cmp -s "$fwcfg" "$file" || cp "$fwcfg" "$file"
+fi
+[ -f "$file" ] || exit 0
 
 iface=$(jq -r '."management-interface" // empty' "$file" 2>/dev/null)
 [ -n "$iface" ] || exit 0
