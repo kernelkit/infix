@@ -142,7 +142,7 @@
           <td colspan="3" class="key-detail-cell">
             <div class="key-detail-body">
               {{template "port-cbs" (dict "Row" $p.Row "Page" $)}}
-              {{template "port-gates" (dict "Row" $p.Row "Page" $)}}
+              {{template "port-gates" (dict "Row" $p.Row "Page" $ "Clock" $p.Clock)}}
             </div>
           </td>
         </tr>

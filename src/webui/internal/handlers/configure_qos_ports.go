@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kernelkit/infix/src/features"
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/schema"
 )
@@ -37,6 +38,7 @@ type tsnPortRow struct {
 	Row      cfgIfaceRow
 	Reserved string // "class 7: 50 Mbps, class 6: 20 Mbps"
 	Schedule string // "1000 µs cycle, 4 entries"
+	Clock    string // why the port's clock is not synchronized
 }
 
 type cfgTSNPageData struct {
@@ -266,6 +268,36 @@ func tsnSummary(row cfgIfaceRow) (reserved, schedule string) {
 	return reserved, schedule
 }
 
+// ptpClockHint returns, for a port, why its clock is not synchronized; "" when it is or without PTP support.
+func (h *ConfigureInterfacesHandler) ptpClockHint(ctx context.Context, caps *Capabilities) func(port string) string {
+	none := func(string) string { return "" }
+	if !caps.Has(features.PTP) {
+		return none
+	}
+	var raw ptpWrapper
+	if err := h.RC.Get(ctx, "/data/ieee1588-ptp-tt:ptp", &raw); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure tsn: ptp: %v", err)
+		return none
+	}
+	hints := map[string]string{}
+	for i := range raw.PTP.Instances.Instance {
+		in := &raw.PTP.Instances.Instance[i]
+		hint := ""
+		if isGM, follows := in.synced(); !isGM && !follows {
+			hint = fmt.Sprintf("PTP instance %d is not synchronized", in.Index)
+		}
+		for _, p := range in.Ports.Port {
+			hints[p.Interface] = hint
+		}
+	}
+	return func(port string) string {
+		if hint, runs := hints[port]; runs {
+			return hint
+		}
+		return "No PTP instance runs on this port"
+	}
+}
+
 // OverviewTSN lists the ports with their reservations and gate
 // schedule, and an editor for both per port.
 // GET /configure/tsn
@@ -298,7 +330,15 @@ func (h *ConfigureInterfacesHandler) OverviewTSN(w http.ResponseWriter, r *http.
 		data.Classes = append(data.Classes, c)
 	}
 
-	ifaces, oper, profiles, err := h.qosPortData(context.WithoutCancel(r.Context()))
+	ctx := context.WithoutCancel(r.Context())
+	var (
+		clock func(string) string
+		wg    sync.WaitGroup
+	)
+	wg.Add(1)
+	go func() { defer wg.Done(); clock = h.ptpClockHint(ctx, data.Capabilities) }()
+	ifaces, oper, profiles, err := h.qosPortData(ctx)
+	wg.Wait()
 	if err != nil {
 		log.Printf("configure tsn: %v", err)
 		data.Error = "Could not read the interfaces"
@@ -310,6 +350,7 @@ func (h *ConfigureInterfacesHandler) OverviewTSN(w http.ResponseWriter, r *http.
 		}
 		p := tsnPortRow{Row: row}
 		p.Reserved, p.Schedule = tsnSummary(row)
+		p.Clock = clock(row.Name)
 		data.Ports = append(data.Ports, p)
 	}
 	sort.Slice(data.Ports, func(i, j int) bool { return naturalLess(data.Ports[i].Row.Name, data.Ports[j].Row.Name) })

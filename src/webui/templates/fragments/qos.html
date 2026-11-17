@@ -154,13 +154,18 @@
 {{end}}
 {{end}}
 
-{{/* The gate schedule of one port.  dict: Row, a cfgIfaceRow; Page. */}}
+{{/* The gate schedule of one port.  dict: Row, a cfgIfaceRow; Page; Clock, a hint. */}}
 {{define "port-gates"}}
-{{$page := .Page}}{{$d := .Page.Desc}}{{with .Row}}
+{{$page := .Page}}{{$d := .Page.Desc}}{{$clock := .Clock}}{{with .Row}}
                 {{$qp := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
                 {{/* ── Time-Aware Shaper ────────────────────────────── */}}
                 {{$g := .QoSGates}}
                 <h4 class="cfg-section-head" style="margin-top:1rem">Time-Aware Shaper{{template "field-info" (index $d "tsn-gates")}}</h4>
+                {{if $clock}}
+                <p class="text-muted" style="margin:0 0 0.5rem; white-space:normal">{{$clock}}.  A schedule lines up with
+                  other devices only when their clocks are synchronized, see
+                  <a href="/configure/ptp" hx-get="/configure/ptp" hx-target="#content" hx-push-url="true">PTP</a>.</p>
+                {{end}}
                 <form hx-post="/configure/interfaces/{{.Name}}/gates" hx-swap="none" data-gate-editor>
                   <table class="info-table">
                     <tr>

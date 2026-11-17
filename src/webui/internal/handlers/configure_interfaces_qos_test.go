@@ -116,7 +116,7 @@ func renderTSN(t *testing.T) string {
 	tmpl := pageTemplate(t, "configure-tsn.html")
 	var ports []tsnPortRow
 	for _, row := range tsnRows(t) {
-		p := tsnPortRow{Row: row}
+		p := tsnPortRow{Row: row, Clock: "No PTP instance runs on this port"}
 		p.Reserved, p.Schedule = tsnSummary(row)
 		ports = append(ports, p)
 	}
@@ -583,5 +583,11 @@ func TestPortSpeed(t *testing.T) {
 	row := qosGatesRowOf(&ifaceJSON{}, &ifaceJSON{Ethernet: eth})
 	if row.GuardUs != "5" || row.GuardSpeed != "2.5 Gbps" || !row.GuardMax {
 		t.Errorf("link down: guard %q at %q, highest %v", row.GuardUs, row.GuardSpeed, row.GuardMax)
+	}
+}
+
+func TestConfigureTSNClockHint(t *testing.T) {
+	if !strings.Contains(renderTSN(t), "No PTP instance runs on this port.  A schedule lines up") {
+		t.Error("no clock hint in the schedule editor")
 	}
 }

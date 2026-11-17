@@ -70,52 +70,64 @@ type ptpClockQuality struct {
 type ptpWrapper struct {
 	PTP struct {
 		Instances struct {
-			Instance []struct {
-				Index     int `json:"instance-index"`
-				DefaultDS struct {
-					ClockIdentity string          `json:"clock-identity"`
-					ClockQuality  ptpClockQuality `json:"clock-quality"`
-					Priority1     int             `json:"priority1"`
-					Priority2     int             `json:"priority2"`
-					DomainNumber  int             `json:"domain-number"`
-					InstanceType  string          `json:"instance-type"`
-				} `json:"default-ds"`
-				CurrentDS struct {
-					StepsRemoved int    `json:"steps-removed"`
-					Offset       string `json:"offset-from-time-transmitter"`
-					MeanDelay    string `json:"mean-delay"`
-				} `json:"current-ds"`
-				ParentDS struct {
-					GrandmasterIdentity string          `json:"grandmaster-identity"`
-					GrandmasterQuality  ptpClockQuality `json:"grandmaster-clock-quality"`
-					GrandmasterPrio1    int             `json:"grandmaster-priority1"`
-					GrandmasterPrio2    int             `json:"grandmaster-priority2"`
-				} `json:"parent-ds"`
-				TimePropertiesDS struct {
-					TimeSource string `json:"time-source"`
-				} `json:"time-properties-ds"`
-				Ports struct {
-					Port []struct {
-						Index     int    `json:"port-index"`
-						Interface string `json:"underlying-interface"`
-						PortDS    struct {
-							State         string `json:"port-state"`
-							MeanLinkDelay string `json:"mean-link-delay"`
-							DelayMech     string `json:"delay-mechanism"`
-						} `json:"port-ds"`
-						Stats *struct {
-							RxSync     uint64 `json:"rx-sync-count"`
-							TxSync     uint64 `json:"tx-sync-count"`
-							RxAnnounce uint64 `json:"rx-announce-count"`
-							TxAnnounce uint64 `json:"tx-announce-count"`
-							RxPDelay   uint64 `json:"rx-pdelay-req-count"`
-							TxPDelay   uint64 `json:"tx-pdelay-req-count"`
-						} `json:"ieee802-dot1as-gptp:port-statistics-ds"`
-					} `json:"port"`
-				} `json:"ports"`
-			} `json:"instance"`
+			Instance []ptpOperInstance `json:"instance"`
 		} `json:"instances"`
 	} `json:"ieee1588-ptp-tt:ptp"`
+}
+
+type ptpOperInstance struct {
+	Index     int `json:"instance-index"`
+	DefaultDS struct {
+		ClockIdentity string          `json:"clock-identity"`
+		ClockQuality  ptpClockQuality `json:"clock-quality"`
+		Priority1     int             `json:"priority1"`
+		Priority2     int             `json:"priority2"`
+		DomainNumber  int             `json:"domain-number"`
+		InstanceType  string          `json:"instance-type"`
+	} `json:"default-ds"`
+	CurrentDS struct {
+		StepsRemoved int    `json:"steps-removed"`
+		Offset       string `json:"offset-from-time-transmitter"`
+		MeanDelay    string `json:"mean-delay"`
+	} `json:"current-ds"`
+	ParentDS struct {
+		GrandmasterIdentity string          `json:"grandmaster-identity"`
+		GrandmasterQuality  ptpClockQuality `json:"grandmaster-clock-quality"`
+		GrandmasterPrio1    int             `json:"grandmaster-priority1"`
+		GrandmasterPrio2    int             `json:"grandmaster-priority2"`
+	} `json:"parent-ds"`
+	TimePropertiesDS struct {
+		TimeSource string `json:"time-source"`
+	} `json:"time-properties-ds"`
+	Ports struct {
+		Port []struct {
+			Index     int    `json:"port-index"`
+			Interface string `json:"underlying-interface"`
+			PortDS    struct {
+				State         string `json:"port-state"`
+				MeanLinkDelay string `json:"mean-link-delay"`
+				DelayMech     string `json:"delay-mechanism"`
+			} `json:"port-ds"`
+			Stats *struct {
+				RxSync     uint64 `json:"rx-sync-count"`
+				TxSync     uint64 `json:"tx-sync-count"`
+				RxAnnounce uint64 `json:"rx-announce-count"`
+				TxAnnounce uint64 `json:"tx-announce-count"`
+				RxPDelay   uint64 `json:"rx-pdelay-req-count"`
+				TxPDelay   uint64 `json:"tx-pdelay-req-count"`
+			} `json:"ieee802-dot1as-gptp:port-statistics-ds"`
+		} `json:"port"`
+	} `json:"ports"`
+}
+
+// synced reports whether the instance is the grandmaster, or follows one.
+func (in *ptpOperInstance) synced() (isGM, follows bool) {
+	id := in.DefaultDS.ClockIdentity
+	isGM = id != "" && id == in.ParentDS.GrandmasterIdentity
+	for _, p := range in.Ports.Port {
+		follows = follows || p.PortDS.State == "time-receiver"
+	}
+	return isGM, follows
 }
 
 // ptpNanos formats a time-interval, nanoseconds scaled by 2^16 in a
@@ -165,15 +177,18 @@ func (h *PTPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		log.Printf("restconf ptp: %v", err)
 		data.Error = "Failed to fetch PTP data"
 	}
-	for _, in := range raw.PTP.Instances.Instance {
+	for i := range raw.PTP.Instances.Instance {
+		in := &raw.PTP.Instances.Instance[i]
 		d := in.DefaultDS
+		isGM, follows := in.synced()
 		view := ptpInstanceView{
 			Index:       in.Index,
 			Type:        d.InstanceType,
 			Domain:      d.DomainNumber,
 			ClockID:     d.ClockIdentity,
 			Grandmaster: in.ParentDS.GrandmasterIdentity,
-			IsGM:        d.ClockIdentity != "" && d.ClockIdentity == in.ParentDS.GrandmasterIdentity,
+			IsGM:        isGM,
+			Synced:      follows,
 			Priority:    ptpPair(d.Priority1, d.Priority2),
 			GMPriority:  ptpPair(in.ParentDS.GrandmasterPrio1, in.ParentDS.GrandmasterPrio2),
 			ClockClass:  schema.StripModulePrefix(d.ClockQuality.ClockClass),
@@ -196,9 +211,6 @@ func (h *PTPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				Up:        state == "time-receiver" || state == "time-transmitter",
 				Delay:     p.PortDS.DelayMech,
 				LinkDelay: ptpNanos(p.PortDS.MeanLinkDelay),
-			}
-			if state == "time-receiver" {
-				view.Synced = true
 			}
 			if s := p.Stats; s != nil {
 				row.HasStats, view.HasStats = true, true

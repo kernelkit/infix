@@ -3,9 +3,12 @@
 package handlers
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
+
+	"infix/webui/internal/testutil"
 )
 
 func TestPlanSchedule(t *testing.T) {
@@ -62,5 +65,37 @@ func TestConfigureTSNOffersTimeSchedule(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %s", want)
 		}
+	}
+}
+
+func TestPTPClockHint(t *testing.T) {
+	ptp := NewCapabilities(map[string]bool{"ptp": true})
+	hint := func(resp map[string]any, caps *Capabilities, port string) string {
+		mock := testutil.NewMockFetcher()
+		if resp != nil {
+			mock.SetResponse("/data/ieee1588-ptp-tt:ptp", resp)
+		}
+		h := &ConfigureInterfacesHandler{RC: mock}
+		return h.ptpClockHint(context.Background(), caps)(port)
+	}
+	for _, tc := range []struct {
+		name             string
+		clock, gm, state string
+		caps             *Capabilities
+		port             string
+		want             string
+	}{
+		{"follows a grandmaster", "aa", "bb", "time-receiver", ptp, "e5", ""},
+		{"is grandmaster", "aa", "aa", "time-transmitter", ptp, "e5", ""},
+		{"listening", "aa", "bb", "listening", ptp, "e5", "PTP instance 0 is not synchronized"},
+		{"port without PTP", "aa", "aa", "time-transmitter", ptp, "e6", "No PTP instance runs on this port"},
+		{"no PTP support", "aa", "bb", "listening", NewCapabilities(nil), "e5", ""},
+	} {
+		if got := hint(ptpOperJSON(tc.clock, tc.gm, tc.state), tc.caps, tc.port); got != tc.want {
+			t.Errorf("%s: got %q", tc.name, got)
+		}
+	}
+	if got := hint(nil, ptp, "e5"); got != "No PTP instance runs on this port" {
+		t.Errorf("no instances: got %q", got)
 	}
 }
