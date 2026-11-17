@@ -138,6 +138,7 @@ type cfgIfaceRow struct {
 	QoSCustom     bool
 	QoSShaperMbit string
 	QoSShapers    []qosShaperRow
+	QoSOver       string // the reservations exceed the port's speed
 	QoSGates      qosGatesRow
 
 	// Page-level bits copied onto each row so the per-interface IPv4/IPv6
@@ -2297,6 +2298,7 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 		if row.TypeSlug != "loopback" {
 			op := operByName[iface.Name]
 			row.QoSShapers = qosShaperRows(&iface, op, qosEgressOf(&iface, profByName))
+			row.QoSOver = reservedOver(op, qosAdminSlopes(&iface))
 			row.QoSGates = qosGatesRowOf(&iface, op)
 		}
 		rows = append(rows, row)

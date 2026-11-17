@@ -81,6 +81,12 @@ func planReservation(res reservation, ifaces, oper []ifaceJSON, profiles []qosPr
 			}
 		}
 
+		slopes := qosAdminSlopes(iface)
+		slopes[res.Class], _ = strconv.ParseInt(res.Bits, 10, 64)
+		if over := reservedOver(operByName[name], slopes); over != "" {
+			plan.Notes = append(plan.Notes, name+": "+over)
+		}
+
 		egress := map[string]any{}
 		if !shaped[res.Class] {
 			egress["traffic-class"] = []any{map[string]any{"id": res.Class, "algorithm": qosAlgoCBS}}

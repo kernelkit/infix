@@ -94,9 +94,8 @@ func guardBandNs(speed int64) int64 {
 	return (ns + 99) / 100 * 100
 }
 
-// guardSpeed is the bit rate a guard band is sized for: the link's, or
-// without link the highest the port supports.
-func guardSpeed(oper *ifaceJSON) (bps int64, highest bool) {
+// qosPortSpeed is the link's bit rate, or without link the highest the port supports.
+func qosPortSpeed(oper *ifaceJSON) (bps int64, highest bool) {
 	if oper == nil {
 		return 0, false
 	}
@@ -189,14 +188,38 @@ func qosShapedClasses(eg *qosEgressJSON) map[int]bool {
 	return shaped
 }
 
-func qosShaperRows(iface, oper *ifaceJSON, eg *qosEgressJSON) []qosShaperRow {
-	shaped := qosShapedClasses(eg)
-	admin := map[int]int64{}
+// qosAdminSlopes is the idle slope configured for each class of a port.
+func qosAdminSlopes(iface *ifaceJSON) map[int]int64 {
+	slopes := map[int]int64{}
 	if iface.CBSA != nil {
 		for _, e := range iface.CBSA.Table {
-			admin[e.TrafficClass] = int64(e.AdminIdleSlope)
+			slopes[e.TrafficClass] = int64(e.AdminIdleSlope)
 		}
 	}
+	return slopes
+}
+
+// reservedOver warns when slopes add up to more than the port's speed.
+func reservedOver(oper *ifaceJSON, slopes map[int]int64) string {
+	var sum int64
+	for _, s := range slopes {
+		sum += s
+	}
+	speed, highest := qosPortSpeed(oper)
+	if speed == 0 || sum <= speed {
+		return ""
+	}
+	what := "link speed"
+	if highest {
+		what = "highest speed"
+	}
+	return fmt.Sprintf("reservations add up to %s, more than the port's %s of %s",
+		formatBitRate(uint64(sum)), what, formatBitRate(uint64(speed)))
+}
+
+func qosShaperRows(iface, oper *ifaceJSON, eg *qosEgressJSON) []qosShaperRow {
+	shaped := qosShapedClasses(eg)
+	admin := qosAdminSlopes(iface)
 	profile := iface.QoS != nil && iface.QoS.Profile != ""
 	var rows []qosShaperRow
 	for _, id := range qosClassesOf(oper) {
@@ -239,7 +262,7 @@ func rationalNs(r *rationalJSON) int64 {
 
 func qosGatesRowOf(iface, oper *ifaceJSON) qosGatesRow {
 	row := qosGatesRow{Classes: qosClassesOf(oper), BaseSeconds: "0"}
-	if bps, highest := guardSpeed(oper); bps > 0 {
+	if bps, highest := qosPortSpeed(oper); bps > 0 {
 		row.GuardUs = usText(guardBandNs(bps))
 		row.GuardSpeed = formatBitRate(uint64(bps))
 		row.GuardMax = highest

@@ -45,7 +45,7 @@ func planSchedule(s timeSchedule, oper []ifaceJSON) (map[string][]gateEntry, err
 		}
 		var guard int64
 		if s.Guard {
-			bps, _ := guardSpeed(o)
+			bps, _ := qosPortSpeed(o)
 			if bps == 0 {
 				return nil, fmt.Errorf("%s reports no speed to size a guard band from; create its schedule without one", name)
 			}

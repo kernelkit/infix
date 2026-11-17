@@ -141,7 +141,7 @@ func TestConfigureTSNRenders(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		`<td>class 7: 20 Mbps, class 5: 1 Mbps</td>`, `<td>100 µs cycle, 2 entries</td>`,
+		`>class 7: 20 Mbps, class 5: 1 Mbps`, `<td>100 µs cycle, 2 entries</td>`,
 		`hx-post="/configure/interfaces/e1/cbs"`, `name="idle_7"`, `value="20"`, `(not shaped by the profile)`,
 		`hx-post="/configure/interfaces/e1/gates" hx-swap="none" data-gate-editor`, `name="gate_enabled" value="on" checked`,
 		`data-guard-us="12.4"`, `+ Guard band (12.4 µs)`, `class="gate-timeline" data-classes="8"`,
@@ -558,7 +558,7 @@ func TestGuardBand(t *testing.T) {
 	}
 }
 
-func TestGuardSpeed(t *testing.T) {
+func TestPortSpeed(t *testing.T) {
 	eth := &ethernetJSON{SupportedPMDs: []string{
 		"ieee802-ethernet-phy-type:pmd-type-1000BASE-T",
 		"ieee802-ethernet-phy-type:pmd-type-2.5GBASE-T",
@@ -575,7 +575,7 @@ func TestGuardSpeed(t *testing.T) {
 		{"nothing known", &ifaceJSON{}, 0, true},
 		{"no data", nil, 0, false},
 	} {
-		bps, highest := guardSpeed(tc.oper)
+		bps, highest := qosPortSpeed(tc.oper)
 		if bps != tc.bps || highest != tc.highest {
 			t.Errorf("%s: got %d bps, highest %v", tc.name, bps, highest)
 		}
