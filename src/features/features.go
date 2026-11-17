@@ -39,6 +39,7 @@ const (
 	Alarms       = "alarms"
 	QoS          = "qos"
 	TSN          = "tsn"
+	PTP          = "ptp"
 	EgressShaper = "egress-shaper"
 )
 
@@ -55,6 +56,7 @@ var Optionals = []Optional{
 	{Name: Alarms, Module: "ietf-alarms"},
 	{Name: QoS, Module: "infix-qos"},
 	{Name: TSN, Module: "infix-tsn"},
+	{Name: PTP, Module: "ieee1588-ptp-tt"},
 	{Name: EgressShaper, Module: "infix-interfaces", Feature: "egress-shaper"},
 }
 

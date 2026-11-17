@@ -109,6 +109,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	ptpTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/ptp.html")
+	if err != nil {
+		return nil, err
+	}
 	qosTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "pages/qos.html")
 	if err != nil {
 		return nil, err
@@ -271,6 +275,7 @@ func New(
 	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
 	cfgAdv := &handlers.ConfigureAdvancedHandler{Template: cfgAdvTmpl, RC: rc, Schema: schemaCache}
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
+	ptp := &handlers.PTPHandler{Template: ptpTmpl, RC: rc, Schema: schemaCache}
 	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc, Schema: schemaCache}
 	cfgQoS := &handlers.ConfigureQoSHandler{Template: cfgQoSTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
@@ -346,6 +351,7 @@ func New(
 	mux.HandleFunc("GET /vpn", vpn.Overview)
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
+	mux.HandleFunc("GET /ptp", ptp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
 	mux.HandleFunc("GET /alarms", alarms.Overview)
 	mux.HandleFunc("POST /alarms/state", alarms.SetState)

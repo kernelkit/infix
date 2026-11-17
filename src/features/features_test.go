@@ -8,7 +8,7 @@ import (
 )
 
 // testdata/sysrepo.startup is trimmed from an x86_64 image with WiFi,
-// GPS, containers, FRR, QoS and TSN built in, but not modems.
+// GPS, containers, FRR, QoS, TSN and PTP built in, but not modems.
 func TestSysrepoModules(t *testing.T) {
 	s, err := LoadSysrepoModules("testdata/sysrepo.startup")
 	if err != nil {
@@ -53,6 +53,7 @@ func TestYangLibraryFull(t *testing.T) {
 		{"name":"infix-hardware","feature":["gps","modem"]},
 		{"name":"infix-qos"},
 		{"name":"infix-tsn"},
+		{"name":"ieee1588-ptp-tt"},
 		{"name":"ietf-ospf"},
 		{"name":"ietf-alarms"}]}]}}`))
 	if err != nil {

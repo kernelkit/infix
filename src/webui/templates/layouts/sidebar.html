@@ -159,6 +159,18 @@
             NTP
           </a>
         </li>
+        {{if and .Capabilities (.Capabilities.Has "ptp")}}
+        <li>
+          <a href="/ptp"
+             hx-get="/ptp"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "ptp"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/ptp.svg')"></span>
+            PTP
+          </a>
+        </li>
+        {{end}}
         {{if and .Capabilities (.Capabilities.Has "wifi")}}
         <li>
           <a href="/wifi"
