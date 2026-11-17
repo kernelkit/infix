@@ -42,6 +42,7 @@ untouched.
 | system-advanced.svg| wrench               |
 | system-control.svg| power                 |
 | system.svg        | settings              |
+| tsn.svg           | chart-gantt           |
 | wifi.svg          | wifi                  |
 | wireguard.svg     | globe-lock            |
 

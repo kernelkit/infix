@@ -1,0 +1,110 @@
+{{define "configure-qos-ports.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/qos/ports"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">QoS</div>
+  {{template "qos-tabs" "ports"}}
+  <p class="text-muted" style="margin:0.6rem 1rem">A port takes its classification, traffic classes and remarking from a
+    profile, or has settings of its own.  The egress shaper is always the port's own{{if .Capabilities.Has "tsn"}},
+    as are its <a href="/configure/tsn" hx-get="/configure/tsn" hx-target="#content" hx-push-url="true">reservations and gate schedule</a>{{end}}.</p>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Port</th>
+          <th>Settings{{template "field-info" (index $d "port-profile")}}</th>
+          {{if .Capabilities.Has "egress-shaper"}}
+          <th>Egress shaper{{template "field-info" (index $d "port-shaper")}}</th>
+          {{end}}
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $p := .Ports}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="qosport-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$p.Name}}
+            </button>
+          </td>
+          <td>{{if $p.Profile}}Profile {{$p.Profile}}{{else if $p.Own}}Own settings{{else}}<span class="text-muted">Defaults</span>{{end}}</td>
+          {{if $.Capabilities.Has "egress-shaper"}}
+          <td>{{if $p.ShaperMbit}}{{$p.ShaperMbit}} Mbps{{else}}<span class="text-muted">—</span>{{end}}</td>
+          {{end}}
+        </tr>
+        <tr class="key-detail-row" id="key-detail-qosport-{{$i}}">
+          <td colspan="3" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/qos/ports/{{$p.Name}}" hx-swap="none">
+                {{$qp := printf "/ietf-interfaces:interfaces/interface=%s/infix-interfaces:qos" $p.Name}}
+                <table class="info-table">
+                  <tr>
+                    <th>Settings{{template "field-info" (index $d "port-profile")}}</th>
+                    <td>
+                      <select class="cfg-input" name="source" style="width:auto" data-opens="qos-own-{{$i}}" data-opens-on="own">
+                        <option value="default" {{if and (not $p.Profile) (not $p.Own)}}selected{{end}}>Defaults</option>
+                        <option value="own" {{if $p.Own}}selected{{end}}>Own settings</option>
+                        {{if $.ProfileNames}}
+                        <optgroup label="Profile">
+                          {{range $.ProfileNames}}
+                          <option value="profile:{{.}}" {{if eq . $p.Profile}}selected{{end}}>{{.}}</option>
+                          {{end}}
+                        </optgroup>
+                        {{end}}
+                      </select>
+                      <a href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-swap="innerHTML"
+                         hx-push-url="true" style="margin-left:0.5rem">Edit profiles</a>
+                    </td>
+                  </tr>
+                  {{if $.Capabilities.Has "egress-shaper"}}
+                  <tr>
+                    <th>Egress shaper <span class="unit">(Mbps)</span>{{template "field-info" (index $d "port-shaper")}}</th>
+                    <td><input class="cfg-input cfg-input-sm" type="number" min="{{$.QoSBounds.RateLo}}" max="{{$.QoSBounds.RateHi}}" step="any" name="rate"
+                               value="{{$p.ShaperMbit}}" placeholder="no shaping" style="width:8rem"></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress-shaper" $qp) "Back" "/configure/qos/ports" "What" "the egress shaper")}}
+                  </tr>
+                  {{end}}
+                </table>
+                <details id="qos-own-{{$i}}" {{if $p.Own}}open{{end}} style="margin-top:0.75rem">
+                  <summary>Own settings</summary>
+                  <p class="text-muted" style="margin:0.4rem 0">Used when Settings is "Own settings".</p>
+                  {{template "qos-settings-fields" (dict "P" $p.Editor "Path" $qp "Back" "/configure/qos/ports" "Page" $)}}
+                </details>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="3"><span class="text-muted">No ports report QoS support.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}
+{{end}}

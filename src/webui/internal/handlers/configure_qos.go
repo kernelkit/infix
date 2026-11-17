@@ -342,6 +342,37 @@ func qosProfilePorts(ifaces []ifaceJSON) map[string][]string {
 	return ports
 }
 
+// fillQoSEditor reads what the settings editor takes from the schema:
+// options, descriptions, bounds and the defaults of each leaf.
+func fillQoSEditor(data *cfgQoSPageData, mgr *schema.Manager) qosDefaults {
+	l := qosProfileLeafs()
+	data.Options = map[string][]schema.IdentityOption{
+		"trust":        schema.OptionsFor(mgr, l.Trust),
+		"pcp-preset":   schema.OptionsFor(mgr, l.PCPPreset),
+		"dscp-preset":  schema.OptionsFor(mgr, l.DSCPPreset),
+		"table-preset": schema.OptionsFor(mgr, l.TablePreset),
+		"algorithm":    schema.OptionsFor(mgr, l.Algorithm),
+		"remark-pcp":   schema.OptionsFor(mgr, l.RemarkPCP),
+		"remark-dscp":  schema.OptionsFor(mgr, l.RemarkDSCP),
+	}
+	def := qosDefaultsOf(mgr, l, data.Options)
+	data.TrustText = schema.OptionDescriptions(data.Options["trust"])
+	data.PriorityLo, data.PriorityHi = schema.RangeBounds(schemaRange(mgr, l.DefaultPriority))
+	data.ShareLo, data.ShareHi = schema.RangeBounds(schemaRange(mgr, l.Bandwidth))
+	data.Desc = map[string]string{
+		"profile":   schema.DescriptionOf(mgr, qosProfilesPath),
+		"trust":     schema.DescriptionOf(mgr, l.Trust),
+		"default":   schema.DescriptionOf(mgr, l.DefaultPriority),
+		"pcp-map":   schema.DescriptionOf(mgr, qosProfilesPath+"/ingress/pcp-map"),
+		"dscp-map":  schema.DescriptionOf(mgr, qosProfilesPath+"/ingress/dscp-map"),
+		"table":     schema.DescriptionOf(mgr, qosProfilesPath+"/egress/traffic-class-table"),
+		"algorithm": schema.DescriptionOf(mgr, l.Algorithm),
+		"bandwidth": schema.DescriptionOf(mgr, l.Bandwidth),
+		"remark":    schema.DescriptionOf(mgr, qosProfilesPath+"/egress/remark"),
+	}
+	return def
+}
+
 // Overview lists the profiles with the ports on each and an editor per row.
 func (h *ConfigureQoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgQoSPageData{PageData: newPageData(w, r, "configure-qos", "QoS Profiles"), Templates: qosTemplates}
@@ -349,31 +380,7 @@ func (h *ConfigureQoSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data.Loading = mgr == nil
 	var def qosDefaults
 	if mgr != nil {
-		l := qosProfileLeafs()
-		data.Options = map[string][]schema.IdentityOption{
-			"trust":        schema.OptionsFor(mgr, l.Trust),
-			"pcp-preset":   schema.OptionsFor(mgr, l.PCPPreset),
-			"dscp-preset":  schema.OptionsFor(mgr, l.DSCPPreset),
-			"table-preset": schema.OptionsFor(mgr, l.TablePreset),
-			"algorithm":    schema.OptionsFor(mgr, l.Algorithm),
-			"remark-pcp":   schema.OptionsFor(mgr, l.RemarkPCP),
-			"remark-dscp":  schema.OptionsFor(mgr, l.RemarkDSCP),
-		}
-		def = qosDefaultsOf(mgr, l, data.Options)
-		data.TrustText = schema.OptionDescriptions(data.Options["trust"])
-		data.PriorityLo, data.PriorityHi = schema.RangeBounds(schemaRange(mgr, l.DefaultPriority))
-		data.ShareLo, data.ShareHi = schema.RangeBounds(schemaRange(mgr, l.Bandwidth))
-		data.Desc = map[string]string{
-			"profile":   schema.DescriptionOf(mgr, qosProfilesPath),
-			"trust":     schema.DescriptionOf(mgr, l.Trust),
-			"default":   schema.DescriptionOf(mgr, l.DefaultPriority),
-			"pcp-map":   schema.DescriptionOf(mgr, qosProfilesPath+"/ingress/pcp-map"),
-			"dscp-map":  schema.DescriptionOf(mgr, qosProfilesPath+"/ingress/dscp-map"),
-			"table":     schema.DescriptionOf(mgr, qosProfilesPath+"/egress/traffic-class-table"),
-			"algorithm": schema.DescriptionOf(mgr, l.Algorithm),
-			"bandwidth": schema.DescriptionOf(mgr, l.Bandwidth),
-			"remark":    schema.DescriptionOf(mgr, qosProfilesPath+"/egress/remark"),
-		}
+		def = fillQoSEditor(&data, mgr)
 	}
 
 	var (

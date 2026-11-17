@@ -181,8 +181,6 @@ type cfgIfacePageData struct {
 	// the Add Interface row so users don't have to remember the name.
 	UnconfiguredPhysical []string
 	Desc                 map[string]string
-	QoSProfiles          []string  // names, for the per-port profile select
-	QoSBounds            qosBounds // input bounds of the QoS and TSN fields
 
 	// Add Interface modal — pre-computed once per page render so the
 	// dialog has no per-tile-click latency. WizardTypes feeds the type
@@ -230,7 +228,9 @@ type cfgIfacePageData struct {
 
 // ConfigureInterfacesHandler serves the Configure > Interfaces page.
 type ConfigureInterfacesHandler struct {
-	Template *template.Template
+	Template         *template.Template
+	QoSPortsTemplate *template.Template // Configure > QoS > Ports
+	TSNTemplate      *template.Template // Configure > TSN
 	RC       restconf.Fetcher
 	Schema   *schema.Cache
 }
@@ -254,7 +254,6 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		lPath := "/infix-interfaces:lag"
 		ip4 := "/ietf-ip:ipv4"
 		ip6 := "/ietf-ip:ipv6"
-		data.QoSBounds = qosBoundsOf(mgr)
 		data.Desc = map[string]string{
 			"name":            descOr(mgr, ifPath+"/name", "The unique name for this interface. Pick one not already in use."),
 			"description":     schema.DescriptionOf(mgr, ifPath+"/description"),
@@ -291,16 +290,6 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			// wrapped in descOr() with a fallback string taken straight
 			// from the YANG description text. Drop the fallback once
 			// the schema layer learns to traverse augments.
-			"qos-profile":        schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/profile"),
-			"qos-shaper":         schema.DescriptionOf(mgr, ifPath+"/infix-interfaces:qos/egress-shaper"),
-			"tsn-cbs":            schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa"),
-			"tsn-idle":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-cbsa-if:cbsa/cbsa-parameter-table/admin-idle-slope"),
-			"tsn-list":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-control-list"),
-			"tsn-gates":          schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table"),
-			"tsn-cycle":          schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time"),
-			"tsn-base":           schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time"),
-			"tsn-extension":      schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time-extension"),
-			"tsn-max-sdu":        schema.DescriptionOf(mgr, ifPath+"/ieee802-dot1dc-sched-if:gate-parameter-table/queue-max-sdu-table/queue-max-sdu"),
 			"bridge-port-bridge": descOr(mgr, ifPath+"/infix-interfaces:bridge-port/bridge", "Interfaces enslaved to this bridge. Each becomes a member port carrying L2 traffic for the bridge."),
 			"veth-peer":          descOr(mgr, ifPath+"/infix-interfaces:veth/peer", "Peer veth interface to which this interface is connected (the other end of the pair)."),
 			"gre-local":          descOr(mgr, ifPath+"/infix-interfaces:gre/local", "Local address used as the tunnel source. Must be the same family (IPv4 or IPv6) as the remote."),
@@ -534,9 +523,6 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	sort.Strings(data.WizardAvailableRadios)
 
 	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface, profiles)
-	for _, p := range profiles {
-		data.QoSProfiles = append(data.QoSProfiles, p.Name)
-	}
 	// Copy page-level descriptions + DHCP option enums onto each row so the
 	// IPv4/IPv6 blocks render standalone (see cfgIfaceRow.Desc).
 	for i := range data.Interfaces {

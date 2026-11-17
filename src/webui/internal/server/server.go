@@ -153,7 +153,15 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	cfgQoSTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-qos.html")
+	cfgQoSTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/qos.html", "pages/configure-qos.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgQoSPortsTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/qos.html", "pages/configure-qos-ports.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgTSNTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/qos.html", "pages/configure-tsn.html")
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +286,7 @@ func New(
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
 	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
 	cfgAdv := &handlers.ConfigureAdvancedHandler{Template: cfgAdvTmpl, RC: rc, Schema: schemaCache}
-	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
+	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, QoSPortsTemplate: cfgQoSPortsTmpl, TSNTemplate: cfgTSNTmpl, RC: rc, Schema: schemaCache}
 	ptp := &handlers.PTPHandler{Template: ptpTmpl, RC: rc, Schema: schemaCache}
 	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc, Schema: schemaCache}
 	cfgPTP := &handlers.ConfigurePTPHandler{Template: cfgPTPTmpl, RC: rc, Schema: schemaCache}
@@ -445,7 +453,9 @@ func New(
 	mux.HandleFunc("POST /configure/qos/profiles", cfgQoS.AddProfile)
 	mux.HandleFunc("POST /configure/qos/profiles/{name}", cfgQoS.SaveProfile)
 	mux.HandleFunc("DELETE /configure/qos/profiles/{name}", cfgQoS.DeleteProfile)
-	mux.HandleFunc("POST /configure/interfaces/{name}/qos", cfgIf.SaveQoS)
+	mux.HandleFunc("GET /configure/qos/ports", cfgIf.OverviewQoSPorts)
+	mux.HandleFunc("POST /configure/qos/ports/{name}", cfgIf.SaveQoSPort)
+	mux.HandleFunc("GET /configure/tsn", cfgIf.OverviewTSN)
 	mux.HandleFunc("POST /configure/interfaces/{name}/cbs", cfgIf.SaveCBS)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/cbs/{class}", cfgIf.ResetCBS)
 	mux.HandleFunc("POST /configure/interfaces/{name}/gates", cfgIf.SaveGates)

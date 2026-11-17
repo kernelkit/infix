@@ -111,17 +111,19 @@ func TestQoSTSNRows(t *testing.T) {
 	}
 }
 
-func TestConfigureInterfacesRendersTSN(t *testing.T) {
-	tmpl := realTemplates(t, IfaceTemplateFuncs(), "layouts/*.html", "fragments/configure-toolbar.html",
-		"fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html",
-		"fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
-	rows := tsnRows(t)
-	data := cfgIfacePageData{
-		PageData:    PageData{Capabilities: NewCapabilities(map[string]bool{"qos": true, "tsn": true, "egress-shaper": true})},
-		Interfaces:  rows,
-		Desc:        map[string]string{},
-		QoSProfiles: []string{"tsn-ring"},
-		QoSBounds:   qosBounds{RateLo: "0.000008", SlopeHi: "18446744073709.55", IntervalHi: "4294967.295", MaxSDULo: "0"},
+func TestConfigureTSNRenders(t *testing.T) {
+	tmpl := pageTemplate(t, "configure-tsn.html")
+	var ports []tsnPortRow
+	for _, row := range tsnRows(t) {
+		p := tsnPortRow{Row: row}
+		p.Reserved, p.Schedule = tsnSummary(row)
+		ports = append(ports, p)
+	}
+	data := cfgTSNPageData{
+		PageData:  PageData{Capabilities: NewCapabilities(map[string]bool{"qos": true, "tsn": true, "egress-shaper": true})},
+		Ports:     ports,
+		Desc:      map[string]string{},
+		QoSBounds: qosBounds{RateLo: "0.000008", SlopeHi: "18446744073709.55", IntervalHi: "4294967.295", MaxSDULo: "0"},
 	}
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "content", data); err != nil {
@@ -134,21 +136,48 @@ func TestConfigureInterfacesRendersTSN(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		`hx-post="/configure/interfaces/e1/qos"`, `<option value="tsn-ring" selected>`,
+		`<td>class 7: 20 Mbps, class 5: 1 Mbps</td>`, `<td>100 µs cycle, 2 entries</td>`,
 		`hx-post="/configure/interfaces/e1/cbs"`, `name="idle_7"`, `value="20"`, `(not shaped by the profile)`,
 		`hx-post="/configure/interfaces/e1/gates"`, `name="gate_enabled" value="on" checked`,
 		`name="cycle"`, `name="entry_open_1" value="5" checked`, `name="entry_interval_0"`,
 		`id="gate-entry-tpl-e1"`, `data-template="gate-entry-tpl-e1"`, `name="entry_interval___N__"`, `name="maxsdu_5"`,
 		`hx-post="/configure/interfaces/e2/cbs"`, `name="idle_3"`, `hx-post="/configure/interfaces/e2/gates"`,
-		`href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-swap="innerHTML"`,
 		`Cycle <span class="unit">(µs)</span>`, "Time-Aware Shaper",
-		`hx-delete="/configure/leaf?path=/ietf-interfaces:interfaces/interface=e1/infix-interfaces:qos/egress-shaper&redirect=/configure/interfaces"`,
+		`gate-parameter-table/admin-cycle-time&redirect=/configure/tsn"`,
 		`hx-delete="/configure/interfaces/e1/cbs/7"`, `hx-delete="/configure/interfaces/e1/gates/max-sdu"`,
-		`min="0.000008"`, `max="18446744073709.55" step="any" name="idle_7"`,
+		`max="18446744073709.55" step="any" name="idle_7"`,
 		`max="4294967.295" step="any" name="entry_interval_0"`, `min="0" max="" step="1" name="maxsdu_5"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)
+		}
+	}
+}
+
+// The interfaces page says what a port runs and links to the pages
+// that set it.
+func TestConfigureInterfacesLinksToQoS(t *testing.T) {
+	tmpl := realTemplates(t, IfaceTemplateFuncs(), "layouts/*.html", "fragments/configure-toolbar.html",
+		"fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html",
+		"fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
+	data := cfgIfacePageData{
+		PageData:   PageData{Capabilities: NewCapabilities(map[string]bool{"qos": true, "tsn": true, "egress-shaper": true})},
+		Interfaces: tsnRows(t),
+		Desc:       map[string]string{},
+	}
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, "content", data); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"Profile tsn-ring.", `href="/configure/qos/ports"`, `href="/configure/tsn"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	for _, gone := range []string{`/cbs"`, `/gates"`, "Time-Aware Shaper"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("%q still on the interfaces page", gone)
 		}
 	}
 }
@@ -509,15 +538,5 @@ func TestSaveGatesKeepsUnknown(t *testing.T) {
 	}
 	if _, ok := table["admin-cycle-time-extension"]; ok {
 		t.Errorf("a cleared field came back: %v", table)
-	}
-}
-
-// A rate that does not parse is refused before the candidate is touched.
-func TestSaveQoSBadRateChangesNothing(t *testing.T) {
-	rc := &recordingFetcher{MockFetcher: testutil.NewMockFetcher()}
-	h := &ConfigureInterfacesHandler{RC: rc}
-	postForm(t, h.SaveQoS, "/configure/interfaces/e1/qos", "e1", url.Values{"rate": {"fast"}})
-	if len(rc.deletePaths) != 0 || rc.putCalls != 0 {
-		t.Errorf("deletes %v puts %d", rc.deletePaths, rc.putCalls)
 	}
 }

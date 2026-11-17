@@ -212,7 +212,7 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-ntp") (eq .ActivePage "configure-dns") (eq .ActivePage "configure-hardware") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-qos") (eq .ActivePage "configure-ptp") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-advanced") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-ntp") (eq .ActivePage "configure-dns") (eq .ActivePage "configure-hardware") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-qos") (eq .ActivePage "configure-tsn") (eq .ActivePage "configure-ptp") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-advanced") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
 
       <div class="nav-section-label">System</div>
@@ -283,13 +283,25 @@
         </li>
         {{if and .Capabilities (.Capabilities.Has "qos")}}
         <li>
-          <a href="/configure/qos"
-             hx-get="/configure/qos"
+          <a href="/configure/qos/ports"
+             hx-get="/configure/qos/ports"
              hx-target="#content"
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "configure-qos"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/qos.svg')"></span>
-            QoS Profiles
+            QoS
+          </a>
+        </li>
+        {{end}}
+        {{if and .Capabilities (.Capabilities.Has "tsn")}}
+        <li>
+          <a href="/configure/tsn"
+             hx-get="/configure/tsn"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-tsn"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/tsn.svg')"></span>
+            TSN
           </a>
         </li>
         {{end}}

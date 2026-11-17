@@ -15,60 +15,6 @@ import (
 	"infix/webui/internal/schema"
 )
 
-// SaveQoS sets the port's profile reference and egress shaper.  An empty
-// profile leaves the port on its own settings or the defaults, an empty
-// rate removes the shaper.
-// POST /configure/interfaces/{name}/qos
-func (h *ConfigureInterfacesHandler) SaveQoS(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	name := r.PathValue("name")
-	qosPath := ifacePath(name) + "/infix-interfaces:qos"
-	ctx := r.Context()
-
-	// The profile leaf and the inline containers are the two cases of a
-	// choice; a merge into the candidate keeps both, so the other case
-	// is removed first.
-	qos := map[string]any{}
-	rate := strings.TrimSpace(r.FormValue("rate"))
-	if rate != "" {
-		bits, err := mbitField(rate, "the egress shaper rate")
-		if err != nil {
-			renderSaveError(w, err)
-			return
-		}
-		qos["egress-shaper"] = map[string]any{"rate": bits}
-	}
-
-	drop := []string{"/profile"}
-	if profile := strings.TrimSpace(r.FormValue("profile")); profile != "" {
-		qos["profile"] = profile
-		drop = []string{"/ingress", "/egress"}
-	}
-	if rate == "" {
-		drop = append(drop, "/egress-shaper")
-	}
-	for _, node := range drop {
-		if err := h.RC.Delete(ctx, qosPath+node); err != nil && !restconf.IsNotFound(err) {
-			log.Printf("configure interfaces %s qos delete %s: %v", name, node, err)
-			renderSaveError(w, err)
-			return
-		}
-	}
-
-	if len(qos) > 0 {
-		body := map[string]any{"infix-interfaces:qos": qos}
-		if err := h.RC.Patch(ctx, qosPath, body); err != nil {
-			log.Printf("configure interfaces %s qos: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	}
-	renderSaved(w, "QoS saved")
-}
-
 // ─── IEEE 802.1DC shaper and gate sections ──────────────────────────────────
 
 const (
@@ -363,7 +309,7 @@ func (h *ConfigureInterfacesHandler) ResetCBS(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+	renderSavedRedirect(w, "Reset to default", "/configure/tsn")
 }
 
 // ResetMaxSDU removes the per-class max SDU limits of the gate list.
@@ -379,7 +325,7 @@ func (h *ConfigureInterfacesHandler) ResetMaxSDU(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+	renderSavedRedirect(w, "Reset to default", "/configure/tsn")
 }
 
 // replaceContainer writes a whole container under the interface, or

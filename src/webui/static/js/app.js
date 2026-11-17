@@ -3346,3 +3346,14 @@ function renderCfgLog() {
   document.addEventListener('DOMContentLoaded', function () { init(document); });
   document.addEventListener('htmx:afterSwap', function (evt) { init(evt.target || document); });
 })();
+
+// A select with data-opens opens the <details> it names while its value
+// is the one in data-opens-on, e.g. a port's own QoS settings.
+(function() {
+  document.addEventListener('change', function(e) {
+    var sel = e.target.closest && e.target.closest('select[data-opens]');
+    if (!sel) return;
+    var box = document.getElementById(sel.getAttribute('data-opens'));
+    if (box) box.open = sel.value === sel.getAttribute('data-opens-on');
+  });
+})();
