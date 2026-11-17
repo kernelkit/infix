@@ -196,15 +196,9 @@ class Env(object):
                                                            password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
-            if test_reset:
-                dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
-            return dev
-
-        if protocol == "ssh":
+        elif protocol == "ssh":
             return ssh.Device(name, ssh.Location(mgmtip, username, password))
-
-        if protocol == "restconf":
+        elif protocol == "restconf":
             dev = restconf.Device(name,
                                   location=restconf.Location(cport,
                                                              mgmtip,
@@ -212,9 +206,10 @@ class Env(object):
                                                              password),
                                   mapping=mapping,
                                   yangdir=self.args.yangdir)
-            if test_reset:
-                dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
-            return dev
+        else:
+            raise Exception(f"Unsupported management procotol \"{protocol}\"")
 
-        raise Exception(f"Unsupported management procotol \"{protocol}\"")
+        if test_reset:
+            dev.test_reset()
+            util.until(lambda: self.is_reachable(node, cport), 30)
+        return dev
