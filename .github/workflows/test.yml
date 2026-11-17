@@ -160,3 +160,11 @@ jobs:
         with:
           name: ${{ inputs.name && inputs.name != 'infix' && format('xpath-coverage-report-{0}', inputs.name) || 'xpath-coverage-report' }}
           path: output/images/xpath-coverage-report.pdf
+
+      - name: Upload Support Bundles as Artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.name && inputs.name != 'infix' && format('support-bundles-{0}', inputs.name) || 'support-bundles' }}
+          path: ${{ env.TEST_PATH }}/.log/last/support
+          if-no-files-found: ignore
