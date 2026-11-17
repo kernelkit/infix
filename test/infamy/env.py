@@ -6,7 +6,7 @@ import sys
 import random
 import inspect
 
-from . import neigh, netconf, restconf, ssh, support, tap, topology, util
+from . import marker, neigh, netconf, restconf, ssh, support, tap, topology, util
 
 
 class NullEnv:
@@ -83,6 +83,10 @@ class Env(object):
 
         self.test = test or tap.Test.current
         self.attached = {}
+        self.markers = marker.Markers()
+        if self.test:
+            self.test.push_step_hook(self.markers.step)
+            self.test.push_test_cleanup(self.markers.stop)
 
         self.ltop = None
         if self.args.ltop != False:
@@ -218,6 +222,8 @@ class Env(object):
             dev.test_reset()
             util.until(lambda: self.is_reachable(node, cport), 30)
         self.collect_on_fail(dev)
+        if self.test:
+            self.markers.attach(dev)
         return dev
 
     def collect_on_fail(self, dev):

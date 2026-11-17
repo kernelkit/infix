@@ -202,6 +202,8 @@ admin@infix-00-00-00:~$
 When a test fails, the DUTs are reset before anyone can look at them.
 So a failed test first saves the support bundle of each DUT it used.
 The bundle has the device's logs, configuration and network state.
+The logs mark where the test and each of its steps start, so you can
+find the failing step.
 
 `make test` saves them in `test/.log/last/support/<test>/<node>.tar.gz`,
 and CI uploads them as the `support-bundles` artifact.  When you run a
