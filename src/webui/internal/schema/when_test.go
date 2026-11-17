@@ -101,7 +101,7 @@ func TestEvaluateWhenConservative(t *testing.T) {
 
 func TestEvaluateWhenDerivedFromOrSelf(t *testing.T) {
 	// Minimal mock manager: IdentitiesOf("gre") → ["gretap"]
-	mgr := &Manager{ms: nil} // ms is nil, but IdentitiesOf will handle it gracefully
+	mgr := &Manager{t: &tree{}}
 
 	// We need a real identity hierarchy. Use a Manager with minimal modules.
 	// Since setting up goyang modules is complex, test via checkIdentity directly.

@@ -79,6 +79,28 @@ func TestFeatureGating(t *testing.T) {
 	}
 }
 
+// The if-feature expressions survive in a compiled schema.
+func TestFeatureGatingCompiled(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "schema.json")
+	if err := loadFeatureModule(t, "").Write(file); err != nil {
+		t.Fatal(err)
+	}
+	mgr, err := Read(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := childNames(t, mgr, "/test-feat:box"); len(got) != 3 {
+		t.Errorf("no features: got %v", got)
+	}
+	got := childNames(t, mgr.WithFeatures(map[string]bool{}), "/test-feat:box")
+	if len(got) != 1 || got[0] != "always" {
+		t.Errorf("none enabled: got %v", got)
+	}
+	if got := childNames(t, mgr.WithFeatures(map[string]bool{"test-feat:extra": true}), "/test-feat:box"); len(got) != 3 {
+		t.Errorf("extra enabled: got %v", got)
+	}
+}
+
 func TestFeatureSet(t *testing.T) {
 	set := FeatureSet([]ModuleInfo{{Name: "a", Features: []string{"x", "y"}}, {Name: "b"}})
 	if len(set) != 2 || !set["a:x"] || !set["a:y"] {

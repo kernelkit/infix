@@ -54,6 +54,9 @@ GOOS=linux GOARCH=arm64 make build
 | `--listen`        | `:10000`                          | Address to listen on                      |
 | `--restconf`      | `http://localhost:8080/restconf`  | RESTCONF base URL of the device           |
 | `--insecure-tls`  | `false`                           | Disable TLS certificate verification      |
+| `--yang-cache-dir` | `/var/cache/webui/yang`          | YANG files fetched from the device        |
+| `--schema`        | `/usr/share/webui/schema.json`    | Compiled schema, used when the file exists |
+| `--compile-schema` |                                  | Compile the YANG files in a directory to the `--schema` file and exit |
 
 The RESTCONF URL can also be set via the `RESTCONF_URL` environment
 variable.
@@ -100,6 +103,25 @@ NACM on the device decides what the user may do, as it does for the
 regular pages.  Background polls should send `X-Auto-Refresh: 1`,
 otherwise an open page keeps the session alive forever.  A request
 without a session is redirected to `/login`.
+
+
+## Schema
+
+The configure pages are driven by the YANG schema of the device.  An
+image carries it compiled, in `/usr/share/webui/schema.json`.  The build
+makes that file from the modules installed in sysrepo, with the `webui`
+program itself built for the build machine:
+
+```sh
+./webui --compile-schema output/target/etc/sysrepo/yang --schema schema.json
+```
+
+Without the file, as when developing against a device, the YANG modules
+are fetched over RESTCONF after login, cached in `--yang-cache-dir` and
+compiled at start.
+
+Either way the features the device enables are read over RESTCONF after
+login, and nodes behind the others are hidden.
 
 
 ## Development
@@ -174,6 +196,7 @@ internal/
     configure_interfaces_qos.go    Per-port profile, egress shaper, shapers, gates
     keystore.go                    Key display
     system.go                      Firmware, reboot, config download
+  schema/                        Compiled YANG schema and its queries
   server/
     server.go                    Route registration, template wiring, middleware
 templates/
