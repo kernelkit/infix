@@ -11,7 +11,7 @@ import (
 	"infix/webui/internal/testutil"
 )
 
-func ptpInstanceJSON(clock, gm, state string) map[string]any {
+func ptpOperJSON(clock, gm, state string) map[string]any {
 	return map[string]any{
 		"ieee1588-ptp-tt:ptp": map[string]any{"instances": map[string]any{"instance": []map[string]any{{
 			"instance-index": 0,
@@ -24,7 +24,7 @@ func ptpInstanceJSON(clock, gm, state string) map[string]any {
 			"parent-ds":  map[string]any{"grandmaster-identity": gm, "grandmaster-priority1": 1, "grandmaster-priority2": 128},
 			"ports": map[string]any{"port": []map[string]any{{
 				"port-index": 1, "underlying-interface": "e5",
-				"port-ds": map[string]any{"port-state": state, "mean-link-delay": "98172928", "delay-mechanism": "p2p"},
+				"port-ds":                                map[string]any{"port-state": state, "mean-link-delay": "98172928", "delay-mechanism": "p2p"},
 				"ieee802-dot1as-gptp:port-statistics-ds": map[string]any{"rx-sync-count": 2371, "tx-sync-count": 0},
 			}}},
 		}}}},
@@ -54,13 +54,13 @@ func TestPTPOverview(t *testing.T) {
 		want []string
 		not  []string
 	}{
-		{"time receiver", ptpInstanceJSON(self, gm, "time-receiver"),
+		{"time receiver", ptpOperJSON(self, gm, "time-receiver"),
 			[]string{"Follows grandmaster " + gm, "-7 ns", "1498 ns", "2371 / 0", "e5"},
 			[]string{"Not synchronized"}},
-		{"grandmaster", ptpInstanceJSON(self, self, "time-transmitter"),
+		{"grandmaster", ptpOperJSON(self, self, "time-transmitter"),
 			[]string{"Grandmaster, the other clocks follow this one"},
 			[]string{"Offset", "Follows grandmaster"}},
-		{"not synchronized", ptpInstanceJSON(self, gm, "listening"),
+		{"not synchronized", ptpOperJSON(self, gm, "listening"),
 			[]string{"Not synchronized"},
 			[]string{"Follows grandmaster"}},
 		{"not configured", nil, []string{"PTP is not configured."}, nil},

@@ -26,10 +26,16 @@ import (
 // taken rather than the whole directory.
 func repoSchema(t *testing.T, rc restconf.Fetcher) *schema.Cache {
 	t.Helper()
+	return repoModules(t, rc, "infix-qos", "ietf-system", "ietf-netconf-acm", "iana-crypt-hash",
+		"ietf-inet-types", "ietf-yang-types", "ieee802-dot1q-types")
+}
+
+// repoModules loads the named modules from src/confd.
+func repoModules(t *testing.T, rc restconf.Fetcher, names ...string) *schema.Cache {
+	t.Helper()
 	src := filepath.Join("..", "..", "..", "confd", "yang", "confd")
 	dir := t.TempDir()
-	for _, name := range []string{"infix-qos", "ietf-system", "ietf-netconf-acm", "iana-crypt-hash",
-		"ietf-inet-types", "ietf-yang-types", "ieee802-dot1q-types"} {
+	for _, name := range names {
 		files, _ := filepath.Glob(filepath.Join(src, name+"@*.yang"))
 		if len(files) == 0 {
 			t.Skipf("no %s module in %s", name, src)

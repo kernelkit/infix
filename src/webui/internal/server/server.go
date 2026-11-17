@@ -149,6 +149,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgPTPTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-ptp.html")
+	if err != nil {
+		return nil, err
+	}
 	cfgQoSTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-qos.html")
 	if err != nil {
 		return nil, err
@@ -277,6 +281,7 @@ func New(
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
 	ptp := &handlers.PTPHandler{Template: ptpTmpl, RC: rc, Schema: schemaCache}
 	qosh := &handlers.QoSHandler{Template: qosTmpl, RC: rc, Schema: schemaCache}
+	cfgPTP := &handlers.ConfigurePTPHandler{Template: cfgPTPTmpl, RC: rc, Schema: schemaCache}
 	cfgQoS := &handlers.ConfigureQoSHandler{Template: cfgQoSTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
@@ -432,6 +437,10 @@ func New(
 	mux.HandleFunc("POST /configure/interfaces/{name}/lag/members",      cfgIf.SaveLAGMembers)
 	mux.HandleFunc("POST /configure/interfaces/{name}/lag-port",         cfgIf.SaveLagPort)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/lag-port",       cfgIf.DeleteLagPort)
+	mux.HandleFunc("GET /configure/ptp", cfgPTP.Overview)
+	mux.HandleFunc("POST /configure/ptp/instances", cfgPTP.AddInstance)
+	mux.HandleFunc("POST /configure/ptp/instances/{index}", cfgPTP.SaveInstance)
+	mux.HandleFunc("DELETE /configure/ptp/instances/{index}", cfgPTP.DeleteInstance)
 	mux.HandleFunc("GET /configure/qos", cfgQoS.Overview)
 	mux.HandleFunc("POST /configure/qos/profiles", cfgQoS.AddProfile)
 	mux.HandleFunc("POST /configure/qos/profiles/{name}", cfgQoS.SaveProfile)
