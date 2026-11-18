@@ -8,110 +8,95 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/testutil"
 )
 
-func collectContainers(t *testing.T, runner *testutil.MockRunner, fs *testutil.MockFileReader) map[string]interface{} {
+const webState = `{
+	"name": "web",
+	"id": "abc123",
+	"image": "oci:/lib/oci/curios-httpd-latest",
+	"image-id": "cd9d0aaf81be",
+	"cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v",
+	"status": "created",
+	"started": 1700000000,
+	"networks": [{"name": "docker0", "ifname": "eth0", "type": "bridge", "addresses": ["172.17.0.2"]}],
+	"publish": ["127.0.0.1:8080:80", "8443:443/tcp"],
+	"cgroup": "system/container@web/payload"
+}`
+
+const hostState = `{
+	"name": "ntpd",
+	"id": "def456",
+	"image": "oci:/lib/oci/curios-ntpd-latest",
+	"image-id": "0cb6059c0f41",
+	"cmdline": "/usr/sbin/ntpd -n",
+	"status": "created",
+	"networks": null,
+	"publish": [],
+	"cgroup": "system/container@ntpd/payload"
+}`
+
+func fixture(states map[string]string, files map[string][]byte) *testutil.MockFileReader {
+	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
+	for name, data := range states {
+		path := fmt.Sprintf("/run/containers/%s/state.json", name)
+		fs.Globs[StateGlob] = append(fs.Globs[StateGlob], path)
+		fs.Files[path] = []byte(data)
+	}
+	for path, data := range files {
+		fs.Files[path] = data
+	}
+	return fs
+}
+
+func runner(running ...string) *testutil.MockRunner {
+	r := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
+	for _, name := range running {
+		r.Results["crun state "+name] = []byte(`{"id":"` + name + `","status":"running","pid":1234}`)
+	}
+	return r
+}
+
+func collectContainers(t *testing.T, r *testutil.MockRunner, fs *testutil.MockFileReader) []map[string]interface{} {
 	t.Helper()
 
-	raw := CollectContainers(runner, fs)
+	raw := CollectContainers(r, fs)
 	if raw == nil {
 		t.Fatal("no container data collected")
 	}
 
-	out := make(map[string]interface{})
+	var out struct {
+		Container []map[string]interface{} `json:"container"`
+	}
 	if err := json.Unmarshal(raw, &out); err != nil {
 		t.Fatalf("unmarshal containers: %v", err)
 	}
-
-	return out
-}
-
-func containerList(t *testing.T, data map[string]interface{}) []interface{} {
-	t.Helper()
-
-	containers, ok := data["container"].([]interface{})
-	if !ok {
-		t.Fatalf("missing container list: %v", data)
-	}
-
-	return containers
+	return out.Container
 }
 
 func TestContainerBasicInfo(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{
-					"Names": ["web"],
-					"Id": "abc123",
-					"Image": "docker.io/library/nginx:latest",
-					"ImageID": "sha256:image",
-					"State": "running",
-					"Status": "Up 2 hours",
-					"Command": ["nginx", "-g", "daemon off;"],
-					"Networks": ["podman0"],
-					"Ports": []
-				}
-			]`),
-			"podman inspect web": []byte(`[{"Path":"nginx","Args":["-g","daemon off;"]}]`),
-			"podman stats --no-stream --format json --no-reset web": []byte(`[]`),
-		},
-		Errors: map[string]error{},
-	}
-
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-
-	out := collectContainers(t, runner, fs)
-	containers := containerList(t, out)
+	fs := fixture(map[string]string{"web": webState}, nil)
+	containers := collectContainers(t, runner("web"), fs)
 	if len(containers) != 1 {
 		t.Fatalf("expected 1 container, got %d", len(containers))
 	}
 
-	c := containers[0].(map[string]interface{})
-	if c["name"] != "web" {
-		t.Fatalf("name: expected web, got %v", c["name"])
+	c := containers[0]
+	if c["name"] != "web" || c["id"] != "abc123" {
+		t.Fatalf("name/id mismatch: %v", c)
 	}
-	if c["id"] != "abc123" {
-		t.Fatalf("id: expected abc123, got %v", c["id"])
-	}
-	if c["image"] != "docker.io/library/nginx:latest" {
-		t.Fatalf("image mismatch: %v", c["image"])
-	}
-	if c["status"] != "Up 2 hours" {
-		t.Fatalf("status mismatch: %v", c["status"])
-	}
-	if c["cmdline"] != "nginx -g daemon off;" {
-		t.Fatalf("cmdline mismatch: %v", c["cmdline"])
+	if c["image"] != "oci:/lib/oci/curios-httpd-latest" || c["image-id"] != "cd9d0aaf81be" {
+		t.Fatalf("image mismatch: %v", c)
 	}
 	if c["running"] != true {
-		t.Fatalf("running expected true, got %v", c["running"])
+		t.Fatalf("expected running, got %v", c["running"])
+	}
+	if c["cmdline"] != "/usr/bin/tini -- /usr/sbin/httpd -f -v" {
+		t.Fatalf("cmdline mismatch: %v", c["cmdline"])
 	}
 }
 
 func TestContainerHostNetwork(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{
-					"Names": ["hostnet"],
-					"Id": "id1",
-					"Image": "img",
-					"ImageID": "sha256:1",
-					"State": "running",
-					"Status": "Up",
-					"Command": ["sleep", "60"],
-					"Networks": ["podman0"],
-					"Ports": [{"host_ip":"", "host_port":8080, "container_port":80, "protocol":"tcp"}]
-				}
-			]`),
-			"podman inspect hostnet":                                    []byte(`[{"NetworkSettings":{"Networks":{"host":{}}}}]`),
-			"podman stats --no-stream --format json --no-reset hostnet": []byte(`[]`),
-		},
-		Errors: map[string]error{},
-	}
+	fs := fixture(map[string]string{"ntpd": hostState}, nil)
+	c := collectContainers(t, runner("ntpd"), fs)[0]
 
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
-
-	c := containerList(t, out)[0].(map[string]interface{})
 	net, ok := c["network"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("missing network: %v", c)
@@ -122,198 +107,101 @@ func TestContainerHostNetwork(t *testing.T) {
 }
 
 func TestContainerBridgeNetwork(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{
-					"Names": ["bridge"],
-					"Id": "id2",
-					"Image": "img",
-					"ImageID": "sha256:2",
-					"State": "running",
-					"Status": "Up",
-					"Command": ["app"],
-					"Networks": ["podman0", "br0"],
-					"Ports": [
-						{"host_ip":"127.0.0.1", "host_port":8080, "container_port":80, "protocol":"tcp"},
-						{"host_ip":"", "host_port":8443, "container_port":443, "protocol":"tcp"}
-					]
-				}
-			]`),
-			"podman inspect bridge": []byte(`[{"NetworkSettings":{"Networks":{"bridge":{}}}}]`),
-			"podman stats --no-stream --format json --no-reset bridge": []byte(`[]`),
-		},
-		Errors: map[string]error{},
-	}
+	fs := fixture(map[string]string{"web": webState}, nil)
+	c := collectContainers(t, runner("web"), fs)[0]
 
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
-
-	c := containerList(t, out)[0].(map[string]interface{})
 	net := c["network"].(map[string]interface{})
-
 	ifaces := net["interface"].([]interface{})
-	if len(ifaces) != 2 {
-		t.Fatalf("expected 2 interfaces, got %d", len(ifaces))
+	if len(ifaces) != 1 || ifaces[0].(map[string]interface{})["name"] != "docker0" {
+		t.Fatalf("interface mismatch: %v", ifaces)
 	}
-	if ifaces[0].(map[string]interface{})["name"] != "podman0" {
-		t.Fatalf("interface[0] mismatch: %v", ifaces[0])
-	}
-
 	publish := net["publish"].([]interface{})
 	if len(publish) != 2 {
 		t.Fatalf("expected 2 published ports, got %d", len(publish))
 	}
-	if publish[0] != "127.0.0.1:8080:80/tcp" {
-		t.Fatalf("publish[0] mismatch: %v", publish[0])
-	}
-	if publish[1] != "8443:443/tcp" {
-		t.Fatalf("publish[1] mismatch: %v", publish[1])
+	if publish[0] != "127.0.0.1:8080:80" || publish[1] != "8443:443/tcp" {
+		t.Fatalf("publish mismatch: %v", publish)
 	}
 }
 
 func TestContainerCgroupLimits(t *testing.T) {
-	cgroupPath := "/machine.slice/libpod-abc.scope"
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{"Names":["limited"],"Id":"id3","Image":"img","ImageID":"sha256:3","State":"exited","Status":"Exited","Command":["app"],"Networks":[],"Ports":[]}
-			]`),
-			"podman inspect limited": []byte(fmt.Sprintf(`[{"State":{"CgroupPath":%q},"NetworkSettings":{"Networks":{"bridge":{}}}}]`, cgroupPath)),
-		},
-		Errors: map[string]error{},
-	}
-
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{
-			"/sys/fs/cgroup/machine.slice/libpod-abc.scope/memory.max": []byte("1073741824\n"),
-			"/sys/fs/cgroup/machine.slice/libpod-abc.scope/cpu.max":    []byte("200000 100000\n"),
-		},
-		Globs: map[string][]string{},
-	}
-
-	out := collectContainers(t, runner, fs)
-	c := containerList(t, out)[0].(map[string]interface{})
+	fs := fixture(map[string]string{"web": webState}, map[string][]byte{
+		"/sys/fs/cgroup/system/container@web/payload/memory.max": []byte("1073741824\n"),
+		"/sys/fs/cgroup/system/container@web/payload/cpu.max":    []byte("200000 100000\n"),
+	})
+	c := collectContainers(t, runner(), fs)[0]
 
 	limit, ok := c["resource-limit"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("missing resource-limit: %v", c)
 	}
 	if limit["memory"] != "1048576" {
-		t.Fatalf("memory limit expected 1048576, got %v", limit["memory"])
+		t.Fatalf("memory limit: expected 1048576 KiB, got %v", limit["memory"])
 	}
-	if toInt(limit["cpu"]) != 2000 {
-		t.Fatalf("cpu limit expected 2000, got %v", limit["cpu"])
+	if limit["cpu"] != float64(2000) {
+		t.Fatalf("cpu limit: expected 2000 millicores, got %v", limit["cpu"])
 	}
 }
 
 func TestContainerCgroupUnlimited(t *testing.T) {
-	cgroupPath := "/machine.slice/libpod-unlimited.scope"
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{"Names":["nolimit"],"Id":"id4","Image":"img","ImageID":"sha256:4","State":"exited","Status":"Exited","Command":["app"],"Networks":[],"Ports":[]}
-			]`),
-			"podman inspect nolimit": []byte(fmt.Sprintf(`[{"State":{"CgroupPath":%q},"NetworkSettings":{"Networks":{"bridge":{}}}}]`, cgroupPath)),
-		},
-		Errors: map[string]error{},
-	}
+	fs := fixture(map[string]string{"web": webState}, map[string][]byte{
+		"/sys/fs/cgroup/system/container@web/payload/memory.max": []byte("max\n"),
+		"/sys/fs/cgroup/system/container@web/payload/cpu.max":    []byte("max 100000\n"),
+	})
+	c := collectContainers(t, runner(), fs)[0]
 
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{
-			"/sys/fs/cgroup/machine.slice/libpod-unlimited.scope/memory.max": []byte("max\n"),
-			"/sys/fs/cgroup/machine.slice/libpod-unlimited.scope/cpu.max":    []byte("max 100000\n"),
-		},
-		Globs: map[string][]string{},
-	}
-
-	out := collectContainers(t, runner, fs)
-	c := containerList(t, out)[0].(map[string]interface{})
 	if _, ok := c["resource-limit"]; ok {
 		t.Fatalf("resource-limit should be omitted for unlimited cgroup values: %v", c["resource-limit"])
 	}
 }
 
 func TestContainerResourceStats(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{
-					"Names":["stats"],"Id":"id5","Image":"img","ImageID":"sha256:5",
-					"State":"running","Status":"Up","Command":["app"],"Networks":["podman0"],"Ports":[]
-				}
-			]`),
-			"podman inspect stats": []byte(`[{"NetworkSettings":{"Networks":{"bridge":{}}}}]`),
-			"podman stats --no-stream --format json --no-reset stats": []byte(`[
-				{
-					"mem_usage":"123.4MB / 1.5GB",
-					"cpu_percent":"12.34%",
-					"block_io":"1.2MB / 3.4GB",
-					"net_io":"1.2MB / 3.4GB",
-					"pids":5
-				}
-			]`),
-		},
-		Errors: map[string]error{},
-	}
+	fs := fixture(map[string]string{"web": webState}, map[string][]byte{
+		"/sys/fs/cgroup/system/container@web/payload/memory.current": []byte("5242880\n"),
+		"/sys/fs/cgroup/system/container@web/payload/cpu.stat":       []byte("usage_usec 1500000\nuser_usec 1000000\n"),
+		"/sys/fs/cgroup/system/container@web/payload/pids.current":   []byte("3\n"),
+		"/sys/fs/cgroup/system/container@web/payload/io.stat":        []byte("8:0 rbytes=2048 wbytes=4096 rios=1 wios=2\n"),
+	})
+	r := runner("web")
+	r.Results["ip -n web -s -j link show"] = []byte(`[
+		{"ifname": "lo", "stats64": {"rx": {"bytes": 999}, "tx": {"bytes": 999}}},
+		{"ifname": "eth0", "stats64": {"rx": {"bytes": 10240}, "tx": {"bytes": 20480}}}
+	]`)
+	c := collectContainers(t, r, fs)[0]
 
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
-
-	c := containerList(t, out)[0].(map[string]interface{})
 	usage, ok := c["resource-usage"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("missing resource-usage: %v", c)
 	}
-
-	if usage["memory"] != "120507" {
-		t.Fatalf("memory usage expected 120507, got %v", usage["memory"])
+	if usage["memory"] != "5120" {
+		t.Fatalf("memory: expected 5120 KiB, got %v", usage["memory"])
 	}
-	if usage["cpu"] != "12.34" {
-		t.Fatalf("cpu usage expected 12.34, got %v", usage["cpu"])
+	if usage["pids"] != float64(3) {
+		t.Fatalf("pids: expected 3, got %v", usage["pids"])
 	}
 	bio := usage["block-io"].(map[string]interface{})
-	if bio["read"] != "1171" {
-		t.Fatalf("block-io read expected 1171, got %v", bio["read"])
-	}
-	if bio["write"] != "3320312" {
-		t.Fatalf("block-io write expected 3320312, got %v", bio["write"])
+	if bio["read"] != "2" || bio["write"] != "4" {
+		t.Fatalf("block-io mismatch: %v", bio)
 	}
 	nio := usage["net-io"].(map[string]interface{})
-	if nio["received"] != "1171" {
-		t.Fatalf("net-io received expected 1171, got %v", nio["received"])
-	}
-	if nio["sent"] != "3320312" {
-		t.Fatalf("net-io sent expected 3320312, got %v", nio["sent"])
-	}
-	if toInt(usage["pids"]) != 5 {
-		t.Fatalf("pids expected 5, got %v", usage["pids"])
+	if nio["received"] != "10" || nio["sent"] != "20" {
+		t.Fatalf("net-io mismatch: %v", nio)
 	}
 }
 
 func TestContainerStopped(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{
-					"Names":["stopped"],"Id":"id6","Image":"img","ImageID":"sha256:6",
-					"State":"exited","Status":"Exited (0)","Command":["app"],
-					"Networks":["podman0"],"Ports":[{"host_ip":"","host_port":8080,"container_port":80,"protocol":"tcp"}]
-				}
-			]`),
-			"podman inspect stopped": []byte(`[{"NetworkSettings":{"Networks":{"bridge":{}}}}]`),
-		},
-		Errors: map[string]error{},
+	fs := fixture(map[string]string{"web": webState}, nil)
+	c := collectContainers(t, runner(), fs)[0]
+
+	if c["running"] != false {
+		t.Fatalf("expected not running: %v", c)
 	}
-
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
-
-	c := containerList(t, out)[0].(map[string]interface{})
+	if c["status"] != "created" {
+		t.Fatalf("status: expected created, got %v", c["status"])
+	}
 	if _, ok := c["resource-usage"]; ok {
 		t.Fatalf("stopped container must not include resource-usage: %v", c["resource-usage"])
 	}
-
 	net := c["network"].(map[string]interface{})
 	publish := net["publish"].([]interface{})
 	if len(publish) != 0 {
@@ -322,116 +210,57 @@ func TestContainerStopped(t *testing.T) {
 }
 
 func TestContainerMultiple(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"podman ps -a --format=json": []byte(`[
-				{"Names":["one"],"Id":"id7","Image":"img1","ImageID":"sha256:7","State":"running","Status":"Up","Command":["a"],"Networks":[],"Ports":[]},
-				{"Names":["two"],"Id":"id8","Image":"img2","ImageID":"sha256:8","State":"exited","Status":"Exited","Command":["b"],"Networks":[],"Ports":[]}
-			]`),
-			"podman inspect one": []byte(`[{}]`),
-			"podman stats --no-stream --format json --no-reset one": []byte(`[]`),
-			"podman inspect two": []byte(`[{}]`),
-		},
-		Errors: map[string]error{},
-	}
-
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
-
-	containers := containerList(t, out)
+	fs := fixture(map[string]string{"web": webState, "ntpd": hostState}, nil)
+	containers := collectContainers(t, runner("web"), fs)
 	if len(containers) != 2 {
 		t.Fatalf("expected 2 containers, got %d", len(containers))
 	}
-	if containers[0].(map[string]interface{})["name"] != "one" {
-		t.Fatalf("first container name mismatch: %v", containers[0])
+}
+
+// A container whose setup failed has no image yet; empty strings must
+// not be emitted, they fail the YANG patterns and sink the whole entry.
+func TestContainerSetupFailed(t *testing.T) {
+	fs := fixture(map[string]string{"web": `{"name": "web", "status": "crashed (1)", "pid": 0}`}, nil)
+	c := collectContainers(t, runner(), fs)[0]
+	for _, key := range []string{"id", "image", "image-id", "cmdline"} {
+		if _, ok := c[key]; ok {
+			t.Fatalf("%s must be absent when unknown: %v", key, c)
+		}
 	}
-	if containers[1].(map[string]interface{})["name"] != "two" {
-		t.Fatalf("second container name mismatch: %v", containers[1])
+	if c["status"] != "crashed (1)" || c["running"] != false {
+		t.Fatalf("status/running: %v", c)
 	}
 }
 
-func TestParseSizeKiB(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected int
-	}{
-		{name: "mb", input: "1.5MB", expected: 1464},
-		{name: "kb", input: "512kB", expected: 500},
-		{name: "gib", input: "2GiB", expected: 2097152},
-		{name: "mib", input: "64MiB", expected: 65536},
-		{name: "bytes", input: "2048B", expected: 2},
-		{name: "empty", input: "", expected: 0},
+func TestContainerNone(t *testing.T) {
+	fs := fixture(nil, nil)
+	if raw := CollectContainers(runner(), fs); raw != nil {
+		t.Fatalf("expected nil without containers, got %s", raw)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseSizeKiB(tt.input)
-			if got != tt.expected {
-				t.Errorf("parseSizeKiB(%q): expected %d, got %d", tt.input, tt.expected, got)
-			}
-		})
+func TestContainerNetworks(t *testing.T) {
+	fs := fixture(map[string]string{"web": webState, "ntpd": hostState}, nil)
+	networks := ContainerNetworks(fs)
+	if len(networks) != 1 || len(networks["docker0"]) != 1 || networks["docker0"][0] != "web" {
+		t.Fatalf("networks = %v", networks)
 	}
 }
 
 func TestParseCgroupMemory(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected int
-	}{
-		{name: "max", input: "max", expected: 0},
-		{name: "bytes", input: "1073741824", expected: 1048576},
-		{name: "empty", input: "", expected: 0},
-		{name: "invalid", input: "abc", expected: 0},
+	if got := parseCgroupMemory("max"); got != 0 {
+		t.Fatalf("max: expected 0, got %d", got)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseCgroupMemory(tt.input)
-			if got != tt.expected {
-				t.Errorf("parseCgroupMemory(%q): expected %d, got %d", tt.input, tt.expected, got)
-			}
-		})
+	if got := parseCgroupMemory("1048576"); got != 1024 {
+		t.Fatalf("1048576: expected 1024 KiB, got %d", got)
 	}
 }
 
 func TestParseCgroupCPU(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected int
-	}{
-		{name: "max", input: "max 100000", expected: 0},
-		{name: "limited", input: "50000 100000", expected: 500},
-		{name: "empty", input: "", expected: 0},
-		{name: "invalid", input: "abc", expected: 0},
+	if got := parseCgroupCPU("max 100000"); got != 0 {
+		t.Fatalf("max: expected 0, got %d", got)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseCgroupCPU(tt.input)
-			if got != tt.expected {
-				t.Errorf("parseCgroupCPU(%q): expected %d, got %d", tt.input, tt.expected, got)
-			}
-		})
-	}
-}
-
-func TestContainerGracefulDegradation(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{},
-		Errors: map[string]error{
-			"podman ps -a --format=json": fmt.Errorf("podman not found"),
-		},
-	}
-
-	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-
-	// With no containers there must be no data, not a bare
-	// {"container":[]} node -- otherwise an enabled-but-idle container
-	// feature surfaces as operational data.
-	if raw := CollectContainers(runner, fs); raw != nil {
-		t.Fatalf("expected no container data when podman ps fails, got %s", raw)
+	if got := parseCgroupCPU("50000 100000"); got != 500 {
+		t.Fatalf("50000/100000: expected 500 millicores, got %d", got)
 	}
 }

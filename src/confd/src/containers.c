@@ -1,330 +1,62 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#include <assert.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <pwd.h>
-#include <sys/utsname.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-
 #include <srx/common.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
 #include "core.h"
 
-#define  ARPING_MSEC  1000
-#define  LOGGER       "logger -t container -p local1.notice"
-
 #define  MODULE       "infix-containers"
 #define  CFG_XPATH    "/infix-containers:containers"
 
 #define  _PATH_CONT   "/run/containers"
-#define  _PATH_CLEAN  "/var/lib/containers/cleanup"
 
 /*
- * Check if image is a local archive and return the file path.
- * Returns NULL if not a recognized local archive format.
- */
-static const char *local_path(const char *image)
-{
-	const char *prefixes[] = {
-		"docker-archive:",
-		"oci-archive:",
-		NULL,
-	};
-
-	for (int i = 0; prefixes[i]; i++) {
-		size_t len = strlen(prefixes[i]);
-
-		if (!strncmp(image, prefixes[i], len))
-			return image + len;
-	}
-
-	return NULL;
-}
-
-static int calc_sha(const char *path, char *sha256, size_t len)
-{
-	int rc = 1;
-	FILE *pp;
-
-	pp = popenf("r", "sha256sum \"%s\" 2>/dev/null | awk '{print $1}'", path);
-	if (pp) {
-		if (fgets(sha256, len, pp)) {
-			chomp(sha256);
-			rc = 0;
-		}
-		pclose(pp);
-	}
-
-	return rc;
-}
-
-/*
- * Create a setup/create/upgrade script and instantiate a new instance
- * that Finit will start when all networking and other dependencies are
- * out of the way.  Finit calls the `/usr/sbin/container` wrapper script
- * in the pre: hook to fetch and create the container instance.
- *
- * The script we create here, on every boot, contains all information
- * needed to recreate and upgrade the user's container at runtime.
+ * Write the container's configuration as JSON for ixcont, which builds
+ * the OCI bundle from it in the Finit pre: hook of container@NAME, and
+ * enable the instance.  Only the hostname is resolved here, it carries
+ * the same format specifiers as the system hostname.
  */
 static int add(const char *name, struct lyd_node *cif)
 {
-	const char *restart_policy, *string, *image;
-	struct lyd_node *node, *nets, *caps;
-	char script[strlen(name) + 5];
-	const char *path;
-	FILE *fp, *ap;
+	struct lyd_node *dup = NULL, *node;
+	const char *hostname;
+	int enabled, manual;
+	FILE *fp;
 
-	snprintf(script, sizeof(script), "%s.sh", name);
-	fp = fopenfp(0700, NULL, "%s/%s", _PATH_CONT, script);
-	if (!fp) {
-		ERRNO("Failed creating container script %s/%s", _PATH_CONT, script);
+	if (lyd_dup_single(cif, NULL, LYD_DUP_RECURSIVE, &dup)) {
+		ERROR("%s: failed duplicating container configuration", name);
 		return SR_ERR_SYS;
 	}
 
-	/*
-	 * Create /run/containers/<NAME>.sh it is used both for initial
-	 * setup at creation/boot and for manual upgrade.  The delete
-	 * command ensures any already running container is stopped and
-	 * deleted so that it releases all claimed resources.
-	 *
-	 * The odd meta data is not used by the script itself, instead
-	 * it is used by the /usr/sbin/container wrapper when upgrading
-	 * a running container instance.
-	 */
-	image = lydx_get_cattr(cif, "image");
-
-	/*
-	 * TODO: this script should be refactored to be a .cfg file to
-	 *       the container helper script, or in the future, even a
-	 *       .cfg file to another runtime/engine. For details, see
-	 *       https://github.com/kernelkit/infix/pull/1151#discussion_r2444851292
-	 */
-	fprintf(fp, "#!/bin/sh\n"
-		"# meta-name: %s\n"
-		"# meta-image: %s\n", name, image);
-
-	path = local_path(image);
-	if (path) {
-		char sha256[65] = { 0 };
-
-		if (!calc_sha(path, sha256, sizeof(sha256)))
-			fprintf(fp, "# meta-image-sha256: %s\n", sha256);
-	}
-
-	fprintf(fp, "container --quiet delete %s >/dev/null\n"
-		"container --quiet", name);
-
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
-		fprintf(fp, " --dns %s", lyd_get_value(node));
-
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "search")
-		fprintf(fp, " --dns-search %s", lyd_get_value(node));
-
-	if ((string = lydx_get_cattr(cif, "hostname"))) {
+	hostname = lydx_get_cattr(dup, "hostname");
+	if (hostname) {
 		char buf[65];
 
-		if (hostnamefmt(&confd, string, buf, sizeof(buf), NULL, 0))
+		if (hostnamefmt(&confd, hostname, buf, sizeof(buf), NULL, 0))
 			ERRNO("%s: failed setting custom hostname", name);
-		else
-			fprintf(fp, " --hostname %s", buf);
+		else if ((node = lydx_get_child(dup, "hostname")))
+			lyd_change_term(node, buf);
 	}
 
-	if (lydx_is_enabled(cif, "privileged"))
-		fprintf(fp, " --privileged");
-
-	caps = lydx_get_descendant(lyd_child(cif), "capabilities", NULL);
-	if (caps) {
-		LYX_LIST_FOR_EACH(lyd_child(caps), node, "add")
-			fprintf(fp, " --cap-add %s", lyd_get_value(node));
-		LYX_LIST_FOR_EACH(lyd_child(caps), node, "drop")
-			fprintf(fp, " --cap-drop %s", lyd_get_value(node));
+	fp = fopenfp(0600, NULL, "%s/%s.json", _PATH_CONT, name);
+	if (!fp) {
+		ERRNO("Failed creating container configuration %s/%s.json", _PATH_CONT, name);
+		lyd_free_tree(dup);
+		return SR_ERR_SYS;
 	}
-
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
-		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"),
-			lydx_get_cattr(node, "target"));
-
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "mount") {
-		const char *dst = lydx_get_cattr(node, "target");
-		const char *data = lydx_get_cattr(node, "content");
-		const char *src = lydx_get_cattr(node, "source");
-		const char *type = lydx_get_cattr(node, "type");
-		const char *id = lydx_get_cattr(node, "name");
-		int ro = lydx_get_bool(node, "read-only");
-		char nm[strlen(id) + strlen(name) + 32];
-
-		/* Content mount: create a unique file with 'content' and bind mount */
-		if (data) {
-			const char *mode = lydx_get_cattr(node, "mode");
-			const char *contdir = "/run/containers/files";
-			mode_t file_mode = 0644;
-			char cmd[256];
-			int pos, fd;
-			FILE *pp;
-
-			if (mode) {
-				unsigned long val;
-				char *endptr;
-
-				val = strtoul(mode, &endptr, 8);
-				if (*endptr != '\0' || val > 07777) {
-					ERROR("%s: invalid file mode '%s'", nm, mode);
-					continue;
-				}
-
-				file_mode = (mode_t)val;
-			}
-
-			/*
-			 * prefix file name with container name, shared namespace,
-			 * and replace any slashes with hyphens.
-			 */
-			pos = snprintf(nm, sizeof(nm), "%s/%s-", contdir, name);
-			strlcat(nm, id, sizeof(nm));
-			for (int i = pos; nm[i] && i < (int)sizeof(nm); i++) {
-				if (nm[i] == '/')
-					nm[i] = '-';
-			}
-
-			/*
-			 * Always create with secure permissions, then immediately
-			 * set final mode.  This takes care of both new files and
-			 * updates to existing files atomically.
-			 */
-			fd = open(nm, O_CREAT | O_WRONLY | O_TRUNC, 0600);
-			if (fd < 0) {
-				ERRNO("%s: failed creating file %s", name, nm);
-				continue;
-			}
-
-			/* Set final permissions */
-			if (fchmod(fd, file_mode) < 0) {
-				ERRNO("%s: failed setting file mode %s", nm, mode);
-				close(fd);
-				unlink(nm);
-				continue;
-			}
-			close(fd);
-
-			/* Now decode base64 content into the properly secured file */
-			snprintf(cmd, sizeof(cmd), "base64 -d > %s", nm);
-			pp = popen(cmd, "w");
-			if (!pp || fputs(data, pp) < 0) {
-				ERRNO("%s: failed decoding %s base64 'content'", name, id);
-				if (pp)
-					pclose(pp);
-				continue;
-			}
-			pclose(pp);
-
-			type = "bind"; /* discard any configured setting */
-			src = nm;      /* discard any source, not used for content mounts */
-		}
-
-		fprintf(fp, " -m type=%s,src=%s,dst=%s,readonly=%s",
-			type, src, dst, ro ? "true" : "false");
-	}
-
-	ap = NULL;
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
-		if (!ap) {
-			ap = fopenf("w", "/run/containers/args/%s.env", name);
-			if (!ap) {
-				ERRNO("Failed creating env list for container %s", name);
-				break;
-			}
-		}
-		fprintf(ap, "%s=%s\n", lydx_get_cattr(node, "key"), lydx_get_cattr(node, "value"));
-	}
-	if (ap) {
-		fclose(ap);
-		fprintf(fp, " -e /run/containers/args/%s.env", name);
-	}
-
-	nets = lydx_get_descendant(lyd_child(cif), "network", NULL);
-	if (nets) {
-		if (lydx_is_enabled(nets, "host")) {
-			fprintf(fp, " --net host");
-		} else {
-			LYX_LIST_FOR_EACH(lyd_child(nets), node, "interface") {
-				struct lyd_node *opt;
-				const char *name;
-				int first = 1;
-
-				name = lydx_get_cattr(node, "name");
-				fprintf(fp, " --net %s", name);
-				LYX_LIST_FOR_EACH(lyd_child(node), opt, "option") {
-					const char *option = lyd_get_value(opt);
-
-					fprintf(fp, "%s%s", first ? ":" : ",", option);
-					first = 0;
-				}
-			}
-
-			LYX_LIST_FOR_EACH(lyd_child(nets), node, "publish")
-				fprintf(fp, " -p %s", lyd_get_value(node));
-		}
-	}
-
-	restart_policy = lydx_get_cattr(cif, "restart-policy");
-	if (restart_policy) {
-		if (!strcmp(restart_policy, "never"))
-			fprintf(fp, " -r no"); /* for docker compat */
-		else if (!strcmp(restart_policy, "always"))
-			fprintf(fp, " -r always");
-		else
-			fprintf(fp, " -r on-failure:10");
-	}
-
-	if (lydx_is_enabled(cif, "manual"))
-		fprintf(fp, " --manual");
-
-	node = lydx_get_descendant(lyd_child(cif), "checksum", NULL);
-	if (node) {
-		if ((string = lydx_get_cattr(node, "md5")))
-			fprintf(fp, " --checksum md5:%s", string);
-		if ((string = lydx_get_cattr(node, "sha256")))
-			fprintf(fp, " --checksum sha256:%s", string);
-		if ((string = lydx_get_cattr(node, "sha512")))
-			fprintf(fp, " --checksum sha512:%s", string);
-	}
-
-	/* Add resource limits for Podman to enforce via cgroups */
-	node = lydx_get_descendant(lyd_child(cif), "resource-limit", NULL);
-	if (node) {
-		struct lyd_node *mem_node, *cpu_node;
-
-		/* Memory limit in KiB, Podman accepts with 'k' suffix */
-		mem_node = lydx_get_descendant(lyd_child(node), "memory", NULL);
-		if (mem_node)
-			fprintf(fp, " --memory %sk", lyd_get_value(mem_node));
-
-		/* CPU limit in millicores, convert to quota (microseconds per 100ms) */
-		cpu_node = lydx_get_descendant(lyd_child(node), "cpu", NULL);
-		if (cpu_node) {
-			uint32_t millicores = strtoul(lyd_get_value(cpu_node), NULL, 10);
-			uint32_t quota = millicores * 100;  /* 1000m → 100000µs, 2000m → 200000µs */
-			fprintf(fp, " --cpu-limit %u", quota);
-		}
-	}
-
-	fprintf(fp, " create %s %s", name, image);
-
- 	if ((string = lydx_get_cattr(cif, "command")))
-		fputqw(string, fp);
-
-	fprintf(fp, "\n");
+	lyd_print_file(fp, dup, LYD_JSON, 0);
 	fclose(fp);
+	lyd_free_tree(dup);
 
-	if (lydx_is_enabled(cif, "enabled")) {
+	enabled = lydx_is_enabled(cif, "enabled");
+	manual  = lydx_is_enabled(cif, "manual");
+	if (enabled) {
 		finit_enablef("container@%s", name);
+		systemf("initctl -bnq cond %s container-%s", manual ? "clear" : "set", name);
 		finit_reloadf("container@%s", name);
 	} else {
+		systemf("initctl -bnq cond clear container-%s", name);
 		finit_disablef("container@%s", name);
 	}
 
@@ -332,40 +64,16 @@ static int add(const char *name, struct lyd_node *cif)
 }
 
 /*
- * Remove setup/create/upgrade script and disable the currently running
- * instance.  The `/usr/sbin/container` wrapper script is called when
- * Finit removes the instance, and it does not need the file we erase.
+ * Remove the configuration and disable the instance.  Finit stops a
+ * running container and ixcont removes its state when it has exited,
+ * the state of one already stopped is removed here.
  */
 static int del(const char *name)
 {
-	char prune_dir[sizeof(_PATH_CLEAN) + strlen(name) + 3];
-	char buf[256];
-	FILE *pp;
-
-	erasef("%s/%s.sh", _PATH_CONT, name);
+	erasef("%s/%s.json", _PATH_CONT, name);
+	systemf("initctl -bnq cond clear container-%s", name);
 	finit_disablef("container@%s", name);
-
-	/* Schedule a cleanup job for this container as soon as it has stopped */
-	snprintf(prune_dir, sizeof(prune_dir), "%s/%s", _PATH_CLEAN, name);
-	mkpath(prune_dir, 0755);
-
-	/* Finit cleanup:script runs when container is deleted, it will remove any image by-ID */
-	pp = popenf("r", "podman inspect %s 2>/dev/null | jq -r '.[].Id' 2>/dev/null", name);
-	if (!pp) {
-		/* Nothing to do, if we can't get the Id we cannot safely remove anything */
-		ERROR("Cannot find any container instance named '%s' to delete", name);
-		rmdir(prune_dir);
-		return SR_ERR_OK;
-	}
-
-	if (fgets(buf, sizeof(buf), pp)) {
-		chomp(buf);
-		/* The return sha should be at least 64 chars long (sha256) */
-		if (strlen(buf) >= 64)
-			touchf("%s/%s", prune_dir, buf);
-	}
-
-	pclose(pp);
+	systemf("ixcont cleanup %s", name);
 
 	return SR_ERR_OK;
 }
@@ -385,7 +93,14 @@ int containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	case SR_EV_CHANGE:
 		cifs = lydx_get_descendant(config, "containers", "container", NULL);
 		LYX_LIST_FOR_EACH(cifs, cif, "container") {
+			const char *name = lydx_get_cattr(cif, "name");
 			struct lyd_node *mount;
+
+			/* The name is also the Finit condition usr/container-NAME */
+			if (strchr(name, '.')) {
+				sr_session_set_error_message(session, "Container '%s': names may not contain '.'", name);
+				return SR_ERR_VALIDATION_FAILED;
+			}
 			LYX_LIST_FOR_EACH(lyd_child(cif), mount, "mount") {
 				const char *src  = lydx_get_cattr(mount, "source");
 				const char *id   = lydx_get_cattr(mount, "name");
@@ -463,8 +178,8 @@ static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 		return SR_ERR_INTERNAL;
 	cmd += 2;
 
-	DEBUG("RPC xpath %s, calling 'container %s %s'", xpath, cmd, name);
-	if (systemf("container %s %s", cmd, name))
+	DEBUG("RPC xpath %s, calling 'ixcont %s %s'", xpath, cmd, name);
+	if (systemf("ixcont %s %s >/dev/null", cmd, name))
 		return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
@@ -480,7 +195,7 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	if (input_cnt > 1)
 		name = input[1].data.string_val;
 
-	if (systemf("container load %s %s 2>&1 | logger -t confd -p local1.err -I $PPID", uri, name))
+	if (systemf("ixcont load %s %s 2>&1 | logger -t confd -p local1.err -I $PPID", uri, name))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;

@@ -37,7 +37,7 @@ $ git submodule update --init
 ### Customer Builds
 
 Customer builds add product specific device trees, more OSS packages,
-e.g., Frr and podman, and sometimes integrates proprietary software.
+e.g., Frr and crun, and sometimes integrates proprietary software.
 What's *important to remember*, however, is that they are all made by
 setting up Infix as a GIT submodule, similar to how Infix set up a GIT
 submodule for Buildroot.

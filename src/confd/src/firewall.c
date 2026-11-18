@@ -615,7 +615,7 @@ static int generate_firewalld_conf(struct lyd_node *cfg)
 	fprintf(fp, "ReloadPolicy=INPUT:DROP,FORWARD:DROP,OUTPUT:DROP\n");
 	fprintf(fp, "FlushAllOnReload=yes\n");
 
-	/* Seamless integration with podman -- published ports are opened. */
+	/* Container published ports are DNAT rules outside firewalld's table. */
 	fprintf(fp, "StrictForwardPorts=no\n");
 
 	/* Performs reverse path filtering (RPF) on IPv6 packets as per RFC 3704 */

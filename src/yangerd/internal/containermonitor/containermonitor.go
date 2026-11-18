@@ -1,50 +1,41 @@
 // Package containermonitor keeps the infix-containers subtree in the tree
-// in sync with podman.  A persistent `podman events` subprocess is used
-// purely as a change trigger; on every event the full container table is
-// re-read with `podman ps` (via collector.CollectContainers) and the
-// subtree replaced, so removed containers disappear and containers present
-// before yangerd started are picked up.
-//
-// This replaces an earlier inotify watch on /run/libpod/events, which was
-// reactive-only and silently went stale whenever an event was missed
-// (debounce coalescing, inotify overflow, a removal racing the re-read, or
-// yangerd starting after the container).  `podman events` reads whichever
-// events backend podman is configured for (file or journald), so it does
-// not depend on a specific on-disk layout.
+// in sync with ixcont.  ixcont writes /run/containers/<name>/state.json
+// when it creates a container, when crun has started it (OCI poststart
+// hook) and when it has stopped, so inotify on that directory is the
+// event.  On every event the full container table is re-read from the
+// state files, crun and the cgroup tree (collector.CollectContainers) and
+// the subtree replaced, so removed containers disappear and containers
+// present before yangerd started are picked up.
 package containermonitor
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"os/exec"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
+	"github.com/kernelkit/infix/src/yangerd/internal/inotify"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 const (
 	treeKey = "infix-containers:containers"
 
-	// debounceDelay coalesces bursts of events into one re-read.  It is
-	// deliberately generous: container lifecycle events fire while confd
-	// is still running its own `podman` start/stop/rm operations, so
-	// re-reading too eagerly makes yangerd's `podman ps/inspect/stats`
-	// contend with confd for the libpod lock on a CPU-starved guest.
-	// Waiting for the churn to settle keeps yangerd off confd's back
-	// during config apply/reset; a couple of seconds of staleness in
-	// operational data is harmless.
-	debounceDelay = 2 * time.Second
+	// debounceDelay coalesces bursts of events into one re-read: setup
+	// writes several files, and the poststart hook follows shortly.
+	debounceDelay = 500 * time.Millisecond
 )
 
-// ContainerMonitor subscribes to container lifecycle events via a
-// persistent `podman events` subprocess and re-reads the full container
-// table on every event.
+// StateDir is where ixcont keeps one directory per container.
+var StateDir = "/run/containers"
+
+// ContainerMonitor follows the ixcont state directory and re-reads the
+// full container table on every change in it.
 type ContainerMonitor struct {
 	tree    *tree.Tree
 	log     *slog.Logger
@@ -74,66 +65,58 @@ func New(t *tree.Tree, cmd collector.CommandRunner, fs collector.FileReader, log
 
 // SetOnUpdate sets a callback run after every re-read of the container
 // table, so other collectors can follow the container set without a
-// podman stream of their own.  Must be called before Run.
+// watch of their own.  Must be called before Run.
 func (m *ContainerMonitor) SetOnUpdate(fn func()) {
 	m.onUpdate = fn
 }
 
 // Run starts the container monitor.  It blocks until ctx is cancelled,
-// restarting the events subprocess with backoff if it exits.
+// restarting the watch with backoff if it fails.
 func (m *ContainerMonitor) Run(ctx context.Context) error {
 	go m.refreshLoop(ctx)
 	return backoff.Retry(ctx, m.log, "container monitor", m.runOnce)
 }
 
 func (m *ContainerMonitor) runOnce(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "podman", "events", "--filter", "type=container", "--format", "json")
-	stdout, err := cmd.StdoutPipe()
+	if err := os.MkdirAll(StateDir, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", StateDir, err)
+	}
+	w, err := inotify.NewWatcher()
 	if err != nil {
-		return fmt.Errorf("stdout pipe: %w", err)
+		return err
 	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start podman events: %w", err)
+	defer w.Close()
+
+	if err := w.Add(StateDir); err != nil {
+		return err
 	}
-	defer cmd.Wait()
+	entries, _ := os.ReadDir(StateDir)
+	for _, e := range entries {
+		if e.IsDir() {
+			_ = w.Add(filepath.Join(StateDir, e.Name()))
+		}
+	}
 
 	// Pick up containers that existed before we attached.
 	m.triggerRefresh()
 
-	return m.readEvents(stdout)
-}
-
-// readEvents consumes the newline-delimited JSON event stream.  Each event
-// is only a trigger; the payload is never used to build state.
-func (m *ContainerMonitor) readEvents(r io.Reader) error {
-	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1*1024*1024)
-
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ev := <-w.Events:
+			// A new container directory: follow its state file too.
+			if filepath.Dir(ev.Name) == StateDir && ev.Has(inotify.Create) {
+				if fi, err := os.Stat(ev.Name); err == nil && fi.IsDir() {
+					_ = w.Add(ev.Name)
+				}
+			}
+			m.log.Debug("container monitor: event", "path", ev.Name, "op", ev.Op.String())
+			m.triggerRefresh()
+		case err := <-w.Errors:
+			return fmt.Errorf("inotify: %w", err)
 		}
-		if status := eventStatus(line); status != "" {
-			m.log.Debug("container monitor: event", "status", status)
-		}
-		m.triggerRefresh()
 	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read podman events: %w", err)
-	}
-	return fmt.Errorf("podman events process exited")
-}
-
-// eventStatus extracts the event status for logging; best-effort only.
-func eventStatus(line []byte) string {
-	var ev struct {
-		Status string `json:"Status"`
-	}
-	if json.Unmarshal(line, &ev) != nil {
-		return ""
-	}
-	return ev.Status
 }
 
 // triggerRefresh requests a table re-read; the buffered channel collapses
