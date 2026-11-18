@@ -446,6 +446,9 @@ int cni_ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 	char *xpath, *iftype;
 	sr_data_t *cfg;
 
+	if (!strstr(path, ":container-network"))
+		return SR_ERR_OK;
+
 	xpath = xpath_base(path);
 	if (!xpath)
 		return SR_ERR_SYS;

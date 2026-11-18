@@ -208,6 +208,7 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	sr_change_iter_t *iter;
 	sr_change_oper_t op;
 	sr_val_t *old, *new;
+	char *prev = NULL;
 	sr_error_t err;
 
 	switch (event) {
@@ -223,6 +224,8 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return err;
 
 	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
+		char *base;
+
 		switch (op) {
 		case SR_OP_CREATED:
 		case SR_OP_MODIFIED:
@@ -231,17 +234,29 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			continue;
 		}
 
-		err = ifchange_cand_infer_type(session, new->xpath);
-		if (err)
+		/* Changes come interface by interface, infer once for each */
+		base = xpath_base(new->xpath);
+		if (!base)
 			break;
 
-		err = ifchange_cand_infer_veth(session, new->xpath);
-		if (err)
-			break;
+		if (!prev || strcmp(prev, base)) {
+			free(prev);
+			prev = base;
 
-		err = ifchange_cand_infer_vlan(session, new->xpath);
-		if (err)
-			break;
+			err = ifchange_cand_infer_type(session, new->xpath);
+			if (err)
+				break;
+
+			err = ifchange_cand_infer_veth(session, new->xpath);
+			if (err)
+				break;
+
+			err = ifchange_cand_infer_vlan(session, new->xpath);
+			if (err)
+				break;
+		} else {
+			free(base);
+		}
 
 		err = ifchange_cand_infer_dhcp(session, new->xpath);
 		if (err)
@@ -256,6 +271,7 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			break;
 	}
 
+	free(prev);
 	sr_free_change_iter(iter);
 	return SR_ERR_OK;
 }

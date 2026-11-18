@@ -208,6 +208,9 @@ All notable changes to the project are documented in this file.
   bridge ports.  A PTP port that was also a bridge port went straight
   to the `faulty` state, so the switch could not act as a gPTP bridge or
   a boundary clock on its own ports
+- Adding several interfaces in one change, e.g., the bridges and VETH
+  pairs of a container setup, could take more than a minute on a small
+  device, long enough for the request to time out
 
 
 [v26.10.0][] - 2026-10-30
