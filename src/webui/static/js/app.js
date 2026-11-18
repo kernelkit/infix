@@ -4,15 +4,13 @@
     return meta ? meta.getAttribute('content') : '';
   }
 
-  function initCSRF() {
+  // Installed before htmx starts, its on-load requests need the token too
+  document.addEventListener('htmx:configRequest', function (evt) {
     var token = getCSRFToken();
-    if (!token || !window.htmx || !document.body) {
-      return;
-    }
-    document.body.addEventListener('htmx:configRequest', function (evt) {
+    if (token) {
       evt.detail.headers['X-CSRF-Token'] = token;
-    });
-  }
+    }
+  });
 
   // HTMX page navigation swaps only #content, leaving the <title> in <head>
   // stale.  Each rendered page emits a setPageTitle HX-Trigger event (set in
@@ -831,7 +829,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    initCSRF();
     initPageTitle();
     initDeviceStatusBanner();
     initDynamicUI(document);
