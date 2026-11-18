@@ -312,6 +312,10 @@ def wait_offload(port, stage="transmission-selection"):
                              f"only {', '.join(port.offload) or 'nothing'}") from None
 
 
+# iperf3 pacing timers in microseconds, one per client of a run
+PACING = (1000, 730, 870, 610)
+
+
 class Flow:
     """One iperf3 UDP flow, talker to listener, told apart by its port"""
     def __init__(self, name, port, tos, rate_bps, seconds=4, size=1000):
@@ -363,10 +367,11 @@ def _start_flows(talker, listener, dst, flows):
     time.sleep(1)
 
     clients = {}
-    for f in sorted(flows, key=lambda f: f.tos):
+    for i, f in enumerate(sorted(flows, key=lambda f: f.tos)):
         clients[f.name] = talker.popen(["iperf3", "-c", dst, "-p", str(f.port), "-u",
                                         "-b", str(f.rate), "-t", str(f.seconds),
-                                        "-l", str(f.size), "--tos", str(f.tos), "--json"],
+                                        "-l", str(f.size), "--tos", str(f.tos),
+                                        "--pacing-timer", str(PACING[i % len(PACING)]), "--json"],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        text=True)
     in_step = _connected(talker, flows)
@@ -399,6 +404,11 @@ def run_flows(talker, listener, dst, flows):
     never gets through.  The clients start back to back, lowest marking
     first, and the flows run again when one fails to connect, or connects
     so late that the flows' middle seconds no longer line up.
+
+    Each client paces its datagrams with a timer of its own length.
+    With the same timer the clients send in step, and when their flows
+    share a queue that is full, the one whose datagrams arrive first
+    takes every free slot and the other gets what is left.
 
     The steady state is the middle seconds of a flow, after the queues
     filled and before the talkers stopped.  Shares and throughput are
