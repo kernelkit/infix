@@ -1,4 +1,4 @@
-From 20ce59191e695e4803b6965791759f95a37b69e4 Mon Sep 17 00:00:00 2001
+From 23d4047f9b5bb60f7be2e1d71fe31826de6bc18c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sat, 3 Oct 2026 21:58:08 +0200
 Subject: [PATCH] pppd: add attach-unit option
@@ -24,7 +24,7 @@ interface then lives as long as its owner, not the session.
  5 files changed, 35 insertions(+)
 
 diff --git a/pppd/options.c b/pppd/options.c
-index 879223d..f6bedcf 100644
+index 09aa046..e891b1b 100644
 --- a/pppd/options.c
 +++ b/pppd/options.c
 @@ -121,6 +121,7 @@ char	linkname[MAXPATHLEN];	/* logical name for link */
@@ -35,9 +35,9 @@ index 879223d..f6bedcf 100644
  char	path_net_init[MAXPATHLEN]; /* pathname of net-init script */
  char	path_net_preup[MAXPATHLEN];/* pathname of net-pre-up script */
  char	path_net_down[MAXPATHLEN]; /* pathname of net-down script */
-@@ -311,6 +312,10 @@ struct option general_options[] = {
+@@ -318,6 +319,10 @@ struct option general_options[] = {
        "PPP interface unit number to use if possible",
-       OPT_PRIO | OPT_LLIMIT, 0, 0 },
+       OPT_PRIO | OPT_LLIMIT, NULL, 0, 0 },
  
 +    { "attach-unit", o_int, &attach_unit,
 +      "Attach to existing PPP interface unit, created by another process",
@@ -47,7 +47,7 @@ index 879223d..f6bedcf 100644
        "Set PPP interface name",
        OPT_PRIO | OPT_PRIV | OPT_STATIC, NULL, IFNAMSIZ },
 diff --git a/pppd/pppd-private.h b/pppd/pppd-private.h
-index d8ec443..fea9342 100644
+index a518180..537e775 100644
 --- a/pppd/pppd-private.h
 +++ b/pppd/pppd-private.h
 @@ -196,6 +196,7 @@ extern bool	tune_kernel;	/* May alter kernel settings as necessary */
@@ -59,12 +59,12 @@ index d8ec443..fea9342 100644
  extern char	path_net_preup[];/* pathname of net-pre-up script */
  extern char	path_net_down[]; /* pathname of net-down script */
 diff --git a/pppd/pppd.8 b/pppd/pppd.8
-index 3a787a0..9bc8bb1 100644
+index c2b3929..ed35138 100644
 --- a/pppd/pppd.8
 +++ b/pppd/pppd.8
-@@ -1157,6 +1157,14 @@ name.  Respective values allowed for this option is: \fInone\fR, \fIsubject\fR,
- (EAP-TLS, or PEAP) Enables examination of peer certificate's purpose, and
- extended key usage attributes.
+@@ -1189,6 +1189,14 @@ authentication as a client (regardless of whether pppd is
+ authenticating the peer, or being authenticated).
+ This option is privileged.
  .TP
 +.B attach-unit \fInum
 +Use the existing ppp interface with unit number \fInum\fR, created and owned
@@ -78,12 +78,12 @@ index 3a787a0..9bc8bb1 100644
  Sets the ppp unit number (for a ppp0 or ppp1 etc interface name) for outbound
  connections.  If the unit is already in use a dynamically allocated number will
 diff --git a/pppd/sys-linux.c b/pppd/sys-linux.c
-index b94f3ec..107bd66 100644
+index 3196768..1d00ceb 100644
 --- a/pppd/sys-linux.c
 +++ b/pppd/sys-linux.c
-@@ -898,6 +898,18 @@ static int make_ppp_unit(void)
- 	    || fcntl(ppp_dev_fd, F_SETFL, flags | O_NONBLOCK) == -1)
- 		warn("Couldn't set /dev/ppp to nonblock: %m");
+@@ -996,6 +996,18 @@ static int make_ppp_unit(void)
+ 		}
+ 	}
  
 +	/*
 +	 * The interface was created by another process, which owns it.
@@ -100,7 +100,7 @@ index b94f3ec..107bd66 100644
  	/*
  	 * Via rtnetlink it is possible to create ppp network interface with
  	 * custom ifname atomically. But it is not possible to specify custom
-@@ -3705,6 +3717,11 @@ sys_check_options(void)
+@@ -3730,6 +3742,11 @@ sys_check_options(void)
  	warn("Warning: multilink is not supported by the kernel driver");
  	multilink = 0;
      }
@@ -113,10 +113,10 @@ index b94f3ec..107bd66 100644
  }
  
 diff --git a/pppd/sys-solaris.c b/pppd/sys-solaris.c
-index e442108..9f95f89 100644
+index c422daa..a50f26c 100644
 --- a/pppd/sys-solaris.c
 +++ b/pppd/sys-solaris.c
-@@ -638,6 +638,10 @@ ppp_sys_close(void)
+@@ -632,6 +632,10 @@ ppp_sys_close(void)
  int
  sys_check_options(void)
  {
@@ -127,6 +127,3 @@ index e442108..9f95f89 100644
      return 1;
  }
  
--- 
-2.43.0
-
