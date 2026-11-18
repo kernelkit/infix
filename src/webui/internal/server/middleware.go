@@ -21,7 +21,7 @@ const cookieName = "session"
 // the token up in the in-memory store, and attaches the session's
 // credentials to the context.  Unauthenticated requests are
 // redirected to /login (or get a 401 if the request comes from HTMX).
-func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Handler) http.Handler {
+func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, homes map[string]string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublicPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
@@ -37,6 +37,11 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Han
 		username, password, csrf, features, ok := store.Lookup(cookie.Value)
 		if !ok {
 			deny(w, r)
+			return
+		}
+
+		if home := homes[username]; home != "" && !homeAllowed(r.URL.Path, home) {
+			redirect(w, r, home)
 			return
 		}
 
@@ -219,6 +224,29 @@ func isPolling(r *http.Request) bool {
 	}
 	path := r.URL.Path
 	return path == "/device-status" || strings.HasSuffix(path, "/counters")
+}
+
+// homeAllowed reports what a user with a home page, see WEBUI_HOME, may
+// still reach here: the API its page uses, and logout.  This only keeps
+// such a user out of the regular pages, what they may read or change is
+// up to NACM.  Paths below home pass, to a 404, they belong to nginx
+// and redirecting them back home would loop.
+func homeAllowed(path, home string) bool {
+	switch path {
+	case "/api/session", "/logout", "/session/timeout":
+		return true
+	}
+	// Whole segments only, a home of /s must not open up /software
+	below := strings.TrimSuffix(home, "/") + "/"
+	return strings.HasPrefix(path, "/api/restconf/") || path == home || strings.HasPrefix(path, below)
+}
+
+func redirect(w http.ResponseWriter, r *http.Request, to string) {
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", to)
+		return
+	}
+	http.Redirect(w, r, to, http.StatusSeeOther)
 }
 
 func deny(w http.ResponseWriter, r *http.Request) {
