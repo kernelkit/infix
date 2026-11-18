@@ -48,9 +48,7 @@ func New(backend string) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", browseHandler)
-	mux.HandleFunc("/netbrowse", browseHandler)
 	mux.HandleFunc("/data", dataHandler(scanFn))
-	mux.HandleFunc("/netbrowse/data", dataHandler(scanFn))
 	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
 
 	return mux
