@@ -129,6 +129,32 @@ struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
 	return node;
 }
 
+/* True if the descendant existed before diff was applied to config */
+bool lydx_had_descendant(struct lyd_node *diff, struct lyd_node *config, ...)
+{
+	struct lyd_node *node;
+	va_list ap, aq;
+
+	va_start(ap, config);
+	va_copy(aq, ap);
+	node = lydx_vdescend(diff, ap);
+	va_end(ap);
+
+	switch (node ? lydx_get_op(node) : LYDX_OP_NONE) {
+	case LYDX_OP_CREATE:
+		node = NULL;
+		break;
+	case LYDX_OP_DELETE:
+		break;
+	default:
+		node = lydx_vdescend(config, aq);
+		break;
+	}
+	va_end(aq);
+
+	return node;
+}
+
 /*
  * Similar to lydx_get_decsendant() but for, e.g., finding a named
  * interface in ietf-interfaces from the top node.
