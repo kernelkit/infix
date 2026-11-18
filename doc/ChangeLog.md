@@ -211,6 +211,9 @@ All notable changes to the project are documented in this file.
 - Adding several interfaces in one change, e.g., the bridges and VETH
   pairs of a container setup, could take more than a minute on a small
   device, long enough for the request to time out
+- RESTCONF: a request the server did not answer in time got the HTML
+  page the WebUI shows during startup as its reply.  It now gets the web
+  server's plain 504, or 502 when the RESTCONF server is not running
 
 
 [v26.10.0][] - 2026-10-30

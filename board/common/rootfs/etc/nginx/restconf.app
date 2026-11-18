@@ -7,4 +7,7 @@ location ~ ^/(restconf|yang|.well-known)/ {
     grpc_set_header X-Real-IP $remote_addr;
     grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     grpc_set_header X-Forwarded-Proto $scheme;
+
+    # Any error_page here stops the inherited one, 599 is never sent
+    error_page 599 /50x.html;
 }
