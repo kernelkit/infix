@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   docs:
+    if: github.repository == 'kernelkit/infix'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

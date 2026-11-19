@@ -1,7 +1,10 @@
 name: Generic X86 GitHub Build
 
 on:
-  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:

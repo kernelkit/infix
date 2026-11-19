@@ -65,6 +65,9 @@ env:
   NINEPM_CONF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ninepm-conf || inputs.ninepm-conf }}
   TEST_PATH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test-path || inputs.test-path }}
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Regression Test ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}

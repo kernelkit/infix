@@ -10,8 +10,12 @@ on:
   push:
     branches: [ sign-with-bitsign ]
 
+permissions:
+  contents: read
+
 jobs:
   sign-infix-release:
+    if: github.repository == 'kernelkit/infix'
     runs-on: ubuntu-latest
 
     steps:
