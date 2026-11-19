@@ -2,15 +2,18 @@
 location ~ ^/(restconf|yang|.well-known)/ {
     include /etc/nginx/restconf-access.conf;
     include /etc/nginx/restconf-rate-limit.conf;
-    grpc_pass grpc://[::1]:10080;
-    grpc_set_header Host $host;
-    grpc_set_header X-Real-IP $remote_addr;
-    grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    grpc_set_header X-Forwarded-Proto $scheme;
 
     # A little longer than the RESTCONF server waits, see /etc/default/confd
     grpc_read_timeout 130s;
+    include /etc/nginx/restconf-proxy.conf;
+}
 
-    # Any error_page here stops the inherited one, 599 is never sent
-    error_page 599 /50x.html;
+# Event streams stay open, rousette sends a keep-alive every 55 s
+location /streams/ {
+    include /etc/nginx/restconf-access.conf;
+    include /etc/nginx/restconf-rate-limit.conf;
+    limit_conn restconf_streams 16;
+    limit_conn_status 429;
+    grpc_read_timeout 120s;
+    include /etc/nginx/restconf-proxy.conf;
 }
