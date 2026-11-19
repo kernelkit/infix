@@ -478,7 +478,7 @@ For example, a system container from which `ping` does not work:
 <pre class="cli"><code>admin@example:/config/container/system/> <b>edit capabilities</b>
 admin@example:/config/container/system/capabilities/> <b>set add net_raw</b>
 admin@example:/config/container/system/capabilities/> <b>end</b>
-admin@infix-00-00-00:/config/container/system/> <b>show</b>
+admin@example:/config/container/system/> <b>show</b>
 ...
 capabilities {
   add net_raw;

@@ -67,7 +67,8 @@ Each is explained in the doc named above; these are the ones that come back in r
   kernel internals. A ChangeLog entry is a few lines that say what changed for the user
   and link to the manual page, not a tour of the feature. A new manual page is listed
   in `doc/README.md` and in the `nav` of `mkdocs.yml`. The manual never uses the
-  product name, write "the device" or "the system".
+  product name, write "the device" or "the system".  CLI examples use the prompt
+  `admin@example`, not the hostname of the box they were run on.
 
 ## Notes for agents
 

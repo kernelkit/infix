@@ -33,6 +33,10 @@ include::lldp/lldp_ieee_group_forward/Readme.adoc[]
 
 <<<
 
+include::lldp/lldp_management_address/Readme.adoc[]
+
+<<<
+
 include::restconf/rate_limit/Readme.adoc[]
 
 <<<
