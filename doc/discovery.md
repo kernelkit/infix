@@ -162,8 +162,8 @@ admin@infix-c0-ff-ee:/>
 
 To reenable it from the CLI config mode:
 
-<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp enabled</b>
-admin@test-00-01-00:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>set lldp enabled</b>
+admin@example:/config/> <b>leave</b>
 </code></pre>
 
 ### LLDP Message Transmission Interval
@@ -172,8 +172,8 @@ By default, LLDP uses a `message-tx-interval` of 30 seconds, as defined
 by the IEEE standard. Infix allows this value to be customized.
 To change it using the CLI:
 
-<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp message-tx-interval 1</b>
-admin@test-00-01-00:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>set lldp message-tx-interval 1</b>
+admin@example:/config/> <b>leave</b>
 </code></pre>
 
 ### LLDP Administrative Status per Interface
@@ -188,10 +188,10 @@ also supported:
 
 Example configuration:
 
-<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled</b>
-admin@test-00-01-00:/config/> <b>set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only</b>
-admin@test-00-01-00:/config/> <b>set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only</b>
-admin@test-00-01-00:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/> <b>set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled</b>
+admin@example:/config/> <b>set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only</b>
+admin@example:/config/> <b>set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only</b>
+admin@example:/config/> <b>leave</b>
 </code></pre>
 
 > [!NOTE]
@@ -218,7 +218,7 @@ admin@example:/config/> <b>leave</b>
 In CLI mode, Infix also provides a convenient `show lldp` command to
 list LLDP neighbors detected on each interface:
 
-<pre class="cli"><code>admin@test-00-01-00:/> <b>show lldp</b>
+<pre class="cli"><code>admin@example:/> <b>show lldp</b>
 <span class="header">INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID                           </span>
 e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07
 e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07

@@ -143,6 +143,11 @@ A new page in `doc/` is listed in two places, the index in
 online guide.  The manual does not use the product name, write "the
 device" or "the system" instead.
 
+CLI examples use the prompt `admin@example`.  Do not paste the hostname
+of the device the example was run on, like `admin@test-00-01-00`.  A
+real hostname is fine when the example is about the name itself, as in
+the mDNS section of `doc/discovery.md`.
+
 Preview with:
 
 ```
