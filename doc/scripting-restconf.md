@@ -648,6 +648,72 @@ Verify the change with SSH:
 Wed Apr 17 14:48:12 UTC 2024
 ```
 
+## Notifications
+
+A client can subscribe to notifications and read them as a stream of
+server-sent events, instead of polling.  Subscribing is an RPC, and the
+reply has the address of the stream:
+
+```bash
+~$ curl -sk -u admin:admin -X POST                                   \
+        -H 'Content-Type: application/yang-data+json'                \
+        -d '{"ietf-subscribed-notifications:input":{"stream":"NETCONF","encoding":"encode-json"}}' \
+        https://example.local/restconf/operations/ietf-subscribed-notifications:establish-subscription
+{
+  "ietf-subscribed-notifications:output": {
+    "id": 1,
+    "ietf-restconf-subscribed-notifications:uri": "https://example.local/streams/subscribed/5c7d0cfb-93a1-4a31-9cb4-1ee3c8b4a6f4"
+  }
+}
+```
+
+Open the stream within a minute, or the device removes the subscription:
+
+```bash
+~$ curl -sk -N -u admin:admin -H 'Accept: text/event-stream' \
+        https://example.local/streams/subscribed/5c7d0cfb-93a1-4a31-9cb4-1ee3c8b4a6f4
+```
+
+The stream stays open until the client closes it.  One client address
+can have up to 16 streams open at a time.  The device answers the next
+one with 429 Too Many Requests.
+
+The address in the reply has the same host name or IP address as the
+request.  If you used an IPv6 link-local address, the reply has it
+without the zone.  Add the zone again, e.g. `%25eth0`, before you open
+the stream.
+
+### Lost Connections
+
+The device sends every event once, to the client that has the stream
+open at the time, and keeps no history of them.  A client has to cope
+with a stream that breaks:
+
+- When nothing happens the device sends a comment line, starting with
+  a colon, every 55 seconds.  If the stream has been silent for two
+  minutes, treat it as lost and open it again
+- Events have no `id`, and the device ignores `Last-Event-ID`.  A
+  browser `EventSource` reconnects by itself, but it does not get the
+  events it missed
+- A subscription has one reader.  If the stream is already open, a
+  second request for it gets 409 Conflict
+- The device keeps the subscription for a minute after the stream
+  closes.  Open the same address again within that time to continue.
+  Later the address answers 404 Not Found, and you have to subscribe
+  again
+- Only the user who subscribed can open the stream
+- A subscription does not survive a reboot, or a restart of the web
+  services
+- Do not count on events from the time the stream was closed.  The
+  device cannot replay them, and answers a request with `start-time`
+  with 400 Bad Request
+
+A client that goes away without closing its connection keeps its
+stream, and its place among the 16, until the device notices.  That
+can take up to 15 minutes.  Close the stream, or end the subscription
+with `delete-subscription` and the `id` from the reply, when you are
+done.
+
 ## Advanced Examples
 
 ### Makefile for Common Operations
