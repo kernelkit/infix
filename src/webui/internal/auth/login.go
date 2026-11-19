@@ -28,6 +28,9 @@ type LoginHandler struct {
 	// foreground, so implementations should start their own goroutines for
 	// slow work.  May be nil.
 	OnLogin func(ctx context.Context)
+	// Homes maps a username to the page it lands on after login, for
+	// users that should not get the dashboard.  May be nil.
+	Homes map[string]string
 }
 
 type loginData struct {
@@ -111,7 +114,11 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	security.EnsureToken(w, r, csrfToken)
 
-	fullRedirect(w, r, "/")
+	home := h.Homes[username]
+	if home == "" {
+		home = "/"
+	}
+	fullRedirect(w, r, home)
 }
 
 // DoLogout destroys the session and redirects to the login page (POST /logout).

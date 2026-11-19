@@ -56,6 +56,34 @@ The RESTCONF URL can also be set via the `RESTCONF_URL` environment
 variable.
 
 
+## Pages from a br2-external
+
+A product built on Infix can give some users a page of its own instead
+of the dashboard.  Nothing in the WebUI has to change for that.  nginx
+serves the page as plain files, from a snippet in `/etc/nginx/app/`,
+and `/etc/default/webui` says who gets it:
+
+```sh
+WEBUI_HOME=operator=/panel/ service=/service/
+```
+
+A user listed there lands on their page after login and cannot leave
+it.  Everyone else gets the regular pages.  The page uses the same
+login as the WebUI, and two endpoints:
+
+| **Endpoint**           | **Use**                                                    |
+|------------------------|------------------------------------------------------------|
+| `GET /api/session`     | The logged-in `username` and the `csrf` token              |
+| `/api/restconf/...`    | RESTCONF `data`, `operations` and `ds`, as that user       |
+
+Every request except GET must carry the token in an `X-CSRF-Token`
+header.  The form that posts to `/logout` sends it as a `csrf` field.
+NACM on the device decides what the user may do, as it does for the
+regular pages.  Background polls should send `X-Auto-Refresh: 1`,
+otherwise an open page keeps the session alive forever.  A request
+without a session is redirected to `/login`.
+
+
 ## Development
 
 Point `RESTCONF_URL` at a running Infix device and start the dev

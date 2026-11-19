@@ -34,3 +34,16 @@ func TestTemplatesParse(t *testing.T) {
 		}
 	}
 }
+
+func TestParseHomes(t *testing.T) {
+	got := parseHomes("guest=/stats/  bad nopath= rel=stats host=//evil.example/ bs=/\\evil.example/ root=/ op=/op/")
+	want := map[string]string{"guest": "/stats/", "op": "/op/"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for user, path := range want {
+		if got[user] != path {
+			t.Errorf("%s: got %q, want %q", user, got[user], path)
+		}
+	}
+}

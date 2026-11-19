@@ -91,16 +91,26 @@ func checkPath(path string) error {
 // doRequest builds and executes an HTTP request against the RESTCONF server,
 // setting Accept and Basic Auth from the context. The caller must close Body.
 func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Response, error) {
+	return c.Do(ctx, method, path, "", nil)
+}
+
+// Do sends a request as is and hands back the response, whatever its
+// status, for a caller that relays RESTCONF rather than uses it.  The
+// caller closes the body.
+func (c *Client) Do(ctx context.Context, method, path, rawQuery string, body []byte) (*http.Response, error) {
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, nil)
+	url := c.baseURL + path
+	if rawQuery != "" {
+		url += "?" + rawQuery
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/yang-data+json")
-	if method == http.MethodPost {
-		// Required by rousette on every POST, body or not
+	if len(body) > 0 || method == http.MethodPost {
 		req.Header.Set("Content-Type", "application/yang-data+json")
 	}
 	creds := CredentialsFromContext(ctx)

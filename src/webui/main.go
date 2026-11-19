@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("static fs: %v", err)
 	}
 
-	handler, err := server.New(store, rc, schemaCache, tmplFS, stFS)
+	handler, err := server.New(store, rc, schemaCache, tmplFS, stFS, parseHomes(os.Getenv("WEBUI_HOME")))
 	if err != nil {
 		log.Fatalf("server setup: %v", err)
 	}
@@ -70,6 +70,25 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("listen: %v", err)
 	}
+}
+
+// parseHomes reads WEBUI_HOME, a space separated list of user=path.  A
+// user listed here lands on path after login instead of the dashboard,
+// and is kept there, see homeAllowed.  The page itself is served by
+// nginx, it is not part of this binary.
+func parseHomes(v string) map[string]string {
+	homes := make(map[string]string)
+	for _, f := range strings.Fields(v) {
+		user, path, ok := strings.Cut(f, "=")
+		// A browser takes //host and /\host for another host
+		if !ok || user == "" || path == "/" || !strings.HasPrefix(path, "/") ||
+			strings.HasPrefix(path, "//") || strings.Contains(path, "\\") {
+			log.Printf("WEBUI_HOME: ignoring %q, want user=/path", f)
+			continue
+		}
+		homes[user] = path
+	}
+	return homes
 }
 
 func envBool(key string) bool {

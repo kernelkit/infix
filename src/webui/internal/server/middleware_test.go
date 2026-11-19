@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"infix/webui/internal/auth"
 	"infix/webui/internal/handlers"
 	"infix/webui/internal/security"
 )
@@ -107,5 +108,45 @@ func TestSameOriginIgnoresForwardedHost(t *testing.T) {
 	r.Header.Set("X-Forwarded-Host", "evil.example")
 	if sameOrigin(r) {
 		t.Error("cross-origin request accepted on X-Forwarded-Host")
+	}
+}
+
+// A user with a home page, see WEBUI_HOME, is sent there from every
+// regular page but keeps the API the page reads from, and logout.
+func TestHomeUserIsKeptOnHomePage(t *testing.T) {
+	store := auth.NewSessionStore()
+	homes := map[string]string{"guest": "/stats"}
+	h := authMiddleware(store, nil, homes, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	for _, tc := range []struct {
+		user, method, path string
+		want               int
+	}{
+		{"guest", http.MethodGet, "/", http.StatusSeeOther},
+		{"guest", http.MethodGet, "/configure/tree", http.StatusSeeOther},
+		{"guest", http.MethodGet, "/api/data", http.StatusSeeOther},
+		{"guest", http.MethodGet, "/api/restconf/data/ietf-hardware:hardware", http.StatusOK},
+		{"guest", http.MethodGet, "/api/session", http.StatusOK},
+		{"guest", http.MethodPost, "/logout", http.StatusOK},
+		{"guest", http.MethodGet, "/stats/missing.js", http.StatusOK},
+		{"guest", http.MethodGet, "/stats", http.StatusOK},
+		{"guest", http.MethodGet, "/statsother", http.StatusSeeOther},
+		{"guest", http.MethodGet, "/status/tree", http.StatusSeeOther},
+		{"admin", http.MethodGet, "/", http.StatusOK},
+	} {
+		token, _, err := store.Create(tc.user, "pw", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := httptest.NewRequest(tc.method, tc.path, nil)
+		r.AddCookie(&http.Cookie{Name: cookieName, Value: token})
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != tc.want {
+			t.Errorf("%s %s %s: status %d, want %d", tc.user, tc.method, tc.path, w.Code, tc.want)
+		}
+		if tc.want == http.StatusSeeOther && w.Header().Get("Location") != "/stats" {
+			t.Errorf("%s %s: redirected to %q, want /stats", tc.user, tc.path, w.Header().Get("Location"))
+		}
 	}
 }

@@ -21,6 +21,7 @@ func New(
 	schemaCache *schema.Cache,
 	templateFS fs.FS,
 	staticFS fs.FS,
+	homes map[string]string,
 ) (http.Handler, error) {
 	// Parse templates per page so each can define its own "content" block
 	// without collisions.
@@ -194,6 +195,7 @@ func New(
 		Store:    store,
 		RC:       rc,
 		Template: loginTmpl,
+		Homes:    homes,
 		OnLogin: func(ctx context.Context) {
 			schemaCache.RefreshBackground(ctx)
 		},
@@ -476,6 +478,11 @@ func New(
 	// Data API route (authenticated) — raw RESTCONF JSON passthrough.
 	mux.HandleFunc("GET /api/data", dataH.Get)
 
+	// For pages served outside this binary, see WEBUI_HOME: who is
+	// logged in, and RESTCONF as that user.
+	mux.HandleFunc("GET /api/session", handlers.Session)
+	mux.Handle("/api/restconf/", &handlers.RestconfProxy{RC: rc})
+
 	// YANG tree UI routes (authenticated).
 	mux.HandleFunc("GET /configure/tree",           treeH.Overview)
 	mux.HandleFunc("GET /configure/tree/children",  treeH.TreeChildren)
@@ -495,7 +502,7 @@ func New(
 	mux.HandleFunc("GET /status/tree/children", statusTreeH.TreeChildren)
 	mux.HandleFunc("GET /status/tree/node",     statusTreeH.TreeNode)
 
-	handler := authMiddleware(store, rc, mux)
+	handler := authMiddleware(store, rc, homes, mux)
 	handler = csrfMiddleware(handler)
 	handler = securityHeadersMiddleware(handler)
 	return handler, nil
