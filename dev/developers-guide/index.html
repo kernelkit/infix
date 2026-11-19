@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -1010,6 +1012,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../eth-counters/" class="md-nav__link">
         
   
@@ -1080,10 +1110,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1101,8 +1131,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2330,6 +2360,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#interface-quirks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Quirks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#yang-model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2899,6 +2940,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#interface-quirks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Quirks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#yang-model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3360,6 +3412,34 @@ unrelated settings are preserved, conflicting ones are overridden.</p>
 </code></pre></div>
 <p>This is the recommended one-shot command for setting up a development
 build from a freshly selected defconfig.</p>
+<h3 id="interface-quirks">Interface Quirks<a class="headerlink" href="#interface-quirks" title="Permanent link">¶</a></h3>
+<p>What a network interface cannot do, or does differently, is kept out of
+the code in <code>/etc/interface-quirks.json</code>, shipped from
+<code>board/common/rootfs</code>, and the product's <code>/etc/product/interface-quirks.json</code>
+from its <code>board/&lt;arch&gt;/&lt;board&gt;/rootfs/usr/share/product/&lt;compatible&gt;/</code>
+directory, which overrides the former entry by entry.  Each entry names
+an interface, or a pattern matching several, and holds its quirks:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nt">"sfp1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="nt">"comment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reports it supports autoneg, but if setting it, dagger crashes"</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="nt">"broken-autoneg"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">"@driver=sparx5-switch"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="nt">"qos-trust-order"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"pcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp-pcp"</span><span class="p">],</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="nt">"qos-root-qdisc"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ets"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mqprio"</span><span class="p">,</span><span class="w"> </span><span class="s2">"taprio"</span><span class="p">]</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">}</span>
+</code></pre></div>
+<p>An <code>@driver=&lt;name&gt;</code> entry matches every interface whose device is bound
+to that kernel driver, as <code>/sys/class/net/&lt;if&gt;/device/uevent</code> names it,
+which is how the ports of a switch chip are told apart from the rest.
+An <code>@ethtool:&lt;field&gt;=&lt;value&gt;;...</code> entry matches on the <code>ethtool -i</code>
+output of a running interface, for pluggable hardware such as Wi-Fi
+cards.  A quirk is a flag when its value is <code>true</code>, read with
+<code>iface_has_quirk()</code> in <code>confd</code> and <code>has-quirk</code> from shell, and a value,
+a list or a number, when the code needs more than a yes, read with
+<code>iface_quirk()</code> and from the <code>quirks</code> package of <code>yangerd</code>.  Boards
+with the same chip share an entry by symlinking their product file.</p>
 <h3 id="yang-model">YANG Model<a class="headerlink" href="#yang-model" title="Permanent link">¶</a></h3>
 <p>When making changes to the <code>confd</code> and <code>statd</code> services, you will often
 need to update the YANG models.  If you are adding a new YANG module,
@@ -3377,13 +3457,13 @@ like <code>infix-if-wifi</code>, are not listed there.</p>
 <p>The CLI help text is the first line of a node's description, so start
 every description with a short, complete sentence, followed by a blank
 line and any details:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">leaf</span><span class="w"> </span><span class="nv">ssid</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nc">string</span><span class="p">;</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="k">description</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="s2">"Network name.</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s2">     Absent for a hidden network, which does not announce its name."</span><span class="p">;</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">leaf</span><span class="w"> </span><span class="nv">ssid</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nc">string</span><span class="p">;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="k">description</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="s2">"Network name.</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s2">     Absent for a hidden network, which does not announce its name."</span><span class="p">;</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
 </code></pre></div>
 <p>Descriptions are read by operators, keep daemon and driver names out
 of them.</p>
@@ -3673,12 +3753,12 @@ fork, and then use GitHub to create a <em>Pull Reqeuest</em>.</p>
 <li><a href="https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow">Deactivate the Actions</a> you don't want in your fork</li>
 <li>Please read the <a href="https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md">Contributing Guidelines</a> as well!</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>...
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>...
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>...
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -1148,6 +1150,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../eth-counters/" class="md-nav__link">
         
   
@@ -1218,10 +1248,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1239,8 +1269,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2778,7 +2808,7 @@ modes, advertising all speed and duplex modes available.  In the example
 below, the switch would by default auto-negotiate speed 1 Gbps on port eth1
 and 100 Mbps on port eth4, as those are the highest speeds supported by H1 and
 H2 respectively.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ethernet-autoneg.svg" data-desc-position="bottom"><img alt="4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts" src="../img/ethernet-autoneg.svg"></a></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ethernet-autoneg.svg" data-desc-position="bottom"><img alt="4-port Gbps switch connected to Gbit and Fast Ethernet Hosts" src="../img/ethernet-autoneg.svg"></a></p>
 <p>A quick at-a-glance view of the physical link is available in the summary
 listing.  When a port is up, a physical-layer row appears above the ethernet
 row, naming the IEEE PMD type (e.g. <code>1000baseT</code>, <code>10GbaseLR</code>) in the PROTOCOL
@@ -2797,7 +2827,7 @@ eth4            100baseTX     UP          duplex: full
 </code></pre>
 
 <p>The detail view spells everything out, including auto-negotiation
-state and the speed in Mbit/s.</p>
+state and the speed in Mbps.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface eth1</b>
 name               : eth1
 index              : 2
@@ -2849,7 +2879,7 @@ Existing <code>startup-config.cfg</code> files are migrated automatically on upg
 <p>Each entry in <code>auto-negotiation/advertised-pmd-types</code> is an IEEE PMD-type
 identity (<code>ieee802-ethernet-phy-type:pmd-type-*</code>).  The separate <code>duplex</code>
 leaf controls half vs full duplex.</p>
-<p>The example below pins port <code>eth3</code> to 100 Mbit/s half-duplex.</p>
+<p>The example below pins port <code>eth3</code> to 100 Mbps half-duplex.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface eth3 ethernet</b>
 admin@example:/config/interface/eth3/ethernet/&gt; <b>set auto-negotiation advertised-pmd-types pmd-type-100BASE-TX</b>

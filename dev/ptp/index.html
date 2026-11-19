@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -1010,6 +1012,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../eth-counters/" class="md-nav__link">
         
   
@@ -1080,10 +1110,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1101,8 +1131,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1612,6 +1642,17 @@
     <span class="md-ellipsis">
       
         Show a specific instance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#in-the-webui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the WebUI
       
     </span>
   </a>
@@ -2917,6 +2958,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#in-the-webui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the WebUI
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3304,6 +3356,15 @@ admin@example:/config/ptp/…/0/port/1/&gt; <b>leave</b>
 measurement globally, as required by IEEE 802.1AS-2020.  Per-port
 <code>delay-mechanism</code> settings have no effect for 802.1AS instances.</p>
 </div>
+<p>The same instance in the WebUI, on <em>Configure &gt; PTP</em>.  <em>Add instance</em>
+asks for the profile and the ports, and the other settings are in the
+instance's row:</p>
+<figure id="__figure-caption_1">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/webui-ptp-configure.png" data-desc-position="bottom"><img alt="An 802.1AS instance on Configure &gt; PTP" src="../img/webui-ptp-configure.png" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 1:</span> A time-receiver only 802.1AS instance on port <code>e4</code>.</p>
+</figcaption>
+</figure>
 <h2 id="multiple-instances">Multiple Instances<a class="headerlink" href="#multiple-instances" title="Permanent link">¶</a></h2>
 <p>Multiple PTP instances can run simultaneously, one per domain or profile
 combination.  Each instance must have a unique <code>(domain-number, profile)</code>
@@ -3420,6 +3481,16 @@ available.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show ptp 0</b>
 </code></pre>
 
+<h3 id="in-the-webui">In the WebUI<a class="headerlink" href="#in-the-webui" title="Permanent link">¶</a></h3>
+<p><em>Status &gt; PTP</em> has a card for each instance.  The first row says whether
+the instance is the grandmaster, follows one, or is not synchronized.
+Below it are the same data sets and port table as in <code>show ptp</code>:</p>
+<figure id="__figure-caption_2">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/webui-ptp-status.png" data-desc-position="bottom"><img alt="Status &gt; PTP" src="../img/webui-ptp-status.png" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 2:</span> An instance that follows a grandmaster one step away.</p>
+</figcaption>
+</figure>
 <h2 id="tuning-port-intervals">Tuning port intervals<a class="headerlink" href="#tuning-port-intervals" title="Permanent link">¶</a></h2>
 <p>Adjust announcement, sync, and delay-request intervals per port.  Values
 are expressed as log₂ of the interval in seconds (e.g. <code>-3</code> = 125 ms,

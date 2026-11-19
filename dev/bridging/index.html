@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -1159,6 +1161,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../eth-counters/" class="md-nav__link">
         
   
@@ -1229,10 +1259,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1250,8 +1280,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2944,8 +2974,8 @@ VLAN, so the same address can be on different ports in different VLANs.</p>
 
 <p>Static entries pin an address to a port.  On a VLAN filtering bridge
 they are set per VLAN, and the port must be a member of that VLAN:</p>
-<pre class="cli"><code>admin@example:/config/interface/br0/&gt; <b>set bridge forwarding-database entry 00:11:22:33:44:55 port e2</b>
-admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 forwarding-database entry 00:11:22:33:44:66 port e5</b>
+<pre class="cli"><code>admin@example:/config/interface/br0/&gt; <b>set bridge entry 00:11:22:33:44:55 port e2</b>
+admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 entry 00:11:22:33:44:66 port e5</b>
 </code></pre>
 
 <p>Use the bridge itself as port for an address that should be delivered
@@ -3085,9 +3115,9 @@ multicast filters can be configured.</p>
 like this:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit interface br0</b>
-admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e2</b>
-admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e3</b>
-admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filters multicast-filter 01:00:5e:01:01:01 ports e2</b>
+admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filter 224.1.1.1 ports e2</b>
+admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filter 224.1.1.1 ports e3</b>
+admin@example:/config/interface/br0/&gt; <b>set bridge multicast-filter 01:00:5e:01:01:01 ports e2</b>
 admin@example:/config/interface/br0/&gt; <b>leave</b>
 admin@example:/&gt; <b>copy running-config startup-config</b>
 </code></pre>
@@ -3095,8 +3125,8 @@ admin@example:/&gt; <b>copy running-config startup-config</b>
 <p>Each <code>ports</code> entry for the same group adds one port to the filter.
 Receivers on all other ports will not see traffic for that group.</p>
 <p>On a VLAN-filtering bridge the filter is scoped per VLAN:</p>
-<pre class="cli"><code>admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e5</b>
-admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e6</b>
+<pre class="cli"><code>admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 multicast-filter 224.2.2.2 ports e5</b>
+admin@example:/config/interface/br1/&gt; <b>set bridge vlans vlan 10 multicast-filter 224.2.2.2 ports e6</b>
 </code></pre>
 
 <p>To verify the MDB — both statically configured and dynamically learned

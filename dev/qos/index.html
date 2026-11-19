@@ -13,7 +13,7 @@
         <link rel="prev" href="../firewall/">
       
       
-        <link rel="next" href="../eth-counters/">
+        <link rel="next" href="../tsn/">
       
       
         
@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -1044,10 +1046,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#terminology" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Terminology
+        Getting Started
       
     </span>
   </a>
@@ -1117,10 +1119,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rate-limit" class="md-nav__link">
+  <a href="#egress-shaper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rate Limit
+        Egress Shaper
       
     </span>
   </a>
@@ -1160,8 +1162,80 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#shapers-for-time-sensitive-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapers for Time-Sensitive Traffic
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profiles-for-common-port-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles for Common Port Roles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checking-the-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking the Result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vlan-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VLAN Interfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-forwarded-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Forwarded Traffic
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1188,27 +1262,27 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#microchip-lan969x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microchip LAN969x
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#vlan-interfaces" class="md-nav__link">
+  <a href="#terminology" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VLAN Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#software-forwarded-traffic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Software Forwarded Traffic
+        Terminology
       
     </span>
   </a>
@@ -1219,6 +1293,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1301,10 +1403,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1322,8 +1424,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2692,10 +2794,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#terminology" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Terminology
+        Getting Started
       
     </span>
   </a>
@@ -2765,10 +2867,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rate-limit" class="md-nav__link">
+  <a href="#egress-shaper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rate Limit
+        Egress Shaper
       
     </span>
   </a>
@@ -2808,8 +2910,80 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#shapers-for-time-sensitive-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapers for Time-Sensitive Traffic
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profiles-for-common-port-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles for Common Port Roles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checking-the-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking the Result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vlan-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VLAN Interfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-forwarded-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Forwarded Traffic
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2836,27 +3010,27 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#microchip-lan969x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microchip LAN969x
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#vlan-interfaces" class="md-nav__link">
+  <a href="#terminology" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VLAN Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#software-forwarded-traffic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Software Forwarded Traffic
+        Terminology
       
     </span>
   </a>
@@ -2931,7 +3105,7 @@
   
 
 
-<h1 id="quality-of-service">Quality of Service<a class="headerlink" href="#quality-of-service" title="Permanent link">¶</a></h1>
+<h1 id="quality-of-service"><b>Quality of Service</b><a class="headerlink" href="#quality-of-service" title="Permanent link">¶</a></h1>
 <p>On occasion, most networks will experience congestion due to some
 extraordinary load being placed upon it.  If the load is transient,
 switches and routers may be able to absorb such bursts of traffic by
@@ -2944,122 +3118,92 @@ which ones to prioritize, such that critical services remain operational.</p>
 Every interface type is accepted; what the hardware can offload varies
 and is reported back in the operational datastore, see <a href="#hardware-offload">Hardware
 Offload</a>.</p>
-<h2 id="terminology">Terminology<a class="headerlink" href="#terminology" title="Permanent link">¶</a></h2>
-<p>QoS vocabulary comes from two families of standards.  IEEE 802.1Q<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>
-defines priorities and traffic classes for bridged Ethernet, the IETF
-Differentiated Services (DiffServ) RFCs define how IP packets are marked.</p>
-<p><strong>Priority</strong> is the internal value, 0 to 7, that every frame carries
-through the system from classification to transmission.  IEEE 802.1Q
-Annex I names a traffic type for each priority.  Higher is better,
-except that priority 1 is meant for traffic that may yield to best
-effort:</p>
+<p>Most of this only matters when a port has more to send than it can
+carry.  The settings on this page, and the two shapers on the
+<a href="../tsn/">TSN</a> page, each answer a different need:</p>
 <figure id="__table-caption_1">
 <table>
 <thead>
 <tr>
-<th style="text-align: right;">Priority</th>
-<th>Traffic type</th>
+<th>Need</th>
+<th>Mechanism</th>
+<th>Described in</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">7</td>
-<td>Network Control</td>
+<td>Important traffic goes first on a busy port</td>
+<td>Strict priority</td>
+<td><a href="#traffic-classes-and-transmission-selection">Traffic Classes</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">6</td>
-<td>Internetwork Control</td>
+<td>Kinds of traffic share a busy port, none is starved</td>
+<td>Weighted sharing</td>
+<td><a href="#traffic-classes-and-transmission-selection">Traffic Classes</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">5</td>
-<td>Voice</td>
+<td>A port sends no more than the link beyond it can take</td>
+<td>Egress shaper</td>
+<td><a href="#egress-shaper">Egress Shaper</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">4</td>
-<td>Video</td>
+<td>A stream gets its bandwidth, and no more</td>
+<td>Credit-based shaper</td>
+<td><a href="../tsn/#credit-based-shaper">TSN</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">3</td>
-<td>Critical Applications</td>
-</tr>
-<tr>
-<td style="text-align: right;">2</td>
-<td>Excellent Effort</td>
-</tr>
-<tr>
-<td style="text-align: right;">1</td>
-<td>Background</td>
-</tr>
-<tr>
-<td style="text-align: right;">0</td>
-<td>Best Effort (default)</td>
+<td>Traffic gets the port at set times, in every cycle</td>
+<td>Time-aware shaper</td>
+<td><a href="../tsn/#time-aware-shaper">TSN</a></td>
 </tr>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 1:</span> IEEE 802.1Q-2022 Table I-2, traffic types.</p>
+<p><span class="caption-prefix">Table 1:</span> What each QoS mechanism is for.</p>
 </figcaption>
 </figure>
-<p><strong>PCP and DEI</strong> are the Priority Code Point and Drop Eligible Indicator,
-the three-bit priority and one-bit drop flag in a VLAN tag<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>.  A frame
-without a VLAN tag has neither.</p>
-<p><strong>DSCP</strong> is the six-bit Differentiated Services Code Point in the IP
-header<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>.  Named codepoints group into <em>per-hop behaviours</em> (PHB), the
-forwarding treatment a router or switch gives them<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>:</p>
-<figure id="__table-caption_2">
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Codepoints</th>
-<th>Reference</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Expedited Forwarding, EF</td>
-<td>46</td>
-<td>RFC 4594 1.5.3</td>
-</tr>
-<tr>
-<td>Assured Forwarding, AFxy</td>
-<td>10..14, 18..22, 26..30, 34..38</td>
-<td>RFC 4594 1.5.2</td>
-</tr>
-<tr>
-<td>Class Selector, CS1..7</td>
-<td>8, 16, 24, 32, 40, 48, 56</td>
-<td>RFC 4594 1.5.4</td>
-</tr>
-<tr>
-<td>Default Forwarding, DF</td>
-<td>0, also written CS0</td>
-<td>RFC 4594 1.5.1</td>
-</tr>
-</tbody>
-</table>
-<figcaption>
-<p><span class="caption-prefix">Table 2:</span> DiffServ per-hop behaviours and their codepoints.</p>
-</figcaption>
-</figure>
-<p>The class selectors carry the old IP precedence in the top three bits,
-so CS_n_ maps naturally to priority <em>n</em>.  Assured forwarding has four
-classes, AF1 to AF4, each with three drop precedences, e.g. AF11, AF12,
-AF13.  RFC 4594 groups the codepoints into service classes, telephony,
-signaling, multimedia and so on, with a recommended treatment for
-each<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup>.</p>
-<p><strong>Traffic class</strong> is a transmit queue on the egress port.  A port has 1
-to 8 of them, numbered so that the highest class is served first, and a
-table binds each of the eight priorities to one class<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup>.</p>
-<p><strong>Transmission selection</strong> is how the port picks the next class to send
-from<sup id="fnref:7"><a class="footnote-ref" href="#fn:7">7</a></sup>.  <em>Strict priority</em> always serves the highest non-empty class.
-<em>Enhanced Transmission Selection</em> (ETS)<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">8</a></sup> shares bandwidth between
-classes in proportion to a bandwidth share.</p>
-<p><strong>Stream Reservation (SR) classes</strong> are the two priorities reserved for
-time-sensitive audio and video streams in AVB and TSN networks<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup>:
-SR class A on priority 3 and SR class B on priority 2.</p>
-<p><strong>DCB</strong>, Data Center Bridging<sup id="fnref:10"><a class="footnote-ref" href="#fn:10">10</a></sup>, is the Linux kernel interface through
-which per-port priority tables are programmed into switch hardware.</p>
+<p>The terms used are explained in <a href="#terminology">Terminology</a>, at the end
+of the page.</p>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">¶</a></h2>
+<p>Four common tasks, each a few lines.  The sections after this one
+describe every setting.  In the WebUI the same settings are on
+<em>Configure &gt; QoS</em>, per port or in a profile shared by several ports.</p>
+<p><strong>Give voice priority on a port facing hosts.</strong>  Hosts mark their
+traffic with a DSCP, e.g. EF for voice.  Trusting the DSCP on the port
+gives voice priority 5, and writing the priority into the VLAN tag lets
+the switches beyond keep it.  Nothing more is needed: every port
+serves higher priorities first by default.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/&gt; <b>set ingress trust dscp</b>
+admin@example:/config/interface/…/qos/&gt; <b>set egress remark pcp from-priority</b>
+admin@example:/config/interface/…/qos/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Let ordinary and background traffic share an uplink.</strong>  On a port
+with eight traffic classes, ordinary traffic, priority 0, is in class 1
+and background traffic, priority 1, in class 0.  With weights of 80 and
+20 percent, background traffic keeps a fifth of a busy port and
+ordinary traffic the rest.  The classes above stay strict:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e10 qos egress</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 1 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 1 bandwidth 80</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 0 algorithm enhanced-transmission-selection</b>
+admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 0 bandwidth 20</b>
+admin@example:/config/interface/…/egress/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Hold a port to the rate of the link beyond it.</strong>  A port on a
+1 Gbps link toward a 10 Mbps radio or leased line fills the far end's
+queue, where nothing knows what is important.  Shaping the port keeps
+the queue, and the decision, here:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e10 qos</b>
+admin@example:/config/interface/…/qos/&gt; <b>set egress-shaper rate 10M</b>
+admin@example:/config/interface/…/qos/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Reserve bandwidth for a stream, or give traffic the port at set
+times.</strong>  These are the shapers of Time-Sensitive Networking, see
+<a href="../tsn/">TSN</a>.</p>
 <h2 id="the-pipeline">The Pipeline<a class="headerlink" href="#the-pipeline" title="Permanent link">¶</a></h2>
 <figure id="__figure-caption_1">
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-pipeline.svg" data-desc-position="bottom"><img alt="QoS pipeline" src="../img/qos-pipeline.svg" width="460"></a></p>
@@ -3087,7 +3231,7 @@ the port it leaves by:</p>
 and 3 have no settings under <code>qos</code>.</p>
 <h2 id="ingress-classification">Ingress Classification<a class="headerlink" href="#ingress-classification" title="Permanent link">¶</a></h2>
 <p>Configured under <code>qos ingress</code>:</p>
-<figure id="__table-caption_3">
+<figure id="__table-caption_2">
 <table>
 <thead>
 <tr>
@@ -3098,7 +3242,7 @@ and 3 have no settings under <code>qos</code>.</p>
 <tbody>
 <tr>
 <td><code>trust</code></td>
-<td>Trusted fields in order, default <code>pcp</code></td>
+<td>Fields to classify by, in order, default <code>pcp</code></td>
 </tr>
 <tr>
 <td><code>default-priority</code></td>
@@ -3115,13 +3259,13 @@ and 3 have no settings under <code>qos</code>.</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 3:</span> Ingress classification settings.</p>
+<p><span class="caption-prefix">Table 2:</span> Ingress classification settings.</p>
 </figcaption>
 </figure>
 <p>The first trusted field that yields a result wins, and a field only
 yields a result for frames that carry it.  So the five <code>trust</code> values
 differ on frames that have one field but not the other:</p>
-<figure id="__table-caption_4">
+<figure id="__table-caption_3">
 <table>
 <thead>
 <tr>
@@ -3169,7 +3313,7 @@ differ on frames that have one field but not the other:</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 4:</span> Which field sets the priority, per frame type and trust setting.</p>
+<p><span class="caption-prefix">Table 3:</span> Which field sets the priority, per frame type and trust setting.</p>
 </figcaption>
 </figure>
 <p>"default" is <code>default-priority</code>, 0 unless set.  The default <code>trust</code> is
@@ -3181,9 +3325,9 @@ the result, see <a href="#egress-remarking">Egress Remarking</a>.  Every switch
 behind them keeps the default and carries the edge's decision through.</p>
 <p>A custom <code>pcp-map</code> is keyed by PCP and DEI.  A custom <code>dscp-map</code> is keyed
 by DSCP with a <code>trusted</code> flag per entry, so individual codepoints can be
-believed while the rest fall through to the default priority.</p>
+trusted while the rest fall through to the default priority.</p>
 <h3 id="presets">Presets<a class="headerlink" href="#presets" title="Permanent link">¶</a></h3>
-<figure id="__table-caption_5">
+<figure id="__table-caption_4">
 <table>
 <thead>
 <tr>
@@ -3211,13 +3355,13 @@ believed while the rest fall through to the default priority.</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 5:</span> Classification presets.</p>
+<p><span class="caption-prefix">Table 4:</span> Classification presets.</p>
 </figcaption>
 </figure>
 <p>Both maps default to their first preset.  The <code>ietf</code> preset follows the
-RFC 4594 service classes<sup id="fnref2:5"><a class="footnote-ref" href="#fn:5">5</a></sup>; codepoints not listed fall through to the
+RFC 4594 service classes<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup>; codepoints not listed fall through to the
 default priority:</p>
-<figure id="__table-caption_6">
+<figure id="__table-caption_5">
 <table>
 <thead>
 <tr>
@@ -3273,7 +3417,7 @@ default priority:</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 6:</span> The <code>ietf</code> DSCP preset.</p>
+<p><span class="caption-prefix">Table 5:</span> The <code>ietf</code> DSCP preset.</p>
 </figcaption>
 </figure>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h3>
@@ -3286,7 +3430,7 @@ admin@example:/config/interface/…/ingress/&gt; <b>set pcp-map preset ieee</b>
 admin@example:/config/interface/…/ingress/&gt; <b>leave</b>
 </code></pre>
 
-<p>An access port that believes only EF (46) and AF31 (26) and gives
+<p>An access port that trusts only EF (46) and AF31 (26) and gives
 everything else the port default:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e2 qos ingress</b>
 admin@example:/config/interface/…/ingress/&gt; <b>set trust dscp</b>
@@ -3303,7 +3447,7 @@ support the same rules are applied by the kernel to the traffic it
 forwards, see <a href="#hardware-offload">Hardware Offload</a>.</p>
 <h2 id="traffic-classes-and-transmission-selection">Traffic Classes and Transmission Selection<a class="headerlink" href="#traffic-classes-and-transmission-selection" title="Permanent link">¶</a></h2>
 <p>Configured under <code>qos egress</code>:</p>
-<figure id="__table-caption_7">
+<figure id="__table-caption_6">
 <table>
 <thead>
 <tr>
@@ -3331,7 +3475,7 @@ forwards, see <a href="#hardware-offload">Hardware Offload</a>.</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 7:</span> Traffic class settings.</p>
+<p><span class="caption-prefix">Table 6:</span> Traffic class settings.</p>
 </figcaption>
 </figure>
 <p>The first two live under <code>traffic-class-table</code>.  The number of classes
@@ -3349,6 +3493,43 @@ the shares are relative and a class that has nothing to send lends its
 share to the others.</p>
 <p>Strict-priority classes must be the highest-numbered ones, with the
 weighted classes below them; other layouts are rejected.</p>
+<p>The algorithms only make a difference when a port has more to send than
+it can carry:</p>
+<ul>
+<li>Strict-priority classes are served highest first.  A class with
+  enough traffic takes the whole port and starves every class below
+  it, so strict priority suits traffic of bounded volume, e.g. network
+  control and voice.</li>
+<li>Weighted classes divide what the strict classes leave.  With shares
+  of 67 and 33 percent and both classes loaded, one gets two thirds and
+  the other one third, however much either offers.</li>
+<li>Frames of one class share one queue and leave in the order they
+  came.  When the queue is full the port drops what arrives, whichever
+  flow it belongs to, so flows that must not crowd each other out need
+  classes of their own.</li>
+</ul>
+<p>Two flows that each offer 80 percent of what the port can send, first
+at one priority and then with one above the other:</p>
+<figure id="__figure-caption_2">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-strict-priority.svg" data-desc-position="bottom"><img alt="Strict priority on a full port" src="../img/qos-strict-priority.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 2:</span> Strict priority: the higher class is served first, whatever that leaves.</p>
+</figcaption>
+</figure>
+<p>The same two flows in two weighted classes:</p>
+<figure id="__figure-caption_3">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-weighted-sharing.svg" data-desc-position="bottom"><img alt="Weighted sharing on a full port" src="../img/qos-weighted-sharing.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 3:</span> Weighted sharing: the split follows the weights.</p>
+</figcaption>
+</figure>
+<p>And a strict class above two weighted ones, the usual combination:</p>
+<figure id="__figure-caption_4">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-mixed-selection.svg" data-desc-position="bottom"><img alt="Strict priority above weighted sharing" src="../img/qos-mixed-selection.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 4:</span> The strict class is served first, the weighted classes divide the rest 2:1.</p>
+</figcaption>
+</figure>
 <p>A port with four queues, the top two classes strict, the bottom two
 sharing what is left in a 2:1 ratio.  No map is set, so the <code>ieee</code>
 preset supplies Table 8-5's four-class column, <code>0 0 1 1 2 2 3 3</code>:</p>
@@ -3362,27 +3543,27 @@ admin@example:/config/interface/…/egress/&gt; <b>set traffic-class 0 bandwidth
 admin@example:/config/interface/…/egress/&gt; <b>leave</b>
 </code></pre>
 
-<h3 id="rate-limit">Rate Limit<a class="headerlink" href="#rate-limit" title="Permanent link">¶</a></h3>
+<h3 id="egress-shaper">Egress Shaper<a class="headerlink" href="#egress-shaper" title="Permanent link">¶</a></h3>
 <p>A port can be held below its link speed with one token bucket on the
-whole port, configured under <code>qos egress rate-limit</code>.  <code>rate</code> is the
+whole port, configured under <code>qos egress-shaper</code>.  <code>rate</code> is the
 sustained rate in bits per second, here 10M for 10000000, and <code>burst</code> how many bytes may leave
 at once from a full bucket; left unset, the burst covers ten
 milliseconds at the configured rate, never less than one maximum-size
 frame.  The bucket sits above the traffic classes: it bounds what the
 port sends in total, and transmission selection decides which class
 gets the bounded rate.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos egress</b>
-admin@example:/config/interface/…/egress/&gt; <b>set rate-limit rate 10M</b>
-admin@example:/config/interface/…/egress/&gt; <b>leave</b>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 qos</b>
+admin@example:/config/interface/…/qos/&gt; <b>set egress-shaper rate 10M</b>
+admin@example:/config/interface/…/qos/&gt; <b>leave</b>
 </code></pre>
 
-<p>On a port without offload the limit applies to the frames the CPU
+<p>On a port without offload the shaper applies to the frames the CPU
 sends.  Where the driver takes the bucket it applies to the frames the
 fabric forwards as well, and <code>offload</code> under <code>capabilities</code> then lists
-<code>rate-limit</code>.</p>
+<code>egress-shaper</code>.</p>
 <h3 id="egress-remarking">Egress Remarking<a class="headerlink" href="#egress-remarking" title="Permanent link">¶</a></h3>
 <p>Configured under <code>qos egress remark</code>, both leaves default to <code>none</code>:</p>
-<figure id="__table-caption_8">
+<figure id="__table-caption_7">
 <table>
 <thead>
 <tr>
@@ -3402,7 +3583,7 @@ fabric forwards as well, and <code>offload</code> under <code>capabilities</code
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 8:</span> Remarking settings.</p>
+<p><span class="caption-prefix">Table 7:</span> Remarking settings.</p>
 </figcaption>
 </figure>
 <p>PCP is set to the priority with DEI cleared, DSCP to the class selector
@@ -3435,7 +3616,7 @@ the <code>ieee</code> preset, default priority 0 for untagged frames, one traffi
 class per queue with the <code>ieee</code> preset, IEEE 802.1Q-2022 Table 8-5, the
 standard's recommendation for ordinary bridges, and strict priority
 throughout.  Columns are the number of traffic classes on the port:</p>
-<figure id="__table-caption_9">
+<figure id="__table-caption_8">
 <table>
 <thead>
 <tr>
@@ -3533,7 +3714,7 @@ throughout.  Columns are the number of traffic classes on the port:</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 9:</span> IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class mappings.</p>
+<p><span class="caption-prefix">Table 8:</span> IEEE 802.1Q-2022 Table 8-5, recommended priority to traffic class mappings.</p>
 </figcaption>
 </figure>
 <p>The factory configuration carries no <code>qos</code> settings; removing a port's
@@ -3545,7 +3726,7 @@ mapping for ports carrying reserved streams.  The SR classes, priority 3
 (class A) and priority 2 (class B), map to the <em>highest</em> traffic classes
 so they outrank everything else at transmission selection, with best
 effort below:</p>
-<figure id="__table-caption_10">
+<figure id="__table-caption_9">
 <table>
 <thead>
 <tr>
@@ -3643,7 +3824,7 @@ effort below:</p>
 </tbody>
 </table>
 <figcaption>
-<p><span class="caption-prefix">Table 10:</span> IEEE 802.1Q-2022 Table 34-1, priority to traffic class mappings with SR classes.</p>
+<p><span class="caption-prefix">Table 9:</span> IEEE 802.1Q-2022 Table 34-1, priority to traffic class mappings with SR classes.</p>
 </figcaption>
 </figure>
 <p>Apply it on ports where reserved streams are expected:</p>
@@ -3652,10 +3833,236 @@ admin@example:/config/interface/…/traffic-class-table/&gt; <b>set preset ieee-
 admin@example:/config/interface/…/traffic-class-table/&gt; <b>leave</b>
 </code></pre>
 
+<h3 id="shapers-for-time-sensitive-traffic">Shapers for Time-Sensitive Traffic<a class="headerlink" href="#shapers-for-time-sensitive-traffic" title="Permanent link">¶</a></h3>
+<p>A traffic class can also reserve bandwidth with a credit-based shaper,
+and a port can open each class's gate by a timetable with the
+time-aware shaper.  Both are described on the <a href="../tsn/">TSN</a> page.</p>
+<h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">¶</a></h2>
+<p>Ports in the same role share their classification and traffic class
+settings, and a switch with many such ports would repeat them per
+port.  A profile holds one port's <code>ingress</code> and <code>egress</code> settings under
+a name, defined once as a <code>qos-profile</code> under <code>system</code>, and a port
+references it instead of carrying the settings inline:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system qos-profile access</b>
+admin@example:/config/system/…/access/&gt; <b>set ingress trust dscp-pcp</b>
+admin@example:/config/system/…/access/&gt; <b>set egress remark dscp from-priority</b>
+admin@example:/config/system/…/access/&gt; <b>leave</b>
+admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set interface e3 qos profile access</b>
+admin@example:/config/&gt; <b>set interface e4 qos profile access</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<p>A port holds either a profile reference or inline settings, never
+both: setting one replaces the other.  A profile has no effect until a
+port references it, and a profile that ports still reference cannot be
+deleted.  Changing a profile applies the change on every port that
+references it.  The profile is validated against each port it is
+applied to, so a class table that reaches beyond a port's traffic
+classes is rejected with the port and the profile named.</p>
+<p>What stays on the port is what follows the link rather than the role:
+the <code>egress-shaper</code>, the credit-based shaper reservations and the gate
+control list.  The operational datastore shows the profile a port
+runs as <code>qos active-profile</code>, and <code>show qos</code> lists it for every port,
+see <a href="#checking-the-result">Checking the Result</a>.</p>
+<h3 id="profiles-for-common-port-roles">Profiles for Common Port Roles<a class="headerlink" href="#profiles-for-common-port-roles" title="Permanent link">¶</a></h3>
+<p>Three profiles cover the common port roles, each setting only what the
+role changes from the defaults.  The WebUI offers the first two as
+templates when adding a profile, and sets up ports for reserved
+streams with <em>Reserve bandwidth</em> on its TSN page; either way the
+result is an ordinary profile, to be changed as the network needs.</p>
+<p>A <em>trunk</em> port between switches classifies by the PCP of tagged frames and
+uses the IEEE 802.1Q traffic classes, which are the defaults.  The
+profile names the role, so its ports can be changed together later:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system qos-profile trunk</b>
+admin@example:/config/system/…/trunk/&gt; <b>set description "Port between switches."</b>
+admin@example:/config/system/…/trunk/&gt; <b>leave</b>
+</code></pre>
+
+<p>An <em>edge</em> port facing hosts classifies by DSCP, which survives
+routing, and writes the resulting priority into the PCP so the tagged
+links beyond keep it:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system qos-profile edge</b>
+admin@example:/config/system/…/edge/&gt; <b>set ingress trust dscp</b>
+admin@example:/config/system/…/edge/&gt; <b>set egress remark pcp from-priority</b>
+admin@example:/config/system/…/edge/&gt; <b>leave</b>
+</code></pre>
+
+<p>A <em>stream reservation</em> port puts SR classes A and B on the two highest
+traffic classes, the layout of <a href="#stream-reservation-layout">Stream Reservation
+Layout</a>.  This profile carries the layout
+only.  To shape the SR classes, set their <code>algorithm</code> to
+<code>credit-based-shaper</code> in the profile, see <a href="../tsn/#credit-based-shaper">TSN</a>, and give every port that uses it
+a reservation per shaped class; a shaped class without one is
+rejected.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system qos-profile stream-reservation</b>
+admin@example:/config/system/…/stream-reservation/&gt; <b>set egress traffic-class-table preset ieee-sr</b>
+admin@example:/config/system/…/stream-reservation/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="checking-the-result">Checking the Result<a class="headerlink" href="#checking-the-result" title="Permanent link">¶</a></h2>
+<p><code>show qos</code> lists every port with the profile it runs, what it
+classifies on, its shaper, reservations and gate schedule, and the
+stages its switch hardware runs.  A glance down the <code>PROFILE</code> column
+tells whether all ports of a role got the profile they should have:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show qos</b>
+<span class="header">PORT  PROFILE  TRUST       SHAPER  RESERVED  SCHEDULE  HARDWARE OFFLOAD      </span>
+e1             pcp                                     classify select
+e2             pcp       100 Mbps                      classify shaper select
+e3    access   dscp-pcp                                classify remark select
+e4    access   dscp-pcp                                classify remark select
+</code></pre>
+
+<p>The details of one port are part of <code>show interface</code>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface e3</b>
+…
+<b>Quality of Service</b>
+profile            : access
+trust              : dscp-pcp
+default priority   : 0
+remark             : dscp from-priority
+hardware offload   : classification, remarking, transmission-selection
+available offload  : egress-shaper, credit-based-shaper, time-aware-shaper
+
+<span class="header">CLASS  PRIORITIES  ALGORITHM        SHARE  RESERVED</span>
+    7  7           strict-priority
+    6  6           strict-priority
+    5  5           strict-priority
+    4  4           strict-priority
+    3  3           strict-priority
+    2  2           strict-priority
+    1  0           strict-priority
+    0  1           strict-priority
+</code></pre>
+
+<p>Everything shown is read back from the port, from the switch hardware
+where it does the work and from the kernel elsewhere.  It is what the
+port runs, which for a port on a profile is the profile's settings.
+<code>hardware offload</code> lists the stages the switch hardware runs with the
+current configuration, and <code>available offload</code> those it could run but
+that are not configured.  A stage that is configured but in neither
+list runs in the kernel instead, and then only for the traffic the CPU
+handles, see <a href="#hardware-offload">Hardware Offload</a>.  A port with
+reservations or a gate schedule shows those too.</p>
+<p>The same data is in the operational datastore, under
+<code>/interfaces/interface[name='e3']/qos/</code>, for
+<a href="../scripting-restconf/">RESTCONF</a> and NETCONF, and the WebUI shows it
+per port on its QoS page.  From the shell, <code>copy</code> prints it as JSON:</p>
+<pre class="cli"><code>admin@example:~$ <b>copy operational -x "/interfaces/interface[name='e3']/qos"</b>
+</code></pre>
+
+<h2 id="vlan-interfaces">VLAN Interfaces<a class="headerlink" href="#vlan-interfaces" title="Permanent link">¶</a></h2>
+<p>For VLAN interfaces, the system supports mapping the PCP to internal
+priority on ingress, and the reverse on egress.  This is separate from
+the <code>qos</code> settings above, which on a VLAN interface govern only its
+traffic classes.</p>
+<figure id="__figure-caption_5">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-vlan-iface.svg" data-desc-position="bottom"><img alt="VLAN priority mapping" src="../img/qos-vlan-iface.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 5:</span> Ingress and egress priority mapping for VLAN interfaces.</p>
+</figcaption>
+</figure>
+<p>These <code>ingress-qos</code> and <code>egress-qos</code> settings are done per VLAN, both
+defaulting to '0'.  The example below shows how to keep the PCP priority
+for packets being routed between two VLAN interfaces.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1.10</b>
+admin@example:/config/interface/e1.10/&gt; <b>set vlan ingress-qos priority from-pcp</b>
+admin@example:/config/interface/e1.10/&gt; <b>up</b>
+admin@example:/config/&gt; <b>edit interface e1.20</b>
+admin@example:/config/interface/e1.20/&gt; <b>set vlan egress-qos pcp from-priority</b>
+admin@example:/config/interface/e1.20/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="software-forwarded-traffic">Software Forwarded Traffic<a class="headerlink" href="#software-forwarded-traffic" title="Permanent link">¶</a></h2>
+<p>For packets which are processed by a CPU, i.e. typically routed traffic,
+and bridged traffic between interfaces that do not belong to the same
+hardware switching domain, the traffic class table and transmission
+selection above apply in software.  For classification and marking
+beyond what the <code>qos</code> settings offer, an <a href="../container/#application-container-nftables">nftables container</a> can
+be used to define a QoS policy.</p>
+<p>The picture below shows a packet flow subject to both: classified and
+queued by the switch fabric on the way in and out, and carrying its
+priority through the VLAN interfaces and a container with a traffic
+control policy in between.</p>
+<figure id="__figure-caption_6">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-complex.svg" data-desc-position="bottom"><img alt="Hardware and software QoS" src="../img/qos-complex.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 6:</span> Hardware and software QoS handling.</p>
+</figcaption>
+</figure>
 <h2 id="hardware-offload">Hardware Offload<a class="headerlink" href="#hardware-offload" title="Permanent link">¶</a></h2>
 <p>The system runs on a wide range of hardware, and offload is best effort.
-The same configuration is accepted everywhere; where it ends up differs,
-and each port reports it under <code>qos capabilities</code>:</p>
+The same configuration is accepted everywhere; where it ends up differs.
+On a switch, frames forwarded between ports never pass the CPU, so a
+stage has to run in the switch hardware to apply to them:</p>
+<figure id="__table-caption_10">
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th style="text-align: center;">Marvell LinkStreet</th>
+<th style="text-align: center;">Microchip LAN966x</th>
+<th style="text-align: center;">Microchip LAN969x</th>
+<th style="text-align: center;">Other ports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classification</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel</td>
+</tr>
+<tr>
+<td>Remarking</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel, DSCP only</td>
+</tr>
+<tr>
+<td>Transmission selection</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel</td>
+</tr>
+<tr>
+<td>Egress shaper</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel</td>
+</tr>
+<tr>
+<td>Credit-based shaper</td>
+<td style="text-align: center;">refused</td>
+<td style="text-align: center;">refused</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel</td>
+</tr>
+<tr>
+<td>Time-aware shaper</td>
+<td style="text-align: center;">refused</td>
+<td style="text-align: center;">refused</td>
+<td style="text-align: center;">hardware</td>
+<td style="text-align: center;">kernel</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 10:</span> Where each QoS stage runs.  "Kernel" covers the traffic the CPU handles.</p>
+</figcaption>
+</figure>
+<p>The two shapers are refused on a switch port that cannot run them in
+hardware, since the kernel would only shape the few frames the CPU
+sends.</p>
+<p>A port without a switch behind it, e.g. on a router board, runs every
+stage in the kernel, which there is all of its traffic.  The details
+per switch family follow below.  Each port reports where it stands
+under <code>qos capabilities</code>:</p>
 <figure id="__table-caption_11">
 <table>
 <thead>
@@ -3674,8 +4081,12 @@ and each port reports it under <code>qos capabilities</code>:</p>
 <td><code>trust</code> values the driver accepts</td>
 </tr>
 <tr>
+<td><code>supported-offload</code></td>
+<td>Stages the port's switch fabric can run</td>
+</tr>
+<tr>
 <td><code>offload</code></td>
-<td>Stages the driver runs in hardware</td>
+<td>Stages the driver runs in hardware right now</td>
 </tr>
 </tbody>
 </table>
@@ -3683,10 +4094,15 @@ and each port reports it under <code>qos capabilities</code>:</p>
 <p><span class="caption-prefix">Table 11:</span> QoS capabilities a port reports.</p>
 </figcaption>
 </figure>
-<p><code>supported-trust-order</code> is absent when the driver has no ingress
-classification support.  <code>offload</code> lists <code>classification</code>, <code>remarking</code>, <code>transmission-selection</code>
-and <code>rate-limit</code> as the driver takes them; a stage not listed runs in
-the kernel.</p>
+<p><code>supported-trust-order</code> and <code>supported-offload</code> describe the switch
+the port belongs to and are absent on a port without one.
+<code>supported-offload</code> and <code>offload</code> both list from <code>classification</code>,
+<code>remarking</code>, <code>transmission-selection</code>, <code>egress-shaper</code>,
+<code>credit-based-shaper</code> and <code>time-aware-shaper</code>:
+<code>supported-offload</code> what the fabric can run, <code>offload</code> what the driver
+has taken with the current configuration.  A supported stage missing
+from <code>offload</code> fell back to the kernel, e.g. a traffic class table the
+fabric cannot carry; a stage not supported always runs there.</p>
 <p>Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:</p>
 <figure id="__table-caption_12">
@@ -3725,9 +4141,21 @@ hardware depends on the driver implementing the matching hook:</p>
 <td>software</td>
 </tr>
 <tr>
-<td>Port rate limit</td>
+<td>Port egress shaper</td>
 <td><code>tc tbf</code></td>
 <td><code>TC_SETUP_QDISC_TBF</code></td>
+<td>software</td>
+</tr>
+<tr>
+<td>Credit-based shaper</td>
+<td><code>tc cbs</code></td>
+<td><code>TC_SETUP_QDISC_CBS</code></td>
+<td>software</td>
+</tr>
+<tr>
+<td>Time-aware shaper</td>
+<td><code>tc taprio</code></td>
+<td><code>TC_SETUP_QDISC_TAPRIO</code></td>
 <td>software</td>
 </tr>
 </tbody>
@@ -3756,10 +4184,10 @@ classification and remarking tables of the 88E6390 and 88E6393X
 generations through DCB, so ingress classification, remarking and the
 traffic class table are all offloaded on these chips.  This section is
 <em>only</em> valid for generations with 8 output queues per port.</p>
-<figure id="__figure-caption_2">
+<figure id="__figure-caption_7">
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-hw-mvls.svg" data-desc-position="bottom"><img alt="Marvell LinkStreet offloading" src="../img/qos-hw-mvls.svg" width="600"></a></p>
 <figcaption>
-<p><span class="caption-prefix">Figure 2:</span> Hardware offloading for Marvell LinkStreet.</p>
+<p><span class="caption-prefix">Figure 7:</span> Hardware offloading for Marvell LinkStreet.</p>
 </figcaption>
 </figure>
 <p>The picture illustrates packets having their priority determined at
@@ -3787,7 +4215,7 @@ orders are accepted.  Three hardware details show through:</p>
 forwarded frames as well: each priority is queued in its traffic class,
 the strict classes are served first, and the weighted classes share the
 rest by Weighted Round Robin (WRR)<sup id="fnref:11"><a class="footnote-ref" href="#fn:11">11</a></sup> with the <code>bandwidth</code> shares as
-weights.  The <code>rate-limit</code> is the port's own egress shaper.  Four
+weights.  The <code>egress-shaper</code> is the port's own shaper.  Four
 hardware details show through:</p>
 <ul>
 <li>A frame's output queue is chosen where it enters the switch, by the
@@ -3812,46 +4240,246 @@ hardware details show through:</p>
 </ul>
 <p>Without any <code>qos</code> configuration the class table is IEEE 802.1Q-2022
 Table 8-5 with every class strict, as on any other port.</p>
-<h2 id="vlan-interfaces">VLAN Interfaces<a class="headerlink" href="#vlan-interfaces" title="Permanent link">¶</a></h2>
-<p>For VLAN interfaces, the system supports mapping the PCP to internal
-priority on ingress, and the reverse on egress.  This is separate from
-the <code>qos</code> settings above, which on a VLAN interface govern only its
-traffic classes.</p>
-<figure id="__figure-caption_3">
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-vlan-iface.svg" data-desc-position="bottom"><img alt="VLAN priority mapping" src="../img/qos-vlan-iface.svg" width="600"></a></p>
+<h3 id="microchip-lan969x">Microchip LAN969x<a class="headerlink" href="#microchip-lan969x" title="Permanent link">¶</a></h3>
+<p>The Laguna family of switch chips, in the Tactical 1000 and the
+EV23X71A, is managed by the <code>sparx5</code> driver.  The classification and
+remarking tables are reached through DCB as on Marvell, and every stage
+runs in the fabric, the credit-based and time-aware shapers included.</p>
+<figure id="__table-caption_13">
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>On LAN969x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trust orders</td>
+<td><code>pcp</code>, <code>dscp</code> and <code>dscp-pcp</code></td>
+</tr>
+<tr>
+<td><code>pcp-map</code></td>
+<td>Per port, as is <code>default-priority</code></td>
+</tr>
+<tr>
+<td><code>dscp-map</code></td>
+<td>One table for the chip, written by the ports that trust DSCP; the port configured last defines it</td>
+</tr>
+<tr>
+<td><code>remark pcp</code></td>
+<td>Per port, from the priority</td>
+</tr>
+<tr>
+<td><code>remark dscp</code></td>
+<td>One table for the chip, defined the same way by the ports that remark DSCP</td>
+</tr>
+<tr>
+<td>Traffic classes</td>
+<td>Eight per port, each port's own <code>traffic-class-table</code></td>
+</tr>
+<tr>
+<td>Transmission selection</td>
+<td>Strict priority and Deficit Weighted Round Robin (DWRR) with the <code>bandwidth</code> shares as weights, in 31 steps relative to the smallest share</td>
+</tr>
+<tr>
+<td><code>egress-shaper</code></td>
+<td>The port's own shaper, rate in steps of 40 kbps, burst in steps of 4 KiB up to 508 KiB</td>
+</tr>
+<tr>
+<td>Credit-based shaper</td>
+<td>One per queue, idle slope in steps of 4 kbps.  A port with a shaped class queues its classes one to one and serves them strictly, so it refuses weighted classes</td>
+</tr>
+<tr>
+<td>Time-aware shaper</td>
+<td>One gate control list per port, limits in the next table</td>
+</tr>
+</tbody>
+</table>
 <figcaption>
-<p><span class="caption-prefix">Figure 3:</span> Ingress and egress priority mapping for VLAN interfaces.</p>
+<p><span class="caption-prefix">Table 13:</span> QoS offload on LAN969x.</p>
 </figcaption>
 </figure>
-<p>These <code>ingress-qos</code> and <code>egress-qos</code> settings are done per VLAN, both
-defaulting to '0'.  The example below shows how to keep the PCP priority
-for packets being routed between two VLAN interfaces.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1.10</b>
-admin@example:/config/interface/e1.10/&gt; <b>set vlan ingress-qos priority from-pcp</b>
-admin@example:/config/interface/e1.10/&gt; <b>up</b>
-admin@example:/config/&gt; <b>edit interface e1.20</b>
-admin@example:/config/interface/e1.20/&gt; <b>set vlan egress-qos pcp from-priority</b>
-admin@example:/config/interface/e1.20/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<h2 id="software-forwarded-traffic">Software Forwarded Traffic<a class="headerlink" href="#software-forwarded-traffic" title="Permanent link">¶</a></h2>
-<p>For packets which are processed by a CPU, i.e. typically routed traffic,
-and bridged traffic between interfaces that do not belong to the same
-hardware switching domain, the traffic class table and transmission
-selection above apply in software.  For classification and marking
-beyond what the <code>qos</code> settings offer, an <a href="../container/#application-container-nftables">nftables container</a> can
-be used to define a QoS policy.</p>
-<p>The picture below shows a packet flow subject to both: classified and
-queued by the switch fabric on the way in and out, and carrying its
-priority through the VLAN interfaces and a container with a traffic
-control policy in between.</p>
-<figure id="__figure-caption_4">
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-complex.svg" data-desc-position="bottom"><img alt="Hardware and software QoS" src="../img/qos-complex.svg" width="600"></a></p>
+<p>Give the ports that trust DSCP one <code>dscp-map</code>, and the ports that remark
+DSCP one <code>remark dscp</code> setting, since the chip holds one table of each.</p>
+<figure id="__table-caption_14">
+<table>
+<thead>
+<tr>
+<th>Gate control list</th>
+<th>On LAN969x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entries</td>
+<td>Up to 3000, from a memory shared by all ports</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>1 µs to 999 999 999 ns</td>
+</tr>
+<tr>
+<td>Interval</td>
+<td>1 µs to 999 999 999 ns, and the intervals may not exceed the cycle</td>
+</tr>
+<tr>
+<td>Tick granularity</td>
+<td>1 ns, reported as 10 tenths of a nanosecond</td>
+</tr>
+<tr>
+<td>Cycle time extension</td>
+<td>Not supported</td>
+</tr>
+<tr>
+<td>Base time</td>
+<td>From the switch clock; one in the past is moved forward by whole cycles</td>
+</tr>
+<tr>
+<td>Gate closing</td>
+<td>A frame that cannot finish before its gate closes waits for the next opening.  The guard band fits a 1500-byte frame with two VLAN tags: 13.8 µs at 1 Gbps</td>
+</tr>
+<tr>
+<td><code>queue-max-sdu</code></td>
+<td>Longer frames are dropped, and the class's guard band is its largest frame rounded down to 64 bytes</td>
+</tr>
+<tr>
+<td>Classes under gates</td>
+<td>Served strictly; weighted classes and an <code>egress-shaper</code> are refused</td>
+</tr>
+</tbody>
+</table>
 <figcaption>
-<p><span class="caption-prefix">Figure 4:</span> Hardware and software QoS handling.</p>
+<p><span class="caption-prefix">Table 14:</span> Time-aware shaper limits on LAN969x.  Each port reports them under
+<code>gate-parameter-table</code> as <code>supported-list-max</code>, <code>supported-cycle-max</code>,
+<code>supported-interval-max</code> and <code>tick-granularity</code>.</p>
 </figcaption>
 </figure>
+<h2 id="terminology">Terminology<a class="headerlink" href="#terminology" title="Permanent link">¶</a></h2>
+<p>QoS vocabulary comes from two families of standards.  IEEE 802.1Q<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>
+defines priorities and traffic classes for bridged Ethernet, the IETF
+Differentiated Services (DiffServ) RFCs define how IP packets are marked.</p>
+<p><strong>Priority</strong> is the internal value, 0 to 7, that every frame carries
+through the system from classification to transmission.  IEEE 802.1Q
+Annex I names a traffic type for each priority.  Higher is better,
+except that priority 1 is meant for traffic that may yield to best
+effort:</p>
+<figure id="__table-caption_15">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Priority</th>
+<th style="text-align: right;">Acronym</th>
+<th>Traffic type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">NC</td>
+<td>Network Control</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">IC</td>
+<td>Internetwork Control</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">VO</td>
+<td>Voice</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">VI</td>
+<td>Video</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">CA</td>
+<td>Critical Applications</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">EE</td>
+<td>Excellent Effort</td>
+</tr>
+<tr>
+<td style="text-align: right;">0 (default)</td>
+<td style="text-align: right;">BE</td>
+<td>Best Effort</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">BK</td>
+<td>Background</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 15:</span> IEEE 802.1Q-2022 Table I-2, traffic types.</p>
+</figcaption>
+</figure>
+<p><strong>PCP and DEI</strong> are the Priority Code Point and Drop Eligible Indicator,
+the three-bit priority and one-bit drop flag in a VLAN tag<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>.  A frame
+without a VLAN tag has neither.</p>
+<p><strong>DSCP</strong> is the six-bit Differentiated Services Code Point in the IP
+header<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>.  Named codepoints group into <em>per-hop behaviours</em> (PHB), the
+forwarding treatment a router or switch gives them<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>:</p>
+<figure id="__table-caption_16">
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Codepoints</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expedited Forwarding, EF</td>
+<td>46</td>
+<td>RFC 4594 1.5.3</td>
+</tr>
+<tr>
+<td>Assured Forwarding, AFxy</td>
+<td>10..14, 18..22, 26..30, 34..38</td>
+<td>RFC 4594 1.5.2</td>
+</tr>
+<tr>
+<td>Class Selector, CS1..7</td>
+<td>8, 16, 24, 32, 40, 48, 56</td>
+<td>RFC 4594 1.5.4</td>
+</tr>
+<tr>
+<td>Default Forwarding, DF</td>
+<td>0, also written CS0</td>
+<td>RFC 4594 1.5.1</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 16:</span> DiffServ per-hop behaviours and their codepoints.</p>
+</figcaption>
+</figure>
+<p>The class selectors carry the old IP precedence in the top three bits,
+so CS_n_ maps naturally to priority <em>n</em>.  Assured forwarding has four
+classes, AF1 to AF4, each with three drop precedences, e.g. AF11, AF12,
+AF13.  RFC 4594 groups the codepoints into service classes, telephony,
+signaling, multimedia and so on, with a recommended treatment for
+each<sup id="fnref2:5"><a class="footnote-ref" href="#fn:5">5</a></sup>.</p>
+<p><strong>Traffic class</strong> is a transmit queue on the egress port.  A port has 1
+to 8 of them, numbered so that the highest class is served first, and a
+table binds each of the eight priorities to one class<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup>.</p>
+<p><strong>Transmission selection</strong> is how the port picks the next class to send
+from<sup id="fnref:7"><a class="footnote-ref" href="#fn:7">7</a></sup>.  <em>Strict priority</em> always serves the highest non-empty class.
+<em>Enhanced Transmission Selection</em> (ETS)<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">8</a></sup> shares bandwidth between
+classes in proportion to a bandwidth share.</p>
+<p><strong>Stream Reservation (SR) classes</strong> are the two priorities reserved for
+time-sensitive audio and video streams in AVB and TSN networks<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup>:
+SR class A on priority 3 and SR class B on priority 2.</p>
+<p><strong>DCB</strong>, Data Center Bridging<sup id="fnref:10"><a class="footnote-ref" href="#fn:10">10</a></sup>, is the Linux kernel interface through
+which per-port priority tables are programmed into switch hardware.</p>
 <div class="footnote">
 <hr>
 <ol>

@@ -792,6 +792,8 @@
       
         
       
+        
+      
     
     
     
@@ -1147,6 +1149,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../tsn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../eth-counters/" class="md-nav__link">
         
   
@@ -1217,10 +1247,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1238,8 +1268,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2825,8 +2855,8 @@ made by typing <code>diff</code>:</p>
 unit suffix instead of all its digits.  The suffixes <code>k</code> (or <code>K</code>), <code>M</code>,
 <code>G</code>, <code>T</code>, <code>P</code> and <code>E</code> multiply by powers of 1000, and <code>Ki</code>, <code>Mi</code>, <code>Gi</code>,
 <code>Ti</code>, <code>Pi</code> and <code>Ei</code> by powers of 1024:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:/config/interface/eth0/&gt; set qos egress rate-limit rate 200M
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host:/config/interface/eth0/&gt; set qos egress rate-limit burst 64Ki
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:/config/interface/eth0/&gt; set qos egress-shaper rate 200M
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host:/config/interface/eth0/&gt; set qos egress-shaper burst 64Ki
 </code></pre></div>
 <p>These are stored as 200000000 and 65536, which is also how <code>show</code> and
 <code>diff</code> list them.  A fraction is allowed when the result is a whole

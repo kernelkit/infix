@@ -1,0 +1,3278 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/tsn/">
+      
+      
+        <link rel="prev" href="../qos/">
+      
+      
+        <link rel="next" href="../eth-counters/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Time-Sensitive Networking - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#time-sensitive-networking" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden="">
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Time-Sensitive Networking
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard="" data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://www.kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keybindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Calculator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/edit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Networking
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pppoe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PPPoE Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quality of Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time-Sensitive Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-a-scheduled-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting Up a Scheduled Port
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setting Up a Scheduled Port">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#synchronise-the-clocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Synchronise the Clocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reserve-bandwidth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reserve Bandwidth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schedule-the-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule the Port
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-what-the-port-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check What the Port Runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credit-based-shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credit-Based Shaper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-aware-shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Aware Shaper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measuring-the-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measuring the Result
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RMON Counters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tunneling (L2/L3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15">
+        
+          
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPN Tunnels
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wireless LAN (Wi-Fi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cellular Modem (wwan)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DHCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ntp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ptp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTP (IEEE 1588/802.1AS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snmp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNMP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tftp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TFTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    System
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../alarms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Alarms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Info &amp; Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schedule/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scheduling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syslog Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-netconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NETCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-restconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Corner
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer's Corner
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Branding &amp; Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing with Buildroot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Netboot HowTo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test System Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vital Product Data (VPD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases &amp; Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Origin &amp; Licensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-a-scheduled-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting Up a Scheduled Port
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setting Up a Scheduled Port">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#synchronise-the-clocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Synchronise the Clocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reserve-bandwidth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reserve Bandwidth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schedule-the-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule the Port
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-what-the-port-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check What the Port Runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credit-based-shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credit-Based Shaper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-aware-shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Aware Shaper
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measuring-the-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measuring the Result
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation">
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../networking/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Networking
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="time-sensitive-networking">Time-Sensitive Networking<a class="headerlink" href="#time-sensitive-networking" title="Permanent link">¶</a></h1>
+<p>Priorities decide who goes first on a busy port, see <a href="../qos/">Quality of
+Service</a>.  Some traffic needs more than that: a stream that
+must get its bandwidth whatever else is sent, or a control loop that
+must hear from its sensor every millisecond and cannot wait behind a
+frame that happened to start just before.  Time-Sensitive Networking
+(TSN) is the set of IEEE 802.1 standards for such traffic.  Three of
+them work together on a port:</p>
+<figure id="__table-caption_1">
+<table>
+<thead>
+<tr>
+<th>Building block</th>
+<th>Standard</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synchronised time</td>
+<td>IEEE 802.1AS</td>
+<td>Gives every switch and station the same clock, see <a href="../ptp/">PTP</a></td>
+</tr>
+<tr>
+<td>Credit-based shaper</td>
+<td>IEEE 802.1Qav</td>
+<td>Holds a traffic class to a reserved rate</td>
+</tr>
+<tr>
+<td>Time-aware shaper</td>
+<td>IEEE 802.1Qbv</td>
+<td>Opens each traffic class's gate by a repeating timetable</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 1:</span> The building blocks of TSN on a port.</p>
+</figcaption>
+</figure>
+<p>The two shapers are available on products built with TSN support.
+Where they are not, the <code>cbsa</code> and <code>gate-parameter-table</code> settings do
+not exist.  Whether a port's switch hardware runs them is listed in its
+<code>qos capabilities</code>, see <a href="../qos/#hardware-offload">Hardware Offload</a>.
+The shapers act on traffic classes, so the port's classification and
+class table come first, see <a href="../qos/">Quality of Service</a>.</p>
+<h2 id="setting-up-a-scheduled-port">Setting Up a Scheduled Port<a class="headerlink" href="#setting-up-a-scheduled-port" title="Permanent link">¶</a></h2>
+<p>One port, <code>e2</code>, carries three kinds of traffic toward a machine cell:
+control traffic that must arrive within a fixed part of every
+millisecond, a video stream that needs 50 Mbps, and everything else.</p>
+<figure id="__figure-caption_1">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/tsn-schedule.svg" data-desc-position="bottom"><img alt="One cycle of the gate control list" src="../img/tsn-schedule.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 1:</span> The timetable of the example, one 1 ms cycle.</p>
+</figcaption>
+</figure>
+<p>The setup takes four steps, each with its own page in the WebUI and a
+few lines in the CLI.  In the WebUI every step changes the candidate
+configuration, and <em>Apply</em> at the bottom of the page activates them
+together.</p>
+<figure id="__table-caption_2">
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>WebUI page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synchronise the clocks</td>
+<td><em>Configure &gt; PTP</em></td>
+</tr>
+<tr>
+<td>Reserve bandwidth</td>
+<td><em>Configure &gt; TSN</em>, Reserve bandwidth</td>
+</tr>
+<tr>
+<td>Schedule the port</td>
+<td><em>Configure &gt; TSN</em>, Time schedule</td>
+</tr>
+<tr>
+<td>Check what the port runs</td>
+<td><em>Status &gt; PTP</em> and <em>Status &gt; QoS</em></td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 2:</span> The steps of the example and where each is done in the WebUI.</p>
+</figcaption>
+</figure>
+<h3 id="synchronise-the-clocks">Synchronise the Clocks<a class="headerlink" href="#synchronise-the-clocks" title="Permanent link">¶</a></h3>
+<p>A timetable only means something when every device counts the cycle
+from the same clock.  The device is the gPTP grandmaster on the port,
+and the stations follow it.</p>
+<p>In the WebUI, open <em>Configure &gt; PTP</em> and select <em>Add instance</em>.  Choose
+the <code>ieee802-dot1as</code> profile and tick <code>e2</code>.  Then open the instance and
+set <em>Priority 1</em> to 1, the lowest in the network becomes grandmaster.</p>
+<p>In the CLI:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds profile ieee802-dot1as</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds priority1 1</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface e2</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>leave</b>
+</code></pre>
+
+<p>See <a href="../ptp/">PTP</a> for the roles a device can have and the settings
+of each profile.</p>
+<h3 id="reserve-bandwidth">Reserve Bandwidth<a class="headerlink" href="#reserve-bandwidth" title="Permanent link">¶</a></h3>
+<p>The video stream gets a traffic class of its own with a reservation
+of 50 Mbps.  The <code>ieee-sr</code> preset is the layout IEEE 802.1Q recommends
+for a port with reserved streams: the video stream, priority 3, goes
+to class 7, and the control traffic, priority 5, to class 3.</p>
+<p>In the WebUI, open <em>Configure &gt; TSN</em> and select <em>Reserve bandwidth</em>.
+Tick <code>e2</code>, choose traffic class 7, enter 50 Mbps and leave the stream
+reservation class table ticked.  This sets all three things the CLI
+example below does.  On a port that uses a QoS profile the class
+settings change in the profile, for all its ports, and the page says
+so.  A class can only be reserved when the classes above it are, so
+start with the highest.</p>
+<p>In the CLI:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e2</b>
+admin@example:/config/interface/e2/&gt; <b>set qos egress traffic-class-table preset ieee-sr</b>
+admin@example:/config/interface/e2/&gt; <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
+admin@example:/config/interface/e2/&gt; <b>set cbsa-parameter-table 7 admin-idle-slope 50M</b>
+</code></pre>
+
+<h3 id="schedule-the-port">Schedule the Port<a class="headerlink" href="#schedule-the-port" title="Permanent link">¶</a></h3>
+<p>Last the timetable: 200 µs for class 3, 600 µs for class 7, the rest
+of the cycle for the other classes, and a guard band of 12.4 µs with
+all gates closed before the cycle starts over.</p>
+<p>In the WebUI, select <em>Time schedule</em> on <em>Configure &gt; TSN</em>.  Tick <code>e2</code>,
+set the cycle to 1000 µs, the traffic class to 3 and its window to
+200 µs:</p>
+<figure id="__figure-caption_2">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/webui-tsn-schedule.png" data-desc-position="bottom"><img alt="The Time schedule form" src="../img/webui-tsn-schedule.png" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 2:</span> Time schedule, filled in for the control traffic of the example.</p>
+</figcaption>
+</figure>
+<p><em>Create schedule</em> writes a gate control list with three entries: the
+window for class 3, the rest of the cycle for the other classes, and
+the guard band.  It then opens the port's schedule editor, where the
+list can be changed.  The editor draws one cycle with a row per
+traffic class, and says below it whether the entries fill the cycle.
+To give the video stream its 600 µs, change entry 1 to class 7 alone
+for 600 µs and entry 2 to the remaining classes for 187.6 µs, then
+select <em>Guard band</em> to add the last entry:</p>
+<figure id="__figure-caption_3">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/webui-tsn-editor.png" data-desc-position="bottom"><img alt="The schedule editor" src="../img/webui-tsn-editor.png" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 3:</span> The schedule of the example in the editor.</p>
+</figcaption>
+</figure>
+<p>The guard band is as long as a full-size frame takes at the port's
+link speed.  A port without link gets it for the highest speed the
+port supports, so a device can be set up before it is connected.</p>
+<p>In the CLI:</p>
+<pre class="cli"><code>admin@example:/config/interface/e2/&gt; <b>edit gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-enabled true</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set admin-cycle-time numerator 1 denominator 1000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 0 operation-name set-gate-states gate-states-value 8 time-interval-value 200000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 1 operation-name set-gate-states gate-states-value 128 time-interval-value 600000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 2 operation-name set-gate-states gate-states-value 119 time-interval-value 187600</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 3 operation-name set-gate-states gate-states-value 0 time-interval-value 12400</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="check-what-the-port-runs">Check What the Port Runs<a class="headerlink" href="#check-what-the-port-runs" title="Permanent link">¶</a></h3>
+<p>In the WebUI, <em>Status &gt; PTP</em> shows whether the device is grandmaster
+or which clock it follows, and how far off it is.  <em>Status &gt; QoS</em>
+lists the reservations and the gate schedule every port runs, and the
+page of an interface has the running list entry by entry.</p>
+<p>In the CLI, <code>show interface</code> lists what the port runs: the
+reservation of each shaped class, and the gate schedule with the
+traffic classes each entry opens.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface e2</b>
+…
+<b>Quality of Service</b>
+trust              : pcp
+default priority   : 0
+hardware offload   : classification, transmission-selection, time-aware-shaper, credit-based-shaper
+available offload  : remarking, egress-shaper
+
+<span class="header">CLASS  PRIORITIES  ALGORITHM            SHARE  RESERVED</span>
+    7  3           credit-based-shaper          50 Mbps
+    6  2           strict-priority
+    5  7           strict-priority
+    4  6           strict-priority
+    3  5           strict-priority
+    2  4           strict-priority
+    1  0           strict-priority
+    0  1           strict-priority
+
+gate schedule      : running
+cycle time         : 1 ms
+base time          : 0.000000000 s
+
+<span class="header">ENTRY  OPEN CLASSES  INTERVAL</span>
+    0  3               200 µs
+    1  7               600 µs
+    2  0-2,4-6       187.6 µs
+    3  none           12.4 µs
+</code></pre>
+
+<p>The port where the traffic enters decides which frames get priority 5
+and 3, e.g. by trusting the DSCP, see <a href="../qos/#ingress-classification">Ingress
+Classification</a>.  The sections below
+describe each shaper, and <a href="#measuring-the-result">Measuring the Result</a>
+how to check the timing on the wire.</p>
+<h2 id="credit-based-shaper">Credit-Based Shaper<a class="headerlink" href="#credit-based-shaper" title="Permanent link">¶</a></h2>
+<p>A traffic class can reserve bandwidth with the IEEE 802.1Qav
+credit-based shaper.  The shaper runs in the switch fabric where the
+hardware has one, see <a href="../qos/#hardware-offload">Hardware Offload</a>; elsewhere
+the kernel runs it for the traffic it forwards itself.  Turning it on
+takes two settings in two places, as the standard splits them: the
+class's <code>algorithm</code> under <code>qos egress</code>, and the reservation as
+<code>admin-idle-slope</code>, in bits per second, here 20M for 20000000, in
+<code>cbsa-parameter-table</code> beside <code>qos</code> on the interface, i.e.
+<code>/interfaces/interface[name='e1']/cbsa/cbsa-parameter-table[traffic-class='7']/</code>.
+One without the other is rejected.</p>
+<p>Reserve 20 Mbps for class 7 on a port:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1</b>
+admin@example:/config/interface/e1/&gt; <b>set qos egress traffic-class 7 algorithm credit-based-shaper</b>
+admin@example:/config/interface/e1/&gt; <b>set cbsa-parameter-table 7 admin-idle-slope 20M</b>
+admin@example:/config/interface/e1/&gt; <b>leave</b>
+</code></pre>
+
+<p>The class sends at most its reservation on average, and credit earned
+while it waits lets it burst by about one frame.  Shaped classes must
+be the highest-numbered ones, above the strict classes, as IEEE
+802.1Q-2022 34.5 lays a port out, and the reservation may not exceed
+the link rate.  A port with an <code>egress-shaper</code> cannot shape per class.
+The reservation in force is reported as <code>oper-idle-slope</code>.</p>
+<h2 id="time-aware-shaper">Time-Aware Shaper<a class="headerlink" href="#time-aware-shaper" title="Permanent link">¶</a></h2>
+<p>A port can run the IEEE 802.1Qbv time-aware shaper: a repeating cycle
+in which each traffic class's gate is open only in defined windows, so
+a reserved window stays quiet whatever else is queued.  The gates run
+in the switch fabric where the hardware has one, see <a href="../qos/#hardware-offload">Hardware
+Offload</a>, and the schedule needs synchronised time
+across the network, see <a href="../ptp/">PTP</a>.</p>
+<p>The gate control list lives in <code>gate-parameter-table</code> beside <code>qos</code> on
+the interface, <code>/interfaces/interface[name='e1']/gate-parameter-table/</code>,
+one <code>gate-control-entry</code> per step.  Each entry opens the
+gates in <code>gate-states-value</code>, a bit per traffic class with bit 0 for
+class 0, for <code>time-interval-value</code> nanoseconds.  <code>admin-cycle-time</code> is
+a fraction of a second, unset it is the sum of the entries, and
+<code>admin-base-time</code> anchors the cycle to the clock.  A 100 µs cycle with
+class 7 alone for 20 µs, classes 7 and 5 for 20 µs, and the rest for
+60 µs:</p>
+<figure id="__figure-caption_4">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/tsn-gates-example.svg" data-desc-position="bottom"><img alt="A 100 µs gate control list" src="../img/tsn-gates-example.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 4:</span> The gate control list of the example.</p>
+</figcaption>
+</figure>
+<p>The mask of an entry is the sum of the values of the classes it opens:</p>
+<figure id="__table-caption_3">
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th style="text-align: right;">7</th>
+<th style="text-align: right;">6</th>
+<th style="text-align: right;">5</th>
+<th style="text-align: right;">4</th>
+<th style="text-align: right;">3</th>
+<th style="text-align: right;">2</th>
+<th style="text-align: right;">1</th>
+<th style="text-align: right;">0</th>
+<th style="text-align: right;"><code>gate-states-value</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Value</td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>Entry 0, class 7 alone</td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">128</td>
+</tr>
+<tr>
+<td>Entry 1, classes 7 and 5</td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">160</td>
+</tr>
+<tr>
+<td>Entry 2, the rest</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">95</td>
+</tr>
+</tbody>
+</table>
+<figcaption>
+<p><span class="caption-prefix">Table 3:</span> The gate masks of the example, 255 opens every gate and 0 closes them all.</p>
+</figcaption>
+</figure>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-enabled true</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set admin-cycle-time numerator 1 denominator 10000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set admin-base-time seconds 0 nanoseconds 200</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 0 operation-name set-gate-states gate-states-value 128 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 1 operation-name set-gate-states gate-states-value 160 time-interval-value 20000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set gate-control-entry 2 operation-name set-gate-states gate-states-value 95 time-interval-value 60000</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>leave</b>
+</code></pre>
+
+<p>The list applies at commit.  Gated classes are served strictly, so a
+gated port rejects weighted classes, and the schedule takes the whole
+port, so it rejects an <code>egress-shaper</code> as well.  A shaped class under gates
+keeps its reservation: credit is earned only while its gate is open,
+and the shaper is set up with the slope raised by the cycle over the
+class's open time, as 802.1Q-2022 8.6.8.2 specifies.  A shaped class
+whose gate never opens is rejected.  The list, cycle and base time the
+port runs are reported as <code>oper-control-list</code>, <code>oper-cycle-time</code> and
+<code>oper-base-time</code>.</p>
+<p>A frame that cannot finish before its gate closes waits for the next
+opening, as 802.1Q-2022 8.6.8.4 requires, so no window overruns into
+the next.  A switch does this by closing each gate a guard band early,
+long enough for the largest frame.</p>
+<figure id="__figure-caption_5">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/qos-guard-band.svg" data-desc-position="bottom"><img alt="The end of a cycle with and without a guard band" src="../img/qos-guard-band.svg" width="560"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 5:</span> A full-size frame at the end of a window, with and without the guard band.</p>
+</figcaption>
+</figure>
+<p><code>queue-max-sdu-table</code> sets the
+largest frame of a class, in bytes counted like the MTU.  Longer frames
+of the class are dropped, and a switch that sizes its guard bands from
+it leaves more of a short window to a class of small frames.  For
+class 7, carrying 200-byte frames:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface e1 gate-parameter-table</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>set queue-max-sdu-table 7 queue-max-sdu 200</b>
+admin@example:/config/interface/…/gate-parameter-table/&gt; <b>leave</b>
+</code></pre>
+
+<p>A schedule meant to hold also on bridges that let a frame overrun its
+window adds a guard band of its own: an entry with all gates closed
+before the protected window, as long as the largest frame takes on the
+wire.  That is 12.4 µs at 1 Gbps for a 1500-byte frame with two VLAN
+tags, and 123.7 µs at 100 Mbps.  A switch that holds frames back itself
+may use a longer band than the list does, see the limits of each
+family under <a href="../qos/#hardware-offload">Hardware Offload</a>.</p>
+<h2 id="measuring-the-result">Measuring the Result<a class="headerlink" href="#measuring-the-result" title="Permanent link">¶</a></h2>
+<p><code>show interface</code> and the operational datastore show the list, cycle
+and base time a port runs, and the reservation of each shaped class.
+That shows what is configured.  Whether frames
+leave when the timetable says takes a measurement, and the system
+comes with a tool for it: <code>ptping</code> sends probes that are timestamped
+in hardware, both when they leave the sender and when they reach the
+receiver.  With all clocks synchronised, each probe shows how long it
+took and where in the cycle it arrived.</p>
+<p>The probes are PTP messages over UDP, in a PTP domain of their own,
+254 unless another is given.  The clocks must be synchronised with PTP
+over Layer 2, as gPTP is.  Start a sink on the station at the far end:</p>
+<pre class="cli"><code>admin@listener:~$ <b>sudo ptping sink</b>
+</code></pre>
+
+<p>Check from the sending station that the sink answers and that both
+ends can timestamp:</p>
+<pre class="cli"><code>admin@talker:~$ <b>sudo ptping probe 192.168.20.2</b>
+</code></pre>
+
+<p>Then send probes marked EF, DSCP 46, against a 1 ms cycle.  With an
+interval of 1.003 ms between them, the probes reach the port under
+test a little later in the cycle each time, and after 333 they have
+covered all of it.  With <code>--observe</code> the probes are sent throughout
+the cycle, and <code>stat</code> prints a running summary with one row for those
+that left inside the window given, here the first 200 µs, and one for
+those outside it:</p>
+<pre class="cli"><code>admin@talker:~$ <b>sudo ptping stat --cycle 1ms --window 0+200us --observe -r 1.003ms -c 999 -n control -d 46 192.168.20.2</b>
+</code></pre>
+
+<p>A probe that reaches a closed gate waits for it, so its latency grows
+by the time left until the gate opens.  <code>record</code> saves every probe as
+a line of CSV instead, with the time it left and arrived and where in
+the cycle that was, for a closer look.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2022-2026 The KernelKit Team
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+        <script src="../print-keep.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
