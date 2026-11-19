@@ -155,3 +155,45 @@ func TestServerSocketIsOwnerOnly(t *testing.T) {
 		t.Fatalf("socket mode %o, want 600", perm)
 	}
 }
+
+func TestServerWatch(t *testing.T) {
+	tr := tree.New()
+	tr.Set("a", json.RawMessage(`{"stored":1}`))
+	tr.Set("other", json.RawMessage(`1`))
+	tr.RegisterProvider("a", func() json.RawMessage { return json.RawMessage(`{"computed":2}`) })
+
+	sockPath, cancel, _ := startServer(t, tr, time.Hour)
+	defer cancel()
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	payload, _ := json.Marshal(&Request{Method: "watch", Keys: []string{"a"}})
+	if err := WriteFrame(conn, payload); err != nil {
+		t.Fatal(err)
+	}
+
+	expect := func(want string) {
+		t.Helper()
+		resp, err := ReadResponse(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.Key != "a" || string(resp.Data) != want {
+			t.Fatalf("expected a with %s, got %s with %s", want, resp.Key, resp.Data)
+		}
+	}
+
+	expect(`{"a":{"stored":1}}`)
+
+	tr.Set("other", json.RawMessage(`2`))
+	tr.Set("a", json.RawMessage(`{"stored":3}`))
+	expect(`{"a":{"stored":3}}`)
+
+	tr.Delete("a")
+	expect(`{}`)
+}

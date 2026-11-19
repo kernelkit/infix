@@ -8,6 +8,7 @@
 package tree
 
 import (
+	"bytes"
 	"encoding/json"
 	"sync"
 	"time"
@@ -31,6 +32,79 @@ type Tree struct {
 	mu        sync.RWMutex // protects the models map itself
 	models    map[string]*modelEntry
 	providers map[string]OnDemandFunc // on-demand overlay providers
+
+	wmu      sync.RWMutex
+	watchers map[*Watcher]struct{}
+}
+
+// Watcher collects the keys whose cached data changed.  C gets a
+// token when there is something to Take.
+type Watcher struct {
+	C     chan struct{}
+	keys  map[string]struct{} // nil for every key
+	mu    sync.Mutex
+	dirty map[string]struct{}
+}
+
+// Watch registers a Watcher for the given keys, or for every key when
+// none is given.  It starts out with all of them changed.
+func (t *Tree) Watch(keys ...string) *Watcher {
+	w := &Watcher{C: make(chan struct{}, 1), dirty: make(map[string]struct{})}
+	if len(keys) > 0 {
+		w.keys = make(map[string]struct{}, len(keys))
+		for _, key := range keys {
+			w.keys[key] = struct{}{}
+		}
+	} else {
+		keys = t.Keys()
+	}
+	t.wmu.Lock()
+	t.watchers[w] = struct{}{}
+	t.wmu.Unlock()
+	for _, key := range keys {
+		w.mark(key)
+	}
+	return w
+}
+
+// Unwatch removes a Watcher.
+func (t *Tree) Unwatch(w *Watcher) {
+	t.wmu.Lock()
+	delete(t.watchers, w)
+	t.wmu.Unlock()
+}
+
+// Take returns the keys changed since the last call.
+func (w *Watcher) Take() []string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	keys := make([]string, 0, len(w.dirty))
+	for key := range w.dirty {
+		keys = append(keys, key)
+	}
+	clear(w.dirty)
+	return keys
+}
+
+func (w *Watcher) mark(key string) {
+	if _, ok := w.keys[key]; w.keys != nil && !ok {
+		return
+	}
+	w.mu.Lock()
+	w.dirty[key] = struct{}{}
+	w.mu.Unlock()
+	select {
+	case w.C <- struct{}{}:
+	default:
+	}
+}
+
+func (t *Tree) changed(key string) {
+	t.wmu.RLock()
+	defer t.wmu.RUnlock()
+	for w := range t.watchers {
+		w.mark(key)
+	}
 }
 
 // New creates an empty Tree.
@@ -38,6 +112,7 @@ func New() *Tree {
 	return &Tree{
 		models:    make(map[string]*modelEntry),
 		providers: make(map[string]OnDemandFunc),
+		watchers:  make(map[*Watcher]struct{}),
 	}
 }
 
@@ -74,9 +149,13 @@ func (t *Tree) entry(key string) *modelEntry {
 func (t *Tree) Set(key string, v json.RawMessage) {
 	entry := t.entry(key)
 	entry.mu.Lock()
+	same := bytes.Equal(entry.data, v)
 	entry.data = v
 	entry.updated = time.Now()
 	entry.mu.Unlock()
+	if !same {
+		t.changed(key)
+	}
 }
 
 // Get returns the raw JSON for the given module key.
@@ -161,21 +240,25 @@ type ModelInfo struct {
 func (t *Tree) Merge(key string, partial json.RawMessage) {
 	entry := t.entry(key)
 	entry.mu.Lock()
-	defer entry.mu.Unlock()
+	old := entry.data
+	entry.data = merge(old, partial)
+	entry.updated = time.Now()
+	same := bytes.Equal(old, entry.data)
+	entry.mu.Unlock()
+	if !same {
+		t.changed(key)
+	}
+}
 
-	// Unmarshal existing data.
+func merge(data, partial json.RawMessage) json.RawMessage {
 	var base map[string]json.RawMessage
-	if len(entry.data) == 0 || json.Unmarshal(entry.data, &base) != nil {
+	if len(data) == 0 || json.Unmarshal(data, &base) != nil {
 		base = make(map[string]json.RawMessage)
 	}
 
-	// Unmarshal partial.
 	var overlay map[string]json.RawMessage
 	if json.Unmarshal(partial, &overlay) != nil {
-		// partial is not a JSON object — fall back to full replace.
-		entry.data = partial
-		entry.updated = time.Now()
-		return
+		return partial
 	}
 
 	for k, v := range overlay {
@@ -184,20 +267,20 @@ func (t *Tree) Merge(key string, partial json.RawMessage) {
 
 	merged, err := json.Marshal(base)
 	if err != nil {
-		// Should never happen with valid JSON inputs.
-		entry.data = partial
-		entry.updated = time.Now()
-		return
+		return partial
 	}
-	entry.data = merged
-	entry.updated = time.Now()
+	return merged
 }
 
 // Delete removes a key from the tree entirely.
 func (t *Tree) Delete(key string) {
 	t.mu.Lock()
+	_, ok := t.models[key]
 	delete(t.models, key)
 	t.mu.Unlock()
+	if ok {
+		t.changed(key)
+	}
 }
 
 // ShallowMerge overlays the top-level fields of overlay onto base and

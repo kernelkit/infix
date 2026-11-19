@@ -12,12 +12,12 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
-func startServer(t *testing.T, timeout time.Duration) (string, context.CancelFunc, chan error) {
+func startServer(t *testing.T, tr *tree.Tree, timeout time.Duration) (string, context.CancelFunc, chan error) {
 	t.Helper()
 	sockPath := filepath.Join(t.TempDir(), "conn.sock")
 	ready := &atomic.Bool{}
 	ready.Store(true)
-	srv := NewServer(tree.New(), ready)
+	srv := NewServer(tr, ready)
 	srv.timeout = timeout
 	if err := srv.Listen(sockPath); err != nil {
 		t.Fatal(err)
@@ -30,7 +30,7 @@ func startServer(t *testing.T, timeout time.Duration) (string, context.CancelFun
 
 // A client that connects and never sends is dropped at the deadline.
 func TestServerIdleConnDeadline(t *testing.T) {
-	sockPath, cancel, _ := startServer(t, 200*time.Millisecond)
+	sockPath, cancel, _ := startServer(t, tree.New(), 200*time.Millisecond)
 	defer cancel()
 
 	conn, err := net.Dial("unix", sockPath)
@@ -51,7 +51,7 @@ func TestServerIdleConnDeadline(t *testing.T) {
 
 // Shutdown must not wait for a connection that is still open.
 func TestServerShutdownClosesConns(t *testing.T) {
-	sockPath, cancel, done := startServer(t, time.Hour)
+	sockPath, cancel, done := startServer(t, tree.New(), time.Hour)
 
 	conn, err := net.Dial("unix", sockPath)
 	if err != nil {

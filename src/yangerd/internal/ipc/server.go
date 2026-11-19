@@ -3,6 +3,7 @@ package ipc
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -27,6 +28,9 @@ type Server struct {
 	// client in statd uses the same.
 	timeout time.Duration
 
+	// debounce is how long "watch" collects a burst of changes.
+	debounce time.Duration
+
 	mu    sync.Mutex
 	conns map[net.Conn]struct{}
 }
@@ -35,10 +39,11 @@ type Server struct {
 // While ready is false, all requests receive a 503 "starting" response.
 func NewServer(t *tree.Tree, ready *atomic.Bool) *Server {
 	return &Server{
-		tree:  t,
-		ready:   ready,
-		timeout: 5 * time.Second,
-		conns:   make(map[net.Conn]struct{}),
+		tree:     t,
+		ready:    ready,
+		timeout:  5 * time.Second,
+		debounce: 100 * time.Millisecond,
+		conns:    make(map[net.Conn]struct{}),
 	}
 }
 
@@ -127,6 +132,8 @@ func (s *Server) handleConn(conn net.Conn) {
 		s.handleGet(conn, req)
 	case "health":
 		s.handleHealth(conn)
+	case "watch":
+		s.handleWatch(conn, req)
 	default:
 		WriteResponse(conn, &Response{
 			Status:  "error",
@@ -148,23 +155,7 @@ func (s *Server) handleGet(conn net.Conn, req *Request) {
 		key = key[1:]
 	}
 
-	data := s.tree.Get(key)
-	if data == nil {
-		// An absent subtree is a normal answer for operational data --
-		// the feature is simply not active (e.g. NTP unconfigured).
-		// Answer ok with an empty object rather than an error, so every
-		// client gets "no data" without special-casing.  Deliberately
-		// NOT {"<key>": {}}: that would make libyang instantiate the
-		// container, which for presence containers is real data.
-		WriteResponse(conn, &Response{
-			Status: "ok",
-			Data:   json.RawMessage(`{}`),
-		})
-		return
-	}
-
-	envelope := map[string]json.RawMessage{key: data}
-	body, err := json.Marshal(envelope)
+	body, err := envelope(key, s.tree.Get(key))
 	if err != nil {
 		WriteResponse(conn, &Response{
 			Status:  "error",
@@ -178,6 +169,60 @@ func (s *Server) handleGet(conn net.Conn, req *Request) {
 		Status: "ok",
 		Data:   body,
 	})
+}
+
+// envelope wraps the data of a key the way libyang wants it.
+func envelope(key string, data json.RawMessage) (json.RawMessage, error) {
+	if data == nil {
+		// An absent subtree is a normal answer for operational data --
+		// the feature is simply not active (e.g. NTP unconfigured).
+		// Answer ok with an empty object rather than an error, so every
+		// client gets "no data" without special-casing.  Deliberately
+		// NOT {"<key>": {}}: that would make libyang instantiate the
+		// container, which for presence containers is real data.
+		return json.RawMessage(`{}`), nil
+	}
+	return json.Marshal(map[string]json.RawMessage{key: data})
+}
+
+// handleWatch keeps the connection and writes the stored data of each
+// key that changes, starting with all of them, until the client hangs
+// up.  Values a tree provider computes per request are left out.
+func (s *Server) handleWatch(conn net.Conn, req *Request) {
+	conn.SetDeadline(time.Time{})
+
+	w := s.tree.Watch(req.Keys...)
+	defer s.tree.Unwatch(w)
+
+	gone := make(chan struct{})
+	go func() {
+		io.Copy(io.Discard, conn)
+		close(gone)
+	}()
+
+	for {
+		select {
+		case <-gone:
+			return
+		case <-w.C:
+		}
+		select {
+		case <-gone:
+			return
+		case <-time.After(s.debounce):
+		}
+		for _, key := range w.Take() {
+			body, err := envelope(key, s.tree.GetCached(key))
+			if err != nil {
+				log.Printf("ipc: watch %s: %v", key, err)
+				continue
+			}
+			conn.SetWriteDeadline(time.Now().Add(s.timeout))
+			if WriteResponse(conn, &Response{Status: "ok", Key: key, Data: body}) != nil {
+				return
+			}
+		}
+	}
 }
 
 func (s *Server) handleDump(conn net.Conn) {

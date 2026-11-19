@@ -33,6 +33,9 @@ const (
 type Request struct {
 	Method string `json:"method"`
 	Path   string `json:"path,omitempty"`
+
+	// Keys limits "watch" to these tree keys, all of them when empty.
+	Keys []string `json:"keys,omitempty"`
 }
 
 // Response is the IPC response to a client.
@@ -44,8 +47,11 @@ type Response struct {
 	// Raw is set on the wire when Data follows in its own frame.
 	Raw bool `json:"raw,omitempty"`
 
-	// Used by "get" responses, sent as the second frame.
+	// Used by "get" and "watch" responses, sent as the second frame.
 	Data json.RawMessage `json:"-"`
+
+	// Used by "watch" responses, the key that changed.
+	Key string `json:"key,omitempty"`
 
 	// Used by "health" responses.
 	Models map[string]json.RawMessage `json:"models,omitempty"`
