@@ -1,3 +1,6 @@
 ---
 - name: RESTCONF Rate Limit
   case: rate_limit/test.py
+
+- name: RESTCONF Event Stream
+  case: streams/test.py

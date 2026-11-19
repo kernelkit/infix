@@ -9,6 +9,7 @@ Tests verifying network services configuration and operation:
  - LLDP per-interface administrative status configuration
  - LLDP IEEE group address forwarding behavior
  - RESTCONF rate limiting
+ - RESTCONF event streams
  - SSH server configuration and access control
  - SSH public key authentication mechanisms
  - TFTP server file serving and operational file listing
@@ -42,6 +43,10 @@ include::lldp/lldp_fast_start/Readme.adoc[]
 <<<
 
 include::restconf/rate_limit/Readme.adoc[]
+
+<<<
+
+include::restconf/streams/Readme.adoc[]
 
 <<<
 
