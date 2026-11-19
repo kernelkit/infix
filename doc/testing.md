@@ -197,6 +197,26 @@ admin@infix-00-00-00:~$
 > "menu" using Ctrl-], compared to standard Telnet this is the BusyBox
 > version so you press 'e' + enter instead of 'q' to quit.
 
+### Reaching the Web Interface and SSH of a DUT
+
+The web server and SSH server of every DUT with a management port in
+the topology can be reached on ports in the container: 9011 and 9021
+for `dut1`, 9012 and 9022 for `dut2`, and so on.  `make test-sh` prints
+the addresses when the topology starts:
+
+```
+$ make test-sh
+...
+Web on dut1: https://172.17.0.2:9011/
+SSH to dut1: ssh -p 9021 admin@172.17.0.2
+Web on dut2: https://172.17.0.2:9012/
+SSH to dut2: ssh -p 9022 admin@172.17.0.2
+```
+
+Use them from a browser or a terminal on the host.  Docker also
+publishes the ports on the host itself, run `docker port infamy0 9011`
+to see where.
+
 ### Attaching to MACVLANs
 
 To fully isolate the host's interfaces from one another, many tests

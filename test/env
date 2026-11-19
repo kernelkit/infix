@@ -85,6 +85,34 @@ get_base_img()
     echo "$envdir/qeneth/$(basename "$base_img_file")"
 }
 
+# Let the host reach the web server and SSH of each DUT with a mgmt port:
+# 9011 and 9021 for dut1, the console port plus ten and twenty.  The DUT
+# is not up yet when this runs, so its address is looked up on every
+# connect.
+forward_ports()
+{
+    cat <<'EOF' >"$envdir/bin/dutfwd"
+#!/bin/sh
+addr=$(ping -6 -c1 -w5 -L -n "ff02::1%$1" | sed -n 's/.* from \(fe80[^ ]*\):.*/\1/p')
+exec socat - "TCP6:[$addr]:$2"
+EOF
+    chmod +x "$envdir/bin/dutfwd"
+
+    addr=$(hostname -i | cut -d' ' -f1)
+    gvpr 'E [$.qn_tap != "" && index($.provides, "mgmt") >= 0] {
+	      node_t dut = ($.head.name == "host") ? $.tail : $.head;
+	      print($.qn_tap, " ", dut.name, " ", dut.qn_console);
+	  }' "$envdir/qeneth/topology.dot" | while read -r tap dut console; do
+	web=$((console + 10))
+	ssh=$((console + 20))
+	socat "TCP-LISTEN:$web,fork,reuseaddr" "EXEC:$envdir/bin/dutfwd $tap 443" 2>/dev/null &
+	socat "TCP-LISTEN:$ssh,fork,reuseaddr" "EXEC:$envdir/bin/dutfwd $tap 22" 2>/dev/null &
+	[ -n "$interactive" ] || continue
+	echo "Web on $dut: https://$addr:$web/"
+	echo "SSH to $dut: ssh -p $ssh admin@$addr"
+    done
+}
+
 start_topology()
 {
     qenethdir="$1"
@@ -111,6 +139,7 @@ start_topology()
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
+    forward_ports
     cat <<EOF >"$envdir/bin/qeneth"
 #!/bin/sh
 cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
@@ -237,7 +266,7 @@ if [ "$containerize" ]; then
 	 --env PS1="$(build_ps1)" \
 	 --env VERSION="$version" \
 	 $extra_env \
-	 --expose 9001-9010 --publish-all \
+	 --expose 9001-9030 --publish-all \
 	 -v "$HOME/.infix/.ash_history":/home/infamy/.ash_history \
 	 $(name) \
 	 $interactive \
