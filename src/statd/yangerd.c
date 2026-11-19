@@ -108,17 +108,26 @@ static int yangerd_read_all(int fd, void *buf, size_t len)
 	return 0;
 }
 
-static int yangerd_send_request(int fd, const char *path)
+static int yangerd_send_request(int fd, const char *method, const char *path,
+				const char **keys, size_t num)
 {
-	json_t *req;
+	json_t *req, *arr;
 	char *json_str;
 	size_t json_len;
 	unsigned char hdr[5];
 	int rc = -1;
 
-	req = json_pack("{s:s, s:s}", "method", "get", "path", path);
+	req = json_pack("{s:s}", "method", method);
 	if (!req)
 		return -1;
+	if (path)
+		json_object_set_new(req, "path", json_string(path));
+	if (num) {
+		arr = json_array();
+		while (num--)
+			json_array_append_new(arr, json_string(*keys++));
+		json_object_set_new(req, "keys", arr);
+	}
 
 	json_str = json_dumps(req, JSON_COMPACT);
 	json_decref(req);
@@ -193,9 +202,10 @@ static int yangerd_recv_frame(int fd, char **buf, size_t *len)
  * The response header is a small JSON object, the data, if any,
  * follows raw in a frame of its own and goes to the caller untouched.
  */
-static int yangerd_recv_response(int fd, char **buf, size_t *len)
+static int yangerd_recv_response(int fd, char **key, char **buf, size_t *len)
 {
 	json_t *resp, *status, *raw;
+	const char *name;
 	json_error_t jerr;
 	size_t hdr_len;
 	char *hdr;
@@ -224,6 +234,12 @@ static int yangerd_recv_response(int fd, char **buf, size_t *len)
 
 		ERROR("yangerd: request failed: %s",
 		      json_is_string(msg) ? json_string_value(msg) : "unknown");
+		json_decref(resp);
+		return -1;
+	}
+
+	name = json_string_value(json_object_get(resp, "key"));
+	if (key && !(*key = strdup(name ?: ""))) {
 		json_decref(resp);
 		return -1;
 	}
@@ -257,17 +273,144 @@ int yangerd_query(const char *path, char **buf, size_t *len)
 	if (fd < 0)
 		return -1;
 
-	if (yangerd_send_request(fd, path) < 0) {
+	if (yangerd_send_request(fd, "get", path, NULL, 0) < 0) {
 		ERROR("yangerd: failed sending request for %s", path);
 		close(fd);
 		return -1;
 	}
 
-	rc = yangerd_recv_response(fd, buf, len);
+	rc = yangerd_recv_response(fd, NULL, buf, len);
 	if (rc < 0)
 		ERROR("yangerd: failed reading response for %s", path);
 
 	close(fd);
 
 	return rc;
+}
+
+/*
+ * One bad value must not cost every GET of the module.  When yangerd's
+ * answer does not parse, try each entry of every list under the top
+ * container on its own, drop the ones libyang rejects, loudly, and parse
+ * the rest.  Only runs on the error path.
+ */
+static int parse_salvage(const struct ly_ctx *ctx, const char *json, const char *key,
+			 struct lyd_node **tree)
+{
+	json_t *root, *top, *list, *good, *one, *entry, *name;
+	const char *lname;
+	size_t i, dropped = 0;
+	char *text;
+	int rc = -1;
+
+	root = json_loads(json, 0, NULL);
+	top = json_object_get(root, key);
+	if (!json_is_object(top))
+		goto out;
+
+	json_object_foreach(top, lname, list) {
+		if (!json_is_array(list))
+			continue;
+
+		good = json_array();
+		json_array_foreach(list, i, entry) {
+			struct lyd_node *probe = NULL;
+			LY_ERR err;
+
+			one = json_pack("{s:{s:[O]}}", key, lname, entry);
+			text = json_dumps(one, JSON_COMPACT);
+			json_decref(one);
+			err = text ? lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, &probe) : LY_EMEM;
+			free(text);
+			lyd_free_all(probe);
+			if (!err) {
+				json_array_append(good, entry);
+				continue;
+			}
+
+			name = json_object_get(entry, "name");
+			ERROR("yangerd: dropping %s %s[%s]: %s", key, lname,
+			      json_is_string(name) ? json_string_value(name) : "?", ly_last_logmsg());
+			dropped++;
+		}
+		json_object_set_new(top, lname, good);
+	}
+
+	if (!dropped)
+		goto out;
+
+	text = json_dumps(root, JSON_COMPACT);
+	if (text && !lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, tree))
+		rc = 0;
+	free(text);
+out:
+	json_decref(root);
+	return rc;
+}
+
+int yangerd_parse(const struct ly_ctx *ctx, const char *key, const char *json, struct lyd_node **tree)
+{
+	*tree = NULL;
+
+	if (lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, tree)) {
+		ERROR("Failed parsing yangerd data for %s: %s", key, ly_errmsg(ctx));
+		*tree = NULL;
+		return parse_salvage(ctx, json, key, tree);
+	}
+
+	return 0;
+}
+
+int yangerd_tree(const struct ly_ctx *ctx, const char *key, struct lyd_node **tree)
+{
+	char *json = NULL;
+	size_t len = 0;
+	int rc;
+
+	*tree = NULL;
+
+	rc = yangerd_query(key, &json, &len);
+	if (rc > 0) {
+		WARN("yangerd: no data for %s yet, not ready", key);
+		return 1;
+	}
+	if (rc) {
+		ERROR("yangerd: query failed for %s", key);
+		return -1;
+	}
+
+	DEBUG("yangerd: got %zu bytes JSON for %s", len, key);
+	rc = yangerd_parse(ctx, key, json, tree);
+	free(json);
+
+	return rc;
+}
+
+int yangerd_watch(const char **keys, size_t num)
+{
+	int fd;
+
+	fd = yangerd_connect();
+	if (fd < 0)
+		return -1;
+
+	if (yangerd_send_request(fd, "watch", NULL, keys, num) < 0) {
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
+int yangerd_watch_read(int fd, char **key, char **json)
+{
+	size_t len;
+
+	*key = NULL;
+	if (yangerd_recv_response(fd, key, json, &len)) {
+		free(*key);
+		return -1;
+	}
+
+	return 0;
 }

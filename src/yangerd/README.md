@@ -194,6 +194,14 @@ follows in a second frame, so statd can pass it to
 keys, and `health` returns each key's size and last update time.  The
 maximum frame is 4 MiB.
 
+`{"method": "watch", "keys": [...]}` keeps the connection.  Each time
+the stored data of one of the keys changes, yangerd waits 100 ms for
+the burst to end and answers with `{"status": "ok", "key": "<key>"}`
+and the data like a `get`, without the values a tree provider computes
+per request.  The first answers cover every key asked for.  A key
+without data gets `{}`.  A write that leaves a key byte for byte the
+same is not a change.
+
 `yangerctl` speaks the same protocol for debugging:
 
 ```
@@ -223,6 +231,20 @@ in mind:
   them as `yangerd: dropping <key> <list>[<name>]: <reason>`.  If you see
   that line, fix the value in yangerd.
 
+
+- **Changes are pushed for some modules.**  A pull subscription gives
+  sysrepo nothing to compare, so an on-change subscription to it never
+  fires.  For the keys listed in `src/statd/push.h`, `statd-push`
+  follows `watch` and writes the data it gets to the operational
+  datastore, and sysrepo sends the difference to the subscribers.  A
+  GET is still answered by statd's pull subscription.  The write is in
+  a daemon of its own: it needs the module lock that a client holds
+  while it waits for statd to answer its GET.  It only runs while a
+  client subscribes to changes of one of those modules: statd sets
+  the Finit condition `usr/event-push` when sysrepo has such a
+  subscription.
+  Values that only a tree provider computes, such as the byte counters,
+  never produce a change event.
 
 ## Configuration
 

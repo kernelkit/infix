@@ -28,6 +28,7 @@
 #include "shared.h"
 #include "journal.h"
 #include "avahi.h"
+#include "push.h"
 #include "yangerd.h"
 
 #define XPATH_MAX PATH_MAX
@@ -136,99 +137,17 @@ static int graft(struct lyd_node *parent, struct lyd_node *tree, const char *pat
 	return SR_ERR_OK;
 }
 
-/*
- * One bad value must not cost every GET of the module.  When yangerd's
- * answer does not parse, try each entry of every list under the top
- * container on its own, drop the ones libyang rejects, loudly, and parse
- * the rest.  Only runs on the error path.
- */
-static int parse_salvage(const struct ly_ctx *ctx, const char *json, const char *key,
-			 struct lyd_node **tree)
-{
-	json_t *root, *top, *list, *good, *one, *entry, *name;
-	const char *lname;
-	size_t i, dropped = 0;
-	char *text;
-	int rc = -1;
-
-	root = json_loads(json, 0, NULL);
-	top = json_object_get(root, key);
-	if (!json_is_object(top))
-		goto out;
-
-	json_object_foreach(top, lname, list) {
-		if (!json_is_array(list))
-			continue;
-
-		good = json_array();
-		json_array_foreach(list, i, entry) {
-			struct lyd_node *probe = NULL;
-			LY_ERR err;
-
-			one = json_pack("{s:{s:[O]}}", key, lname, entry);
-			text = json_dumps(one, JSON_COMPACT);
-			json_decref(one);
-			err = text ? lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, &probe) : LY_EMEM;
-			free(text);
-			lyd_free_all(probe);
-			if (!err) {
-				json_array_append(good, entry);
-				continue;
-			}
-
-			name = json_object_get(entry, "name");
-			ERROR("yangerd: dropping %s %s[%s]: %s", key, lname,
-			      json_is_string(name) ? json_string_value(name) : "?", ly_last_logmsg());
-			dropped++;
-		}
-		json_object_set_new(top, lname, good);
-	}
-
-	if (!dropped)
-		goto out;
-
-	text = json_dumps(root, JSON_COMPACT);
-	if (text && !lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, tree))
-		rc = 0;
-	free(text);
-out:
-	json_decref(root);
-	return rc;
-}
-
 static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       const char *path, const char *key)
 {
-	struct lyd_node *tree = NULL;
-	char *json = NULL;
-	size_t len = 0;
+	struct lyd_node *tree;
 	int rc;
 
-	rc = yangerd_query(key, &json, &len);
-	if (rc > 0) {
-		WARN("yangerd: no data for %s yet, not ready", key);
+	rc = yangerd_tree(ctx, key, &tree);
+	if (rc > 0)
 		return SR_ERR_OK;
-	}
-	if (rc) {
-		ERROR("yangerd: query failed for %s", key);
+	if (rc)
 		return SR_ERR_INTERNAL;
-	}
-
-	DEBUG("yangerd: got %zu bytes JSON for %s", len, key);
-	if (!json || !len) {
-		free(json);
-		return SR_ERR_OK;	/* feature not active, no data */
-	}
-
-	if (lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, &tree)) {
-		ERROR("Failed parsing yangerd data for %s: %s", key, ly_errmsg(ctx));
-		tree = NULL;
-		if (parse_salvage(ctx, json, key, &tree)) {
-			free(json);
-			return SR_ERR_INTERNAL;
-		}
-	}
-	free(json);
 	if (!tree)
 		return SR_ERR_OK;	/* "{}", nothing to add */
 
@@ -580,6 +499,9 @@ int main(int argc, char *argv[])
 
 	if (mdns_ctx_init(&statd.mdns, statd.ev_loop, statd.sr_conn))
 		INFO("mDNS neighbor monitoring not available");
+
+	if (push_gate_init(statd.ev_loop))
+		INFO("On-change subscriptions not available");
 
 	/* Signal readiness to Finit */
 	pidfile(NULL);
