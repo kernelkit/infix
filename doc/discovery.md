@@ -198,6 +198,21 @@ admin@test-00-01-00:/config/> <b>leave</b>
 > The destination MAC address must be the standard LLDP multicast
 > address: `01:80:C2:00:00:0E`.
 
+### LLDP Management Addresses
+
+By default the device advertises all its addresses as management
+addresses, so a management station can pick one it has a route to.
+To advertise only the addresses of some interfaces, list them:
+
+<pre class="cli"><code>admin@example:/config/> <b>set lldp management-interface vlan99</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+> [!NOTE]
+> An LLDP frame holds a limited number of addresses.  On a device with
+> many addresses, list the interfaces a management station can reach,
+> otherwise the frame may not be sent at all.
+
 ###  Displaying LLDP Neighbor Information
 
 In CLI mode, Infix also provides a convenient `show lldp` command to

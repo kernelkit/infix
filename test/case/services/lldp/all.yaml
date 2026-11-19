@@ -7,3 +7,6 @@
 
 - name: LLDP IEEE Group Forward
   case: lldp_ieee_group_forward/test.py
+
+- name: LLDP Management Address
+  case: lldp_management_address/test.py

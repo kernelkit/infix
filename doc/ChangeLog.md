@@ -53,6 +53,11 @@ All notable changes to the project are documented in this file.
   not only the octet counters
 - LLDP neighbors now report their system name and management
   addresses in the operational data
+- LLDP now advertises all addresses of the device as management
+  addresses.  Before, only the first IPv4 and the first IPv6 address
+  were sent, and a management station could lack a route to them.
+  The new `management-interface` setting limits them to the addresses
+  of selected interfaces, see [Discovery][lldp-mgmt]
 
 ### Fixes
 
@@ -352,6 +357,7 @@ All notable changes to the project are documented in this file.
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database
 [qos]: https://www.kernelkit.org/infix/latest/qos/
 [cli-numbers]: https://www.kernelkit.org/infix/latest/cli/configure/#large-numbers
+[lldp-mgmt]: https://www.kernelkit.org/infix/latest/discovery/#lldp-management-addresses
 [mcast]: https://www.kernelkit.org/infix/latest/bridging/#multicast-filtering-and-snooping
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 [roaming]: https://www.kernelkit.org/infix/latest/wifi/#station-roaming

@@ -26,6 +26,7 @@
 #define AVAHI_SVC_PATH "/etc/avahi/services"
 
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
+#define LLDP_MGMT_PATTERN "configure system ip management pattern "
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
 #define DNSMASQ_TFTP_CONF "/etc/dnsmasq.d/tftp.conf"
 
@@ -352,7 +353,7 @@ static void svc_enable(int ena, svc type, const char *svcname)
 		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
 }
 
-static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
+static int fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
 {
 	const char *prefix = heading;
 	struct lyd_node *node;
@@ -362,8 +363,11 @@ static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const ch
 		prefix = ",";
 	}
 
-	if (prefix != heading)
-		fprintf(fp, "\n");
+	if (prefix == heading)
+		return 0;
+
+	fprintf(fp, "\n");
+	return 1;
 }
 
 #define AVAHI_CONF "/etc/avahi/avahi-daemon.conf"
@@ -471,6 +475,9 @@ static int lldp_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 				break;
 			}
 			fprintf(fp, "configure lldp tx-interval %s\n", tx_interval);
+
+			if (!fput_list(fp, node, "management-interface", LLDP_MGMT_PATTERN))
+				fputs(LLDP_MGMT_PATTERN "*\n", fp);
 
 			LY_LIST_FOR(lyd_child(node), subnode) {
     				if (!strcmp(subnode->schema->name, "port")) {
