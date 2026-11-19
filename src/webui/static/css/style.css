@@ -2764,6 +2764,8 @@ select.cfg-input {
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
 .cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
 .cfg-subsection-head { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0.5rem 0 0.25rem; }
+/* A unit keeps its case inside an uppercased header: µs, not MS */
+.unit { text-transform: none; }
 .cfg-fold { margin: 0.5rem 0 0; }
 .cfg-fold > summary { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.4rem; user-select: none; }
 .cfg-fold > summary::-webkit-details-marker { display: none; }
@@ -3618,3 +3620,13 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
 
 /* A configure page while the candidate is reset and the page reloaded */
 .cfg-entering { opacity: 0.5; pointer-events: none; }
+
+/* Gate schedule timeline on Configure > TSN */
+.gate-timeline { margin-top: 0.75rem; max-width: 60rem; }
+.gate-timeline svg { display: block; width: 100%; height: auto; }
+.gate-timeline text { fill: var(--fg-muted); font-size: 9px; font-family: var(--font-mono); }
+.gate-lane { fill: var(--surface); }
+.gate-open { fill: var(--primary); }
+.gate-hold { fill: var(--primary); opacity: 0.35; }
+.gate-edge { stroke: var(--border); stroke-width: 1; }
+.gate-sum-over { color: var(--danger); }

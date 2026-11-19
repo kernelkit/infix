@@ -1,6 +1,7 @@
 package qosmonitor
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/mdlayher/netlink"
@@ -23,6 +24,11 @@ func ieeeReply(t *testing.T, app, rewr [][]byte) []byte {
 	ae.Nested(dcbAttrIEEE, func(nae *netlink.AttributeEncoder) error {
 		nae.Bytes(1, make([]byte, 59)) // ETS, skipped
 		nae.Nested(dcbAttrAppTable, table(app))
+		nae.Nested(dcbAttrTrustTable, func(tae *netlink.AttributeEncoder) error {
+			tae.Uint8(1, dcbSelectorDSCP)
+			tae.Uint8(1, dcbSelectorPCP)
+			return nil
+		})
 		nae.Nested(dcbAttrRewrTable, table(rewr))
 		return nil
 	})
@@ -50,9 +56,25 @@ func TestParseIEEE(t *testing.T) {
 		{"ethertype only", [][]byte{ethertype}, nil, false, false},
 		{"both", [][]byte{ethertype, pcp}, [][]byte{dscp}, true, true},
 	} {
-		app, rewr := parseIEEE(ieeeReply(t, tc.app, tc.rewr))
-		if app != tc.wantApp || rewr != tc.wantRewr {
-			t.Errorf("%s: got app %v rewr %v", tc.name, app, rewr)
+		var got dcbTables
+		parseIEEE(ieeeReply(t, tc.app, tc.rewr), &got)
+		if hasPrioMap(got.App) != tc.wantApp || hasPrioMap(got.Rewr) != tc.wantRewr {
+			t.Errorf("%s: got %+v", tc.name, got)
 		}
+	}
+}
+
+func TestParseIEEETables(t *testing.T) {
+	var got dcbTables
+	parseIEEE(ieeeReply(t, [][]byte{{dcbSelectorDSCP, 5, 46, 0}, {dcbSelectorPCP, 3, 11, 0}},
+		[][]byte{{dcbSelectorPCP, 3, 3, 0}}), &got)
+	want := dcbTables{
+		HasTrust: true,
+		Trust:    []uint8{dcbSelectorDSCP, dcbSelectorPCP},
+		App:      []dcbApp{{dcbSelectorDSCP, 5, 46}, {dcbSelectorPCP, 3, 11}},
+		Rewr:     []dcbApp{{dcbSelectorPCP, 3, 3}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got  %+v\nwant %+v", got, want)
 	}
 }

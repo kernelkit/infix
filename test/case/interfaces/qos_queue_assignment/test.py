@@ -2,21 +2,22 @@
 """
 QoS Queue Assignment
 
-Verify that a frame is queued in the traffic class its priority maps to,
-for the ieee preset, the ieee-sr preset and a custom table.  The
-existing tests check the tables as tc arguments; this one
-checks the queue a frame actually reached.
+Every frame has a priority, and a port's traffic class table says
+which queue each priority uses.  This test checks that frames end up
+in the queue the table names, for the `ieee` preset, the `ieee-sr`
+preset and a custom table.
 
-Frames enter tagged on a VLAN interface whose ingress-qos takes the
-priority straight from the PCP, so classification contributes nothing
-and the traffic class table on the egress port is all that is under
-test.  A hundred datagrams are sent at each priority, routed through the
-DUT to the listener, and the per-class counters of the egress scheduler
-are read before and after: the class the table names must grow by at
-least that many, and no other class by anywhere near it.  The DUT's own
-chatter, mDNS and neighbour discovery at priority 0 and control frames
-at priority 7, is a handful of frames and stays well below the burst.
-No load, no congestion.
+A hundred datagrams are sent at each priority, routed through the DUT
+to the listener, and the egress port's per-class counters are read
+before and after.  The class the table names must grow by at least a
+hundred, and no other class by anywhere near it.
+
+Frames enter tagged, on a VLAN interface that takes the priority
+straight from the PCP, so the table on the egress port is all that is
+under test.  The rate is low, so no queue fills.  mDNS is switched off
+on the DUT, since its announcements would add over a hundred frames at
+priority 0.  What remains of the system's own traffic is a handful of
+frames.
 """
 import infamy
 import infamy.qos as qos
@@ -30,12 +31,12 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, td0 = env.ltop.xlate("target", "data1")
-        _, td1 = env.ltop.xlate("target", "data2")
-        _, hd0 = env.ltop.xlate("host", "data1")
-        _, hd1 = env.ltop.xlate("host", "data2")
+        td0 = target["data1"]
+        td1 = target["data2"]
+        hd0 = env["host"]["data1"]
+        hd1 = env["host"]["data2"]
 
-        num_tc = infamy.capability.Port(target, td0).traffic_classes
+        num_tc = infamy.capability.Port(target, td1).traffic_classes
         print(f"{td1}: {num_tc} traffic classes")
         tables = {
             "ieee": ({"preset": "ieee"}, qos.TABLE_8_5[num_tc]),
@@ -46,6 +47,7 @@ with infamy.Test() as test:
         tables["custom"] = ({f"priority{p}": tc for p, tc in enumerate(custom)}, custom)
 
     with test.step("Configure a routed path, tagged ingress with priority from PCP, egress under test"):
+        target.put_config_dicts({"infix-services": {"mdns": {"enabled": False}}})
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [

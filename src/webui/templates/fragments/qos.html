@@ -1,0 +1,263 @@
+{{/* Shared by Configure > QoS and Configure > TSN. */}}
+
+{{/* The tabs of Configure > QoS; the argument is the active one. */}}
+{{define "qos-tabs"}}
+<div class="diag-tabs" role="tablist">
+  <a class="diag-tab {{if eq . "ports"}}active{{end}}" role="tab" href="/configure/qos/ports"
+     hx-get="/configure/qos/ports" hx-target="#content" hx-push-url="true">Ports</a>
+  <a class="diag-tab {{if eq . "profiles"}}active{{end}}" role="tab" href="/configure/qos"
+     hx-get="/configure/qos" hx-target="#content" hx-push-url="true">Profiles</a>
+</div>
+{{end}}
+
+{{/* The QoS settings a profile and a port with its own settings share.
+     dict: P, a qosProfileRow; Path, its datastore path; Back, the page
+     to reload after a reset; Page, the page data. */}}
+{{define "qos-settings-fields"}}
+{{$p := .P}}{{$pp := .Path}}{{$back := .Back}}{{$page := .Page}}{{$d := .Page.Desc}}
+                <table class="info-table">
+                  <tr>
+                    <th>Trust{{template "field-info" (index $d "trust")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "trust" "Options" (index $page.Options "trust") "Selected" $p.Trust)}}
+                    </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/trust" $pp) "Back" $back "What" "trust")}}
+                  </tr>
+                  <tr>
+                    <th>Default priority{{template "field-info" (index $d "default")}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-sm" type="number" name="default-priority"
+                             min="{{$page.PriorityLo}}" max="{{$page.PriorityHi}}" step="1" value="{{$p.DefaultPri}}" style="width:5rem">
+                    </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/default-priority" $pp) "Back" $back "What" "the default priority")}}
+                  </tr>
+                  <tr>
+                    <th>PCP map{{template "field-info" (index $d "pcp-map")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "pcp-preset" "Options" (index $page.Options "pcp-preset") "Selected" $p.PCPPreset)}}
+                    </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/pcp-map" $pp) "Back" $back "What" "the PCP map")}}
+                  </tr>
+                  <tr>
+                    <th>DSCP map{{template "field-info" (index $d "dscp-map")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "dscp-preset" "Options" (index $page.Options "dscp-preset") "Selected" $p.DSCPPreset)}}
+                    </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/ingress/dscp-map" $pp) "Back" $back "What" "the DSCP map")}}
+                  </tr>
+                  <tr>
+                    <th>Traffic class table{{template "field-info" (index $d "table")}}</th>
+                    <td>
+                      {{template "schema-select" (dict "Name" "table-preset" "Options" (index $page.Options "table-preset") "Selected" $p.TablePreset)}}
+                    </td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/traffic-class-table" $pp) "Back" $back "What" "the traffic class table")}}
+                  </tr>
+                </table>
+
+                <h4 class="cfg-section-head" style="margin-top:1rem">Transmission Selection</h4>
+                <table class="info-table">
+                  <tr>
+                    <th>Class</th>
+                    <th>Algorithm{{template "field-info" (index $d "algorithm")}}</th>
+                    <th>Share (%){{template "field-info" (index $d "bandwidth")}}</th>
+                    <th></th>
+                  </tr>
+                  {{range $p.Classes}}
+                  <tr>
+                    <td><strong>{{.ID}}</strong></td>
+                    <td>
+                      {{template "schema-select" (dict "Name" (printf "algorithm-%d" .ID) "Options" (index $page.Options "algorithm") "Selected" .Algorithm)}}
+                    </td>
+                    <td><input class="cfg-input cfg-input-sm" type="number" min="{{$page.ShareLo}}" max="{{$page.ShareHi}}"
+                               name="bandwidth-{{.ID}}" value="{{if .Bandwidth}}{{.Bandwidth}}{{end}}"
+                               placeholder="—" style="width:5rem"></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/traffic-class=%d" $pp .ID) "Back" $back "What" (printf "class %d" .ID))}}
+                  </tr>
+                  {{end}}
+                </table>
+
+                <h4 class="cfg-section-head" style="margin-top:1rem">Egress Remarking{{template "field-info" (index $d "remark")}}</h4>
+                <table class="info-table">
+                  <tr>
+                    <th>PCP</th>
+                    <td>{{template "schema-select" (dict "Name" "remark-pcp" "Options" (index $page.Options "remark-pcp") "Selected" $p.RemarkPCP)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/remark/pcp" $pp) "Back" $back "What" "PCP remarking")}}
+                  </tr>
+                  <tr>
+                    <th>DSCP</th>
+                    <td>{{template "schema-select" (dict "Name" "remark-dscp" "Options" (index $page.Options "remark-dscp") "Selected" $p.RemarkDSCP)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/egress/remark/dscp" $pp) "Back" $back "What" "DSCP remarking")}}
+                  </tr>
+                </table>
+
+{{end}}
+
+{{/* A select filled from the schema; while the schema loads the current
+     value is the only option, so a save keeps it. */}}
+{{define "schema-select"}}
+<select class="cfg-input" name="{{.Name}}" style="width:auto;max-width:100%">
+  {{$sel := .Selected}}
+  {{if eq $sel "custom"}}
+  <option value="custom" selected title="Spelled out entry by entry, kept as it is">custom</option>
+  {{end}}
+  {{range .Options}}
+  <option value="{{.Value}}" title="{{.Description}}" {{if eq $sel .Value}}selected{{end}}>{{.Label}}</option>
+  {{else}}
+  <option value="{{$sel}}" selected>{{stripPrefix $sel}}</option>
+  {{end}}
+</select>
+{{end}}
+
+{{/* The reservations of one port.  dict: Row, a cfgIfaceRow; Page. */}}
+{{define "port-cbs"}}
+{{$page := .Page}}{{$d := .Page.Desc}}{{with .Row}}
+                {{$qp := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
+                {{/* ── Credit-Based Shaper ──────────────────────────── */}}
+                <h4 class="cfg-section-head" style="margin-top:1rem">Credit-Based Shaper{{template "field-info" (index $d "tsn-cbs")}}</h4>
+                {{if .QoSShapers}}
+                <form hx-post="/configure/interfaces/{{.Name}}/cbs" hx-swap="none">
+                  {{if .QoSProfile}}
+                  <p class="text-muted" style="margin:0 0 0.4rem">Profile {{.QoSProfile}} decides which classes are shaped.</p>
+                  {{else}}
+                  <p class="text-muted" style="margin:0 0 0.4rem">A class with an idle slope is shaped, one without is not.  Shaped classes sit above the others.</p>
+                  {{end}}
+                  <table class="info-table" style="max-width:34rem">
+                    <tr>
+                      <th>Class</th>
+                      <th>Idle slope <span class="unit">(Mbps)</span>{{template "field-info" (index $d "tsn-idle")}}</th>
+                      <th></th>
+                    </tr>
+                    {{$profile := .QoSProfile}}
+                    {{$name := .Name}}
+                    {{range .QoSShapers}}
+                    <tr>
+                      <td>Class {{.ID}}{{if and $profile (not .Shaped)}} <span class="text-muted">(not shaped by the profile)</span>{{end}}</td>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{$page.QoSBounds.SlopeHi}}" step="any" name="idle_{{.ID}}"
+                                 value="{{.IdleMbit}}" placeholder="not shaped" aria-label="Idle slope class {{.ID}}" style="width:8rem"></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/interfaces/{{$name}}/cbs/{{.ID}}" hx-swap="none"
+                                hx-confirm="Reset the idle slope of class {{.ID}} to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    {{end}}
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save shaper</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+                {{else}}
+                <p class="text-muted" style="margin:0">Profile {{.QoSProfile}} shapes no class.
+                  <a href="/configure/qos" hx-get="/configure/qos" hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Edit profiles</a></p>
+                {{end}}
+{{end}}
+{{end}}
+
+{{/* The gate schedule of one port.  dict: Row, a cfgIfaceRow; Page; Clock, a hint. */}}
+{{define "port-gates"}}
+{{$page := .Page}}{{$d := .Page.Desc}}{{$clock := .Clock}}{{with .Row}}
+                {{$qp := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
+                {{/* ── Time-Aware Shaper ────────────────────────────── */}}
+                {{$g := .QoSGates}}
+                <h4 class="cfg-section-head" style="margin-top:1rem">Time-Aware Shaper{{template "field-info" (index $d "tsn-gates")}}</h4>
+                {{if $clock}}
+                <p class="text-muted" style="margin:0 0 0.5rem; white-space:normal">{{$clock}}.  A schedule lines up with
+                  other devices only when their clocks are synchronized, see
+                  <a href="/configure/ptp" hx-get="/configure/ptp" hx-target="#content" hx-push-url="true">PTP</a>.</p>
+                {{end}}
+                <form hx-post="/configure/interfaces/{{.Name}}/gates" hx-swap="none" data-gate-editor>
+                  <table class="info-table">
+                    <tr>
+                      <th>Enabled</th>
+                      <td><label class="diag-check"><input type="checkbox" name="gate_enabled" value="on" {{if $g.Enabled}}checked{{end}}> Run the gate control list on this port</label></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/gate-enabled" $qp) "Back" "/configure/tsn" "What" "gate-enabled")}}
+                    </tr>
+                    <tr>
+                      <th>Cycle <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-cycle")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="any" name="cycle"
+                                 value="{{$g.CycleUs}}" placeholder="sum of entries" style="width:9rem"></td>
+                      {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time" $qp) "Back" "/configure/tsn" "What" "the cycle")}}
+                    </tr>
+                  </table>
+                  <div class="cfg-subsection-head" style="margin-top:0.75rem">Gate control list{{template "field-info" (index $d "tsn-list")}}</div>
+                  <table class="info-table">
+                    <thead>
+                      <tr><th>Entry</th><th>Open gates, class {{index $g.Classes 0}} to 0</th><th>Interval <span class="unit">(µs)</span></th><th></th></tr>
+                    </thead>
+                    <tbody id="gate-entries-{{.Name}}">
+                      {{range $g.Entries}}
+                      {{template "gate-entry" (dict "N" .Index "Classes" $g.Classes "Open" .Open "Interval" .IntervalUs "Max" $page.QoSBounds.IntervalHi)}}
+                      {{end}}
+                    </tbody>
+                  </table>
+                  <template id="gate-entry-tpl-{{.Name}}">
+                    {{template "gate-entry" (dict "N" "__N__" "Classes" $g.Classes "Open" $g.AllOpen "Interval" "" "Max" $page.QoSBounds.IntervalHi)}}
+                  </template>
+                  <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}">+ Add entry</button>
+                  {{if $g.GuardUs}}
+                  <button type="button" class="btn-add-row" data-table="gate-entries-{{.Name}}" data-template="gate-entry-tpl-{{.Name}}"
+                          data-guard-us="{{$g.GuardUs}}" title="An entry with every gate closed, long enough for a full-size frame at {{$g.GuardSpeed}} to finish before the cycle starts over">+ Guard band ({{$g.GuardUs}} µs)</button>
+                  {{if $g.GuardMax}}<span class="text-muted">No link: sized for the port's highest speed, {{$g.GuardSpeed}}.</span>{{end}}
+                  {{end}}
+                  <div class="gate-timeline" data-classes="{{len $g.Classes}}" role="img" aria-label="One cycle of the gate control list"></div>
+                  <p class="gate-sum text-muted" style="margin:0.3rem 0 0"></p>
+
+                  <details style="margin-top:0.5rem">
+                    <summary>Advanced</summary>
+                    <table class="info-table">
+                      <tr>
+                        <th>Base time{{template "field-info" (index $d "tsn-base")}}</th>
+                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" step="1" name="base_s"
+                                   value="{{$g.BaseSeconds}}" aria-label="Base time seconds" style="width:9rem"> <span class="text-muted">s</span>
+                          <input class="cfg-input cfg-input-sm" type="number" min="0" max="999999999" step="1" name="base_ns"
+                                 value="{{$g.BaseNs}}" aria-label="Base time nanoseconds" style="width:9rem;margin-left:0.5rem"> <span class="text-muted">ns</span>
+                          <div class="text-muted" style="white-space:normal">At 0 the cycles line up with the clock's epoch, the same on every synchronized device.</div></td>
+                        {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-base-time" $qp) "Back" "/configure/tsn" "What" "the base time")}}
+                      </tr>
+                      <tr>
+                        <th>Cycle time extension <span class="unit">(µs)</span>{{template "field-info" (index $d "tsn-extension")}}</th>
+                        <td><input class="cfg-input cfg-input-sm" type="number" min="0" max="{{$page.QoSBounds.ExtensionHi}}" step="any" name="extension"
+                                   value="{{$g.ExtensionUs}}" placeholder="0" style="width:9rem"></td>
+                        {{template "reset-cell" (dict "Path" (printf "%s/ieee802-dot1dc-sched-if:gate-parameter-table/admin-cycle-time-extension" $qp) "Back" "/configure/tsn" "What" "the cycle time extension")}}
+                      </tr>
+                      <tr>
+                        <th>Max SDU per class <span class="unit">(bytes)</span>{{template "field-info" (index $d "tsn-max-sdu")}}</th>
+                        <td>
+                          {{range $c := $g.Classes}}
+                          <label class="diag-check" style="margin-right:0.6rem">{{$c}} <input class="cfg-input cfg-input-sm" type="number" min="{{$page.QoSBounds.MaxSDULo}}" max="{{$page.QoSBounds.MaxSDUHi}}" step="1" name="maxsdu_{{$c}}"
+                                 value="{{index $g.MaxSDU $c}}" placeholder="no limit" aria-label="Max SDU class {{$c}}" style="width:5.5rem"></label>
+                          {{end}}
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/interfaces/{{.Name}}/gates/max-sdu" hx-swap="none"
+                                  hx-confirm="Reset max SDU per class to its YANG default?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                    </table>
+                  </details>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save schedule</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+{{end}}
+{{end}}
+
+{{/* One gate control entry.  Open is indexed by class; the <template>
+     copy passes the row number as __N__ for app.js to fill in. */}}
+{{define "gate-entry"}}
+<tr>
+  <td data-row-index>{{.N}}</td>
+  <td>
+    {{$open := .Open}}
+    {{range $c := .Classes}}
+    <label class="diag-check"><input type="checkbox" name="entry_open_{{$.N}}" value="{{$c}}" {{if index $open $c}}checked{{end}}>{{$c}}</label>
+    {{end}}
+  </td>
+  <td><input class="cfg-input cfg-input-sm" type="number" min="0.001" max="{{.Max}}" step="any" name="entry_interval_{{.N}}"
+             value="{{.Interval}}" aria-label="Entry {{.N}} interval" style="width:6rem"></td>
+  <td><button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">{{template "icon-trash"}}</button></td>
+</tr>
+{{end}}

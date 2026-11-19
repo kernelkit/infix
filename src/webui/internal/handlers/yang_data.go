@@ -36,7 +36,7 @@ func (h *DataHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		data, err = h.RC.GetRaw(r.Context(), "/data"+path)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(w, err.Error(), rcStatus(err))
 			return
 		}
 	}

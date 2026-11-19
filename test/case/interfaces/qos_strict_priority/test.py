@@ -2,32 +2,34 @@
 """
 QoS Strict Priority
 
-Two talkers, one marked EF and one CS1, bridged through the DUT and out
-one egress port that cannot carry both.  The port is negotiated down to
-100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where it
-has no PHY, and each talker offers 80 percent of what the port drains,
-so the queues fill and the scheduler decides who gets through.
+When a port has more to send than it can carry, strict priority decides
+who goes first: a higher traffic class is always served before a lower
+one.  This test fills a port with two flows and checks that the
+important one gets through untouched, also when that leaves nothing
+for the other.
 
-Classification at the ingress port decides the priority, and with it
-the queue, all the way to the listener: on one chip, across a cascade,
-or through a network of switches.  So the flows are steered with the
-DSCP map on the ingress port and the class table is left at its
-default.  Three measurements, in this order:
+.What the two talkers offer and what the port must deliver
+image::expected.svg[align=center, scaledwidth=90%]
 
- - baseline: both markings classified to the same priority share one
-   queue, and the low flow keeps at least a tenth of it; one FIFO under
-   tail drop is not fair, but it favours nobody by marking
- - split: EF classified to priority 5, strict above CS1 at priority 2,
-   arrives without loss and CS1 takes what is left
- - starve: EF raised to 120 percent of the port on its own leaves CS1
-   below 5 percent of the served datagrams
+Two talkers, one marked EF and one marked CS1, send through the DUT's
+bridge and out one port.  That port is slowed down so the test's
+traffic can fill it: negotiated down to 100 Mbps, or shaped to
+10 Mbps where it has no PHY.  The port where the traffic enters
+decides the priority of each flow from its DSCP marking.
 
-The low flow must lose more than a tenth of its frames in every
-measurement; a port that was never full proves nothing.  The test's own
-iperf3 control traffic, DSCP 0, is classified to priority 7 so the
-contest never cuts it off.  Skipped on a switch fabric whose scheduler
-is not offloaded, where forwarded frames never meet the configured
-algorithm.
+Three measurements:
+
+ - baseline: both markings get the same priority and each talker offers
+   80 percent of what the port can send.  They share one queue and
+   CS1 must keep at least a tenth of the port, so whatever the next
+   two measurements show comes from the priorities
+ - split: EF gets the higher priority, 80 percent each.  EF must
+   arrive without loss and CS1 gets what is left
+ - starve: EF offers 120 percent of the port.  CS1 must get less than
+   5 percent
+
+In every measurement the port must hold back more than a tenth of what
+is offered, which shows it was full.
 """
 import infamy
 import infamy.qos as qos
@@ -42,17 +44,18 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, td0 = env.ltop.xlate("target", "data1")
-        _, td1 = env.ltop.xlate("target", "data2")
-        _, hd0 = env.ltop.xlate("host", "data1")
-        _, hd1 = env.ltop.xlate("host", "data2")
+        td0 = target["data1"]
+        td1 = target["data2"]
+        hd0 = env["host"]["data1"]
+        hd1 = env["host"]["data2"]
 
         port = infamy.capability.Port(target, td1, tgtssh)
+        infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
         print(f"{td1}: {port.traffic_classes} traffic classes, "
               f"EF at priority {HIGH}, CS1 at priority {LOW}")
         port.require_offload(test, "transmission-selection")
 
-    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic on top"):
+    with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic with CS1"):
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
@@ -63,7 +66,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": HIGH, "8": LOW})}
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": HIGH, "8": LOW})}
                         }
                     },
                     {
@@ -78,9 +81,9 @@ with infamy.Test() as test:
     with test.step("Slow the egress port so its queues can fill"):
         drain = qos.slow_port(port, until)
         if not drain:
-            print(f"{td1} can neither negotiate down nor be rate limited, skipping")
+            print(f"{td1} can neither negotiate down nor be shaped, skipping")
             test.skip()
-        print(f"{td1} drains {drain // 1_000_000} Mbit/s")
+        print(f"{td1} drains {drain // 1_000_000} Mbps")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1:
@@ -97,7 +100,7 @@ with infamy.Test() as test:
                     "interface": [{
                         "name": td0,
                         "infix-interfaces:qos": {
-                            "ingress": {"dscp-map": qos.dscp_map(**{"0": 7, "46": ef_prio,
+                            "ingress": {"dscp-map": qos.dscp_map(**{"0": LOW, "46": ef_prio,
                                                                      "8": cs1_prio})}
                         }
                     }]
@@ -105,7 +108,7 @@ with infamy.Test() as test:
             }})
             until(lambda: qos.dscp_prio(tgtssh, td0, 46) == ef_prio and
                   qos.dscp_prio(tgtssh, td0, 8) == cs1_prio)
-            qos.show_offload(port)
+            qos.wait_offload(port)
             ns0.must_reach("192.168.20.2")
 
         def measure(high_rate, low_rate=0.8):
@@ -114,18 +117,19 @@ with infamy.Test() as test:
             total = qos.run_flows(ns0, ns1, "192.168.20.2", flows)
             high, low = flows
             print(f"shares: EF {high.share(total):.1f}%, CS1 {low.share(total):.1f}%")
-            assert low.result["lost_percent"] > 10, \
-                f"the low priority flow lost {low.result['lost_percent']:.1f}%, the port was never full"
             return high, low, total
 
         with test.step("Baseline: both flows at one priority, 80 percent each, expect neither starved"):
             apply(LOW, LOW)
             high, low, total = measure(0.8)
+            assert total < 0.9 * (high.rate + low.rate), \
+                f"{total / 1e6:.2f} Mbps through, the port was never full"
             assert low.share(total) >= 10, f"CS1 got {low.share(total):.1f}% with no priority in play"
 
         with test.step("Split: EF strict above CS1, 80 percent each, expect EF without loss"):
             apply(HIGH, LOW)
             high, low, total = measure(0.8)
+            low.require_backlog()
             # EF offers less than the port drains, so it passes intact; a
             # stray datagram at the iperf3 startup edge is not congestion
             assert high.result["lost_percent"] < 1, \
@@ -133,6 +137,7 @@ with infamy.Test() as test:
 
         with test.step("Starve: EF at 120 percent of the port, expect CS1 below 5 percent"):
             high, low, total = measure(1.2)
+            low.require_backlog()
             assert low.share(total) < 5, f"CS1 got {low.share(total):.1f}% of the port"
 
     test.succeed()

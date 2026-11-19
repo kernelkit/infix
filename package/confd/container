@@ -676,31 +676,31 @@ wrap()
     podman "$cmd" $args "$name" >/dev/null
 }
 
+# Lists the containers attached to network $1
+netusers()
+{
+    podman ps $all --format '{{.Names}} {{.Networks}}' | while read -r c nets; do
+	case ",$nets," in
+	    *",$1,"*)
+		echo "$c"
+		;;
+	esac
+    done
+}
+
 # Removes network $1 from all containers
 netwrm()
 {
-    net=$1
-
-    for c in $(podman ps $all --format "{{.Names}}"); do
-	for n in $(podman inspect "$c" |jq -r '.[].NetworkSettings.Networks | keys[]'); do
-	    if [ "$n" = "$net" ]; then
-		podman network disconnect $force "$n" "$c" >/dev/null
-	    fi
-	done
+    for c in $(netusers "$1"); do
+	podman network disconnect $force "$1" "$c" >/dev/null
     done
 }
 
 # Schedule restart of (any) container using network $1 to activate network changes
 netrestart()
 {
-    net=$1
-
-    for c in $(podman ps $all --format "{{.Names}}"); do
-	for n in $(podman inspect "$c" |jq -r '.[].NetworkSettings.Networks | keys[]'); do
-	    if [ "$n" = "$net" ]; then
-		initctl -nbq touch "container@$c"
-	    fi
-	done
+    for c in $(netusers "$1"); do
+	initctl -nbq touch "container@$c"
     done
 }
 

@@ -1,16 +1,16 @@
-From 50a8a5c0d07de5f72323be6d9ba1d1b78fdc6b9b Mon Sep 17 00:00:00 2001
+From 23b3b7c330070764e88e674ebd067cec6aa70784 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 1 Sep 2025 14:24:03 +0200
-Subject: [PATCH] lyd_validate_obsolete: change log level warning -> debug
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 1/2] validation UPDATE log obsolete nodes in data as debug
 Organization: Wires
 
-A library should not log directly to syslog, this is the responsibility
-of the application.  In our case sysrepo, with a knob to disable it when
-you know what you're doing or have other ways of handling deprecated and
-obsolete nodes — e.g., automatically migrating them to a new tree.
+Every obsolete schema node instantiated in data is logged as a warning,
+each time the data is validated.  An application that keeps such nodes
+on purpose, e.g., to migrate them to their replacement, has no way to
+silence it short of dropping all warnings.
+
+Log the message in a new debug group, LY_LDGSCHEMA, which applications
+can enable when they want to know.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
@@ -20,10 +20,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  3 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/log.c b/src/log.c
-index 13da500ef..553aefe55 100644
+index 4cca02d7d..d7aa7be60 100644
 --- a/src/log.c
 +++ b/src/log.c
-@@ -705,6 +705,9 @@ ly_log_dbg(uint32_t group, const char *format, ...)
+@@ -621,6 +621,9 @@ ly_log_dbg(uint32_t group, const char *format, ...)
      case LY_LDGDEPSETS:
          str_group = "DEPSETS";
          break;
@@ -34,10 +34,10 @@ index 13da500ef..553aefe55 100644
          LOGINT(NULL);
          return;
 diff --git a/src/log.h b/src/log.h
-index 85f2ac6d4..2bbb0b19b 100644
+index 9b0692f75..e9492e985 100644
 --- a/src/log.h
 +++ b/src/log.h
-@@ -156,6 +156,7 @@ LIBYANG_API_DECL uint32_t *ly_temp_log_options(uint32_t *opts);
+@@ -159,6 +159,7 @@ LIBYANG_API_DECL uint32_t *ly_temp_log_options(uint32_t *opts);
  #define LY_LDGDICT      0x01    /**< Dictionary additions and deletions. */
  #define LY_LDGXPATH     0x02    /**< XPath parsing end evaluation. */
  #define LY_LDGDEPSETS   0x04    /**< Dependency module sets for schema compilation. */
@@ -46,18 +46,18 @@ index 85f2ac6d4..2bbb0b19b 100644
  /**
   * @}
 diff --git a/src/validation.c b/src/validation.c
-index 25be0feeb..86b82dbff 100644
+index eb03b1818..04724f477 100644
 --- a/src/validation.c
 +++ b/src/validation.c
-@@ -1624,7 +1624,7 @@ lyd_validate_obsolete(const struct lyd_node *node)
-         if (snode->flags & LYS_STATUS_OBSLT &&
-                 (!(snode->nodetype & LYD_NODE_INNER) || lyd_child(node))) {
-             LOG_LOCSET(NULL, node);
+@@ -1703,7 +1703,7 @@ lyd_validate_obsolete(const struct lyd_node *node)
+     snode = node->schema;
+     do {
+         if (snode->flags & LYS_STATUS_OBSLT && (!(snode->nodetype & LYD_NODE_INNER) || lyd_child(node))) {
 -            LOGWRN(snode->module->ctx, "Obsolete schema node \"%s\" instantiated in data.", snode->name);
 +            LOGDBG(LY_LDGSCHEMA, "%s: obsolete schema node \"%s\" instantiated in data.", snode->module->name, snode->name);
-             LOG_LOCBACK(0, 1);
              break;
          }
+ 
 -- 
 2.43.0
 

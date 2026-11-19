@@ -369,6 +369,23 @@
               {{end}}{{/* TypeSlug ethernet */}}
 
 
+              {{/* ── QoS ─────────────────────────────────────────────── */}}
+              {{if and $.Capabilities ($.Capabilities.Has "qos") (ne .TypeSlug "loopback")}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">QoS</h4>
+                <p style="margin:0">
+                  {{if .QoSProfile}}Profile {{.QoSProfile}}{{else if .QoSCustom}}The port's own settings{{else}}Defaults{{end}}{{if .QoSShaperMbit}}, egress shaper {{.QoSShaperMbit}} Mbps{{end}}.
+                  <a href="/configure/qos/ports" hx-get="/configure/qos/ports" hx-target="#content" hx-swap="innerHTML"
+                     hx-push-url="true" style="margin-left:0.5rem">QoS</a>
+                  {{if $.Capabilities.Has "tsn"}}
+                  <a href="/configure/tsn" hx-get="/configure/tsn" hx-target="#content" hx-swap="innerHTML"
+                     hx-push-url="true" style="margin-left:0.5rem">Reservations and schedule</a>
+                  {{end}}
+                </p>
+              </div>
+              {{end}}{{/* qos */}}
+
+
               {{/* ── WiFi interface editor ───────────────────────────── */}}
               {{/* Radio + PSK pickers mirror the Add-Interface wizard
                    pattern: each picker has Edit / + New buttons that

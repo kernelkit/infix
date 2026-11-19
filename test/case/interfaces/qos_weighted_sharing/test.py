@@ -2,31 +2,36 @@
 """
 QoS Weighted Sharing
 
-Two talkers, one marked EF and one marked CS1, bridged through the DUT
-and out one egress port that cannot carry both.  The port is negotiated
-down to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s
-where it has no PHY.  The ingress port classifies EF to priority 3 and
-CS1 to priority 2, classes 3 and 2 in the default table, both running
-enhanced transmission selection; the two classes below hold five
-percent each and carry nothing, since strict classes must sit above the
-weighted ones.  Each talker offers 80 percent of what the port drains,
-so both classes always have a backlog and the scheduler decides the
-split.
+Weighted sharing divides a full port between traffic classes in the
+proportions configured, so every class keeps its share however much
+the others offer.  This test fills a port with two flows and checks
+that the split follows the weights.
+
+.What the two talkers offer and what the port must deliver
+image::expected.svg[align=center, scaledwidth=90%]
+
+Two talkers, one marked EF and one marked CS1, send through the DUT's
+bridge and out one port.  That port is slowed down so the test's
+traffic can fill it: negotiated down to 100 Mbps, or shaped to
+10 Mbps where it has no PHY.  The port where the traffic enters puts
+the two flows in two traffic classes, both running enhanced
+transmission selection, the weighted algorithm of IEEE 802.1Q.  Each
+talker offers 80 percent of what the port can send, so both classes
+always have frames waiting.
 
 Two measurements:
 
- - equal weights, 45 and 45 percent, must give an even split.  This is
-   the baseline, and fails on its own if the shares are applied to the
-   wrong bands
- - 2:1, configured as 60 and 30 percent, must move the split to match
+ - equal weights must give an even split.  This is the baseline, and
+   fails on its own if the weights land on the wrong classes
+ - weights 2:1 must give one flow two thirds and the other one third
 
-Each flow's share of the delivered datagrams must land within five
-points of its configured share of the two, and both flows must lose more
-than a tenth of their frames in both measurements; a port that was never
-full proves nothing.  The test's own iperf3 control traffic, DSCP 0, is
-classified to priority 7.  Skipped on a switch fabric whose scheduler is
-not offloaded, where forwarded frames never meet the configured
-algorithm.
+Each flow's share of what the port delivers must be within five points
+of its weight.  Both flows must also be held back by more than a tenth
+of what they offer, which shows the port was full.
+
+The weights are set as 45 and 45 percent, then 60 and 30.  Every class
+below a weighted one must be weighted too, so the two classes below
+get the remaining ten percent, five each, and carry no traffic.
 """
 import infamy
 import infamy.qos as qos
@@ -49,15 +54,16 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
-        _, td0 = env.ltop.xlate("target", "data1")
-        _, td1 = env.ltop.xlate("target", "data2")
-        _, hd0 = env.ltop.xlate("host", "data1")
-        _, hd1 = env.ltop.xlate("host", "data2")
+        td0 = target["data1"]
+        td1 = target["data2"]
+        hd0 = env["host"]["data1"]
+        hd1 = env["host"]["data2"]
 
         port = infamy.capability.Port(target, td1, tgtssh)
+        infamy.capability.Port(target, td0, tgtssh).require_offload(test, "classification")
         num_tc = port.traffic_classes
         print(f"{td1}: {num_tc} traffic classes")
-        port.require_classes(test, 3)
+        port.require_classes(test, 7)
         port.require_offload(test, "transmission-selection")
 
     with test.step("Bridge the two ports, classify by DSCP on ingress, EF and CS1 in two weighted classes"):
@@ -71,7 +77,7 @@ with infamy.Test() as test:
                         "infix-interfaces:bridge-port": {"bridge": "br0"},
                         "infix-interfaces:qos": {
                             "ingress": {"trust": "dscp",
-                                        "dscp-map": qos.dscp_map(**{"0": 7, "46": HIGH, "8": LOW})}
+                                        "dscp-map": qos.dscp_map(**{"0": LOW, "46": HIGH, "8": LOW})}
                         }
                     },
                     {
@@ -89,9 +95,9 @@ with infamy.Test() as test:
     with test.step("Slow the egress port so its queues can fill"):
         drain = qos.slow_port(port, until)
         if not drain:
-            print(f"{td1} can neither negotiate down nor be rate limited, skipping")
+            print(f"{td1} can neither negotiate down nor be shaped, skipping")
             test.skip()
-        print(f"{td1} drains {drain // 1_000_000} Mbit/s")
+        print(f"{td1} drains {drain // 1_000_000} Mbps")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1:
@@ -115,7 +121,7 @@ with infamy.Test() as test:
             until(lambda: qos.scheduler_matches(qos.scheduler(tgtssh, td1), num_tc,
                                                 qos.TABLE_8_5[num_tc],
                                                 strict=num_tc - 2 - LOW, quanta=quanta))
-            qos.show_offload(port)
+            qos.wait_offload(port)
             ns0.must_reach("192.168.20.2")
 
         def measure(high, low):
@@ -128,8 +134,7 @@ with infamy.Test() as test:
             print(f"shares: EF {ef.share(total):.1f}%, CS1 {cs1.share(total):.1f}%, "
                   f"configured {high}:{low}")
             for flow in flows:
-                assert flow.result["lost_percent"] > 10, \
-                    f"{flow.name} lost {flow.result['lost_percent']:.1f}%, the port was never full"
+                flow.require_backlog()
             assert abs(ef.share(total) - expect) < 5, \
                 f"EF got {ef.share(total):.1f}% of the port, configured {expect:.0f}%"
 

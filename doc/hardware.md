@@ -255,7 +255,7 @@ admin@example:/> <b>show hardware usb-1-1.2</b>
   Hardware Rev        : 1.00
   USB ID              : 0781:5581
   USB Version         : 3.20
-  Speed               : 5000 Mbit/s
+  Speed               : 5000 Mbps
   Authorized          : yes
   URI                 : usb:///sys/bus/usb/devices/1-1.2
   Interface 0         : mass-storage

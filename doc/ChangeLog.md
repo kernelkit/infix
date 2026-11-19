@@ -1,6 +1,5 @@
 Change Log
-==========
-
+===
 All notable changes to the project are documented in this file.
 
 [v26.11.0][UNRELEASED]
@@ -58,6 +57,52 @@ All notable changes to the project are documented in this file.
   were sent, and a management station could lack a route to them.
   The new `management-interface` setting limits them to the addresses
   of selected interfaces, see [Discovery][lldp-mgmt]
+- QoS changes, see [QoS][qos]:
+  - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
+    products built with the TSN feature, configured and read back with
+    the IEEE 802.1DC interface modules
+  - QoS profiles, the classification and traffic class settings of a
+    port defined once as a `system qos-profile` and shared by any
+    number of ports.  The WebUI offers trunk and edge templates for
+    new profiles, and the QoS guide has those and a stream reservation
+    profile as CLI examples
+  - Microchip LAN969x (Laguna) switch ports offload the traffic class
+    table and the credit-based and time-aware shapers to the switch,
+    including the time-aware shaper's `queue-max-sdu`.  A gate closes
+    early enough for a full-size frame to finish before the next window
+  - WebUI: QoS and TSN settings have pages of their own under
+    Configure.  The TSN page sets up a reservation with *Reserve
+    bandwidth* and a gate schedule with *Time schedule*, and its
+    schedule editor draws the cycle and checks the entries against it.
+    The QoS status page lists the trust mode, reservations and gate
+    schedule of every port
+  - WebUI: new PTP pages, under Configure for the instances and their
+    ports, and under Status for the grandmaster, offset and port states
+  - New CLI command `show qos` with an overview of all ports: profile,
+    trust mode, shaper, reservations, gate schedule and hardware
+    offload.  `show interface NAME` lists the QoS state of the port,
+    with its traffic classes and gate schedule
+  - The operational datastore reports the QoS settings each port runs,
+    read back from the switch hardware or the kernel: trust mode and
+    priority maps, the traffic class table, the algorithm and share of
+    each class, and remarking.  `qos active-profile` names the profile
+    a port runs
+  - `qos capabilities` lists `supported-offload`, the stages a port's
+    switch fabric can run, next to `offload`, those it runs right now
+  - The `algorithm` of a traffic class only accepts the three the
+    system runs: `strict-priority`, `enhanced-transmission-selection`
+    and `credit-based-shaper`.  Over NETCONF and RESTCONF the values
+    are now identities of `infix-qos`, e.g.
+    `infix-qos:credit-based-shaper`, each derived from its IEEE 802.1Q
+    identity.  Saved configurations are migrated
+  - The port's `qos egress rate-limit` is now `qos egress-shaper`, and
+    the offload stage and feature of the same name are renamed with it.
+    Saved configurations are migrated
+  - New shell tool `ptping`, which measures one-way latency with
+    hardware-timestamped PTP probes and can tell where in a gate
+    control list's cycle each probe left and arrived
+- NETCONF and RESTCONF requests now get 120 seconds to complete, up from
+  60.  A large change can take more than a minute on a small device
 
 ### Fixes
 
@@ -161,6 +206,19 @@ All notable changes to the project are documented in this file.
 - OSPF: after a restart, a device could keep a stale copy of its own
   routes from a neighbor and never refresh them.  Also, routes marked
   never to age could still age out
+- Microchip LAN969x (Laguna), e.g., Tactical 1000: PTP now runs on
+  bridge ports.  A PTP port that was also a bridge port went straight
+  to the `faulty` state, so the switch could not act as a gPTP bridge or
+  a boundary clock on its own ports
+- Adding several interfaces in one change, e.g., the bridges and VETH
+  pairs of a container setup, could take more than a minute on a small
+  device, long enough for the request to time out
+- Removing an interface used by containers took several seconds per
+  interface on a small device, a container setup with four of them close
+  to a minute
+- RESTCONF: a request the server did not answer in time got the HTML
+  page the WebUI shows during startup as its reply.  It now gets the web
+  server's plain 504, or 502 when the RESTCONF server is not running
 
 
 [v26.10.0][] - 2026-10-30
@@ -2797,6 +2855,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.10.0...HEAD
+[v26.11.0]:   https://github.com/kernelkit/infix/compare/v26.10.0...v26.11.0
 [v26.10.0]:   https://github.com/kernelkit/infix/compare/v26.09.0...v26.10.0
 [v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0

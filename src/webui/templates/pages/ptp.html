@@ -1,0 +1,104 @@
+{{define "ptp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "ptp-configure"}}
+    <a href="/configure/ptp"
+       hx-get="/configure/ptp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{$d := .Desc}}
+{{range .Instances}}
+<section class="info-card">
+  <div class="card-header">PTP instance {{.Index}}
+    <span class="text-muted" style="font-weight:normal; margin-left:0.5rem">{{.Type}}, domain {{.Domain}}</span>
+    {{template "ptp-configure"}}
+  </div>
+  <table class="info-table">
+    <tr>
+      <th>Time</th>
+      <td>
+        {{if .IsGM}}
+        <span class="status-dot status-up"></span>Grandmaster, the other clocks follow this one
+        {{else if .Synced}}
+        <span class="status-dot status-up"></span>Follows grandmaster {{.Grandmaster}}
+        {{else}}
+        <span class="status-dot status-down"></span>Not synchronized, no port follows a time transmitter
+        {{end}}
+      </td>
+    </tr>
+    {{if not .IsGM}}
+    <tr><th>Offset{{template "field-info" (index $d "offset")}}</th><td class="num">{{.Offset}}</td></tr>
+    <tr><th>Mean path delay{{template "field-info" (index $d "mean-delay")}}</th><td class="num">{{.MeanDelay}}</td></tr>
+    <tr><th>Steps removed{{template "field-info" (index $d "steps")}}</th><td class="num">{{.Steps}}</td></tr>
+    {{end}}
+    <tr><th>Clock identity{{template "field-info" (index $d "clock-identity")}}</th><td class="num">{{.ClockID}}</td></tr>
+    <tr><th>Priority 1 / 2{{template "field-info" (index $d "priority")}}</th><td class="num">{{.Priority}}</td></tr>
+    <tr><th>Clock class{{template "field-info" (index $d "clock-class")}}</th><td>{{.ClockClass}}</td></tr>
+    {{if not .IsGM}}
+    <tr><th>Grandmaster{{template "field-info" (index $d "grandmaster")}}</th><td class="num">{{.Grandmaster}}</td></tr>
+    <tr><th>Grandmaster priority 1 / 2</th><td class="num">{{.GMPriority}}</td></tr>
+    <tr><th>Grandmaster clock class</th><td>{{.GMClass}}</td></tr>
+    {{end}}
+    <tr><th>Time source{{template "field-info" (index $d "time-source")}}</th><td>{{.TimeSource}}</td></tr>
+  </table>
+
+  <h3 class="section-subtitle">Ports</h3>
+  {{if .Ports}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="num">Port</th>
+          <th>Interface</th>
+          <th>State</th>
+          <th>Delay{{template "field-info" (index $d "delay")}}</th>
+          <th class="num">Link delay{{template "field-info" (index $d "link-delay")}}</th>
+          {{if .HasStats}}
+          <th class="num">Sync</th>
+          <th class="num">Announce</th>
+          <th class="num">Peer delay</th>
+          {{end}}
+        </tr>
+      </thead>
+      <tbody>
+        {{$stats := .HasStats}}
+        {{range .Ports}}
+        <tr>
+          <td class="num">{{.Index}}</td>
+          <td><a href="/interfaces/{{.Interface}}" hx-get="/interfaces/{{.Interface}}" hx-target="#content" hx-push-url="true">{{.Interface}}</a></td>
+          <td><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.State}}{{template "field-info" .StateHelp}}</td>
+          <td>{{.Delay}}</td>
+          <td class="num">{{if .LinkDelay}}{{.LinkDelay}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          {{if $stats}}
+          <td class="num">{{.Sync}}</td>
+          <td class="num">{{.Announce}}</td>
+          <td class="num">{{.PDelay}}</td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .HasStats}}<p class="text-muted" style="margin:0.5rem 1rem">Message counts are received / sent.</p>{{end}}
+  {{else}}
+  <p class="empty-message">The instance has no ports.</p>
+  {{end}}
+</section>
+{{else}}
+{{if not .Error}}
+<section class="info-card">
+  <div class="card-header">PTP{{template "ptp-configure"}}</div>
+  <p class="empty-message">PTP is not configured.</p>
+</section>
+{{end}}
+{{end}}
+{{end}}

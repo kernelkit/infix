@@ -138,9 +138,11 @@ class Device(object):
         """Run a script, with stderr merged into the captured stdout
 
         Callers parse that stdout, so ssh(1) stays quiet here, use
-        run() to see transport errors.
+        run() to see transport errors.  With retry=True the script is
+        run again on a transport error, see run_retry().
         """
         kwargs.setdefault("loglevel", "QUIET")
-        return self.run("/bin/sh", text=True, input=script,
+        run = self.run_retry if kwargs.pop("retry", False) else self.run
+        return run("/bin/sh", text=True, input=script,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT, *args, **kwargs)

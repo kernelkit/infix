@@ -1,0 +1,41 @@
+=== QoS Time-Aware Shaper
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_tas]
+
+==== Description
+
+A time-aware shaper opens and closes a gate in front of each traffic
+class on a fixed, repeating timetable, the gate control list of IEEE
+802.1Qbv, so each kind of traffic has the port to itself at set times.
+This test configures a list on a port and checks that the port runs it
+and reports it back.  It sends no traffic: the TSN tests check the
+timing on the wire.
+
+.The gate control list of the test
+image::schedule.svg[align=center, scaledwidth=90%]
+
+The list repeats every 100 µs: the top class alone for 20 µs, the top
+class and the class two below it for 20 µs, and every other class for
+the remaining 60 µs.  The port must run the list and report it back as
+the operational control list, with the cycle and base time as given.
+
+Settings that cannot run under gates must be rejected: a port egress
+shaper, a weighted class, since gated classes are served strictly, an
+empty list, and a list on a port with fewer transmit queues than
+traffic classes.
+
+==== Topology
+
+image::topology.svg[QoS Time-Aware Shaper topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Reject a gate control list together with a port egress shaper
+. Reject a gate control list together with a weighted class
+. Reject an empty gate control list
+. Reject the schedule on a port with fewer transmit queues than classes
+. Enable the gate control list on the port
+. Verify the port reports the list, cycle and base time it runs
+
+

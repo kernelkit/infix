@@ -1,0 +1,145 @@
+From c028dfd563c81512cdca52ab5ac213c39f0e3f7d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 13 Nov 2026 16:45:00 +0100
+Subject: [PATCH 2/2] validation BUGFIX default nodes of a case block another
+ case
+Organization: Wires
+
+A choice with a default case whose nodes have default values cannot be
+changed to another case if the data is printed and parsed again before
+it is validated, like sysrepo does with its candidate datastore:
+
+    Data for both cases "a" and "b" exist.
+
+Only the nodes of the newly created case are expected to be flagged as
+new, which is what lets the validation remove the old case.  In parsed
+data all nodes are new, so the default nodes of the default case and
+the explicit nodes of the other case count as new data of two cases.
+
+A case holding nothing but default nodes is selected only for as long
+as no other case has data.  Do not count it as a second case, remove
+its nodes instead.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/validation.c | 78 ++++++++++++++++++++++++++++++++----------------
+ 1 file changed, 52 insertions(+), 26 deletions(-)
+
+diff --git a/src/validation.c b/src/validation.c
+index 04724f477..8adfa288a 100644
+--- a/src/validation.c
++++ b/src/validation.c
+@@ -703,6 +703,39 @@ lyd_validate_duplicates(const struct lyd_node *first, const struct lyd_node *nod
+     return LY_SUCCESS;
+ }
+ 
++/**
++ * @brief Delete all the data of a case.
++ *
++ * @param[in,out] first First sibling.
++ * @param[in] mod Module of the siblings, NULL for nested siblings.
++ * @param[in] scase Case to delete the data of.
++ * @param[in,out] diff Validation diff.
++ * @return LY_ERR value.
++ */
++static LY_ERR
++lyd_validate_case_del(struct lyd_node **first, const struct lys_module *mod, const struct lysc_node *scase,
++        struct lyd_node **diff)
++{
++    const struct lysc_node *iter = NULL;
++    struct lyd_node *match = NULL, *to_del = NULL;
++
++    while ((match = lys_getnext_data(match, *first, &iter, scase, NULL))) {
++        lyd_del_move_root(first, to_del, mod);
++
++        /* free previous node */
++        lyd_free_tree(to_del);
++        if (diff) {
++            /* add into diff */
++            LY_CHECK_RET(lyd_val_diff_add(match, LYD_DIFF_OP_DELETE, diff));
++        }
++        to_del = match;
++    }
++    lyd_del_move_root(first, to_del, mod);
++    lyd_free_tree(to_del);
++
++    return LY_SUCCESS;
++}
++
+ /**
+  * @brief Validate multiple case data existence with possible autodelete.
+  *
+@@ -716,28 +749,32 @@ static LY_ERR
+ lyd_validate_cases(struct lyd_node **first, const struct lys_module *mod, const struct lysc_node_choice *choic,
+         struct lyd_node **diff)
+ {
+-    const struct lysc_node *scase, *iter, *old_case = NULL, *new_case = NULL;
+-    struct lyd_node *match, *to_del;
+-    ly_bool found;
++    const struct lysc_node *scase, *iter, *old_case = NULL, *new_case = NULL, *dflt_case = NULL;
++    struct lyd_node *match;
++    ly_bool found, explicit;
+ 
+     LY_LIST_FOR((struct lysc_node *)choic->cases, scase) {
+         found = 0;
++        explicit = 0;
+         iter = NULL;
+         match = NULL;
+         while ((match = lys_getnext_data(match, *first, &iter, scase, NULL))) {
+             if (match->flags & LYD_NEW) {
+-                /* a new case data found, nothing more to look for */
++                /* a new case data found */
+                 found = 2;
+-                break;
+-            } else {
++            } else if (found == 0) {
+                 /* and old case data found */
+-                if (found == 0) {
+-                    found = 1;
+-                }
++                found = 1;
++            }
++            if (!(match->flags & LYD_DEFAULT)) {
++                explicit = 1;
+             }
+         }
+ 
+-        if (found == 1) {
++        if (found && !explicit) {
++            /* only default nodes, the case exists only until another one does */
++            dflt_case = scase;
++        } else if (found == 1) {
+             /* there should not be 2 old cases */
+             if (old_case) {
+                 /* old data from 2 cases */
+@@ -765,22 +802,11 @@ lyd_validate_cases(struct lyd_node **first, const struct lys_module *mod, const
+ 
+     if (old_case && new_case) {
+         /* auto-delete old case */
+-        iter = NULL;
+-        match = NULL;
+-        to_del = NULL;
+-        while ((match = lys_getnext_data(match, *first, &iter, old_case, NULL))) {
+-            lyd_del_move_root(first, to_del, mod);
+-
+-            /* free previous node */
+-            lyd_free_tree(to_del);
+-            if (diff) {
+-                /* add into diff */
+-                LY_CHECK_RET(lyd_val_diff_add(match, LYD_DIFF_OP_DELETE, diff));
+-            }
+-            to_del = match;
+-        }
+-        lyd_del_move_root(first, to_del, mod);
+-        lyd_free_tree(to_del);
++        LY_CHECK_RET(lyd_validate_case_del(first, mod, old_case, diff));
++    }
++    if (dflt_case && (old_case || new_case)) {
++        /* default nodes of a case that is no longer the selected one */
++        LY_CHECK_RET(lyd_validate_case_del(first, mod, dflt_case, diff));
+     }
+ 
+     return LY_SUCCESS;
+-- 
+2.43.0
+

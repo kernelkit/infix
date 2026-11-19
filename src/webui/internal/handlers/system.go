@@ -79,7 +79,7 @@ func (h *SystemHandler) Reboot(w http.ResponseWriter, r *http.Request) {
 	err := h.RC.Post(r.Context(), "/operations/ietf-system:system-restart")
 	if err != nil {
 		log.Printf("reboot: %v", err)
-		http.Error(w, "reboot failed", http.StatusBadGateway)
+		http.Error(w, "reboot failed", rcStatus(err))
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *SystemHandler) SetDatetime(w http.ResponseWriter, r *http.Request) {
 func (h *SystemHandler) Shutdown(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.Post(r.Context(), "/operations/ietf-system:system-shutdown"); err != nil {
 		log.Printf("shutdown: %v", err)
-		http.Error(w, "shutdown failed", http.StatusBadGateway)
+		http.Error(w, "shutdown failed", rcStatus(err))
 		return
 	}
 	w.Header().Set("Content-Type", "text/html")
@@ -185,7 +185,7 @@ func (h *SystemHandler) FactoryDefault(w http.ResponseWriter, r *http.Request) {
 func (h *SystemHandler) FactoryReset(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.Post(r.Context(), "/operations/ietf-factory-default:factory-reset"); err != nil {
 		log.Printf("factory-reset: %v", err)
-		http.Error(w, "factory reset failed", http.StatusBadGateway)
+		http.Error(w, "factory reset failed", rcStatus(err))
 		return
 	}
 	w.Header().Set("Content-Type", "text/html")
@@ -249,17 +249,12 @@ func (h *SystemHandler) SupportBundle(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.RC.CallRPC(ctx, "/operations/infix-system:support-collect", input, &reply); err != nil {
 		log.Printf("support bundle: %v", err)
-		msg, status := "Failed to collect support bundle", http.StatusInternalServerError
+		msg := "Failed to collect support bundle"
 		var re *restconf.Error
-		if errors.As(err, &re) {
-			if re.Message != "" {
-				msg += ": " + re.Message
-			}
-			if re.StatusCode == http.StatusForbidden {
-				status = re.StatusCode
-			}
+		if errors.As(err, &re) && re.Message != "" {
+			msg += ": " + re.Message
 		}
-		http.Error(w, msg, status)
+		http.Error(w, msg, rcStatus(err))
 		return
 	}
 
@@ -427,7 +422,7 @@ func (h *SystemHandler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 	data, err := h.RC.GetRaw(r.Context(), "/ds/ietf-datastores:startup")
 	if err != nil {
 		log.Printf("config download: %v", err)
-		http.Error(w, "failed to fetch config", http.StatusBadGateway)
+		http.Error(w, "failed to fetch config", rcStatus(err))
 		return
 	}
 

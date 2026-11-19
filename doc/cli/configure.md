@@ -79,8 +79,8 @@ unit suffix instead of all its digits.  The suffixes `k` (or `K`), `M`,
 `Ti`, `Pi` and `Ei` by powers of 1024:
 
 ```
-admin@host:/config/interface/eth0/> set qos egress rate-limit rate 200M
-admin@host:/config/interface/eth0/> set qos egress rate-limit burst 64Ki
+admin@host:/config/interface/eth0/> set qos egress-shaper rate 200M
+admin@host:/config/interface/eth0/> set qos egress-shaper burst 64Ki
 ```
 
 These are stored as 200000000 and 65536, which is also how `show` and

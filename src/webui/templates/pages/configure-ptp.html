@@ -1,0 +1,177 @@
+{{define "configure-ptp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/ptp"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">PTP{{template "field-info" (index $d "instance")}}
+    <a href="/ptp" hx-get="/ptp" hx-target="#content" hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Status &rarr;</a>
+  </div>
+  <p class="text-muted" style="margin:0.6rem 1rem">An instance keeps this device's clock in step with its neighbors
+    on the ports it runs on.  A time-aware shaper needs that on every device in the path.</p>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Instance</th>
+          <th>Profile{{template "field-info" (index $d "profile")}}</th>
+          <th>Domain{{template "field-info" (index $d "domain-number")}}</th>
+          <th>Ports</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $p := .Instances}}
+        {{$profile := or $p.Profile (index $.Default "profile")}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="ptp-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$p.Index}}
+            </button>
+          </td>
+          <td title="{{index (index $.Labels "profile") $profile}}">{{$profile}}</td>
+          <td>{{or $p.Domain (index $.Default "domain-number")}}</td>
+          <td>{{if $p.Interfaces}}{{join $p.Interfaces ", "}}{{else}}<span class="text-muted">none</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/ptp/instances/{{$p.Index}}"
+                    hx-confirm="Delete PTP instance {{$p.Index}}?"
+                    hx-swap="none" title="Delete instance">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-ptp-{{$i}}">
+          <td colspan="5" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/ptp/instances/{{$p.Index}}" hx-swap="none">
+                {{$pp := printf "/ieee1588-ptp-tt:ptp/instances/instance=%d/default-ds" $p.Index}}
+                <table class="info-table">
+                  <tr>
+                    <th>Profile{{template "field-info" (index $d "profile")}}</th>
+                    <td>{{template "ptp-select" (dict "Name" "profile" "Options" (index $.Options "profile") "Selected" $profile)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/infix-ptp:profile" $pp) "Back" "/configure/ptp" "What" "the profile")}}
+                  </tr>
+                  <tr>
+                    <th>Clock type{{template "field-info" (index $d "instance-type")}}</th>
+                    <td>{{template "ptp-select" (dict "Name" "instance-type" "Options" (index $.Options "instance-type") "Selected" (or $p.InstanceType (index $.Default "instance-type")) "Describe" true)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/instance-type" $pp) "Back" "/configure/ptp" "What" "the clock type")}}
+                  </tr>
+                  <tr>
+                    <th>Domain{{template "field-info" (index $d "domain-number")}}</th>
+                    <td>{{template "ptp-number" (dict "Name" "domain-number" "Value" $p.Domain "Field" "domain-number" "Page" $)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/domain-number" $pp) "Back" "/configure/ptp" "What" "the domain")}}
+                  </tr>
+                  <tr>
+                    <th>Priority 1{{template "field-info" (index $d "priority1")}}</th>
+                    <td>{{template "ptp-number" (dict "Name" "priority1" "Value" $p.Priority1 "Field" "priority1" "Page" $)}}
+                      <span class="text-muted">The lowest in the network becomes grandmaster.</span></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/priority1" $pp) "Back" "/configure/ptp" "What" "priority 1")}}
+                  </tr>
+                  <tr>
+                    <th>Priority 2{{template "field-info" (index $d "priority2")}}</th>
+                    <td>{{template "ptp-number" (dict "Name" "priority2" "Value" $p.Priority2 "Field" "priority2" "Page" $)}}</td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/priority2" $pp) "Back" "/configure/ptp" "What" "priority 2")}}
+                  </tr>
+                  <tr>
+                    <th>Never grandmaster{{template "field-info" (index $d "time-receiver-only")}}</th>
+                    <td><label class="diag-check"><input type="checkbox" name="time-receiver-only" value="on" {{if $p.TimeReceiverOnly}}checked{{end}}> Only follow another clock</label></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/time-receiver-only" $pp) "Back" "/configure/ptp" "What" "never grandmaster")}}
+                  </tr>
+                  <tr>
+                    <th>Ports{{template "field-info" (index $d "ports")}}</th>
+                    <td colspan="2">{{template "ptp-ports" $p.Choices}}</td>
+                  </tr>
+                </table>
+                <div style="margin-top:0.5rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5"><span class="text-muted">No PTP instance.  The device does not synchronize its clock over the network.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div id="ptp-instance-add" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/ptp/instances" hx-swap="none">
+      <table class="info-table">
+        <tr>
+          <th>Instance</th>
+          <td><input class="cfg-input cfg-input-sm" type="number" name="index" min="0" step="1" required value="{{.NextIndex}}" style="width:5rem"></td>
+        </tr>
+        <tr>
+          <th>Profile{{template "field-info" (index $d "profile")}}</th>
+          <td>{{template "ptp-select" (dict "Name" "profile" "Options" (index .Options "profile") "Selected" (index .Default "profile"))}}</td>
+        </tr>
+        <tr>
+          <th>Ports{{template "field-info" (index $d "ports")}}</th>
+          <td>{{template "ptp-ports" .NewChoices}}</td>
+        </tr>
+      </table>
+      <div style="margin-top:0.5rem">
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+      </div>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="ptp-instance-add">+ Add instance</button>
+  </div>
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}
+{{end}}
+
+{{/* A select filled from the schema.  With Describe the options show
+     their description, for values that are abbreviations. */}}
+{{define "ptp-select"}}
+<select class="cfg-input" name="{{.Name}}" style="width:auto;max-width:100%">
+  {{$sel := .Selected}}
+  {{$describe := .Describe}}
+  {{range .Options}}
+  <option value="{{.Value}}" title="{{.Description}}" {{if eq $sel .Value}}selected{{end}}>{{if and $describe .Description}}{{.Description}}{{else}}{{.Label}}{{end}}</option>
+  {{else}}
+  <option value="{{$sel}}" selected>{{$sel}}</option>
+  {{end}}
+</select>
+{{end}}
+
+{{/* A number the model bounds; empty shows the model's default. */}}
+{{define "ptp-number"}}
+{{$b := index .Page.Bounds .Field}}
+<input class="cfg-input cfg-input-sm" type="number" name="{{.Name}}" step="1" style="width:6rem"
+       min="{{index $b 0}}" max="{{index $b 1}}" value="{{.Value}}" placeholder="{{index .Page.Default .Field}}">
+{{end}}
+
+{{define "ptp-ports"}}
+<div style="display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem; max-width:46rem; white-space:normal">
+{{range .}}
+<label class="diag-check"><input type="checkbox" name="port" value="{{.Name}}" {{if .Checked}}checked{{end}}> {{.Name}}</label>
+{{else}}
+<span class="text-muted">No interface here can timestamp PTP messages.</span>
+{{end}}
+</div>
+{{end}}

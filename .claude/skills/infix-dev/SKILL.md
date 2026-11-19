@@ -69,6 +69,9 @@ Each is explained in the doc named above; these are the ones that come back in r
   in `doc/README.md` and in the `nav` of `mkdocs.yml`. The manual never uses the
   product name, write "the device" or "the system".  CLI examples use the prompt
   `admin@example`, not the hostname of the box they were run on.
+- The WebUI reads the YANG schema for everything about the model: option values, labels,
+  help text, defaults and ranges. Never copy any of those into Go or a template; if the
+  schema lacks it, fix the model. See `src/webui/README.md`, *Development*.
 
 ## Notes for agents
 

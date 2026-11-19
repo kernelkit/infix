@@ -2,6 +2,7 @@ package schema
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,10 +12,23 @@ import (
 	"infix/webui/internal/restconf"
 )
 
-// ModuleInfo identifies a YANG module by name and revision.
+// ModuleInfo identifies a YANG module by name and revision, with the
+// features the device enables in it.
 type ModuleInfo struct {
 	Name     string
 	Revision string
+	Features []string
+}
+
+// FeatureSet lists the enabled features as "module:feature".
+func FeatureSet(mods []ModuleInfo) map[string]bool {
+	set := map[string]bool{}
+	for _, m := range mods {
+		for _, f := range m.Features {
+			set[m.Name+":"+f] = true
+		}
+	}
+	return set
 }
 
 func (m ModuleInfo) filename() string {
@@ -28,9 +42,10 @@ func (m ModuleInfo) filename() string {
 type rfc7895ModulesState struct {
 	ModulesState struct {
 		Module []struct {
-			Name       string `json:"name"`
-			Revision   string `json:"revision"`
-			Submodule  []struct {
+			Name      string   `json:"name"`
+			Revision  string   `json:"revision"`
+			Feature   []string `json:"feature"`
+			Submodule []struct {
 				Name     string `json:"name"`
 				Revision string `json:"revision"`
 			} `json:"submodule"`
@@ -43,8 +58,9 @@ type rfc8525YangLibrary struct {
 	YangLibrary struct {
 		ModuleSet []struct {
 			Module []struct {
-				Name     string `json:"name"`
-				Revision string `json:"revision"`
+				Name     string   `json:"name"`
+				Revision string   `json:"revision"`
+				Feature  []string `json:"feature"`
 			} `json:"module"`
 		} `json:"module-set"`
 	} `json:"ietf-yang-library:yang-library"`
@@ -73,6 +89,9 @@ func FetchModules(ctx context.Context, rc restconf.Fetcher, cacheDir string) ([]
 		downloaded = append(downloaded, m)
 	}
 	prune(cacheDir, modules)
+	if err := writeFeatures(cacheDir, FeatureSet(modules)); err != nil {
+		return nil, err
+	}
 	return downloaded, nil
 }
 
@@ -105,7 +124,7 @@ func listModules(ctx context.Context, rc restconf.Fetcher) ([]ModuleInfo, error)
 	if err := rc.Get(ctx, "/data/ietf-yang-library:modules-state", &ms); err == nil {
 		var mods []ModuleInfo
 		for _, m := range ms.ModulesState.Module {
-			mods = append(mods, ModuleInfo{Name: m.Name, Revision: m.Revision})
+			mods = append(mods, ModuleInfo{Name: m.Name, Revision: m.Revision, Features: m.Feature})
 			for _, sub := range m.Submodule {
 				mods = append(mods, ModuleInfo{Name: sub.Name, Revision: sub.Revision})
 			}
@@ -123,7 +142,7 @@ func listModules(ctx context.Context, rc restconf.Fetcher) ([]ModuleInfo, error)
 	var mods []ModuleInfo
 	for _, ms := range yl.YangLibrary.ModuleSet {
 		for _, m := range ms.Module {
-			mods = append(mods, ModuleInfo{Name: m.Name, Revision: m.Revision})
+			mods = append(mods, ModuleInfo{Name: m.Name, Revision: m.Revision, Features: m.Feature})
 		}
 	}
 	return mods, nil
@@ -166,4 +185,30 @@ func downloadIfMissing(ctx context.Context, rc restconf.Fetcher, cacheDir string
 	}
 	log.Printf("schema: cached %s", m.filename())
 	return nil
+}
+
+// The enabled features sit next to the cached modules, so a load from
+// the cache hides the same nodes as a load after a refresh.
+const featuresFile = "features.json"
+
+func writeFeatures(cacheDir string, set map[string]bool) error {
+	b, err := json.Marshal(set)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(cacheDir, featuresFile), b, 0640)
+}
+
+// readFeatures returns nil when no feature list was cached, which gates
+// nothing.
+func readFeatures(cacheDir string) map[string]bool {
+	b, err := os.ReadFile(filepath.Join(cacheDir, featuresFile))
+	if err != nil {
+		return nil
+	}
+	var set map[string]bool
+	if json.Unmarshal(b, &set) != nil {
+		return nil
+	}
+	return set
 }

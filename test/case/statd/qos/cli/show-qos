@@ -1,0 +1,4 @@
+[7mPORT  PROFILE  TRUST       SHAPER  RESERVED    SCHEDULE  HARDWARE OFFLOAD             [0m
+e1    sr       dscp                7: 50 Mbps      1 ms  classify select cbs tas
+e2             dscp-pcp  100 Mbps                        classify remark shaper select
+e10            pcp                                       classify

@@ -96,8 +96,13 @@
     });
     document.addEventListener('htmx:sendError', show);
     document.addEventListener('htmx:timeout',   show);
+    // A gateway error from the WebUI itself is an answer, about the
+    // device behind it; only one the proxy gave for a WebUI that is down
+    // means we lost the box.  Our answers carry X-WebUI, nginx's do not.
     document.addEventListener('htmx:responseError', function (evt) {
-      var s = evt.detail && evt.detail.xhr && evt.detail.xhr.status;
+      var xhr = evt.detail && evt.detail.xhr;
+      if (!xhr || xhr.getResponseHeader('X-WebUI')) return;
+      var s = xhr.status;
       if (s === 502 || s === 503 || s === 504) show();
     });
     document.addEventListener('htmx:afterRequest', function (evt) {
@@ -1570,18 +1575,18 @@ function markActiveOpt(cls, attr, value) {
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
     }
 
-    // NACM refused the candidate copy: the page is of no use, say so instead.
-    var configureDenied = false;
+    // The candidate copy failed: the page is of no use, say why instead.
+    var configureFailed = false;
     document.addEventListener('htmx:responseError', function(evt) {
       var d = evt.detail;
-      if (!d || !d.xhr || d.xhr.status !== 403 ||
-          !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
-      configureDenied = true;
+      if (!d || !d.xhr || !d.pathInfo || d.pathInfo.requestPath !== '/configure/enter') return;
+      configureFailed = true;
       var content = document.getElementById('content');
-      if (content) {
-        content.innerHTML = '<div class="alert alert-error">' +
-          'You do not have permission to change the configuration.</div>';
-      }
+      if (!content) return;
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-error';
+      alert.textContent = d.xhr.responseText || 'Could not start editing the configuration.';
+      content.replaceChildren(alert);
     });
 
     // The Configure accordion is open on page load only on a configure
@@ -1594,7 +1599,7 @@ function markActiveOpt(cls, attr, value) {
       if (content) content.classList.add('cfg-entering');
       htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body})
         .then(function() {
-          if (configureDenied) return;
+          if (configureFailed) return;
           return htmx.ajax('GET', window.location.pathname + window.location.search,
                            {target: '#content', swap: 'innerHTML'});
         })
@@ -1748,6 +1753,24 @@ function markActiveOpt(cls, attr, value) {
     });
     open = null;
   });
+})();
+
+// ?open=NAME in the address opens that fold-out row, once
+(function() {
+  function openNamed() {
+    var params = new URLSearchParams(window.location.search);
+    var name = params.get('open');
+    if (!name) return;
+    document.querySelectorAll('#content .key-row-toggle[aria-expanded="false"]').forEach(function(btn) {
+      if (btn.textContent.replace('▶', '').trim() === name) btn.click();
+    });
+    params.delete('open');
+    var query = params.toString();
+    history.replaceState(history.state, '', window.location.pathname + (query ? '?' + query : ''));
+  }
+  document.addEventListener('DOMContentLoaded', openNamed);
+  document.addEventListener('htmx:afterSettle', openNamed);
+  document.addEventListener('htmx:pushedIntoHistory', openNamed);
 })();
 
 // A morph swap keeps a <dialog> node and only strips its open attribute,
@@ -2039,7 +2062,8 @@ function openModal(message, onConfirm, opts) {
 
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
-// Templates are keyed by data-template attribute value.
+// data-template names a row template below, or the id of a <template>
+// element the page rendered.
 (function () {
   var rowTemplates = {
     'ntp': function(i) {
@@ -2083,7 +2107,16 @@ function openModal(message, onConfirm, opts) {
       row.querySelectorAll('input').forEach(function(inp) {
         inp.name = inp.name.replace(/_\d+$/, '_' + i);
       });
+      row.querySelectorAll('[data-row-index]').forEach(function(c) { c.textContent = i; });
     });
+  }
+
+  // A row template rendered by the server: a <template> element whose
+  // __N__ placeholders take the row number.
+  function rowFromTemplate(key, i) {
+    var tpl = document.getElementById(key);
+    if (tpl && tpl.content) { return tpl.innerHTML.replace(/__N__/g, i); }
+    return rowTemplates[key] ? rowTemplates[key](i) : null;
   }
 
   document.addEventListener('click', function(e) {
@@ -2092,9 +2125,11 @@ function openModal(message, onConfirm, opts) {
       var tbodyId  = addBtn.getAttribute('data-table');
       var tmplKey  = addBtn.getAttribute('data-template');
       var tbody    = document.getElementById(tbodyId);
-      if (!tbody || !rowTemplates[tmplKey]) { return; }
+      if (!tbody) { return; }
       var idx = tbody.querySelectorAll('tr').length;
-      tbody.insertAdjacentHTML('beforeend', rowTemplates[tmplKey](idx));
+      var html = rowFromTemplate(tmplKey, idx);
+      if (!html) { return; }
+      tbody.insertAdjacentHTML('beforeend', html);
       var newInput = tbody.querySelector('tr:last-child input');
       if (newInput) { newInput.focus(); }
       return;
@@ -3328,4 +3363,135 @@ function renderCfgLog() {
 
   document.addEventListener('DOMContentLoaded', function () { init(document); });
   document.addEventListener('htmx:afterSwap', function (evt) { init(evt.target || document); });
+})();
+
+// A select with data-opens opens the <details> it names while its value
+// is the one in data-opens-on, e.g. a port's own QoS settings.
+(function() {
+  document.addEventListener('change', function(e) {
+    var sel = e.target.closest && e.target.closest('select[data-opens]');
+    if (!sel) return;
+    var box = document.getElementById(sel.getAttribute('data-opens'));
+    if (box) box.open = sel.value === sel.getAttribute('data-opens-on');
+  });
+})();
+
+// ─── Gate schedule editor: one cycle drawn from the list ────────────────────
+// Redraws on every edit.  A list shorter than the cycle holds its last
+// gates to the end, a longer one is cut off there.
+(function() {
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 1000, LABEL = 26, LANE = 13, GAP = 3;
+
+  function el(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    Object.keys(attrs).forEach(function(k) { e.setAttribute(k, attrs[k]); });
+    return e;
+  }
+
+  function us(v) { return String(Math.round(v * 1000) / 1000); }
+
+  function render(form) {
+    var box = form.querySelector('.gate-timeline');
+    var note = form.querySelector('.gate-sum');
+    if (!box || !note) return;
+    var classes = parseInt(box.getAttribute('data-classes'), 10) || 8;
+    var entries = [], sum = 0;
+    form.querySelectorAll('tbody[id^="gate-entries-"] tr').forEach(function(row) {
+      var field = row.querySelector('input[type=number]');
+      var iv = parseFloat(field && field.value);
+      if (!(iv > 0)) return;
+      var open = {};
+      row.querySelectorAll('input[type=checkbox]:checked').forEach(function(c) { open[c.value] = true; });
+      entries.push({ iv: iv, open: open });
+      sum += iv;
+    });
+    box.textContent = '';
+    note.textContent = '';
+    note.classList.remove('gate-sum-over');
+    if (!entries.length) return;
+
+    var field = form.querySelector('input[name=cycle]');
+    var cycle = parseFloat(field && field.value);
+    var fixed = cycle > 0;
+    if (!fixed) cycle = sum;
+
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + (classes * (LANE + GAP) + 14) });
+    var scale = (W - LABEL) / cycle;
+    for (var lane = 0; lane < classes; lane++) {
+      var c = classes - 1 - lane, y = lane * (LANE + GAP);
+      var t = el('text', { x: 0, y: y + LANE - 3 });
+      t.textContent = 'TC' + c;
+      svg.appendChild(t);
+      svg.appendChild(el('rect', { 'class': 'gate-lane', x: LABEL, y: y, width: W - LABEL, height: LANE }));
+      var at = 0;
+      entries.forEach(function(e, i) {
+        var end = Math.min(at + e.iv, cycle);
+        var last = i === entries.length - 1;
+        if (e.open[c] && end > at) {
+          svg.appendChild(el('rect', { 'class': 'gate-open', x: LABEL + at * scale, y: y, width: (end - at) * scale, height: LANE }));
+        }
+        if (last && e.open[c] && cycle > at + e.iv) {
+          svg.appendChild(el('rect', { 'class': 'gate-hold', x: LABEL + (at + e.iv) * scale, y: y,
+                                       width: (cycle - at - e.iv) * scale, height: LANE }));
+        }
+        at += e.iv;
+      });
+    }
+    var x = 0, bottom = classes * (LANE + GAP);
+    entries.forEach(function(e) {
+      x += e.iv;
+      if (x < cycle) svg.appendChild(el('line', { 'class': 'gate-edge', x1: LABEL + x * scale, y1: 0, x2: LABEL + x * scale, y2: bottom - GAP }));
+    });
+    var from = el('text', { x: LABEL, y: bottom + 10 });
+    from.textContent = '0';
+    var to = el('text', { x: W, y: bottom + 10, 'text-anchor': 'end' });
+    to.textContent = us(cycle) + ' µs';
+    svg.appendChild(from);
+    svg.appendChild(to);
+    box.appendChild(svg);
+
+    var diff = Math.round((cycle - sum) * 1000) / 1000;
+    if (!fixed) {
+      note.textContent = 'The cycle is the sum of the entries, ' + us(sum) + ' µs.';
+    } else if (diff === 0) {
+      note.textContent = 'The entries fill the ' + us(cycle) + ' µs cycle.';
+    } else if (diff > 0) {
+      note.textContent = 'The entries take ' + us(sum) + ' of the ' + us(cycle) + ' µs cycle; the gates of the last entry hold for the remaining ' + us(diff) + ' µs.';
+    } else {
+      note.textContent = 'The entries take ' + us(sum) + ' µs, ' + us(-diff) + ' more than the cycle; the list is cut off where the cycle ends.';
+      note.classList.add('gate-sum-over');
+    }
+  }
+
+  function renderAll(root) {
+    (root || document).querySelectorAll('form[data-gate-editor]').forEach(render);
+  }
+
+  function onEdit(e) {
+    var form = e.target.closest && e.target.closest('form[data-gate-editor]');
+    if (form) render(form);
+  }
+  document.addEventListener('input', onEdit);
+  document.addEventListener('change', onEdit);
+
+  // Rows are added and removed by the list handler above; a guard band
+  // is a new row with every gate closed.
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest && e.target.closest('.btn-add-row, .cfg-delete-row');
+    var form = btn && btn.closest('form[data-gate-editor]');
+    if (!form) return;
+    var guard = btn.getAttribute('data-guard-us');
+    if (guard) {
+      var row = form.querySelector('tbody[id^="gate-entries-"] tr:last-child');
+      if (row) {
+        row.querySelectorAll('input[type=checkbox]').forEach(function(c) { c.checked = false; });
+        row.querySelector('input[type=number]').value = guard;
+      }
+    }
+    setTimeout(function() { render(form); }, 0);
+  });
+
+  document.addEventListener('DOMContentLoaded', function() { renderAll(); });
+  document.addEventListener('htmx:afterSettle', function(e) { renderAll(e.target); });
 })();

@@ -188,7 +188,8 @@ class Device(Transport):
                       f"attempt {attempt}/{tries}")
                 time.sleep(1)
 
-        self.ncc = Manager(session)
+        # Longer than the server's own 120 s, so its error is what we see
+        self.ncc = Manager(session, timeout=150)
 
     def _ly_bootstrap(self, yangdir):
         self.modules["ietf-netconf-monitoring"] = {
@@ -364,16 +365,16 @@ class Device(Transport):
                               f"nc:operation=\"{dst}\"" if dst else "")
 
         last_error = None
-        for _ in range(0, retries):
+        for attempt in range(0, retries):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
                 last_error = None
                 break
             except RpcError as _e:
                 last_error = _e
-                print(f"Failed sending edit-config RPC: {_e}  Retrying ...")
-                time.sleep(1)
-                continue
+                if attempt < retries - 1:
+                    print(f"Failed sending edit-config RPC: {_e}  Retrying ...")
+                    time.sleep(1)
 
         # If we exhausted all retries, raise the last error
         if last_error is not None:

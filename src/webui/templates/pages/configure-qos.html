@@ -1,0 +1,107 @@
+{{define "configure-qos.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/qos"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">QoS Profiles{{template "field-info" (index $d "profile")}}</div>
+  {{template "qos-tabs" "profiles"}}
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Trust{{template "field-info" (index $d "trust")}}</th>
+          <th>Traffic class table{{template "field-info" (index $d "table")}}</th>
+          <th>Ports</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $p := .Profiles}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="qos-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$p.Name}}
+            </button>
+          </td>
+          <td>{{with index $.TrustText $p.Trust}}{{.}}{{else}}{{$p.Trust}}{{end}}</td>
+          <td>{{$p.TableText}}</td>
+          <td>{{if $p.Ports}}{{join $p.Ports ", "}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/qos/profiles/{{$p.Name}}"
+                    hx-confirm="Delete profile {{$p.Name}}?{{if $p.Ports}} It is used by {{join $p.Ports ", "}}.{{end}}"
+                    hx-swap="none" title="Delete profile">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-qos-{{$i}}">
+          <td colspan="5" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/qos/profiles/{{$p.Name}}" hx-swap="none">
+                {{$pp := printf "/ietf-system:system/infix-qos:qos-profile=%s" $p.Name}}
+                <table class="info-table">
+                  <tr>
+                    <th>Description</th>
+                    <td><input class="cfg-input" type="text" name="description"
+                               value="{{$p.Description}}" placeholder="Optional description"></td>
+                    {{template "reset-cell" (dict "Path" (printf "%s/description" $pp) "Back" "/configure/qos" "What" "the description")}}
+                  </tr>
+                </table>
+                {{template "qos-settings-fields" (dict "P" $p "Path" $pp "Back" "/configure/qos" "Page" $)}}
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5"><span class="text-muted">No profiles.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div id="qos-profile-add" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/qos/profiles" hx-swap="none" class="user-add-inline">
+      <input class="cfg-input" type="text" name="name" required placeholder="name (e.g. edge)"
+             pattern="[A-Za-z0-9_][A-Za-z0-9_.-]*" maxlength="64">
+      <select class="cfg-input" name="template" aria-label="Start from" style="width:auto">
+        <option value="">Empty profile</option>
+        <optgroup label="From template">
+          {{range .Templates}}<option value="{{.Key}}" title="{{.Help}}">{{.Label}}</option>{{end}}
+        </optgroup>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="qos-profile-add">+ Add profile</button>
+  </div>
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}
+{{end}}

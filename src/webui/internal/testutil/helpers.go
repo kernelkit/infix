@@ -25,6 +25,8 @@ type MockFetcher struct {
 	Posts []string
 	// Datastores holds the raw JSON GetDatastore returns per datastore name.
 	Datastores map[string]json.RawMessage
+	// CopyError is what CopyDatastore fails with, nil for success.
+	CopyError error
 }
 
 func NewMockFetcher() *MockFetcher {
@@ -151,4 +153,4 @@ func (m *MockFetcher) PutDatastore(_ context.Context, _ string, _ json.RawMessag
 	return nil
 }
 
-func (m *MockFetcher) CopyDatastore(_ context.Context, _, _ string) error { return nil }
+func (m *MockFetcher) CopyDatastore(_ context.Context, _, _ string) error { return m.CopyError }

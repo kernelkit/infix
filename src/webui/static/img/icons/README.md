@@ -32,6 +32,8 @@ untouched.
 | nacm.svg          | users                 |
 | netbrowse.svg     | radar                 |
 | ntp.svg           | clock                 |
+| ptp.svg           | timer                 |
+| qos.svg           | sliders-horizontal    |
 | routes.svg        | git-compare-arrows    |
 | routing.svg       | git-compare-arrows    |
 | services.svg      | library-big           |
@@ -40,6 +42,7 @@ untouched.
 | system-advanced.svg| wrench               |
 | system-control.svg| power                 |
 | system.svg        | settings              |
+| tsn.svg           | chart-gantt           |
 | wifi.svg          | wifi                  |
 | wireguard.svg     | globe-lock            |
 

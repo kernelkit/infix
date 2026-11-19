@@ -423,7 +423,7 @@ func ospfNeighbor(neigh map[string]interface{}) map[string]interface{} {
 	return neighbor
 }
 
-// ospfAutoCostDefault is the reference bandwidth in Mbit/s that both
+// ospfAutoCostDefault is the reference bandwidth in Mbps that both
 // ospfd and ospf6d use unless configured otherwise.
 const ospfAutoCostDefault = 100000
 
