@@ -101,6 +101,8 @@ All notable changes to the project are documented in this file.
   - New shell tool `ptping`, which measures one-way latency with
     hardware-timestamped PTP probes and can tell where in a gate
     control list's cycle each probe left and arrived
+- NETCONF and RESTCONF requests now get 120 seconds to complete, up from
+  60.  A large change can take more than a minute on a small device
 
 ### Fixes
 

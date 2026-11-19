@@ -19,12 +19,12 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 # (connect, read) in seconds.  A firewall reload drops new connections
 # until it is done, which takes over half a minute on a single-core
-# system.  nginx gives up on rousette after 60 s and replies 504, so
+# system.  nginx gives up on rousette after 130 s and replies 504, so
 # only a lost request or reply reaches the read timeout.  Without one,
 # requests waits forever.  Reachability probes are retried by their
 # caller, so they give up sooner.
-TIMEOUT = (60, 90)
-PROBE_TIMEOUT = (10, 90)
+TIMEOUT = (60, 150)
+PROBE_TIMEOUT = (10, 150)
 
 @dataclass
 class Location:

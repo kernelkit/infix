@@ -188,7 +188,8 @@ class Device(Transport):
                       f"attempt {attempt}/{tries}")
                 time.sleep(1)
 
-        self.ncc = Manager(session)
+        # Longer than the server's own 120 s, so its error is what we see
+        self.ncc = Manager(session, timeout=150)
 
     def _ly_bootstrap(self, yangdir):
         self.modules["ietf-netconf-monitoring"] = {

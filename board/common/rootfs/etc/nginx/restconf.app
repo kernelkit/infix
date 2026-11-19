@@ -8,6 +8,9 @@ location ~ ^/(restconf|yang|.well-known)/ {
     grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     grpc_set_header X-Forwarded-Proto $scheme;
 
+    # A little longer than the RESTCONF server waits, see /etc/default/confd
+    grpc_read_timeout 130s;
+
     # Any error_page here stops the inherited one, 599 is never sent
     error_page 599 /50x.html;
 }
