@@ -5,9 +5,14 @@ Tests verifying system utilities and operational features:
 
  - Operational datastore query for all configuration
  - Support data collection with work-dir and GPG encryption
+ - On-change subscriptions to the operational datastore
 
 include::operational_all/Readme.adoc[]
 
 <<<
 
 include::support_collect/Readme.adoc[]
+
+<<<
+
+include::on_change/Readme.adoc[]

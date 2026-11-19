@@ -5,5 +5,8 @@
 - name: Support Data Collection
   case: support_collect/test.py
 
+- name: On-Change Subscription
+  case: on_change/test.py
+
 #- name: start_from_startup
 #  case: start_from_startup.py
