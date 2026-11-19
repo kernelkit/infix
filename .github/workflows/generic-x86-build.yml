@@ -3,6 +3,9 @@ name: Generic X86 GitHub Build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     if: github.repository != 'kernelkit/infix'

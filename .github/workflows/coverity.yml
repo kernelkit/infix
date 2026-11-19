@@ -13,6 +13,9 @@ env:
   SYSKLOGD_VERSION: 2.7.2
   WATCHDOGD_VERSION: '4.0'
 
+permissions:
+  contents: read
+
 jobs:
   coverity:
     if: ${{github.repository_owner == 'kernelkit'}}

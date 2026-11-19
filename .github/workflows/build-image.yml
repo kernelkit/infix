@@ -20,10 +20,16 @@ on:
           - acer-connect-vero-w6m
         default: 'raspberrypi-rpi64'
 
+permissions:
+  contents: read
+
 jobs:
   create-image:
     name: Create images for ${{ inputs.board }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

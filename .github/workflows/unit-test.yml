@@ -61,6 +61,9 @@ env:
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
   INFIX_BRANCH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_branch || inputs.infix_branch }}
 
+permissions:
+  contents: read
+
 jobs:
   unit-tests:
     name: Build ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}

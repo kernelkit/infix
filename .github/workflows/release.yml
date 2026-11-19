@@ -17,6 +17,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   set-version:
     if: github.repository == 'kernelkit/infix' && startsWith(github.ref, 'refs/tags/')
