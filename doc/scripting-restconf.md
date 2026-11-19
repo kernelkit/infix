@@ -714,6 +714,74 @@ can take up to 15 minutes.  Close the stream, or end the subscription
 with `delete-subscription` and the `id` from the reply, when you are
 done.
 
+### Subscribe to Changes
+
+To be told when operational data changes, subscribe with `on-change`
+and a filter for the data you want.  This subscription reports when an
+interface goes up or down:
+
+```bash
+~$ curl -sk -u admin:admin -X POST                                   \
+        -H 'Content-Type: application/yang-data+json'                \
+        -d '{"ietf-subscribed-notifications:input":{
+               "ietf-yang-push:datastore":"ietf-datastores:operational",
+               "ietf-yang-push:datastore-xpath-filter":"/ietf-interfaces:interfaces/interface/oper-status",
+               "ietf-yang-push:on-change":{},
+               "encoding":"encode-json"}}'                           \
+        https://example.local/restconf/operations/ietf-subscribed-notifications:establish-subscription
+```
+
+The stream starts with the current values in a `push-update`, followed
+by a `push-change-update` for every change:
+
+```json
+{
+  "ietf-restconf:notification": {
+    "ietf-yang-push:push-change-update": {
+      "id": 2,
+      "datastore-changes": {
+        "yang-patch": {
+          "patch-id": "patch-1",
+          "edit": [
+            {
+              "edit-id": "edit-1",
+              "operation": "replace",
+              "target": "/ietf-interfaces:interfaces/interface[name='e2']/oper-status",
+              "value": {
+                "ietf-interfaces:oper-status": "down"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "eventTime": "2026-11-19T09:39:39.286415871+00:00"
+  }
+}
+```
+
+The device reports changes to the interfaces and their addresses, the
+LLDP neighbors and the alarm list.  It does not report counters, read
+them with a GET.
+
+The `push-update` holds the values as they are when you subscribe.  An
+interface that went down and came back before that is only shown as
+up.  Set `"sync-on-start": false` inside `on-change` to skip the
+`push-update` and only get the changes.
+
+The device then reports every change by itself, in the order they
+happened.  The `patch-id` counts up from `patch-1` in each
+subscription, so a missing number means a change was lost.
+
+To get back in step after a lost connection, subscribe again and start
+over from the new `push-update`.  Opening the old stream again within
+the minute gives no new `push-update`, so changes from the time it was
+closed can be missing.
+
+A NETCONF client can make the same subscription.  Its notifications
+arrive on the session that subscribed, so there is no stream to open,
+and the subscription ends when the session does.
+
 ## Advanced Examples
 
 ### Makefile for Common Operations

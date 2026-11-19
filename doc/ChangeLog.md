@@ -148,6 +148,9 @@ All notable changes to the project are documented in this file.
   60.  A large change can take more than a minute on a small device
 - RESTCONF clients can now subscribe to notifications and read them as
   an event stream, see [Notifications][restconf-notif]
+- On-change subscriptions to the operational datastore, over NETCONF
+  and RESTCONF, now report when an interface, its addresses, the LLDP
+  neighbors or the alarm list change, see [Subscribe to Changes][on-change]
 
 ### Fixes
 
@@ -457,6 +460,7 @@ All notable changes to the project are documented in this file.
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [restconf-notif]: https://www.kernelkit.org/infix/latest/scripting-restconf/#notifications
+[on-change]: https://www.kernelkit.org/infix/latest/scripting-restconf/#subscribe-to-changes
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
