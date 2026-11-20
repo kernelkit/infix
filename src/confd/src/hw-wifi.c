@@ -687,16 +687,72 @@ static bool wifi_channel_supported(json_t *oper, int ch)
 	return false;
 }
 
+/* The first interface on the radio in a mode the radio does not list, if any */
+static const char *wifi_unsupported_mode(struct lyd_node *cifs, const char *radio, json_t *oper,
+					 const char **mode)
+{
+	json_t *modes = json_object_get(oper, "supported-modes");
+	struct lyd_node *cif;
+
+	if (!json_array_size(modes))
+		return NULL;
+
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		const char *r = lydx_get_cattr(lydx_get_child(cif, "wifi"), "radio");
+		bool found = false;
+		json_t *entry;
+		size_t i;
+
+		if (!r || strcmp(r, radio))
+			continue;
+
+		switch (wifi_get_mode(cif)) {
+		case wifi_ap:
+			*mode = "access-point";
+			break;
+		case wifi_mesh:
+			*mode = "mesh-point";
+			break;
+		case wifi_station:
+			*mode = "station";
+			break;
+		default:
+			continue;
+		}
+
+		json_array_foreach(modes, i, entry) {
+			if (json_is_string(entry) && !strcmp(json_string_value(entry), *mode))
+				found = true;
+		}
+		if (!found)
+			return lydx_get_cattr(cif, "name");
+	}
+
+	return NULL;
+}
+
 /* Refuse radio settings the hardware reports it cannot do */
 static int wifi_radio_validate(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
 			       const char *name, struct lyd_node *radio, json_t *components)
 {
 	json_t *oper = wifi_oper_radio(components, name);
 	const char *band, *channel, *width;
+	struct lyd_node *cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	const char *ifname, *mode;
 	json_t *oband = NULL, *max;
 	int ch = 0, aps;
 
-	if (!oper || !radio)
+	if (!oper)
+		return SR_ERR_OK;
+
+	ifname = wifi_unsupported_mode(cifs, name, oper, &mode);
+	if (ifname) {
+		sr_session_set_error_message(session, "%s: %s mode is not supported by %s",
+					     ifname, mode, name);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	if (!radio)
 		return SR_ERR_OK;
 
 	band = lydx_get_cattr(radio, "band");
@@ -740,7 +796,7 @@ static int wifi_radio_validate(sr_session_ctx_t *session, struct lyd_node *confi
 	}
 
 	max = json_object_get(json_object_get(oper, "max-interfaces"), "ap");
-	aps = wifi_radio_ap_count(lydx_get_descendant(config, "interfaces", "interface", NULL), name);
+	aps = wifi_radio_ap_count(cifs, name);
 	if (json_is_integer(max) && aps > json_integer_value(max)) {
 		sr_session_set_error_message(session, "%s: %d access points configured, this radio "
 					     "supports %lld", name, aps, json_integer_value(max));

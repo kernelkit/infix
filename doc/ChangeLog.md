@@ -31,9 +31,10 @@ All notable changes to the project are documented in this file.
   ones on every boot.  Requires a bootloader from v26.11.0 or later
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
-- Wi-Fi: a band, channel, channel width or number of access points the
-  radio does not support is now refused with an error when configured,
-  see [Wi-Fi][wifi]
+- Wi-Fi: a band, channel, channel width, interface mode or number of
+  access points the radio does not support is now refused with an error
+  when configured, see [Wi-Fi][wifi].  The modes a radio supports are
+  in its operational data
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module

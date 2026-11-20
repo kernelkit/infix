@@ -189,7 +189,9 @@ allow fewer.
 
 A band, channel, or channel width that the radio does not support is
 refused when the configuration is applied, as is more access points
-than the radio can carry.  The error names the radio and the setting.
+than the radio can carry, or an interface in a mode the radio lacks,
+e.g. a mesh point on a radio without 802.11s support.  The error names
+the radio or interface and the setting.
 Use `show hardware` to see what each radio supports.
 
 **2.4 GHz**
