@@ -24,6 +24,7 @@ image::topology.svg[WiFi radio settings the hardware cannot do are refused topol
 . Set up topology and attach to target DUT
 . Configure radio0 for 2.4GHz channel 1 with country code SE
 . Verify radio0 supports channel 13 but not channel 14
+. Verify radio0 supports access-point, station and mesh-point modes
 . Reject channel 36 in band 2.4GHz on radio0
 . Reject channel 14 in band 2.4GHz on radio0
 . Configure radio0 for 2.4GHz channel 13

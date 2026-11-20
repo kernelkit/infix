@@ -917,3 +917,17 @@ func TestHardwareRadioDriverSensor(t *testing.T) {
 		t.Fatalf("iwlwifi sensor not adopted by radio0: %v", got)
 	}
 }
+
+func TestSupportedModes(t *testing.T) {
+	got := supportedModes([]interface{}{"AP", "AP_VLAN", "mesh_point", "monitor", "station"})
+	want := []interface{}{"access-point", "mesh-point", "station"}
+
+	if len(got) != len(want) {
+		t.Fatalf("supportedModes = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("supportedModes = %v, want %v", got, want)
+		}
+	}
+}

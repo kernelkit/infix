@@ -1012,6 +1012,25 @@ func channelFromFrequency(freq int) (int, bool) {
 	}
 }
 
+// supportedModes maps the nl80211 interface types of a radio to the
+// modes an interface can be configured for.
+func supportedModes(iftypes interface{}) []interface{} {
+	names := map[string]string{
+		"AP":         "access-point",
+		"mesh_point": "mesh-point",
+		"station":    "station",
+	}
+	modes := make([]interface{}, 0, len(names))
+
+	raw, _ := iftypes.([]interface{})
+	for _, t := range raw {
+		if s, ok := t.(string); ok && names[s] != "" {
+			modes = append(modes, names[s])
+		}
+	}
+	return modes
+}
+
 // radioCapabilities lists the radios and the PHY info they were built
 // from so the sensors can be matched to them.
 func (c *HardwareCollector) radioCapabilities(ctx context.Context) ([]interface{}, map[string]map[string]interface{}) {
@@ -1048,6 +1067,10 @@ func (c *HardwareCollector) radioCapabilities(ctx context.Context) ([]interface{
 		}
 		if maxIf, ok := phyDetails["max-interfaces"].(map[string]interface{}); ok && len(maxIf) > 0 {
 			wifiRadioData["max-interfaces"] = maxIf
+		}
+
+		if modes := supportedModes(iwInfo["supported_iftypes"]); len(modes) > 0 {
+			wifiRadioData["supported-modes"] = modes
 		}
 
 		setIfPresent(wifiRadioData, "max-txpower", iwInfo, "max_txpower")

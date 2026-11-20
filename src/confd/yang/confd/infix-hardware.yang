@@ -26,7 +26,8 @@ module infix-hardware {
   revision 2026-11-04 {
     description "Add cpu container with the cores and clock frequencies of
                  the CPU.  Restrict the VPD vendor-extension list to
-                 administrators, it may hold the factory password hash.";
+                 administrators, it may hold the factory password hash.
+                 Add supported-modes to the Wi-Fi radio.";
     reference "internal";
   }
 
@@ -962,6 +963,20 @@ module infix-hardware {
         type string;
         description
           "Wi-Fi driver name (e.g., mt798x-wmac, ath10k).";
+      }
+
+      leaf-list supported-modes {
+        config false;
+        type enumeration {
+          enum access-point;
+          enum station;
+          enum mesh-point;
+        }
+        description
+          "Interface modes this radio supports.
+
+           An interface on the radio can only be configured for one of
+           these modes.";
       }
 
       container max-interfaces {

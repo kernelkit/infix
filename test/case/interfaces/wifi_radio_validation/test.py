@@ -30,11 +30,14 @@ def must_reject(target, radio, reason):
     raise AssertionError("configuration was accepted")
 
 
-def supported_channels(target):
+def radio_oper(target):
     data = target.get_data("/ietf-hardware:hardware/component[name='radio0']")
     radio = data["hardware"]["component"]["radio0"]
-    radio = radio.get("infix-hardware:wifi-radio") or radio.get("wifi-radio") or {}
-    return radio.get("supported-channels", [])
+    return radio.get("infix-hardware:wifi-radio") or radio.get("wifi-radio") or {}
+
+
+def supported_channels(target):
+    return radio_oper(target).get("supported-channels", [])
 
 
 with infamy.Test() as test:
@@ -51,6 +54,10 @@ with infamy.Test() as test:
     with test.step("Verify radio0 supports channel 13 but not channel 14"):
         until(lambda: 13 in supported_channels(target) and
               14 not in supported_channels(target), attempts=30)
+
+    with test.step("Verify radio0 supports access-point, station and mesh-point modes"):
+        modes = radio_oper(target).get("supported-modes", [])
+        assert {"access-point", "station", "mesh-point"} <= set(modes), modes
 
     with test.step("Reject channel 36 in band 2.4GHz on radio0"):
         must_reject(target, wifi.radio("radio0", band="2.4GHz", channel=36),

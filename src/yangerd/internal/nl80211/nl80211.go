@@ -172,6 +172,10 @@ func (c *Client) PhyInfo(phyName string) (map[string]interface{}, error) {
 				if combs := parseInterfaceCombinations(ad.Bytes()); len(combs) > 0 {
 					info["interface_combinations"] = combs
 				}
+			case unix.NL80211_ATTR_SUPPORTED_IFTYPES:
+				if types := parseIfaceLimitTypes(ad.Bytes()); len(types) > 0 {
+					info["supported_iftypes"] = types
+				}
 			case unix.NL80211_ATTR_WIPHY_TX_POWER_LEVEL:
 				info["max_txpower"] = int(ad.Uint32() / 100)
 			}
