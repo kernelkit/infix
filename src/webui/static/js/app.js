@@ -1309,7 +1309,57 @@ function setBlockEnabled(el, on) {
     form.querySelectorAll('input, textarea').forEach(function (i) { i.value = ''; });
     form.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
     resetMaskedInputs(form);
+    syncWifiRadioForm(form);
   }
+  // WiFi radio forms: offer only the bands the radio has, and only the
+  // channels of the selected band.  data-wifi-caps on the form is
+  // {radio: {band: [channel, ...]}}; the radio is data-wifi-radio or the
+  // form's radio-name select.  Without a band the channel stays 'auto'.
+  // want is the channel to select; keep adds it when the band lacks it.
+  function syncWifiRadioForm(form, want, keep) {
+    var bandSel = form.querySelector('select[name="band"]');
+    var chanSel = form.querySelector('select[name="channel"]');
+    if (!bandSel || !chanSel) return;
+    var caps = {};
+    try { caps = JSON.parse(form.getAttribute('data-wifi-caps') || '{}'); } catch (e) {}
+    var nameSel = form.querySelector('select[name="radio-name"]');
+    var radio = form.getAttribute('data-wifi-radio') || (nameSel ? nameSel.value : '');
+    var bands = caps[radio];
+    Array.prototype.forEach.call(bandSel.options, function (o) {
+      var off = !!(bands && o.value && !bands[o.value]);
+      if (off && o.selected && !keep) bandSel.value = '';
+      off = off && !o.selected;
+      o.hidden = off;
+      o.disabled = off;
+    });
+    if (want === undefined) want = chanSel.value;
+    var list = (bandSel.value && bands && bands[bandSel.value]) || [];
+    var values = ['auto'].concat(list.map(String));
+    if (keep && bandSel.value && want && values.indexOf(String(want)) < 0) values.push(String(want));
+    chanSel.textContent = '';
+    values.forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      chanSel.appendChild(o);
+    });
+    chanSel.value = values.indexOf(String(want)) < 0 ? 'auto' : String(want);
+  }
+  function syncWifiRadioForms(root) {
+    (root || document).querySelectorAll('[data-wifi-caps]').forEach(function (form) {
+      var chanSel = form.querySelector('select[name="channel"]');
+      var want = chanSel ? (chanSel.getAttribute('data-value') || chanSel.value) : undefined;
+      syncWifiRadioForm(form, want, true);
+    });
+  }
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.closest || !t.matches('select[name="band"], select[name="radio-name"]')) return;
+    var form = t.closest('[data-wifi-caps]');
+    if (form) syncWifiRadioForm(form);
+  });
+  document.addEventListener('DOMContentLoaded', function () { syncWifiRadioForms(); });
+  document.addEventListener('htmx:afterSwap', function (e) { syncWifiRadioForms(e.target); });
   // Strip the `.cfg-secret-shown` (eye-toggled "show") class from any
   // masked inputs inside `root`. Called whenever a fold-out form
   // transitions (open / clear / prefill / after-save) so a previous
@@ -1362,6 +1412,9 @@ function setBlockEnabled(el, on) {
         radioNameSel.insertBefore(injected, radioNameSel.firstChild);
         radioNameSel.selectedIndex = 0;
       }
+    }
+    if (form.hasAttribute('data-wifi-caps')) {
+      syncWifiRadioForm(form, opt.getAttribute('data-channel') || 'auto', true);
     }
   }
   document.addEventListener('click', function (e) {

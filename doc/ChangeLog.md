@@ -38,6 +38,9 @@ All notable changes to the project are documented in this file.
 - Wi-Fi: a radio without a band no longer accepts a channel, channel
   width or legacy rates.  They had no effect there and are dropped from
   the configuration on upgrade
+- WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
+  and the channel is picked from the channels of the selected band.
+  The country code is set in one place on the interfaces page
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module

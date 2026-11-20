@@ -59,6 +59,7 @@ type hwCompCfgRow struct {
 	DescAdminState  string
 	DescBand        string
 	DescChannel     string
+	RadioCaps       string
 }
 
 // hwAvailable is a detected-but-unconfigured component shown in the Add
@@ -82,6 +83,7 @@ type cfgHardwarePageData struct {
 	CountryOptions []schema.IdentityOption
 	DescCountry    string
 	BandOptions    []schema.IdentityOption
+	RadioCaps      string
 	Desc           map[string]string
 	Error          string
 }
@@ -147,6 +149,7 @@ func (h *ConfigureHardwareHandler) Overview(w http.ResponseWriter, r *http.Reque
 	}
 
 	data.CountryCode = cfgWrap.wifiCountryCode()
+	data.RadioCaps = wifiRadioCaps(operWrap.Hardware.Component)
 	configured := make(map[string]bool, len(cfgWrap.Hardware.Component))
 	for _, c := range cfgWrap.Hardware.Component {
 		configured[c.Name] = true
@@ -211,6 +214,7 @@ func (h *ConfigureHardwareHandler) buildRow(c hwComponentJSON, class string, dat
 		row.BandOptions = data.BandOptions
 		row.DescBand = data.Desc["band"]
 		row.DescChannel = data.Desc["channel"]
+		row.RadioCaps = data.RadioCaps
 		if c.WiFiRadio != nil {
 			row.Band = c.WiFiRadio.Band
 			row.Channel = wifiChannelString(c.WiFiRadio.Channel)
@@ -321,6 +325,11 @@ func (h *ConfigureHardwareHandler) SaveWiFiCountry(w http.ResponseWriter, r *htt
 		renderSaveError(w, err)
 		return
 	}
+	// The interfaces page shows the code in its radio forms too.
+	if r.FormValue("page") == "interfaces" {
+		renderSavedRedirect(w, "WiFi country code saved", "/configure/interfaces")
+		return
+	}
 	renderSaved(w, "WiFi country code saved")
 }
 
@@ -358,14 +367,14 @@ func parseWiFiRadio(r *http.Request) (map[string]any, error) {
 		radio["band"] = band
 	}
 	if ch := strings.TrimSpace(r.FormValue("channel")); ch != "" {
-		// YANG union: uint16 (1..196) or the literal "auto". Coerce
-		// numeric input so the RESTCONF payload type-matches the union.
+		// YANG union: uint16 or the literal "auto". Coerce numeric
+		// input so the RESTCONF payload type-matches the union.
 		if ch == "auto" {
 			radio["channel"] = "auto"
 		} else {
 			n, err := strconv.Atoi(ch)
-			if err != nil || n < 1 || n > 196 {
-				return nil, fmt.Errorf("channel must be 'auto' or a number 1–196")
+			if err != nil {
+				return nil, fmt.Errorf("channel must be 'auto' or a number")
 			}
 			radio["channel"] = n
 		}

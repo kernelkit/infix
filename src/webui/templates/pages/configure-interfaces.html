@@ -435,7 +435,7 @@
                                   data-add-form="{{$radioFormID}}"
                                   data-show="{{$radioFormID}}">+ New</button>
                         </div>
-                        <div id="{{$radioFormID}}" hidden class="ks-create-form">
+                        <div id="{{$radioFormID}}" hidden class="ks-create-form" data-wifi-caps="{{$.WizardRadioCaps}}">
                           <input type="hidden" name="picker-id" value="{{$radioPickerID}}">
                           <table class="info-table info-table-sub">
                             <tr>
@@ -453,18 +453,13 @@
                             </tr>
                             <tr>
                               <th>Country code</th>
-                              <td>
-                                <select class="cfg-input cfg-input-sm" name="country-code">
-                                  <option value="" selected>— keep current (all radios) —</option>
-                                  {{range $.WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
-                                </select>
-                              </td>
+                              <td>{{$.WizardCountry}}{{if ne $.WizardCountry $.WizardCountryApplied}} <span class="badge badge-warning">not applied yet, bands and channels below are those of {{$.WizardCountryApplied}}</span>{{else}} <span class="text-muted">set for all radios in the WiFi card on this page</span>{{end}}</td>
                             </tr>
                             <tr>
                               <th>Band</th>
                               <td>
                                 <select class="cfg-input cfg-input-sm" name="band">
-                                  <option value="" selected>— auto-pick band —</option>
+                                  <option value="" selected>— auto (station only) —</option>
                                   {{range $.WizardBandOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
                                 </select>
                               </td>
@@ -472,8 +467,9 @@
                             <tr>
                               <th>Channel</th>
                               <td>
-                                <input class="cfg-input cfg-input-sm" type="text" name="channel"
-                                       value="auto" pattern="auto|[0-9]+">
+                                <select class="cfg-input cfg-input-sm" name="channel">
+                                  <option value="auto">auto</option>
+                                </select>
                               </td>
                             </tr>
                           </table>
@@ -1170,6 +1166,26 @@
   </div>
 </section>
 
+{{if and .HasWifiRadio .WifiCountryOptions}}
+<section class="info-card">
+  <div class="card-header">WiFi</div>
+  <form hx-post="/configure/hardware/wifi" hx-swap="none" hx-trigger="change">
+    <input type="hidden" name="page" value="interfaces">
+    <table class="info-table">
+      <tr>
+        <th>Country code{{template "field-info" (index $d "wifi-country")}}</th>
+        <td>
+          <select class="cfg-input cfg-input-sm" name="country-code" required>
+            {{range .WifiCountryOptions}}<option value="{{.Value}}" {{if eq .Value $.WizardCountry}}selected{{end}}>{{.Label}}</option>{{end}}
+          </select>
+        </td>
+        <td class="cfg-reset-col">{{if ne .WizardCountry .WizardCountryApplied}}<span class="badge badge-warning">Apply to get the bands and channels of {{.WizardCountry}}</span> {{end}}<span class="cfg-save-status"></span></td>
+      </tr>
+    </table>
+  </form>
+</section>
+{{end}}
+
 {{/* ── Add Interface modal dialog ───────────────────────────────────────
      One <form>, multiple per-type <fieldset disabled>. The type pulldown
      enables exactly one fieldset so only its inputs submit. Bridge type
@@ -1551,7 +1567,7 @@
                         data-add-form="add-wifi-radio-form"
                         data-show="add-wifi-radio-form">+ New</button>
               </div>
-              <div id="add-wifi-radio-form" hidden class="ks-create-form">
+              <div id="add-wifi-radio-form" hidden class="ks-create-form" data-wifi-caps="{{.WizardRadioCaps}}">
                 <table class="info-table info-table-sub">
                   <tr>
                     <th>Radio name</th>
@@ -1568,29 +1584,24 @@
                     </td>
                   </tr>
                   <tr>
-                    <th>Country code{{template "field-info" "ISO 3166-1 country code, one setting shared by every radio in the system. Regulators tie the channel/power allowance to this; '00' (world) cannot be used in Access Point mode."}}</th>
-                    <td>
-                      <select class="cfg-input cfg-input-sm" name="country-code" id="add-wifi-radio-country">
-                        <option value="" selected>— keep current (all radios) —</option>
-                        {{range .WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
-                      </select>
-                    </td>
+                    <th>Country code{{template "field-info" (index $d "wifi-country")}}</th>
+                    <td>{{.WizardCountry}}{{if ne $.WizardCountry $.WizardCountryApplied}} <span class="badge badge-warning">not applied yet, bands and channels below are those of {{$.WizardCountryApplied}}</span>{{else}} <span class="text-muted">set for all radios in the WiFi card on this page</span>{{end}}</td>
                   </tr>
                   <tr>
-                    <th>Band{{template "field-info" "WiFi band — leave empty to let the driver pick. Required on the radio component for Access Point mode."}}</th>
+                    <th>Band{{template "field-info" "WiFi band, of those the radio supports. Leave empty for a station, which follows its access point. Required for Access Point and Mesh Point mode."}}</th>
                     <td>
                       <select class="cfg-input cfg-input-sm" name="band" id="add-wifi-radio-band">
-                        <option value="" selected>— auto-pick band —</option>
+                        <option value="" selected>— auto (station only) —</option>
                         {{range .WizardBandOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
                       </select>
                     </td>
                   </tr>
                   <tr>
-                    <th>Channel{{template "field-info" "'auto' or a numeric channel (1–196). Required on the radio for AP mode."}}</th>
+                    <th>Channel{{template "field-info" "'auto' or one of the channels the radio supports on the selected band. A channel needs a band."}}</th>
                     <td>
-                      <input class="cfg-input cfg-input-sm" type="text" name="channel"
-                             id="add-wifi-radio-channel"
-                             value="auto" pattern="auto|[0-9]+">
+                      <select class="cfg-input cfg-input-sm" name="channel" id="add-wifi-radio-channel">
+                        <option value="auto">auto</option>
+                      </select>
                     </td>
                   </tr>
                 </table>

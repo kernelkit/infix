@@ -200,8 +200,12 @@ type cfgIfacePageData struct {
 	WizardSymKeys         []symKeyEntry     // for WiFi PSK picker (Name + decoded cleartext)
 	WizardWifiRadios      []wifiRadioOption // configured (in candidate)
 	WizardAvailableRadios []string          // detected (operational) but not yet in candidate
-	WizardCountryOptions  []schema.IdentityOption
+	WizardCountry         string // box-wide country code in the candidate
+	WizardCountryApplied  string // the one in effect, the channel lists follow it
+	WifiCountryOptions    []schema.IdentityOption
+	HasWifiRadio          bool // a radio is detected
 	WizardBandOptions     []schema.IdentityOption
+	WizardRadioCaps       string // per-radio bands and channels, JSON
 
 	STPProtoOptions []schema.IdentityOption
 	LagModeOptions  []schema.IdentityOption
@@ -215,10 +219,9 @@ type cfgIfacePageData struct {
 	WiFiSecOptionsAP   []schema.IdentityOption
 	WiFiSecOptionsSta  []schema.IdentityOption
 	WiFiQuerierOptions []schema.IdentityOption
-	// CountryOptions / BandOptions reused by the mirrored radio editor
-	// on WiFi interface rows (same enums as the wizard).
-	CountryOptions []schema.IdentityOption
-	BandOptions    []schema.IdentityOption
+	// BandOptions reused by the mirrored radio editor on WiFi
+	// interface rows (same enum as the wizard).
+	BandOptions []schema.IdentityOption
 	// PSKKeys is the keystore symmetric-keys list for the WiFi security
 	// secret picker (mirrors WizardSymKeys without the cleartext).
 	PSKKeys []symKeyEntry
@@ -300,6 +303,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"vxlan-remote":       descOr(mgr, ifPath+"/infix-interfaces:vxlan/remote", "Remote unicast or multicast address for the VXLAN overlay."),
 			"vxlan-vni":          descOr(mgr, ifPath+"/infix-interfaces:vxlan/vni", "VXLAN Network Identifier (0–16777215). Pick a unique VNI per overlay segment."),
 			"vxlan-port":         descOr(mgr, ifPath+"/infix-interfaces:vxlan/remote-port", "Destination UDP port. IANA-assigned VXLAN port is 4789 (default)."),
+			"wifi-country":       schema.DescriptionOf(mgr, hwWiFiCountryPath),
 			"wg-key":             descOr(mgr, ifPath+"/infix-interfaces:wireguard/private-key", "Reference to the WireGuard private key (X25519/Curve25519) stored in the keystore."),
 			"wg-port":            descOr(mgr, ifPath+"/infix-interfaces:wireguard/listen-port", "Local UDP port to listen on for incoming WireGuard traffic (default 51820)."),
 			"wifi-radio":         descOr(mgr, ifPath+"/infix-interfaces:wifi/radio", "Parent WiFi radio (hardware component, class=wifi). Configure the radio's band, channel, and country code in Configure › Hardware first."),
@@ -364,19 +368,12 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		// by the inline "+ New radio" form in the WiFi fieldset and by
 		// the WiFi interface row's mirrored radio editor.
 		const radioSchemaPath = "/ietf-hardware:hardware/component/infix-hardware:wifi-radio"
-		data.WizardCountryOptions = schema.OptionsFor(mgr, hwWiFiCountryPath)
 		data.WizardBandOptions = schema.OptionsFor(mgr, radioSchemaPath+"/band")
-		data.CountryOptions = data.WizardCountryOptions
+		data.WifiCountryOptions = schema.OptionsFor(mgr, hwWiFiCountryPath)
 		data.BandOptions = data.WizardBandOptions
-		// Cross-module typedef enums (iwcc:country-code, wifi-band)
-		// don't always resolve through goyang's Entry tree, so the
-		// schema lookup can return empty. Fall back to a small set so
-		// the WiFi radio editor at least shows pickable values.
-		if len(data.CountryOptions) == 0 {
-			for _, cc := range []string{"00", "US", "GB", "DE", "SE", "FI", "JP", "AU"} {
-				data.CountryOptions = append(data.CountryOptions, schema.IdentityOption{Value: cc, Label: cc})
-			}
-		}
+		// Cross-module typedef enums (wifi-band) don't always resolve
+		// through goyang's Entry tree, so the schema lookup can return
+		// empty. Fall back so the radio editor shows pickable values.
 		if len(data.BandOptions) == 0 {
 			data.BandOptions = []schema.IdentityOption{
 				{Value: "2.4GHz", Label: "2.4 GHz"},
@@ -516,12 +513,16 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		if shortClass(c.Class) != classWiFi {
 			continue
 		}
+		data.HasWifiRadio = true
 		if configuredRadioNames[c.Name] {
 			continue
 		}
 		data.WizardAvailableRadios = append(data.WizardAvailableRadios, c.Name)
 	}
 	sort.Strings(data.WizardAvailableRadios)
+	data.WizardRadioCaps = wifiRadioCaps(hw.Hardware.Component)
+	data.WizardCountry = hwCand.wifiCountryCode()
+	data.WizardCountryApplied = hw.wifiCountryCode()
 
 	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface, profiles)
 	// Copy page-level descriptions + DHCP option enums onto each row so the
@@ -1093,7 +1094,6 @@ func (h *ConfigureInterfacesHandler) WizardCreateRadio(w http.ResponseWriter, r 
 		return
 	}
 	name := strings.TrimSpace(r.FormValue("radio-name"))
-	country := strings.TrimSpace(r.FormValue("country-code"))
 	band := strings.TrimSpace(r.FormValue("band"))
 	channel := strings.TrimSpace(r.FormValue("channel"))
 	if name == "" {
@@ -1111,8 +1111,8 @@ func (h *ConfigureInterfacesHandler) WizardCreateRadio(w http.ResponseWriter, r 
 		radio["channel"] = "auto"
 	} else {
 		n, err := strconv.Atoi(channel)
-		if err != nil || n < 1 || n > 196 {
-			renderSaveError(w, fmt.Errorf("channel must be 'auto' or a number 1–196"))
+		if err != nil {
+			renderSaveError(w, fmt.Errorf("channel must be 'auto' or a number"))
 			return
 		}
 		radio["channel"] = n
@@ -1121,16 +1121,6 @@ func (h *ConfigureInterfacesHandler) WizardCreateRadio(w http.ResponseWriter, r 
 		"name":                      name,
 		"class":                     "infix-hardware:wifi",
 		"infix-hardware:wifi-radio": radio,
-	}
-	// The country code is one setting for every radio; the form offers
-	// it here so a first radio can be set up in one go.
-	if country != "" {
-		cc := map[string]any{"infix-hardware:country-code": country}
-		if err := h.RC.Put(r.Context(), candidatePath+hwWiFiCountryPath, cc); err != nil {
-			log.Printf("wizard create radio %q: country: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
 	}
 	body := map[string]any{"ietf-hardware:component": []map[string]any{comp}}
 	path := candidatePath + "/ietf-hardware:hardware/component=" + url.PathEscape(name)
@@ -1831,14 +1821,9 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 	// candidate untouched.
 	p := restconf.NewYangPatch(candidatePath)
 	// Hardware half: the radio's band and channel when the form carried
-	// them, and the box-wide country code when it was picked.  A form
-	// whose user only touched the WiFi side leaves hardware alone.
+	// them.  A form whose user only touched the WiFi side leaves
+	// hardware alone.
 	hw := map[string]any{}
-	if strings.TrimSpace(r.FormValue("country-code")) != "" {
-		hw["infix-hardware:wifi"] = map[string]any{
-			"country-code": strings.TrimSpace(r.FormValue("country-code")),
-		}
-	}
 	if strings.TrimSpace(r.FormValue("band")) != "" || strings.TrimSpace(r.FormValue("channel")) != "" {
 		rc, err := parseWiFiRadio(r)
 		if err != nil {

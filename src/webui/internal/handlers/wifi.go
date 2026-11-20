@@ -4,12 +4,14 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +41,36 @@ type wifiBandJSON struct {
 	HTCapable  bool   `json:"ht-capable"`
 	VHTCapable bool   `json:"vht-capable"`
 	HECapable  bool   `json:"he-capable"`
+	Channels   []int  `json:"channels"`
+}
+
+// wifiRadioCaps maps each detected radio to the channels of every band it
+// supports, as JSON for the radio forms' data-wifi-caps attribute.  The
+// band keys match the configured band names.
+func wifiRadioCaps(comps []hwComponentJSON) string {
+	caps := map[string]map[string][]int{}
+	for _, c := range comps {
+		if c.WiFiRadio == nil || len(c.WiFiRadio.Bands) == 0 {
+			continue
+		}
+		bands := map[string][]int{}
+		for _, b := range c.WiFiRadio.Bands {
+			if b.Name == "" {
+				continue
+			}
+			ch := b.Channels
+			if ch == nil {
+				ch = []int{}
+			}
+			bands[strings.ReplaceAll(b.Name, " ", "")] = ch
+		}
+		caps[c.Name] = bands
+	}
+	out, err := json.Marshal(caps)
+	if err != nil {
+		return "{}"
+	}
+	return string(out)
 }
 
 // hwComponentWiFiJSON is a minimal hardware component used for the wifi page.
