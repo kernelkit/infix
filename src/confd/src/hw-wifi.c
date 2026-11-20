@@ -670,13 +670,15 @@ static bool wifi_channel_in_band(const char *band, int ch)
 	return ch >= 1 && ch <= 233;
 }
 
-static bool wifi_channel_supported(json_t *oper, int ch)
+static bool wifi_channel_supported(json_t *oper, json_t *oband, int ch)
 {
 	json_t *list = json_object_get(oper, "supported-channels");
 	json_t *entry;
 	size_t i;
 
-	if (!json_array_size(list))
+	if (oband)
+		list = json_object_get(oband, "channels");
+	else if (!json_array_size(list))
 		return true;
 
 	json_array_foreach(list, i, entry) {
@@ -777,7 +779,7 @@ static int wifi_radio_validate(sr_session_ctx_t *session, struct lyd_node *confi
 
 	/* The channel list follows the country code, which is not applied yet when it changes */
 	if (ch && !lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code") &&
-	    !wifi_channel_supported(oper, ch)) {
+	    !wifi_channel_supported(oper, oband, ch)) {
 		sr_session_set_error_message(session, "%s: channel %d is not available on this radio "
 					     "with the current country code", name, ch);
 		return SR_ERR_INVAL_ARG;
