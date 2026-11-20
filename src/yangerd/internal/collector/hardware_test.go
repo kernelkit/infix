@@ -555,11 +555,15 @@ func TestHardwareUniqueNames(t *testing.T) {
 func TestHardwareBandNameOptional(t *testing.T) {
 	out := convertPhyInfo(map[string]interface{}{
 		"bands": []interface{}{
-			map[string]interface{}{"band": 1, "name": "2.4 GHz"},
+			map[string]interface{}{"band": 1, "name": "2.4 GHz",
+				"frequencies": []interface{}{2437, 2412, 2484}},
 			map[string]interface{}{"band": 2},
 		},
 	})
 	bands := out["bands"].([]interface{})
+	if got := fmt.Sprint(bands[0].(map[string]interface{})["channels"]); got != "[1 6 14]" {
+		t.Fatalf("channels = %s, want [1 6 14]", got)
+	}
 	if bands[0].(map[string]interface{})["name"] != "2.4 GHz" {
 		t.Fatalf("known band name lost: %v", bands[0])
 	}

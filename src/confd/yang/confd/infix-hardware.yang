@@ -27,7 +27,8 @@ module infix-hardware {
     description "Add cpu container with the cores and clock frequencies of
                  the CPU.  Restrict the VPD vendor-extension list to
                  administrators, it may hold the factory password hash.
-                 Add supported-modes to the Wi-Fi radio.";
+                 Add supported-modes to the Wi-Fi radio, and the channels of
+                 each band.";
     reference "internal";
   }
 
@@ -1031,6 +1032,12 @@ module infix-hardware {
           type boolean;
           description
             "High Efficiency (802.11ax/Wi-Fi 6) support.";
+        }
+
+        leaf-list channels {
+          type uint16;
+          description
+            "Channels of this band usable in the current regulatory domain.";
         }
       }
 

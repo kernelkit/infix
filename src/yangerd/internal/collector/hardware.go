@@ -951,6 +951,9 @@ func convertPhyInfo(phyInfo map[string]interface{}) map[string]interface{} {
 		if v, ok := band["he_capable"].(bool); ok && v {
 			bandData["he-capable"] = true
 		}
+		if channels := bandChannels(band); len(channels) > 0 {
+			bandData["channels"] = channels
+		}
 		bands = append(bands, bandData)
 	}
 	result["bands"] = bands
@@ -995,6 +998,25 @@ func convertPhyInfo(phyInfo map[string]interface{}) map[string]interface{} {
 	result["max-interfaces"] = maxInterfaces
 
 	return result
+}
+
+func bandChannels(band map[string]interface{}) []interface{} {
+	freqsRaw, _ := band["frequencies"].([]interface{})
+	seen := make(map[int]bool, len(freqsRaw))
+	channels := make([]int, 0, len(freqsRaw))
+	for _, freqRaw := range freqsRaw {
+		if ch, ok := channelFromFrequency(toInt(freqRaw)); ok && !seen[ch] {
+			seen[ch] = true
+			channels = append(channels, ch)
+		}
+	}
+	sort.Ints(channels)
+
+	out := make([]interface{}, 0, len(channels))
+	for _, ch := range channels {
+		out = append(out, ch)
+	}
+	return out
 }
 
 func channelFromFrequency(freq int) (int, bool) {

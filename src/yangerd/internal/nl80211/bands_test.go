@@ -1,6 +1,7 @@
 package nl80211
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mdlayher/netlink"
@@ -15,14 +16,15 @@ func TestFinalizeBandsDropsUnsupported(t *testing.T) {
 		1: {frequencies: []interface{}{5180, 5200}, vhtCapable: true},
 		2: {frequencies: []interface{}{58320, 60480}},
 		4: {frequencies: []interface{}{902, 904}},
+		3: {disabled: []interface{}{5955, 5975}, heCapable: true},
 	}
 
 	var names []string
 	for _, raw := range finalizeBands(bands) {
 		names = append(names, raw.(map[string]interface{})["name"].(string))
 	}
-	if len(names) != 2 || names[0] != "2.4 GHz" || names[1] != "5 GHz" {
-		t.Fatalf("bands = %v, want [2.4 GHz 5 GHz]", names)
+	if got := strings.Join(names, ","); got != "2.4 GHz,5 GHz,6 GHz" {
+		t.Fatalf("bands = %v, want 2.4, 5 and the disabled 6 GHz", names)
 	}
 }
 
