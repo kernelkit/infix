@@ -2157,7 +2157,7 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 		row := cfgIfaceRow{
 			ifaceJSON:    iface,
 			TypeSlug:     slug,
-			TypeDisplay:  typeDisplay(slug),
+			TypeDisplay:  slug,
 			AdminEnabled: iface.Enabled == nil || *iface.Enabled,
 			IsBridge:     slug == "bridge",
 			IsBridgePort: iface.BridgePort != nil,
@@ -2608,32 +2608,6 @@ func typeSlug(yangType string) string {
 	return s
 }
 
-func typeDisplay(slug string) string {
-	switch slug {
-	case "bridge":
-		return "Bridge"
-	case "lag":
-		return "LAG"
-	case "ethernet":
-		return "Ethernet"
-	case "vlan":
-		return "VLAN"
-	case "loopback":
-		return "Loopback"
-	case "dummy":
-		return "Dummy"
-	case "wireguard":
-		return "WireGuard"
-	case "veth":
-		return "veth"
-	case "gre", "gretap":
-		return strings.ToUpper(slug)
-	case "vxlan":
-		return "VXLAN"
-	}
-	return slug
-}
-
 func typeOrder(slug string) int {
 	switch slug {
 	case "bridge":
@@ -2750,7 +2724,7 @@ func buildIfaceTypeList(mgr *schema.Manager) []ifaceTypeOption {
 		opts = append(opts, ifaceTypeOption{
 			Slug:  name,
 			Value: ifTypePrefix + name,
-			Label: typeDisplay(name),
+			Label: name,
 		})
 	}
 	sort.SliceStable(opts, func(i, j int) bool {
