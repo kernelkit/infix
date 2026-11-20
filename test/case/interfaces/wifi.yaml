@@ -19,3 +19,6 @@
 
 - name: WiFi channel survey on a connected radio
   case: wifi_channel_survey/test.py
+
+- name: WiFi radio settings the hardware cannot do are refused
+  case: wifi_radio_validation/test.py
