@@ -59,7 +59,7 @@ jobs:
 
             **Commit:** ${{ github.sha }}
             **Built:** ${{ github.run_id }}
-          artifacts: "*.tar.gz,*.qcow2"
+          artifacts: "*.tar.gz,*.qcow2,*.pkg,*.img.xz"
 
       - name: Summary
         run: |
