@@ -289,9 +289,7 @@ func mergeBandAttrs(bi *bandInfo, data []byte) {
 	for nad.Next() {
 		switch nad.Type() {
 		case unix.NL80211_BAND_ATTR_FREQS:
-			if freqs := parseBandFrequencies(nad.Bytes()); len(freqs) > 0 {
-				bi.frequencies = freqs
-			}
+			bi.frequencies = append(bi.frequencies, parseBandFrequencies(nad.Bytes())...)
 		case unix.NL80211_BAND_ATTR_HT_CAPA:
 			if nad.Uint16() != 0 {
 				bi.htCapable = true

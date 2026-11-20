@@ -108,6 +108,8 @@ All notable changes to the project are documented in this file.
 
 - LLDP: a device with a Wi-Fi interface announced its WLAN access
   point capability as disabled
+- Wi-Fi: the supported channels of a radio listed only the last
+  channel of each band, and the 6 GHz band could be missing
 - A change to a VLAN filtering bridge with spanning tree enabled was
   not applied once its ports were members of a VLAN
 - Disabling spanning tree on a bridge left its ports disabled, and the

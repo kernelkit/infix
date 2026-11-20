@@ -999,9 +999,11 @@ func convertPhyInfo(phyInfo map[string]interface{}) map[string]interface{} {
 
 func channelFromFrequency(freq int) (int, bool) {
 	switch {
-	case freq >= 2412 && freq <= 2484:
+	case freq == 2484:
+		return 14, true
+	case freq >= 2412 && freq <= 2472:
 		return (freq - 2407) / 5, true
-	case freq >= 5170 && freq <= 5825:
+	case freq >= 5160 && freq <= 5885:
 		return (freq - 5000) / 5, true
 	case freq >= 5955 && freq <= 7115:
 		return (freq - 5950) / 5, true

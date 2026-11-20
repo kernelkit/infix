@@ -1,6 +1,11 @@
 package nl80211
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mdlayher/netlink"
+	"golang.org/x/sys/unix"
+)
 
 // Only 2.4, 5 and 6 GHz are reported; hwsim's S1G and 60 GHz bands are
 // dropped rather than listed as "Unknown".
@@ -31,5 +36,33 @@ func TestManufacturerFor(t *testing.T) {
 		if got := manufacturerFor(driver); got != want {
 			t.Errorf("manufacturerFor(%q) = %q, want %q", driver, got, want)
 		}
+	}
+}
+
+// A split wiphy dump carries one frequency per message.
+func TestMergeBandsAcrossMessages(t *testing.T) {
+	bands := map[uint16]*bandInfo{}
+
+	for _, freq := range []uint32{2412, 2417, 2422} {
+		ae := netlink.NewAttributeEncoder()
+		ae.Nested(0, func(band *netlink.AttributeEncoder) error {
+			band.Nested(unix.NL80211_BAND_ATTR_FREQS, func(freqs *netlink.AttributeEncoder) error {
+				freqs.Nested(0, func(entry *netlink.AttributeEncoder) error {
+					entry.Uint32(unix.NL80211_FREQUENCY_ATTR_FREQ, freq)
+					return nil
+				})
+				return nil
+			})
+			return nil
+		})
+		data, err := ae.Encode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		mergeBands(bands, data)
+	}
+
+	if got := len(bands[0].frequencies); got != 3 {
+		t.Fatalf("frequencies = %v, want 3 entries", bands[0].frequencies)
 	}
 }
