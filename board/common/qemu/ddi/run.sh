@@ -513,6 +513,15 @@ gen_net()
     gen_net_tap
 }
 
+gen_wifi()
+{
+    echo "${IX_QEMU_WIFI_RADIOS:-0}" >"$qdir"/wifi
+
+    q sect fw_cfg
+    q param name opt/wifi
+    q param file "$qdir"/wifi
+}
+
 gen_gdb()
 {
     # Create a UNIX socket on the host that is connected to a virtio
@@ -563,6 +572,7 @@ EOF
     gen_serial
     gen_disks
     gen_net
+    gen_wifi
     gen_gdb
 
     if [ "$IX_QEMU_LOADER_QEMU" ]; then

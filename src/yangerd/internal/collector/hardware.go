@@ -951,6 +951,9 @@ func convertPhyInfo(phyInfo map[string]interface{}) map[string]interface{} {
 		if v, ok := band["he_capable"].(bool); ok && v {
 			bandData["he-capable"] = true
 		}
+		if channels := bandChannels(band); len(channels) > 0 {
+			bandData["channels"] = channels
+		}
 		bands = append(bands, bandData)
 	}
 	result["bands"] = bands
@@ -997,17 +1000,57 @@ func convertPhyInfo(phyInfo map[string]interface{}) map[string]interface{} {
 	return result
 }
 
+func bandChannels(band map[string]interface{}) []interface{} {
+	freqsRaw, _ := band["frequencies"].([]interface{})
+	seen := make(map[int]bool, len(freqsRaw))
+	channels := make([]int, 0, len(freqsRaw))
+	for _, freqRaw := range freqsRaw {
+		if ch, ok := channelFromFrequency(toInt(freqRaw)); ok && !seen[ch] {
+			seen[ch] = true
+			channels = append(channels, ch)
+		}
+	}
+	sort.Ints(channels)
+
+	out := make([]interface{}, 0, len(channels))
+	for _, ch := range channels {
+		out = append(out, ch)
+	}
+	return out
+}
+
 func channelFromFrequency(freq int) (int, bool) {
 	switch {
-	case freq >= 2412 && freq <= 2484:
+	case freq == 2484:
+		return 14, true
+	case freq >= 2412 && freq <= 2472:
 		return (freq - 2407) / 5, true
-	case freq >= 5170 && freq <= 5825:
+	case freq >= 5160 && freq <= 5885:
 		return (freq - 5000) / 5, true
 	case freq >= 5955 && freq <= 7115:
 		return (freq - 5950) / 5, true
 	default:
 		return 0, false
 	}
+}
+
+// supportedModes maps the nl80211 interface types of a radio to the
+// modes an interface can be configured for.
+func supportedModes(iftypes interface{}) []interface{} {
+	names := map[string]string{
+		"AP":         "access-point",
+		"mesh_point": "mesh-point",
+		"station":    "station",
+	}
+	modes := make([]interface{}, 0, len(names))
+
+	raw, _ := iftypes.([]interface{})
+	for _, t := range raw {
+		if s, ok := t.(string); ok && names[s] != "" {
+			modes = append(modes, names[s])
+		}
+	}
+	return modes
 }
 
 // radioCapabilities lists the radios and the PHY info they were built
@@ -1046,6 +1089,10 @@ func (c *HardwareCollector) radioCapabilities(ctx context.Context) ([]interface{
 		}
 		if maxIf, ok := phyDetails["max-interfaces"].(map[string]interface{}); ok && len(maxIf) > 0 {
 			wifiRadioData["max-interfaces"] = maxIf
+		}
+
+		if modes := supportedModes(iwInfo["supported_iftypes"]); len(modes) > 0 {
+			wifiRadioData["supported-modes"] = modes
 		}
 
 		setIfPresent(wifiRadioData, "max-txpower", iwInfo, "max_txpower")

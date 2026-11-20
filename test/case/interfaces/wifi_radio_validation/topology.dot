@@ -1,0 +1,30 @@
+graph "wifi-radio-validation" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt> mgmt }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	target [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | target",
+	    pos="6,0!",
+	    requires="infix",
+	];
+
+	cell [
+	    label="cell",
+	    pos="9,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
+
+	target:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+}

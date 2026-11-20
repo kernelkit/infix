@@ -156,7 +156,9 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 
 **⚠ Must match your physical location for legal compliance! ⚠**
 
-- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
+- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode).  Only a radio used
+  for a station can go without a band, and then `channel`, `channel-width`
+  and `legacy-rates` cannot be set either.  Automatically enables
   appropriate Wi-Fi standards:
     - 2.4GHz: 802.11n/ax
     - 5GHz: 802.11n/ac/ax
@@ -186,6 +188,13 @@ Each band strikes a different balance between range and capacity.  The
 `country-code` decides which channels are legal in your location; the
 lists below are the common allocations, and your regulatory domain may
 allow fewer.
+
+A band, channel, or channel width that the radio does not support is
+refused when the configuration is applied, as is more access points
+than the radio can carry, or an interface in a mode the radio lacks,
+e.g. a mesh point on a radio without 802.11s support.  The error names
+the radio or interface and the setting.
+Use `show hardware` to see what each radio supports.
 
 **2.4 GHz**
 

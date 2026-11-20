@@ -26,7 +26,10 @@ module infix-hardware {
   revision 2026-11-04 {
     description "Add cpu container with the cores and clock frequencies of
                  the CPU.  Restrict the VPD vendor-extension list to
-                 administrators, it may hold the factory password hash.";
+                 administrators, it may hold the factory password hash.
+                 Add supported-modes to the Wi-Fi radio, and the channels of
+                 each band.  A Wi-Fi radio without a band takes no channel,
+                 channel-width or legacy-rates.";
     reference "internal";
   }
 
@@ -806,11 +809,15 @@ module infix-hardware {
           }
         }
         default "auto";
+        must ". = 'auto' or ../band" {
+          error-message "A channel requires the band to be set.";
+        }
         description
           "Operating channel number.
 
            Required for Access Point mode.
            Not used in Station mode (station uses AP's channel).
+           A specific channel requires the band to be set.
 
            Channel availability depends on:
            - Configured band (2.4/5/6 GHz)
@@ -848,6 +855,9 @@ module infix-hardware {
         must "../band != '2.4GHz' or . = 'auto' or . = '20MHz' or . = '40MHz'" {
           error-message "80/160 MHz channel width requires 5 GHz or 6 GHz band.";
         }
+        must ". = 'auto' or ../band" {
+          error-message "A channel width requires the band to be set.";
+        }
         description
           "Channel bandwidth.
 
@@ -861,6 +871,9 @@ module infix-hardware {
       leaf legacy-rates {
         type boolean;
         default false;
+        must ". = 'false' or ../band" {
+          error-message "Legacy rates require the band to be set.";
+        }
         description
           "Allow legacy 802.11b rates (1, 2, 5.5, 11 Mbps) on 2.4 GHz.
 
@@ -964,6 +977,20 @@ module infix-hardware {
           "Wi-Fi driver name (e.g., mt798x-wmac, ath10k).";
       }
 
+      leaf-list supported-modes {
+        config false;
+        type enumeration {
+          enum access-point;
+          enum station;
+          enum mesh-point;
+        }
+        description
+          "Interface modes this radio supports.
+
+           An interface on the radio can only be configured for one of
+           these modes.";
+      }
+
       container max-interfaces {
         config false;
         description
@@ -1016,6 +1043,12 @@ module infix-hardware {
           type boolean;
           description
             "High Efficiency (802.11ax/Wi-Fi 6) support.";
+        }
+
+        leaf-list channels {
+          type uint16;
+          description
+            "Channels of this band usable in the current regulatory domain.";
         }
       }
 

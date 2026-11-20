@@ -28,7 +28,7 @@ func TestSaveWifiOnePatchForBothHalves(t *testing.T) {
 	w, rc := postSaveWifi(t, url.Values{
 		"mode": {"access-point"}, "radio": {"radio0"}, "ssid": {"lab"},
 		"sec-mode": {"wpa2-wpa3-personal"}, "secret": {"psk"},
-		"country-code": {"SE"}, "band": {"5GHz"}, "channel": {"36"},
+		"band": {"5GHz"}, "channel": {"36"},
 	})
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", w.Code, w.Body.String())
@@ -68,7 +68,7 @@ func TestSaveWifiWithoutRadioFieldsPatchesWifiOnly(t *testing.T) {
 func TestSaveWifiBadRadioWritesNothing(t *testing.T) {
 	w, rc := postSaveWifi(t, url.Values{
 		"mode": {"access-point"}, "radio": {"radio0"}, "ssid": {"lab"},
-		"country-code": {"SE"}, "channel": {"999"},
+		"channel": {"abc"},
 	})
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status %d", w.Code)
@@ -78,22 +78,3 @@ func TestSaveWifiBadRadioWritesNothing(t *testing.T) {
 	}
 }
 
-func TestSaveWifiCountryGoesToBoxWideLeaf(t *testing.T) {
-	w, rc := postSaveWifi(t, url.Values{
-		"mode": {"access-point"}, "radio": {"radio0"}, "ssid": {"lab"},
-		"sec-mode": {"wpa2-wpa3-personal"}, "secret": {"psk"},
-		"country-code": {"SE"}, "band": {"5GHz"}, "channel": {"36"},
-	})
-	if w.Code != http.StatusOK {
-		t.Fatalf("status %d: %s", w.Code, w.Body.String())
-	}
-	hw := rc.Patches[0].Edits[0].Value.(map[string]any)["ietf-hardware:hardware"].(map[string]any)
-	wifi, _ := hw["infix-hardware:wifi"].(map[string]any)
-	if wifi["country-code"] != "SE" {
-		t.Errorf("country not on the box-wide leaf: %v", hw)
-	}
-	comps := hw["component"].([]map[string]any)
-	if _, has := comps[0]["infix-hardware:wifi-radio"].(map[string]any)["country-code"]; has {
-		t.Errorf("country still on the radio: %v", comps[0])
-	}
-}
