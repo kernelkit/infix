@@ -28,7 +28,8 @@ module infix-hardware {
                  the CPU.  Restrict the VPD vendor-extension list to
                  administrators, it may hold the factory password hash.
                  Add supported-modes to the Wi-Fi radio, and the channels of
-                 each band.";
+                 each band.  A Wi-Fi radio without a band takes no channel,
+                 channel-width or legacy-rates.";
     reference "internal";
   }
 
@@ -808,11 +809,15 @@ module infix-hardware {
           }
         }
         default "auto";
+        must ". = 'auto' or ../band" {
+          error-message "A channel requires the band to be set.";
+        }
         description
           "Operating channel number.
 
            Required for Access Point mode.
            Not used in Station mode (station uses AP's channel).
+           A specific channel requires the band to be set.
 
            Channel availability depends on:
            - Configured band (2.4/5/6 GHz)
@@ -850,6 +855,9 @@ module infix-hardware {
         must "../band != '2.4GHz' or . = 'auto' or . = '20MHz' or . = '40MHz'" {
           error-message "80/160 MHz channel width requires 5 GHz or 6 GHz band.";
         }
+        must ". = 'auto' or ../band" {
+          error-message "A channel width requires the band to be set.";
+        }
         description
           "Channel bandwidth.
 
@@ -863,6 +871,9 @@ module infix-hardware {
       leaf legacy-rates {
         type boolean;
         default false;
+        must ". = 'false' or ../band" {
+          error-message "Legacy rates require the band to be set.";
+        }
         description
           "Allow legacy 802.11b rates (1, 2, 5.5, 11 Mbps) on 2.4 GHz.
 

@@ -35,6 +35,9 @@ All notable changes to the project are documented in this file.
   access points the radio does not support is now refused with an error
   when configured, see [Wi-Fi][wifi].  The modes a radio supports are
   in its operational data, as are the channels of each band
+- Wi-Fi: a radio without a band no longer accepts a channel, channel
+  width or legacy rates.  They had no effect there and are dropped from
+  the configuration on upgrade
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module

@@ -156,7 +156,9 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 
 **⚠ Must match your physical location for legal compliance! ⚠**
 
-- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
+- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode).  Only a radio used
+  for a station can go without a band, and then `channel`, `channel-width`
+  and `legacy-rates` cannot be set either.  Automatically enables
   appropriate Wi-Fi standards:
     - 2.4GHz: 802.11n/ax
     - 5GHz: 802.11n/ac/ax
