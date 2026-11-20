@@ -187,6 +187,11 @@ Each band strikes a different balance between range and capacity.  The
 lists below are the common allocations, and your regulatory domain may
 allow fewer.
 
+A band, channel, or channel width that the radio does not support is
+refused when the configuration is applied, as is more access points
+than the radio can carry.  The error names the radio and the setting.
+Use `show hardware` to see what each radio supports.
+
 **2.4 GHz**
 
 Channels 1-13 are available in most of the world, 1-11 in the US and

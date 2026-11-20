@@ -599,6 +599,191 @@ static void wifi_gen_helpers(FILE *fp, glob_t *gl)
 }
 
 /*
+ * The hardware component list as yangerd has it.  NULL when yangerd
+ * does not answer, as during boot, and nothing can be checked.
+ */
+static json_t *wifi_oper_components(void)
+{
+	json_t *root, *list;
+	FILE *pp;
+
+	pp = popenf("r", "yangerctl get /ietf-hardware:hardware 2>/dev/null");
+	if (!pp)
+		return NULL;
+
+	root = json_loadf(pp, 0, NULL);
+	pclose(pp);
+
+	list = json_object_get(json_object_get(root, "ietf-hardware:hardware"), "component");
+	json_incref(list);
+	json_decref(root);
+
+	return list;
+}
+
+/* What the hardware reports for a radio, NULL when it is not present */
+static json_t *wifi_oper_radio(json_t *components, const char *name)
+{
+	json_t *comp;
+	size_t i;
+
+	json_array_foreach(components, i, comp) {
+		const char *nm = json_string_value(json_object_get(comp, "name"));
+
+		if (nm && !strcmp(nm, name))
+			return json_object_get(comp, "infix-hardware:wifi-radio");
+	}
+
+	return NULL;
+}
+
+/* yangerd names the bands "5 GHz", the configuration "5GHz" */
+static json_t *wifi_oper_band(json_t *oper, const char *band)
+{
+	json_t *entry;
+	size_t i;
+
+	json_array_foreach(json_object_get(oper, "bands"), i, entry) {
+		const char *nm = json_string_value(json_object_get(entry, "name"));
+		const char *b = band;
+
+		while (nm && *nm && *b) {
+			if (*nm == ' ')
+				nm++;
+			else if (*nm++ != *b++)
+				break;
+		}
+		if (nm && !*nm && !*b)
+			return entry;
+	}
+
+	return NULL;
+}
+
+static bool wifi_channel_in_band(const char *band, int ch)
+{
+	if (!strcmp(band, "2.4GHz"))
+		return ch >= 1 && ch <= 14;
+	if (!strcmp(band, "5GHz"))
+		return ch >= 32 && ch <= 177;
+
+	return ch >= 1 && ch <= 233;
+}
+
+static bool wifi_channel_supported(json_t *oper, int ch)
+{
+	json_t *list = json_object_get(oper, "supported-channels");
+	json_t *entry;
+	size_t i;
+
+	if (!json_array_size(list))
+		return true;
+
+	json_array_foreach(list, i, entry) {
+		if (json_integer_value(entry) == ch)
+			return true;
+	}
+
+	return false;
+}
+
+/* Refuse radio settings the hardware reports it cannot do */
+static int wifi_radio_validate(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+			       const char *name, struct lyd_node *radio, json_t *components)
+{
+	json_t *oper = wifi_oper_radio(components, name);
+	const char *band, *channel, *width;
+	json_t *oband = NULL, *max;
+	int ch = 0, aps;
+
+	if (!oper || !radio)
+		return SR_ERR_OK;
+
+	band = lydx_get_cattr(radio, "band");
+	channel = lydx_get_cattr(radio, "channel");
+	width = lydx_get_cattr(radio, "channel-width");
+	if (channel && strcmp(channel, "auto"))
+		ch = atoi(channel);
+
+	if (band && json_array_size(json_object_get(oper, "bands"))) {
+		oband = wifi_oper_band(oper, band);
+		if (!oband) {
+			sr_session_set_error_message(session, "%s: band %s is not supported by this radio",
+						     name, band);
+			return SR_ERR_INVAL_ARG;
+		}
+	}
+
+	if (ch && band && !wifi_channel_in_band(band, ch)) {
+		sr_session_set_error_message(session, "%s: channel %d is not a %s channel", name, ch, band);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	/* The channel list follows the country code, which is not applied yet when it changes */
+	if (ch && !lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code") &&
+	    !wifi_channel_supported(oper, ch)) {
+		sr_session_set_error_message(session, "%s: channel %d is not available on this radio "
+					     "with the current country code", name, ch);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	if (oband && width && strcmp(width, "auto") && strcmp(width, "20MHz")) {
+		bool ht  = json_is_true(json_object_get(oband, "ht-capable"));
+		bool vht = json_is_true(json_object_get(oband, "vht-capable"));
+		bool he  = json_is_true(json_object_get(oband, "he-capable"));
+
+		if (!he && !(strcmp(width, "40MHz") ? vht : ht)) {
+			sr_session_set_error_message(session, "%s: channel width %s is not supported "
+						     "by this radio on %s", name, width, band);
+			return SR_ERR_INVAL_ARG;
+		}
+	}
+
+	max = json_object_get(json_object_get(oper, "max-interfaces"), "ap");
+	aps = wifi_radio_ap_count(lydx_get_descendant(config, "interfaces", "interface", NULL), name);
+	if (json_is_integer(max) && aps > json_integer_value(max)) {
+		sr_session_set_error_message(session, "%s: %d access points configured, this radio "
+					     "supports %lld", name, aps, json_integer_value(max));
+		return SR_ERR_INVAL_ARG;
+	}
+
+	return SR_ERR_OK;
+}
+
+/* Check every changed radio against the hardware, with a single query */
+int wifi_radios_validate(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff)
+{
+	struct lyd_node *difs, *dif, *cif;
+	json_t *components = NULL;
+	int rc = SR_ERR_OK;
+
+	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
+	LYX_LIST_FOR_EACH(difs, dif, "component") {
+		const char *name = lydx_get_cattr(dif, "name");
+		const char *class;
+
+		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
+		class = lydx_get_cattr(cif, "class");
+		if (!class || strcmp(class, "infix-hardware:wifi"))
+			continue;
+
+		if (!components) {
+			components = wifi_oper_components();
+			if (!components)
+				break;
+		}
+
+		rc = wifi_radio_validate(session, config, diff, name,
+					 lydx_get_child(cif, "wifi-radio"), components);
+		if (rc)
+			break;
+	}
+	json_decref(components);
+
+	return rc;
+}
+
+/*
  * The country code is one setting for every radio.  Apply the
  * regulatory domain here, not from hostapd, so a radio without an
  * interface is in the right domain too.
