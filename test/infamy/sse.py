@@ -1,11 +1,10 @@
 """RESTCONF notifications as server-sent events, RFC 8650"""
 import json
-import queue
 import threading
-import time
 from urllib.parse import urlparse
 
 from infamy.restconf import requests_workaround
+from infamy.transport import Events
 
 
 def subscribe(target, params):
@@ -15,12 +14,11 @@ def subscribe(target, params):
     return output["ietf-restconf-subscribed-notifications:uri"]
 
 
-class Stream:
-    """An open event stream, its notifications are queued as dicts"""
+class Stream(Events):
+    """An open event stream"""
 
     def __init__(self, target, uri):
-        self.events = queue.Queue()
-        self.closed = threading.Event()
+        super().__init__()
         self.reply = requests_workaround("GET", f"{target.url_base}{urlparse(uri).path}",
                                          None, {"Accept": "text/event-stream"},
                                          target.auth, stream=True)
@@ -40,16 +38,3 @@ class Stream:
         except Exception as err:
             print(f"Stream read failed: {err}")
         self.closed.set()
-
-    def wait_for(self, match, timeout):
-        """Return the first queued notification match() accepts, or None"""
-        end = time.time() + timeout
-        while True:
-            try:
-                event = self.events.get(timeout=max(end - time.time(), 0.01))
-            except queue.Empty:
-                return None
-            if match(event):
-                return event
-            if time.time() >= end:
-                return None

@@ -18,7 +18,9 @@ import netconf_client.connect
 import netconf_client.ncclient
 import netconf_client.session
 import paramiko
-from infamy.transport import Transport,infer_put_dict
+import json
+import threading
+from infamy.transport import Events, Transport, infer_put_dict
 from netconf_client.error import RpcError
 from . import env, netutil, coverage
 
@@ -97,6 +99,50 @@ class NccGetSchemaReply:
         self.ele = fromstring(raw.xml.decode())
         self.ele = self.ele.find("{urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring}data")
         self.schema = self.ele.text
+
+
+class Subscription(Events):
+    """Notifications of one subscription, on a NETCONF session of its own"""
+
+    def __init__(self, dev, params):
+        super().__init__()
+        self.ly = dev.ly
+        self.ncc = Manager(dev._ncc_connect(dev.location), timeout=150)
+        mod = self.ly.get_module("ietf-subscribed-notifications")
+        rpc = mod.parse_data_dict({"establish-subscription": params}, rpc=True)
+        xml = rpc.print_mem("xml", with_siblings=True, pretty=False)
+
+        # The server resolves the module names in the filter as XML prefixes
+        xmlns = "".join(f' xmlns:{m["name"]}="{m["namespace"]}"' for m in
+                        dev._modules_in_xpath(params.get("ietf-yang-push:datastore-xpath-filter", "")))
+        self.ncc.dispatch(xml.replace("<establish-subscription", "<establish-subscription" + xmlns, 1))
+        threading.Thread(target=self._read, daemon=True).start()
+
+    def _event(self, notification):
+        """The notification as a dict, without the NETCONF envelope"""
+        event = {}
+        for child in notification:
+            if lxml.etree.QName(child).localname == "eventTime":
+                event["eventTime"] = child.text
+                continue
+            op = self.ly.parse_op("xml", libyang.IOType.MEMORY, lxml.etree.tostring(child),
+                                  libyang.DataType.NOTIF_YANG)
+            event.update(json.loads(op.print_mem("json", with_siblings=True)))
+
+        return event
+
+    def _read(self):
+        try:
+            while self.ncc.session.thread.is_alive():
+                notification = self.ncc.take_notification(timeout=1)
+                if not notification:
+                    continue
+                event = self._event(notification.notification_ele)
+                print(json.dumps(event))
+                self.events.put(event)
+        except Exception as err:
+            print(f"Notification read failed: {err}")
+        self.closed.set()
 
 
 @dataclass
@@ -479,6 +525,10 @@ class Device(Transport):
                 output[leaf] = node.text.strip()
 
         return output
+
+    def subscribe(self, params):
+        """Establish a subscription on a session of its own"""
+        return Subscription(self, params)
 
     def call_action(self, xpath, input_data=None):
         """Call NETCONF action (contextualized RPC), XML version.

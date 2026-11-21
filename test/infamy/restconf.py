@@ -494,6 +494,12 @@ class Device(Transport):
         return {k: [str(e) for e in v] if isinstance(v, list) else str(v)
                 for k, v in output.items()}
 
+    def subscribe(self, params):
+        """Establish a subscription and open its event stream"""
+        from infamy import sse
+
+        return sse.Stream(self, sse.subscribe(self, {**params, "encoding": "encode-json"}))
+
     def get_dict(self, xpath=None, parse=True):
         """NETCONF compat function, just wraps get_data"""
         return self.get_data(xpath, parse)
