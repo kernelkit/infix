@@ -15,6 +15,7 @@
 #define MAX_TC     8
 #define FRAME_OVERHEAD 22	/* Ethernet header, VLAN tag and FCS beyond the MTU */
 #define MAX_GATE_ENTRIES 1024	/* where the port names no limit of its own */
+#define MAX_MBPS   1000000	/* 1 Tbps, bounds a speed read from the system */
 #define NSEC_PER_SEC 1000000000ULL
 
 /*
@@ -575,6 +576,15 @@ static long qos_max_speed(const char *ifname)
 	return max;
 }
 
+/* Mbps to bits per second, a gigabit for a speed no port links at. */
+static uint64_t qos_bps(long mbps)
+{
+	if (mbps <= 0 || mbps > MAX_MBPS)
+		mbps = 1000;
+
+	return (uint64_t)mbps * 1000000;
+}
+
 /* The port's highest rate in bits per second, a gigabit when it is virtual. */
 static uint64_t qos_port_rate(const char *ifname)
 {
@@ -583,7 +593,7 @@ static uint64_t qos_port_rate(const char *ifname)
 	if (!speed)
 		speed = qos_sysfs_long(ifname, "speed", 1000);
 
-	return (uint64_t)speed * 1000000;
+	return qos_bps(speed);
 }
 
 /* Link rate in bits per second, the port's highest while the link is down. */
@@ -591,7 +601,7 @@ static uint64_t qos_link_rate(const char *ifname)
 {
 	long speed = qos_sysfs_long(ifname, "speed", 0);
 
-	return speed ? (uint64_t)speed * 1000000 : qos_port_rate(ifname);
+	return speed ? qos_bps(speed) : qos_port_rate(ifname);
 }
 
 /*
