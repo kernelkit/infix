@@ -555,11 +555,15 @@ func TestHardwareUniqueNames(t *testing.T) {
 func TestHardwareBandNameOptional(t *testing.T) {
 	out := convertPhyInfo(map[string]interface{}{
 		"bands": []interface{}{
-			map[string]interface{}{"band": 1, "name": "2.4 GHz"},
+			map[string]interface{}{"band": 1, "name": "2.4 GHz",
+				"frequencies": []interface{}{2437, 2412, 2484}},
 			map[string]interface{}{"band": 2},
 		},
 	})
 	bands := out["bands"].([]interface{})
+	if got := fmt.Sprint(bands[0].(map[string]interface{})["channels"]); got != "[1 6 14]" {
+		t.Fatalf("channels = %s, want [1 6 14]", got)
+	}
 	if bands[0].(map[string]interface{})["name"] != "2.4 GHz" {
 		t.Fatalf("known band name lost: %v", bands[0])
 	}
@@ -915,5 +919,19 @@ func TestHardwareRadioDriverSensor(t *testing.T) {
 	temp := getComponentByName(got, "radio0-temp")
 	if temp == nil || temp["parent"] != "radio0" {
 		t.Fatalf("iwlwifi sensor not adopted by radio0: %v", got)
+	}
+}
+
+func TestSupportedModes(t *testing.T) {
+	got := supportedModes([]interface{}{"AP", "AP_VLAN", "mesh_point", "monitor", "station"})
+	want := []interface{}{"access-point", "mesh-point", "station"}
+
+	if len(got) != len(want) {
+		t.Fatalf("supportedModes = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("supportedModes = %v, want %v", got, want)
+		}
 	}
 }

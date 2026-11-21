@@ -172,6 +172,10 @@ func (c *Client) PhyInfo(phyName string) (map[string]interface{}, error) {
 				if combs := parseInterfaceCombinations(ad.Bytes()); len(combs) > 0 {
 					info["interface_combinations"] = combs
 				}
+			case unix.NL80211_ATTR_SUPPORTED_IFTYPES:
+				if types := parseIfaceLimitTypes(ad.Bytes()); len(types) > 0 {
+					info["supported_iftypes"] = types
+				}
 			case unix.NL80211_ATTR_WIPHY_TX_POWER_LEVEL:
 				info["max_txpower"] = int(ad.Uint32() / 100)
 			}
@@ -259,7 +263,8 @@ func parseWiphyIdent(data []byte) (int, string) {
 }
 
 type bandInfo struct {
-	frequencies []interface{}
+	frequencies []interface{} // usable in the regulatory domain
+	disabled    []interface{}
 	htCapable   bool
 	vhtCapable  bool
 	heCapable   bool
@@ -289,9 +294,9 @@ func mergeBandAttrs(bi *bandInfo, data []byte) {
 	for nad.Next() {
 		switch nad.Type() {
 		case unix.NL80211_BAND_ATTR_FREQS:
-			if freqs := parseBandFrequencies(nad.Bytes()); len(freqs) > 0 {
-				bi.frequencies = freqs
-			}
+			enabled, disabled := parseBandFrequencies(nad.Bytes())
+			bi.frequencies = append(bi.frequencies, enabled...)
+			bi.disabled = append(bi.disabled, disabled...)
 		case unix.NL80211_BAND_ATTR_HT_CAPA:
 			if nad.Uint16() != 0 {
 				bi.htCapable = true
@@ -318,13 +323,13 @@ func finalizeBands(m map[uint16]*bandInfo) []interface{} {
 	out := make([]interface{}, 0, len(keys))
 	for _, k := range keys {
 		bi := m[uint16(k)]
-		if len(bi.frequencies) == 0 && !bi.htCapable && !bi.vhtCapable && !bi.heCapable {
+		if len(bi.frequencies) == 0 && len(bi.disabled) == 0 && !bi.htCapable && !bi.vhtCapable && !bi.heCapable {
 			continue
 		}
 		// Infix supports 2.4, 5 and 6 GHz only.  Hardware may expose
 		// others, like S1G and 60 GHz on hwsim, that are neither
 		// configured nor reported.
-		name := detectBandName(bi.frequencies)
+		name := detectBandName(append(append([]interface{}{}, bi.frequencies...), bi.disabled...))
 		if name == "Unknown" {
 			continue
 		}
@@ -340,22 +345,24 @@ func finalizeBands(m map[uint16]*bandInfo) []interface{} {
 	return out
 }
 
-func parseBandFrequencies(data []byte) []interface{} {
-	out := make([]interface{}, 0)
-
+func parseBandFrequencies(data []byte) (enabled, disabled []interface{}) {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
-		return out
+		return nil, nil
 	}
 
 	for ad.Next() {
-		freq, ok := parseFrequencyEntry(ad.Bytes())
-		if ok {
-			out = append(out, freq)
+		freq, off := parseFrequencyEntry(ad.Bytes())
+		switch {
+		case freq == 0:
+		case off:
+			disabled = append(disabled, freq)
+		default:
+			enabled = append(enabled, freq)
 		}
 	}
 
-	return out
+	return enabled, disabled
 }
 
 func parseFrequencyEntry(data []byte) (int, bool) {
@@ -376,11 +383,7 @@ func parseFrequencyEntry(data []byte) (int, bool) {
 		}
 	}
 
-	if disabled || freq == 0 {
-		return 0, false
-	}
-
-	return freq, true
+	return freq, disabled
 }
 
 func detectBandName(freqs []interface{}) string {

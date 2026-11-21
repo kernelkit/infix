@@ -331,6 +331,21 @@ config IX_QEMU_NET_MODEL
 
 endmenu
 
+menu "Wireless"
+
+config IX_QEMU_WIFI_RADIOS
+	int "Number of virtual Wi-Fi radios"
+	default 0
+	help
+	  Number of simulated 802.11 radios (mac80211_hwsim) to create
+	  in the guest.  With 0, the default, the guest has no radios.
+
+	  Set a small number, e.g. 2, for local AP and station
+	  experiments.  The radios only reach each other inside this
+	  one guest.
+
+endmenu
+
 config IX_QEMU_EXTRA
 	string "Extra QEMU options"
 

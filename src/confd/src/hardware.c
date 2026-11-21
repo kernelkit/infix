@@ -145,6 +145,12 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 	wifi_country_change(config, diff, event);
 
+	if (event == SR_EV_CHANGE) {
+		rc = wifi_radios_validate(session, config, diff);
+		if (rc)
+			return rc;
+	}
+
 	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		const char *name = lydx_get_cattr(dif, "name");

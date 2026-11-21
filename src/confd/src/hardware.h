@@ -28,6 +28,7 @@ void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *
 			  const char *band, struct confd *confd);
 
 /* hw-wifi.c */
+int wifi_radios_validate(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff);
 void wifi_country_change(struct lyd_node *config, struct lyd_node *diff, sr_event_t event);
 int wifi_radio_change(struct lyd_node *config, struct lyd_node *cif, sr_event_t event, struct confd *confd);
 

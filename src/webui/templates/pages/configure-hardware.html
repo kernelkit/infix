@@ -23,7 +23,7 @@
   {{if .CountryOptions}}
   <section class="info-card info-grid-span-2">
     <div class="card-header">WiFi</div>
-    <form hx-post="/configure/hardware/wifi" hx-swap="none">
+    <form hx-post="/configure/hardware/wifi" hx-swap="none" hx-trigger="change">
       <table class="info-table">
         <tr>
           <th>Country code{{template "field-info" .DescCountry}}</th>
@@ -32,10 +32,7 @@
               {{range .CountryOptions}}<option value="{{.Value}}" {{if eq .Value $.CountryCode}}selected{{end}}>{{.Label}}</option>{{end}}
             </select>
           </td>
-          <td class="cfg-reset-col">
-            <button class="btn btn-primary btn-sm" type="submit">Save</button>
-            <span class="cfg-save-status"></span>
-          </td>
+          <td class="cfg-reset-col"><span class="cfg-save-status"></span></td>
         </tr>
       </table>
     </form>
@@ -183,7 +180,8 @@
 {{define "wifi-radio-form"}}
 {{$p := printf "/ietf-hardware:hardware/component=%s" .Name}}
 {{$rp := printf "%s/infix-hardware:wifi-radio" $p}}
-<form hx-post="/configure/hardware/wifi/{{.Name}}" hx-swap="none" class="cfg-radio-form">
+<form hx-post="/configure/hardware/wifi/{{.Name}}" hx-swap="none" class="cfg-radio-form"
+      data-wifi-caps="{{.RadioCaps}}" data-wifi-radio="{{.Name}}">
   <table class="info-table">
     <tr>
       <th>Band{{template "field-info" .DescBand}}</th>
@@ -204,9 +202,10 @@
     <tr>
       <th>Channel{{template "field-info" .DescChannel}}</th>
       <td>
-        <input class="cfg-input cfg-input-sm" type="text" name="channel"
-               value="{{.Channel}}"
-               pattern="auto|[0-9]+" style="width:8rem">
+        <select class="cfg-input cfg-input-sm" name="channel" data-value="{{.Channel}}">
+          <option value="auto">auto</option>
+          {{if and .Channel (ne .Channel "auto")}}<option value="{{.Channel}}" selected>{{.Channel}}</option>{{end}}
+        </select>
       </td>
       <td class="cfg-reset-col">
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"

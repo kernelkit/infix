@@ -31,6 +31,16 @@ All notable changes to the project are documented in this file.
   ones on every boot.  Requires a bootloader from v26.11.0 or later
 - Support for Qualcomm WCN6855 Wi-Fi cards, e.g., the QCNFA765, with
   2.4, 5 and 6 GHz bands and 802.11ax, see [Wi-Fi][wifi]
+- Wi-Fi: a band, channel, channel width, interface mode or number of
+  access points the radio does not support is now refused with an error
+  when configured, see [Wi-Fi][wifi].  The modes a radio supports are
+  in its operational data, as are the channels of each band
+- Wi-Fi: a radio without a band no longer accepts a channel, channel
+  width or legacy rates.  They had no effect there and are dropped from
+  the configuration on upgrade
+- WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
+  and the channel is picked from the channels of the selected band.
+  The country code is set in one place on the interfaces page
 - NanoPi R2S Plus: Infix can now be installed on the eMMC
 - NanoPi R2S Plus: both USB ports can now be locked and unlocked
 - NanoPi R2S Plus: support for the optional RTL8822CS Wi-Fi module
@@ -108,6 +118,8 @@ All notable changes to the project are documented in this file.
 
 - LLDP: a device with a Wi-Fi interface announced its WLAN access
   point capability as disabled
+- Wi-Fi: the supported channels of a radio listed only the last
+  channel of each band, and the 6 GHz band could be missing
 - A change to a VLAN filtering bridge with spanning tree enabled was
   not applied once its ports were members of a VLAN
 - Disabling spanning tree on a bridge left its ports disabled, and the
