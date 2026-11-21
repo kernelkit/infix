@@ -1133,7 +1133,8 @@ static void gen_cbs(FILE *fp, const char *ifname, struct qos_egress *eg, int han
 			uint64_t cycle = qos_gate_cycle(&eg->gates);
 			uint64_t open = qos_gate_open(&eg->gates, tc);
 
-			bps = bps / open * cycle + bps % open * cycle / open;
+			if (open)
+				bps = bps / open * cycle + bps % open * cycle / open;
 		}
 		idle = (bps + 999) / 1000;
 		band = by_queue ? tc + 1 : eg->num_tc - tc;
