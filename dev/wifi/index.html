@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -3754,7 +3754,9 @@ admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>leave</b>
 <p><strong>Key radio parameters:</strong></p>
 <p><strong>⚠ Must match your physical location for legal compliance! ⚠</strong></p>
 <ul>
-<li><code>band</code>: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
+<li><code>band</code>: 2.4GHz, 5GHz, or 6GHz (required for AP mode).  Only a radio used
+  for a station can go without a band, and then <code>channel</code>, <code>channel-width</code>
+  and <code>legacy-rates</code> cannot be set either.  Automatically enables
   appropriate Wi-Fi standards:<ul>
 <li>2.4GHz: 802.11n/ax</li>
 <li>5GHz: 802.11n/ac/ax</li>
@@ -3786,6 +3788,12 @@ explicitly for AP mode, or left at <code>auto</code> to let the driver choose.</
 <code>country-code</code> decides which channels are legal in your location; the
 lists below are the common allocations, and your regulatory domain may
 allow fewer.</p>
+<p>A band, channel, or channel width that the radio does not support is
+refused when the configuration is applied, as is more access points
+than the radio can carry, or an interface in a mode the radio lacks,
+e.g. a mesh point on a radio without 802.11s support.  The error names
+the radio or interface and the setting.
+Use <code>show hardware</code> to see what each radio supports.</p>
 <p><strong>2.4 GHz</strong></p>
 <p>Channels 1-13 are available in most of the world, 1-11 in the US and
 Canada, and 14 in Japan (802.11b only).  At 20 MHz only three channels
