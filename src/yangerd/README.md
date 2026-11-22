@@ -92,6 +92,7 @@ build vendors them from `go.sum`.
 | | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start; the frame counters are the `get-statistics` action in confd |
 | | QoS capabilities, profile, egress shaper, shapers | event | rtnetlink TC and DCB, inotify on `/run/qos`, re-read with `tc` batch and DCB over rtnetlink |
 | | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
+| | Wi-Fi signal, rates and station counters | on demand | nl80211 station dump, the last answer when the driver takes more than 200 ms |
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |

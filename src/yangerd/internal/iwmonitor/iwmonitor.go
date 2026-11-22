@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/wpactrl"
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
@@ -54,6 +55,15 @@ type IWMonitor struct {
 	wdsPorts func() []string
 	// wifiIfaces lists every wireless netdev; overridable in tests.
 	wifiIfaces func() []string
+	// stations dumps the kernel station table of an interface;
+	// overridable in tests.
+	stations func(ifname string) ([]nl80211.Station, error)
+
+	liveMu     sync.Mutex
+	live       map[string]map[string]map[string]any // ifname → MAC → leaves, last dump
+	liveBusy   map[string]bool                      // a dump is under way
+	liveGen    map[string]uint64                    // bumped when the stations change
+	liveFailed map[string]bool                      // the last dump failed
 }
 
 func New(log *slog.Logger) *IWMonitor {
@@ -64,6 +74,11 @@ func New(log *slog.Logger) *IWMonitor {
 		meshState:  kernelMeshState,
 		wdsPorts:   kernelWDSPorts,
 		wifiIfaces: kernelWifiInterfaces,
+		stations:   kernelStations,
+		live:       make(map[string]map[string]map[string]any),
+		liveBusy:   make(map[string]bool),
+		liveGen:    make(map[string]uint64),
+		liveFailed: make(map[string]bool),
 	}
 }
 
@@ -381,6 +396,7 @@ func (m *IWMonitor) refreshInterface(ctx context.Context, iface string) {
 	l := m.ifLock(iface)
 	l.Lock()
 	defer l.Unlock()
+	m.dropLive(iface)
 	wifi := m.buildWifiData(ctx, iface)
 	m.publishWifi(iface, wifi)
 }
@@ -391,6 +407,7 @@ func (m *IWMonitor) clearInterface(iface string) {
 	l := m.ifLock(iface)
 	l.Lock()
 	defer l.Unlock()
+	m.dropLive(iface)
 	m.publishWifi(iface, nil)
 }
 

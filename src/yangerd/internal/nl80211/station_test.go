@@ -30,6 +30,8 @@ func TestParseStation(t *testing.T) {
 			sta.Uint64(unix.NL80211_STA_INFO_TX_BYTES64, 6000000000)
 			sta.Uint32(unix.NL80211_STA_INFO_RX_PACKETS, 10)
 			sta.Uint32(unix.NL80211_STA_INFO_TX_PACKETS, 20)
+			sta.Uint32(unix.NL80211_STA_INFO_TX_RETRIES, 7)
+			sta.Uint32(unix.NL80211_STA_INFO_TX_FAILED, 1)
 			sta.Nested(unix.NL80211_STA_INFO_TX_BITRATE, func(r *netlink.AttributeEncoder) error {
 				r.Uint16(unix.NL80211_RATE_INFO_BITRATE, 8667)
 				r.Uint32(unix.NL80211_RATE_INFO_BITRATE32, 8667)
@@ -52,6 +54,9 @@ func TestParseStation(t *testing.T) {
 	}
 	if !st.HasSignal || st.Signal != -47 {
 		t.Errorf("Signal = %d (has %v)", st.Signal, st.HasSignal)
+	}
+	if !st.HasTxStatus || st.TxRetries != 7 || st.TxFailed != 1 {
+		t.Errorf("tx status = %d retries, %d failed (has %v)", st.TxRetries, st.TxFailed, st.HasTxStatus)
 	}
 	if st.ConnectedTime != 321 {
 		t.Errorf("ConnectedTime = %d", st.ConnectedTime)

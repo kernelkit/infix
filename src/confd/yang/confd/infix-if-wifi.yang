@@ -53,7 +53,8 @@ submodule infix-if-wifi {
     description
       "A radio may hold several station or mesh point interfaces as long
        as only one of them is enabled.  Add client-isolation to the
-       access point.";
+       access point.  Add tx-retries and tx-failed to the stations of
+       an access point and to the mesh peers.";
     reference "internal";
   }
 
@@ -751,6 +752,23 @@ submodule infix-if-wifi {
                      - 65 = 6.5 Mbps
                      - 866 = 86.6 Mbps";
                 }
+
+                leaf tx-retries {
+                  type yang:counter32;
+                  description
+                    "Frames sent again to the station.
+
+                     A frame is sent again when it is not acknowledged.  A
+                     count that grows fast points at a weak or noisy link.";
+                }
+
+                leaf tx-failed {
+                  type yang:counter32;
+                  description
+                    "Frames to the station given up on.
+
+                     No attempt at sending the frame was acknowledged.";
+                }
               }
             }
           }
@@ -892,6 +910,23 @@ submodule infix-if-wifi {
                   units "100 kbps";
                   description
                     "Last transmitted data rate to this peer in 100 kbps.";
+                }
+
+                leaf tx-retries {
+                  type yang:counter32;
+                  description
+                    "Frames sent again to the peer.
+
+                     A frame is sent again when it is not acknowledged.  A
+                     count that grows fast points at a weak or noisy link.";
+                }
+
+                leaf tx-failed {
+                  type yang:counter32;
+                  description
+                    "Frames to the peer given up on.
+
+                     No attempt at sending the frame was acknowledged.";
                 }
               }
             }

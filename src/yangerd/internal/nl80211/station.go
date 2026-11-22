@@ -21,6 +21,9 @@ type Station struct {
 	TxPackets     uint64
 	RxBitrate     uint32 // 100 kbps
 	TxBitrate     uint32 // 100 kbps
+	TxRetries     uint32
+	TxFailed      uint32
+	HasTxStatus   bool // the driver reports retries and failures
 }
 
 // Stations dumps the station table of ifindex.
@@ -97,6 +100,12 @@ func parseStationInfo(st *Station, data []byte) {
 			st.RxBitrate = parseBitrate(ad.Bytes())
 		case unix.NL80211_STA_INFO_TX_BITRATE:
 			st.TxBitrate = parseBitrate(ad.Bytes())
+		case unix.NL80211_STA_INFO_TX_RETRIES:
+			st.TxRetries = ad.Uint32()
+			st.HasTxStatus = true
+		case unix.NL80211_STA_INFO_TX_FAILED:
+			st.TxFailed = ad.Uint32()
+			st.HasTxStatus = true
 		}
 	}
 }
