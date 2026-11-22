@@ -51,7 +51,8 @@ Where `N` is a number (0, 1, 2, ...).
 
 ## Supported Wi-Fi Adapters
 
-Wi-Fi support is primarily tested with Realtek chipset-based adapters.
+The Wi-Fi regression tests run on the built-in radios of the Banana Pi
+BPI-R3.  The other chipsets below have been verified by hand.
 
 ### Known Working Chipsets
 
