@@ -183,6 +183,11 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 > constraints and hardware capabilities.  Channel width can now be set
 > explicitly for AP mode, or left at `auto` to let the driver choose.
 
+While a radio is in use, `show hardware radio0` shows the band, channel,
+channel width, frequency and TX power it ended up with, e.g., the channel
+a station found its access point on.  `show hardware` lists the channel
+and width of every radio.
+
 ### Bands and Channels
 
 Each band strikes a different balance between range and capacity.  The
@@ -393,6 +398,7 @@ physical address   : f0:09:0d:36:5f:86
 mode               : station
 ssid               : MyHomeNetwork
 bssid              : b4:fb:e4:17:b6:a7
+standard           : 11ax
 signal             : -52 dBm (good)
 </code></pre>
 

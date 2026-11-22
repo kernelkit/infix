@@ -44,6 +44,16 @@ All notable changes to the project are documented in this file.
 - Wi-Fi: new `client-isolation` setting on an access point keeps its
   clients from reaching each other, e.g., on a guest network, see
   [Wi-Fi][wifi]
+- Wi-Fi: the operational data of a radio now has the band, channel,
+  channel width, frequency and TX power in use, shown by `show hardware`
+  and the WebUI.  The radio `noise` leaf, which was never set, is
+  removed, the channel survey has the noise
+- Wi-Fi: the 802.11 standard of a connection, e.g., `11ax`, is shown for
+  a station and for each station of an access point
+- Wi-Fi: signal, rates and counters of the stations of an access point
+  and of mesh peers are now current when read, they used to stay as
+  they were when the station connected.  New counters for frames sent
+  again and frames given up on, `tx-retries` and `tx-failed`
 - WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
   and the channel is picked from the channels of the selected band.
   The country code is set in one place on the interfaces page
