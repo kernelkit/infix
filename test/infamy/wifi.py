@@ -212,6 +212,26 @@ def ap_ssid(target, ifname="wifi0"):
     return (_wifi(target.get_iface(ifname)).get("access-point") or {}).get("ssid")
 
 
+def radio_state(target, name="radio0"):
+    """Operational wifi-radio container of a radio."""
+    data = target.get_data(f"/ietf-hardware:hardware/component[name='{name}']")
+    radio = data["hardware"]["component"][name]
+    return radio.get("infix-hardware:wifi-radio") or radio.get("wifi-radio") or {}
+
+
+def on_channel(target, band, channel, name="radio0"):
+    """True once the radio reports band and channel as the ones in use."""
+    radio = radio_state(target, name)
+    return radio.get("band") == band and radio.get("channel") == channel \
+        and radio.get("frequency") is not None
+
+
+def ap_station_entries(target, ifname="wifi0"):
+    """Operational entries of the stations associated to this AP BSS."""
+    ap = _wifi(target.get_iface(ifname)).get("access-point") or {}
+    return list((ap.get("stations") or {}).get("station") or [])
+
+
 def ap_stations(target, ifname="wifi0"):
     """MACs of the stations currently associated to this AP BSS, lowercase."""
     ap = _wifi(target.get_iface(ifname)).get("access-point") or {}
