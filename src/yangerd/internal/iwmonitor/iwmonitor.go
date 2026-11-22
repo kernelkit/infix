@@ -507,6 +507,9 @@ func (m *IWMonitor) buildStationData(ctx context.Context, iface string, si wpact
 	if bssid := status["bssid"]; bssid != "" && bssid != "00:00:00:00:00:00" {
 		sta["bssid"] = bssid
 	}
+	if std := generationStandard(status["wifi_generation"]); std != "" {
+		sta["standard"] = std
+	}
 
 	if si.Daemon == "wpa_supplicant" {
 		conn, err := wpactrl.Dial(si.Path)
@@ -546,11 +549,12 @@ func (m *IWMonitor) formatStations(stas []map[string]string) map[string]any {
 		TxBytes       string `json:"tx-bytes,omitempty"`
 		RxSpeed       uint32 `json:"rx-speed,omitempty"`
 		TxSpeed       uint32 `json:"tx-speed,omitempty"`
+		Standard      string `json:"standard,omitempty"`
 	}
 
 	var out []stationEntry
 	for _, st := range stas {
-		s := stationEntry{MAC: st["addr"]}
+		s := stationEntry{MAC: st["addr"], Standard: flagsStandard(st["flags"])}
 		if v := st["signal"]; v != "" {
 			if sig, err := strconv.ParseInt(v, 10, 16); err == nil {
 				s.Signal = int16(sig)

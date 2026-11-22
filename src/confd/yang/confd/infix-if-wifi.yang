@@ -53,8 +53,9 @@ submodule infix-if-wifi {
     description
       "A radio may hold several station or mesh point interfaces as long
        as only one of them is enabled.  Add client-isolation to the
-       access point.  Add tx-retries and tx-failed to the stations of
-       an access point and to the mesh peers.";
+       access point.  Add the 802.11 standard in use to the station and
+       to the stations of an access point.  Add tx-retries and tx-failed
+       to the stations of an access point and to the mesh peers.";
     reference "internal";
   }
 
@@ -142,6 +143,27 @@ submodule infix-if-wifi {
       "802.11r Mobility Domain identifier (4 hex digits).
 
        Use 'hash' to automatically derive it from the SSID.";
+  }
+
+  typedef standard {
+    type enumeration {
+      enum legacy {
+        description "802.11a, b or g.";
+      }
+      enum 11n {
+        description "802.11n, Wi-Fi 4.";
+      }
+      enum 11ac {
+        description "802.11ac, Wi-Fi 5.";
+      }
+      enum 11ax {
+        description "802.11ax, Wi-Fi 6 and 6E.";
+      }
+      enum 11be {
+        description "802.11be, Wi-Fi 7.";
+      }
+    }
+    description "802.11 standard of a Wi-Fi connection.";
   }
 
   augment "/if:interfaces/if:interface" {
@@ -353,6 +375,16 @@ submodule infix-if-wifi {
                  Only present while connected.  With several access points
                  sharing one SSID (a roaming ESS), this identifies which one
                  the station is on.";
+            }
+
+            leaf standard {
+              config false;
+              type standard;
+              description
+                "802.11 standard of the connection.
+
+                 The newest one both the station and its access point
+                 support.  Only present while connected.";
             }
 
             leaf signal-strength {
@@ -693,6 +725,15 @@ submodule infix-if-wifi {
                 leaf mac-address {
                   type yang:mac-address;
                   description "Client MAC address.";
+                }
+
+                leaf standard {
+                  type standard;
+                  description
+                    "802.11 standard of the connection.
+
+                     The newest one both the station and the access
+                     point support.";
                 }
 
                 leaf signal-strength {
