@@ -1414,6 +1414,7 @@ class Iface:
         print("\nCONNECTED STATIONS:")
         stations_table = SimpleTable([
             Column('MAC'),
+            Column('STD'),
             Column('SIGNAL'),
             Column('TIME'),
             Column('RX PKT'),
@@ -1443,8 +1444,9 @@ class Iface:
             rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
             tx_speed_str = f"{tx_speed / 10:.1f}" if tx_speed else "-"
 
-            stations_table.row(mac, signal_str, time_str, rx_pkt, tx_pkt,
-                             rx_bytes, tx_bytes, rx_speed_str, tx_speed_str)
+            stations_table.row(mac, station.get("standard", "-"), signal_str,
+                               time_str, rx_pkt, tx_pkt, rx_bytes, tx_bytes,
+                               rx_speed_str, tx_speed_str)
 
         stations_table.print()
 
@@ -1823,6 +1825,8 @@ class Iface:
                 print(f"{'ssid':<{19}}: {ssid}")
                 if bssid is not None:
                     print(f"{'bssid':<{19}}: {bssid}")
+                if station.get('standard'):
+                    print(f"{'standard':<{19}}: {station['standard']}")
                 if signal is not None:
                     signal_status = signal_to_status(signal)
                     print(f"{'signal':<{19}}: {signal} dBm ({signal_status})")
@@ -2838,6 +2842,8 @@ def _build_radio_table(wifi_radios):
         Column('MANUFACTURER', flexible=True),
         Column('BANDS', 'right'),
         Column('STANDARDS', 'right'),
+        Column('CHANNEL', 'right'),
+        Column('WIDTH', 'right'),
         Column('MAX AP', 'right')
     ])
 
@@ -2877,7 +2883,10 @@ def _build_radio_table(wifi_radios):
         max_if = radio_data.get("max-interfaces", {})
         max_ap = max_if.get('ap', 'N/A') if max_if else 'N/A'
 
-        table.row(phy, manufacturer, bands_str, standard_str, max_ap)
+        channel = radio_data.get("channel", "-") if "frequency" in radio_data else "-"
+        chwidth = radio_data.get("channel-width", "-") if "frequency" in radio_data else "-"
+
+        table.row(phy, manufacturer, bands_str, standard_str, channel, chwidth, max_ap)
     return table
 
 
@@ -3110,6 +3119,9 @@ def show_hardware_detail(json, ref):
     ms = comp.get("infix-hardware:modem-state", {})
     usb = comp.get("infix-hardware:usb-device", {})
     dev = USBdevice(comp)
+    radio = comp.get("infix-hardware:wifi-radio", {})
+    if "frequency" not in radio:
+        radio = {}
 
     for label, val in (
         ("Name",          comp.get("name", "")),
@@ -3124,6 +3136,11 @@ def show_hardware_detail(json, ref):
         ("USB Version",   usb.get("usb-version", "")),
         ("Speed",         f"{usb['speed']} Mbps" if usb.get("speed") else ""),
         ("Authorized",    dev.authorized),
+        ("Band",          radio.get("band", "")),
+        ("Channel",       radio.get("channel", "")),
+        ("Channel Width", radio.get("channel-width", "")),
+        ("Frequency",     f"{radio['frequency']} MHz" if radio else ""),
+        ("TX Power",      f"{radio['tx-power']} dBm" if "tx-power" in radio else ""),
         ("URI",           ", ".join(comp.get("uri", []))),
         ("Admin State",   state.get("admin-state", "")),
         ("Oper State",    state.get("oper-state", "")),

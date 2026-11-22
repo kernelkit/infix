@@ -1,0 +1,10 @@
+[7mCOMPONENT: radio0                                             [0m
+  Name                : radio0
+  Class               : wifi
+  Description         : WiFi Radio
+  Manufacturer        : Virtual (hwsim)
+  Band                : 5GHz
+  Channel             : 36
+  Channel Width       : 80MHz
+  Frequency           : 5180 MHz
+  TX Power            : 20 dBm

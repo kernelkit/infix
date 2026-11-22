@@ -111,6 +111,9 @@ def hardware(args: List[str]) -> None:
                                                          "infix-hardware:usb-device"):
             cli_pretty(data, "show-hardware-detail", args[0])
             return
+        # A radio gets the detail view above its capabilities and sensors
+        if not RAW_OUTPUT and comps[0].get("class") == "infix-hardware:wifi":
+            cli_pretty(data, "show-hardware-detail", args[0])
         # The component and what sits on it: devices on a USB port, sensors on a radio
         hw["component"] = comps + [c for c in hw.get("component", [])
                                    if c.get("parent") == args[0]]

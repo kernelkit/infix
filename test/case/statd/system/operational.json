@@ -35,6 +35,11 @@
         "class": "infix-hardware:wifi",
         "description": "WiFi Radio",
         "infix-hardware:wifi-radio": {
+          "band": "5GHz",
+          "channel": 36,
+          "channel-width": "80MHz",
+          "frequency": 5180,
+          "tx-power": 20,
           "bands": [
             {
               "band": "0",
