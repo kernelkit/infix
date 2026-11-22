@@ -41,6 +41,9 @@ All notable changes to the project are documented in this file.
 - New `infix-system:whoami` RPC, returns the calling user and the NACM
   groups the user is in.  Guests are permitted to call it, see [NACM][nacm],
   and the rule for that is added to existing configurations on upgrade
+- Wi-Fi: new `client-isolation` setting on an access point keeps its
+  clients from reaching each other, e.g., on a guest network, see
+  [Wi-Fi][wifi]
 - WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
   and the channel is picked from the channels of the selected band.
   The country code is set in one place on the interfaces page

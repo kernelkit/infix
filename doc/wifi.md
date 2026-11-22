@@ -477,6 +477,8 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 - `radio`: Reference to the Wi-Fi radio (mandatory)
 - `access-point ssid`: Network name (SSID) to broadcast
 - `access-point hidden`: Set to `true` to hide SSID (optional, default: false)
+- `access-point client-isolation`: Set to `true` to keep the clients from
+  reaching each other (optional, default: false)
 - `access-point security mode`: Security mode (see below)
 - `access-point security secret`: Reference to keystore entry (for secured networks)
 
@@ -494,6 +496,24 @@ To create a hidden network that doesn't broadcast its SSID:
 
 <pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi access-point hidden true</b>
 </code></pre>
+
+### Client Isolation
+
+On a guest network the clients usually have no business with each other.
+Client isolation stops all traffic between the clients of an access
+point.  They still reach the device itself and whatever is behind it,
+e.g., the Internet:
+
+<pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi access-point client-isolation true</b>
+</code></pre>
+
+Services that clients find on each other, such as printing and screen
+casting, stop working on an isolated network.
+
+> [!NOTE]
+> Isolation applies per access point.  Clients of two access points in
+> the same bridge, e.g., the same SSID on 2.4 and 5 GHz, still reach each
+> other through the bridge, as do clients and wired hosts on that bridge.
 
 ### Multi-SSID Configuration
 
@@ -586,6 +606,7 @@ All APs on the same radio share the same channel and physical layer settings
 - SSID (network name)
 - Security mode and passphrase
 - Hidden/visible SSID setting
+- Client isolation
 - Bridge membership
 
 You can verify the configuration with `show hardware radio0` to see

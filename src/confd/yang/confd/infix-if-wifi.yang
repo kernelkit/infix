@@ -52,7 +52,8 @@ submodule infix-if-wifi {
   revision 2026-11-02 {
     description
       "A radio may hold several station or mesh point interfaces as long
-       as only one of them is enabled.";
+       as only one of them is enabled.  Add client-isolation to the
+       access point.";
     reference "internal";
   }
 
@@ -457,6 +458,21 @@ submodule infix-if-wifi {
 
                  Note: This provides minimal security benefit and may
                  cause compatibility issues with some clients.";
+            }
+
+            leaf client-isolation {
+              type boolean;
+              default false;
+              description
+                "Stop clients of this access point from reaching each other.
+
+                 Clients still reach the device itself and whatever is
+                 behind it, e.g., the Internet, but not other clients
+                 on the same access point.  Typical for guest networks.
+
+                 It applies per access point.  Clients of two access
+                 points in the same bridge, e.g., one per band, still
+                 reach each other through the bridge.";
             }
 
             container security {
