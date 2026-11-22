@@ -29,7 +29,8 @@
         {{if .Band}}<tr><th>Active Band</th><td>{{.Band}}</td></tr>{{end}}
         {{if .Channel}}<tr><th>Channel</th><td>{{.Channel}}</td></tr>{{end}}
         {{if .Frequency}}<tr><th>Frequency</th><td>{{.Frequency}} MHz</td></tr>{{end}}
-        {{if .Noise}}<tr><th>Noise Floor</th><td>{{.Noise}} dBm</td></tr>{{end}}
+        {{if .ChannelWidth}}<tr><th>Channel Width</th><td>{{.ChannelWidth}}</td></tr>{{end}}
+        {{if .TxPower}}<tr><th>TX Power</th><td>{{.TxPower}}</td></tr>{{end}}
         {{if .MaxAP}}<tr><th>Max APs</th><td>{{.MaxAP}}</td></tr>{{end}}
         {{if .Bands}}
         <tr>
@@ -81,6 +82,7 @@
   <div class="card-body" style="padding:0">
     <table class="info-table">
       {{if .BSSID}}<tr><th>BSSID</th><td>{{.BSSID}}</td></tr>{{end}}
+      {{if .Standard}}<tr><th>Standard</th><td>{{.Standard}}</td></tr>{{end}}
       {{if .Signal}}<tr><th>Signal</th><td><span class="{{.SignalCSS}}">{{.Signal}}</span></td></tr>{{end}}
       {{if .RxSpeed}}<tr><th>RX Speed</th><td>{{.RxSpeed}}</td></tr>{{end}}
       {{if .TxSpeed}}<tr><th>TX Speed</th><td>{{.TxSpeed}}</td></tr>{{end}}
@@ -102,6 +104,7 @@
       <thead>
         <tr>
           <th>MAC Address</th>
+          <th>Standard</th>
           <th>Signal</th>
           <th>Connected</th>
           <th>RX Bytes</th>
@@ -114,6 +117,7 @@
         {{range .Clients}}
         <tr>
           <td>{{.MAC}}</td>
+          <td>{{if .Standard}}{{.Standard}}{{else}}&mdash;{{end}}</td>
           <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
           <td>{{.ConnTime}}</td>
           <td class="num">{{.RxBytes}}</td>

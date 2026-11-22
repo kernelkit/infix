@@ -277,6 +277,7 @@ type wifiSecJSON struct {
 
 type wifiStaJSON struct {
 	MACAddress     string    `json:"mac-address"`
+	Standard       string    `json:"standard"`
 	SignalStrength *int      `json:"signal-strength"`
 	ConnectedTime  yangInt64 `json:"connected-time"`
 	RxPackets      yangInt64 `json:"rx-packets"`
@@ -290,6 +291,7 @@ type wifiStaJSON struct {
 type wifiStationJSON struct {
 	SSID           string       `json:"ssid"`
 	BSSID          string       `json:"bssid"`
+	Standard       string       `json:"standard"`
 	Security       *wifiSecJSON `json:"security"`
 	SignalStrength *int         `json:"signal-strength"`
 	RxSpeed        yangInt64    `json:"rx-speed"`

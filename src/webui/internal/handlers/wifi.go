@@ -29,7 +29,8 @@ type wifiRadioHWJSON struct {
 	Channel       interface{}     `json:"channel"`      // uint16 or "auto", rw
 	Band          string          `json:"band"`         // rw
 	Frequency     int             `json:"frequency"`    // MHz, operational
-	Noise         int             `json:"noise"`        // dBm, operational
+	ChannelWidth  string          `json:"channel-width"`
+	TxPower       *int            `json:"tx-power"`     // dBm, operational
 	Driver        string          `json:"driver"`
 	Bands         []wifiBandJSON  `json:"bands"`
 	MaxInterfaces *wifiMaxIfJSON  `json:"max-interfaces"`
@@ -94,7 +95,8 @@ type WiFiRadio struct {
 	Channel      string
 	Band         string
 	Frequency    int
-	Noise        int
+	ChannelWidth string
+	TxPower      string
 	Driver       string
 	Manufacturer string
 	Standards    string
@@ -129,6 +131,7 @@ type WiFiInterface struct {
 	ClientsEmpty string
 	// Station mode
 	BSSID       string
+	Standard    string
 	Signal      string
 	SignalCSS   string
 	RxSpeed     string
@@ -140,6 +143,7 @@ type WiFiInterface struct {
 // WiFiClient is the template data for a connected station client.
 type WiFiClient struct {
 	MAC       string
+	Standard  string
 	Signal    string
 	SignalCSS string
 	ConnTime  string
@@ -332,12 +336,15 @@ func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiF
 			Name:         c.Name,
 			Band:         r.Band,
 			Frequency:    r.Frequency,
-			Noise:        r.Noise,
+			ChannelWidth: r.ChannelWidth,
 			Driver:       r.Driver,
 			Channel:      wifiChannelString(r.Channel),
 			Manufacturer: c.MfgName,
 			Survey:       wifiSurveyData{Radio: c.Name},
 			Scan:         wifiScanData{Radio: c.Name},
+		}
+		if r.TxPower != nil {
+			radio.TxPower = fmt.Sprintf("%d dBm", *r.TxPower)
 		}
 
 		// Capability flags: check per-band capabilities; if any band supports
@@ -432,6 +439,7 @@ func buildWiFiInterfaces(radioName string, ifaces []ifaceJSON) []WiFiInterface {
 			wi.Mode = "station"
 			wi.SSID = st.SSID
 			wi.BSSID = st.BSSID
+			wi.Standard = st.Standard
 			if st.SignalStrength != nil {
 				sig := *st.SignalStrength
 				wi.Signal = fmt.Sprintf("%d dBm", sig)
@@ -455,6 +463,7 @@ func buildWiFiInterfaces(radioName string, ifaces []ifaceJSON) []WiFiInterface {
 func buildWiFiClient(s wifiStaJSON) WiFiClient {
 	c := WiFiClient{
 		MAC:      s.MACAddress,
+		Standard: s.Standard,
 		ConnTime: formatDuration(int64(s.ConnectedTime)),
 		RxBytes:  humanBytes(int64(s.RxBytes)),
 		TxBytes:  humanBytes(int64(s.TxBytes)),
