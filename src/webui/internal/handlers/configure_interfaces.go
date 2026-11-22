@@ -323,6 +323,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wifi-sec-mode":      descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/mode", "Security mode. Open is unencrypted (insecure). For AP: wpa2-wpa3-personal is recommended for compatibility + security."),
 			"wifi-secret":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/secret", "Pre-shared key reference — a symmetric key in the keystore. 8–63 characters per the WPA spec."),
 			"wifi-hidden":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/hidden", "Hide the SSID from broadcast beacons. Minimal security benefit and may cause compatibility issues with some clients."),
+			"wifi-isolation":     descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/client-isolation", ""),
 			"eth-autoneg":        descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/enable", "Enable IEEE 802.3 auto-negotiation.  When off, the link must come up via parallel detection or the forced PMD picked below."),
 			"eth-advertised":     descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/infix-ethernet-interface:advertised-pmd-types", "Restrict auto-negotiation to advertise only these PMD types.  Leave empty to advertise every mode the PHY supports."),
 			"eth-duplex":         descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/duplex", "Force half- or full-duplex.  Leave on Auto to let auto-negotiation pick.  Modern PMDs are full-duplex only."),
@@ -1793,6 +1794,9 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 		if mode == "access-point" {
 			if r.FormValue("hidden") == "on" {
 				leaf["hidden"] = true
+			}
+			if r.FormValue("client-isolation") == "on" {
+				leaf["client-isolation"] = true
 			}
 			roaming, err := wifiRoamingFromForm(r)
 			if err != nil {

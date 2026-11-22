@@ -227,6 +227,7 @@ type wifiWDSJSON struct {
 type wifiAPJSON struct {
 	SSID     string           `json:"ssid"`
 	Hidden   *bool            `json:"hidden"`
+	Isolate  *bool            `json:"client-isolation"`
 	Security *wifiSecJSON     `json:"security"`
 	Roaming  *wifiRoamingJSON `json:"roaming"`
 	Stations struct {

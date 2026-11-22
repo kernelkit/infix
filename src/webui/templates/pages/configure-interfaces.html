@@ -537,6 +537,15 @@
                       </td>
                     </tr>
                     <tr data-wifi-modes="access-point" {{if ne .WifiMode "access-point"}}hidden{{end}}>
+                      <th>Client isolation{{template "field-info" (index $d "wifi-isolation")}}</th>
+                      <td>
+                        <label><input type="checkbox" name="client-isolation"
+                               {{if and $ap $ap.Isolate (deref $ap.Isolate)}}checked{{end}}
+                               {{if ne .WifiMode "access-point"}}disabled{{end}}>
+                               Keep clients from reaching each other</label>
+                      </td>
+                    </tr>
+                    <tr data-wifi-modes="access-point" {{if ne .WifiMode "access-point"}}hidden{{end}}>
                       <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
                       <td>
                         {{$sm := "wpa2-wpa3-personal"}}{{if and $ap $ap.Security $ap.Security.Mode}}{{$sm = $ap.Security.Mode}}{{end}}
