@@ -29,7 +29,10 @@ module infix-hardware {
                  administrators, it may hold the factory password hash.
                  Add supported-modes to the Wi-Fi radio, and the channels of
                  each band.  A Wi-Fi radio without a band takes no channel,
-                 channel-width or legacy-rates.";
+                 channel-width or legacy-rates.  The operational band,
+                 channel and channel-width of a Wi-Fi radio are the ones
+                 in use, with the new tx-power.  Remove the Wi-Fi radio
+                 noise leaf, the channel-survey action has the noise.";
     reference "internal";
   }
 
@@ -909,9 +912,16 @@ module infix-hardware {
         type uint32;
         units "MHz";
         description
-          "Current operating frequency in MHz.
+          "Frequency of the channel in use.
 
-           Derived from the configured channel and band.
+           On a channel wider than 20 MHz this is the primary channel,
+           e.g., 5180 MHz for channel 36 at 80 MHz.
+
+           Only present while the radio is on a channel, i.e., serving
+           an access point or mesh point, or connected as a station.
+           The operational band, channel and channel-width are then the
+           ones in use, e.g., the channel that 'auto' selected or the
+           one a station found its access point on.
 
            Example values:
            - 2412 MHz (channel 1, 2.4 GHz)
@@ -919,20 +929,14 @@ module infix-hardware {
            - 5955 MHz (channel 1, 6 GHz)";
       }
 
-      leaf noise {
+      leaf tx-power {
         config false;
-        type int16;
+        type int8;
         units "dBm";
         description
-          "Background noise level on current channel in dBm.
+          "Transmit power in use.
 
-           Lower (more negative) values indicate a cleaner RF environment.
-
-           Typical values:
-           - -95 to -100 dBm: Very low noise (excellent)
-           - -85 to -95 dBm: Low noise (good)
-           - -75 to -85 dBm: Moderate noise
-           - -65 to -75 dBm: High noise (congested)";
+           Only present while the radio is on a channel.";
       }
 
       leaf-list supported-channels {

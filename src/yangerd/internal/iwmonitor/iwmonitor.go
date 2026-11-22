@@ -71,7 +71,8 @@ func (m *IWMonitor) SetOnUpdate(fn func(string, json.RawMessage)) {
 	m.onUpdate = fn
 }
 
-// SetOnRadioChange sets a callback for changes to what a radio can do:
+// SetOnRadioChange sets a callback for changes to what a radio can do
+// or which channel it is on:
 // a phy came or went, the regulatory domain or its interfaces changed.
 func (m *IWMonitor) SetOnRadioChange(fn func()) {
 	m.onRadioChange = fn
@@ -162,11 +163,16 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 			m.log.Debug("nl80211: connect", "iface", ifname)
 			m.refreshInterface(ctx, ifname)
 		}
+		m.radioChanged()
 	case unix.NL80211_CMD_DISCONNECT:
 		if ifname != "" {
 			m.log.Debug("nl80211: disconnect", "iface", ifname)
 			m.clearInterface(ifname)
 		}
+		m.radioChanged()
+	case unix.NL80211_CMD_CH_SWITCH_NOTIFY:
+		m.log.Debug("nl80211: channel switch", "iface", ifname)
+		m.radioChanged()
 	case unix.NL80211_CMD_REG_CHANGE:
 		m.log.Debug("nl80211: reg_change")
 		m.refreshAllInterfaces(ctx)
@@ -308,6 +314,7 @@ func (m *IWMonitor) attachLoop(ctx context.Context, ifname string) {
 func (m *IWMonitor) onAttach(ctx context.Context, ifname string) {
 	m.refreshInterface(ctx, ifname)
 	m.refreshWDSPorts(ctx)
+	m.radioChanged()
 }
 
 // onDetach publishes an interface whose daemon is gone as having no
@@ -315,9 +322,13 @@ func (m *IWMonitor) onAttach(ctx context.Context, ifname string) {
 func (m *IWMonitor) onDetach(ctx context.Context, ifname string) {
 	m.clearInterface(ifname)
 	m.refreshWDSPorts(ctx)
+	m.radioChanged()
 }
 
 func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpactrl.Event) {
+	if channelEvent(ev) {
+		m.radioChanged()
+	}
 	switch {
 	case ev.Name == "AP-STA-CONNECTED" || ev.Name == "AP-STA-DISCONNECTED":
 		m.refreshInterface(ctx, ifname)

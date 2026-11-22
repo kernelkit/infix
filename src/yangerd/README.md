@@ -111,7 +111,7 @@ build vendors them from `go.sum`.
 | | NTP sources | on demand | chronyd cmdmon |
 | `ietf-hardware:hardware` | mainboard, VPD, USB ports | on demand | `/run/system.json`, sysfs |
 | | CPU cores and clocks | on demand | sysfs cpufreq, `/run/system.json`, `/proc/cpuinfo`, all but the clocks read once |
-| | radio capabilities | event | nl80211 phy, regulatory and interface events |
+| | radio capabilities, operating channel | event | nl80211 phy, regulatory, interface and connect events, hostapd/wpa_supplicant channel events |
 | | radio channel survey | on demand | nl80211 survey dump |
 | | sensors | on demand | hwmon, thermal zones |
 | | GPS receivers | poll 10 s | gpsd |

@@ -55,6 +55,7 @@ type HardwareCollector struct {
 	enableGPS  bool
 	gpsPoll    func(context.Context) map[string]interface{}
 	modems     func() []mmmonitor.Modem
+	operating  func() map[string]nl80211.Operating
 
 	mu       sync.Mutex
 	gps      []interface{}                     // last GPS poll
@@ -82,6 +83,7 @@ func NewHardwareCollector(cmd CommandRunner, fs FileReader, interval time.Durati
 		enableWifi: enableWifi,
 		enableGPS:  enableGPS,
 		gpsPoll:    gpsdPoll,
+		operating:  kernelOperating,
 		reported:   make(map[string]bool),
 
 		radioRefresh: make(chan struct{}, 1),
@@ -125,8 +127,9 @@ func (c *HardwareCollector) RequestRadioRefresh() {
 	}
 }
 
-// RunRadios keeps the radio capabilities, which only change on nl80211
-// events, built from the kernel.  It builds them once at start.
+// RunRadios keeps the radio capabilities and operating channel, which
+// only change on Wi-Fi events, built from the kernel.  It builds them
+// once at start.
 func (c *HardwareCollector) RunRadios(ctx context.Context) error {
 	if !c.enableWifi {
 		<-ctx.Done()
@@ -184,6 +187,66 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 		return nil
 	}
 	return data
+}
+
+// kernelOperating asks the kernel which channel each radio is on.
+func kernelOperating() map[string]nl80211.Operating {
+	client, err := nl80211.Dial()
+	if err != nil {
+		return nil
+	}
+	defer client.Close()
+
+	ops, err := client.Operating()
+	if err != nil {
+		return nil
+	}
+	return ops
+}
+
+// applyOperating adds the channel each radio is on and its transmit
+// power.  A radio that is not on a channel gets nothing.
+func applyOperating(radios []interface{}, ops map[string]nl80211.Operating) {
+	for _, raw := range radios {
+		component, _ := raw.(map[string]interface{})
+		name, _ := component["name"].(string)
+		op, ok := ops[name]
+		if !ok {
+			continue
+		}
+
+		radio, ok := component["infix-hardware:wifi-radio"].(map[string]interface{})
+		if !ok {
+			radio = make(map[string]interface{})
+		}
+		radio["frequency"] = op.Frequency
+		if channel, ok := channelFromFrequency(op.Frequency); ok {
+			radio["channel"] = channel
+		}
+		if band := bandFromFrequency(op.Frequency); band != "" {
+			radio["band"] = band
+		}
+		switch op.Width {
+		case 20, 40, 80, 160:
+			radio["channel-width"] = strconv.Itoa(op.Width) + "MHz"
+		}
+		if op.HasTxPower {
+			radio["tx-power"] = op.TxPower
+		}
+		component["infix-hardware:wifi-radio"] = radio
+	}
+}
+
+func bandFromFrequency(freq int) string {
+	switch {
+	case freq >= 2412 && freq <= 2484:
+		return "2.4GHz"
+	case freq >= 5160 && freq <= 5885:
+		return "5GHz"
+	case freq >= 5955 && freq <= 7115:
+		return "6GHz"
+	}
+	return ""
 }
 
 // cloneComponents copies the component maps, uniqueNames may rename
@@ -1133,6 +1196,7 @@ func (c *HardwareCollector) radioCapabilities(ctx context.Context) ([]interface{
 
 		components = append(components, component)
 	}
+	applyOperating(components, c.operating())
 
 	return components, wifiInfo
 }
