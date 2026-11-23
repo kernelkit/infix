@@ -101,10 +101,18 @@ $ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
 ..
 ```
 
+The tests themselves run in a container, so `make test` also needs
+Docker, or podman:
+
+```bash
+$ sudo apt install docker.io
+..
+```
+
 To be able to build the test specification you also need:
 
 ```bash
-$ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
+$ sudo apt-get install python3-graphviz python3-yaml ruby-asciidoctor-pdf
 ..
 ```
 
