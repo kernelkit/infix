@@ -15,7 +15,9 @@ module infix-lldp {
   description  "Infix augments and deviations to ieee-dot1ab-lldp.";
 
   revision 2026-11-18 {
-    description "Add management-interface, to select the advertised addresses.";
+    description
+      "Add management-interface, to select the advertised addresses.
+       Enable std. /lldp:lldp/message-fast-tx";
     reference "internal";
   }
 
@@ -76,9 +78,6 @@ module infix-lldp {
     }
   }
 
-  deviation "/lldp:lldp/lldp:message-fast-tx" {
-    deviate not-supported;
-  }
   deviation "/lldp:lldp/lldp:message-tx-hold-multiplier" {
     deviate not-supported;
   }

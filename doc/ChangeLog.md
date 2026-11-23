@@ -67,6 +67,9 @@ All notable changes to the project are documented in this file.
   were sent, and a management station could lack a route to them.
   The new `management-interface` setting limits them to the addresses
   of selected interfaces, see [Discovery][lldp-mgmt]
+- LLDP now answers a new neighbor at once, with four messages sent
+  `message-fast-tx` seconds apart, default 1.  Before, the neighbor had
+  to wait for the next regular transmission, issue #181
 - QoS changes, see [QoS][qos]:
   - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
     products built with the TSN feature, configured and read back with

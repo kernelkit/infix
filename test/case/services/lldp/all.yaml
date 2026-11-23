@@ -10,3 +10,6 @@
 
 - name: LLDP Management Address
   case: lldp_management_address/test.py
+
+- name: LLDP Fast Start
+  case: lldp_fast_start/test.py
