@@ -1,0 +1,154 @@
+From ba644f3db7129b079209355048a10e000b1ecb35 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 23 Nov 2026 17:06:04 +0100
+Subject: [PATCH] Add preempt keyword to --dhcp-host.
+Organization: Wires
+
+An address given with --dhcp-host is not used while another client has
+a lease on it, the client gets one from the dynamic range instead:
+
+  not using configured address 192.168.0.13 because it is leased to ...
+
+That is right when the host is a certain machine.  With a host that
+matches on where the client is connected, e.g. a tag set by
+--dhcp-circuitid and a wildcard MAC address, the machine replacing a
+broken one does not get the address of its port until the lease of the
+old machine has expired.
+
+With preempt, drop the lease of the other client and use the address,
+in DHCPDISCOVER, DHCPREQUEST and BOOTP.  A client which holds another
+address is told to start over, as when a static address has been
+configured for it.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ man/dnsmasq.8 | 15 ++++++++++++++-
+ src/dnsmasq.h |  1 +
+ src/option.c  |  2 ++
+ src/rfc2131.c | 27 +++++++++++++++++++++++++--
+ 4 files changed, 42 insertions(+), 3 deletions(-)
+
+diff --git a/man/dnsmasq.8 b/man/dnsmasq.8
+index 5b01e63..2234b85 100644
+--- a/man/dnsmasq.8
++++ b/man/dnsmasq.8
+@@ -1159,7 +1159,7 @@ is also included, as described in RFC-3775 section 7.3.
+ tells dnsmasq to advertise the prefix without the on-link (aka L) bit set.
+ 
+ .TP
+-.B \-G, --dhcp-host=[<hwaddr>][,id:<client_id>|*][,set:<tag>][,tag:<tag>][,<ipaddr>][,<hostname>][,<lease_time>][,ignore]
++.B \-G, --dhcp-host=[<hwaddr>][,id:<client_id>|*][,set:<tag>][,tag:<tag>][,<ipaddr>][,<hostname>][,<lease_time>][,ignore][,preempt]
+ Specify per host parameters for the DHCP server. This allows a machine
+ with a particular hardware address to be always allocated the same
+ hostname, IP address and lease time. A hostname specified like this
+@@ -1245,6 +1245,19 @@ example: \fB--dhcp-host=00:20:e0:3b:13:af,ignore\fP.
+ This can be useful when there is another DHCP server on the network which should
+ be used by some machines.
+ 
++The special keyword \fBpreempt\fP lets a client take over the address
++of the \fB--dhcp-host\fP while another client still has a lease on
++it. The lease of the other client is dropped. Without it the address
++is not used until that lease has expired, and the client gets an
++address from the dynamic range, if there is one.
++This is for a \fB--dhcp-host\fP which matches whatever is connected
++at a certain place rather than a certain machine, like one with a tag
++set by \fB--dhcp-circuitid\fP, so that a machine which replaces a
++broken one gets the same address at once. For
++example: \fB--dhcp-host=tag:port3,*:*:*:*:*:*,192.168.0.13,preempt\fP.
++Only one client at a time can use the address; two clients which
++both match will keep taking it from each other. DHCPv4 and BOOTP only.
++
+ The \fBset:<tag>\fP construct sets the tag
+ whenever this \fB--dhcp-host\fP directive is in use. This can be used to
+ selectively send DHCP options just for this host. More than one tag
+diff --git a/src/dnsmasq.h b/src/dnsmasq.h
+index ebb8d15..a90ea2d 100644
+--- a/src/dnsmasq.h
++++ b/src/dnsmasq.h
+@@ -955,6 +955,7 @@ struct dhcp_config {
+ #define CONFIG_BANK           2048    /* from dhcp hosts file */
+ #define CONFIG_ADDR6          4096
+ #define CONFIG_ADDR6_HOSTS   16384    /* address added by from /etc/hosts */
++#define CONFIG_PREEMPT       32768    /* address may be taken over from another client */
+ 
+ struct dhcp_opt {
+   int opt, len, flags;
+diff --git a/src/option.c b/src/option.c
+index 274732f..47c09f7 100644
+--- a/src/option.c
++++ b/src/option.c
+@@ -4203,6 +4203,8 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
+ 		      }
+ 		    else if (strcmp(arg, "ignore") == 0)
+ 		      new->flags |= CONFIG_DISABLE;
++		    else if (strcmp(arg, "preempt") == 0)
++		      new->flags |= CONFIG_PREEMPT;
+ 		    else if (new->hostname)
+ 		      {
+ 			dhcp_config_free(new);
+diff --git a/src/rfc2131.c b/src/rfc2131.c
+index 7b58e69..0a80d49 100644
+--- a/src/rfc2131.c
++++ b/src/rfc2131.c
+@@ -72,6 +72,15 @@ static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_v
+ static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *context, int null_term);
+ static void handle_encap(struct dhcp_packet *mess, unsigned char *end, unsigned char *req_options, int null_term, struct dhcp_netid *tagif, int pxemode);
+ 
++/* Take the address from the client holding it, for a host configured with preempt. */
++static void abandon_lease(struct dhcp_lease *lease, time_t now)
++{
++  inet_ntop(AF_INET, &lease->addr, daemon->addrbuff, ADDRSTRLEN);
++  my_syslog(MS_DHCP | LOG_INFO, _("abandoning lease to %s of %s"),
++	    print_mac(lease->hwaddr, lease->hwaddr_len), daemon->addrbuff);
++  lease_prune(lease, now);
++}
++
+ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+ 		  size_t sz, time_t now, int unicast_dest, int loopback,
+ 		  int *is_inform, int pxe, struct in_addr fallback, time_t recvtime, struct in_addr leasequery_source)
+@@ -628,7 +637,15 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+ 		  (lease->hwaddr_len != mess->hlen ||
+ 		   lease->hwaddr_type != mess->htype ||
+ 		   memcmp(lease->hwaddr, mess->chaddr, lease->hwaddr_len) != 0))
+-		message = _("address in use");
++		{
++		  if (have_config(config, CONFIG_PREEMPT))
++		    {
++		      abandon_lease(lease, now);
++		      lease = NULL;
++		    }
++		  else
++		    message = _("address in use");
++		}
+ 	    }
+ 	  else
+ 	    {
+@@ -1307,6 +1324,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+ 	      
+ 	      if ((ltmp = lease_find_by_addr(config->addr)) && 
+ 		  ltmp != lease &&
++		  !have_config(config, CONFIG_PREEMPT) &&
+ 		  !config_has_mac(config, ltmp->hwaddr, ltmp->hwaddr_len, ltmp->hwaddr_type))
+ 		{
+ 		  int len;
+@@ -1522,7 +1540,8 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+ 		   (!have_config(config, CONFIG_DECLINED) ||
+ 		    difftime(now, config->decline_time) > (float)DECLINE_BACKOFF) &&
+ 		   config->addr.s_addr != mess->yiaddr.s_addr &&
+-		   (!(ltmp = lease_find_by_addr(config->addr)) || ltmp == lease))
++		   (!(ltmp = lease_find_by_addr(config->addr)) || ltmp == lease ||
++		    have_config(config, CONFIG_PREEMPT)))
+ 	    message = _("static lease available");
+ 
+ 	  /* Check to see if the address is reserved as a static address for another host */
+@@ -1541,6 +1560,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+ 			    daemon->addrbuff);
+ 		  lease = ltmp;
+ 		}
++	      /* With preempt the client is another host, which gets a lease of its own. */
++	      else if (have_config(config, CONFIG_PREEMPT) && have_config(config, CONFIG_ADDR) &&
++		       config->addr.s_addr == mess->yiaddr.s_addr)
++		abandon_lease(ltmp, now);
+ 	      else
+ 		message = _("address in use");
+ 	    }
