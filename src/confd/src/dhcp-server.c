@@ -183,15 +183,73 @@ static const char *host_match(struct lyd_node *match, const char **id, int *quot
 	return NULL;
 }
 
+/* Colon separated hex, a single byte with a trailing colon or dnsmasq takes it as text */
+static void fput_id(FILE *fp, struct lyd_node *id)
+{
+	const char *str = lydx_get_cattr(id, "str");
+	const char *hex = lydx_get_cattr(id, "hex");
+	int single;
+
+	if (str) {
+		single = !str[1];
+		for (; *str; str++)
+			fprintf(fp, "%02x%s", (unsigned char)*str, str[1] ? ":" : "");
+	} else {
+		single = !strchr(hex, ':');
+		fputs(hex, fp);
+	}
+
+	if (single)
+		fputc(':', fp);
+}
+
+/*
+ * Tags for the sub-options of option 82 to match on, in dhcp-host with
+ * any MAC address.  Returns the dhcp-host match, NULL if nothing is set.
+ */
+static const char *option82_match(FILE *fp, struct lyd_node *opt82, const char *tag)
+{
+	static const char *sub[][2] = {
+		{ "circuit-id", "dhcp-circuitid" },
+		{ "remote-id",  "dhcp-remoteid"  },
+	};
+	static char match[256];
+	size_t len = 0;
+
+	for (size_t i = 0; i < NELEMS(sub); i++) {
+		struct lyd_node *id = lydx_get_child(opt82, sub[i][0]);
+
+		if (!lydx_get_child(id, "str") && !lydx_get_child(id, "hex"))
+			continue;
+
+		fprintf(fp, "%s=set:%s-%s,", sub[i][1], tag, sub[i][0]);
+		fput_id(fp, id);
+		fputc('\n', fp);
+		len += snprintf(match + len, sizeof(match) - len, "tag:%s-%s,", tag, sub[i][0]);
+	}
+	if (!len)
+		return NULL;
+
+	snprintf(match + len, sizeof(match) - len, "*:*:*:*:*:*");
+
+	return match;
+}
+
 /* the address is a key in the host node, so is guaranteed to be set */
 static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 {
 	const char *ip = lydx_get_cattr(host, "address");
 	const char *tag = host_tag(NULL, ip);
-	const char *match, *id, *name;
+	struct lyd_node *opt82 = lydx_get_descendant(lyd_child(host), "match", "option82", NULL);
+	const char *match, *id = NULL, *name;
 	int quote = 0;
 
-	match = host_match(lydx_get_child(host, "match"), &id, &quote);
+	if (opt82) {
+		fprintf(fp, "\n# Host %s option 82 match\n", ip);
+		match = option82_match(fp, opt82, tag);
+	} else {
+		match = host_match(lydx_get_child(host, "match"), &id, &quote);
+	}
 	if (!match)
 		return -1;
 
@@ -212,8 +270,9 @@ static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 		fputq(match, fp);
 	else
 		fputs(match, fp);
-	fprintf(fp, ",set:%s,set:%s,%s,%s%s%s\n", tag, subnet, ip,
-		name ?: "", name ? "," : "", lydx_get_cattr(host, "lease-time"));
+	fprintf(fp, ",set:%s,set:%s,%s,%s%s%s%s\n", tag, subnet, ip,
+		name ?: "", name ? "," : "", lydx_get_cattr(host, "lease-time"),
+		lydx_is_enabled(host, "preempt") ? ",preempt" : "");
 
 	return 0;
 }
