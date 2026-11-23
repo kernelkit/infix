@@ -7,7 +7,6 @@ import os
 
 RUN = "/run/containers"               # confd writes <name>.json here
 NETCONF = os.path.join(RUN, "net")    # confd writes <ifname>.json here
-IPAM = os.path.join(RUN, "ipam")
 NETNS = "/run/netns"
 
 VAR = "/var/lib/containers"

@@ -263,10 +263,6 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		err = ifchange_cand_infer_ipv4_prefix(session, new);
 		if (err)
 			break;
-
-		err = ctrnet_ifchange_cand_infer_type(session, new->xpath);
-		if (err)
-			break;
 	}
 
 	free(prev);

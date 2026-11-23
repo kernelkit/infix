@@ -32,14 +32,12 @@ type containerState struct {
 	Status   string              `json:"status"`
 	Started  float64             `json:"started"`
 	Networks *[]containerNetwork `json:"networks"`
-	Publish  []string            `json:"publish"`
 	Cgroup   string              `json:"cgroup"`
 }
 
 type containerNetwork struct {
 	Name      string   `json:"name"`
 	Ifname    string   `json:"ifname"`
-	Type      string   `json:"type"`
 	Addresses []string `json:"addresses"`
 }
 
@@ -269,7 +267,7 @@ func (c *containerCollector) usage(ctx context.Context, st containerState) map[s
 	return rusage
 }
 
-func (c *containerCollector) network(st containerState, running bool) map[string]interface{} {
+func (c *containerCollector) network(st containerState) map[string]interface{} {
 	if st.Networks == nil {
 		return map[string]interface{}{"host": true}
 	}
@@ -278,13 +276,7 @@ func (c *containerCollector) network(st containerState, running bool) map[string
 	for _, n := range *st.Networks {
 		ifaces = append(ifaces, map[string]interface{}{"name": n.Name})
 	}
-	publish := []interface{}{}
-	if running {
-		for _, p := range st.Publish {
-			publish = append(publish, p)
-		}
-	}
-	return map[string]interface{}{"interface": ifaces, "publish": publish}
+	return map[string]interface{}{"interface": ifaces}
 }
 
 func (c *containerCollector) container(ctx context.Context, st containerState) map[string]interface{} {
@@ -299,7 +291,7 @@ func (c *containerCollector) container(ctx context.Context, st containerState) m
 		"name":    st.Name,
 		"running": running,
 		"status":  status,
-		"network": c.network(st, running),
+		"network": c.network(st),
 	}
 	// A failed setup leaves only name and status behind; an empty
 	// string fails the YANG patterns and would drop the whole entry.

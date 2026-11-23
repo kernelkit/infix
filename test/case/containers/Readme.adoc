@@ -6,7 +6,7 @@ Tests verifying link:https://opencontainers.org/[OCI container] support:
  - Basic web server container running in host network mode
  - Container enable/disable functionality via configuration  
  - Container environment variable configuration and access
- - Common setup with docker0 bridge and automatic VETH pairs
+ - Common setup behind a bridge, with a VETH pair and firewall port forwarding
  - Connecting containers with VETH pairs to standard Linux bridges
  - Assigning physical Ethernet interfaces to containers
  - Container upgrades with persistent volume data

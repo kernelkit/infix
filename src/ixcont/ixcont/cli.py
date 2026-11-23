@@ -18,7 +18,7 @@ import time
 
 from . import bundle, image as images, net, oci, paths
 from .state import (ContainerError, all_states, conf_names, cond_name, err, initctl,
-                    load_conf, load_state, log, pid, running, save_state, sh, update_state)
+                    load_conf, log, pid, running, save_state, sh, update_state)
 
 STOP_TIMEOUT = 30
 
@@ -112,24 +112,22 @@ def _container_id(cfg, image_id):
     return hashlib.sha256(doc.encode()).hexdigest()
 
 
-def _teardown_runtime(name, st):
+def _teardown_runtime(name):
     sh("crun", "delete", "-f", name, check=False, quiet=True)
     rt = paths.rundir(name)
     _umount(os.path.join(rt, "rootfs"))
-    net.teardown(name, (st or {}).get("networks"))
-    net.apply_nft()
+    net.teardown(name)
 
 
 # --- Finit hooks ----------------------------------------------------------
 
 def setup(name):
     cfg = load_conf(name)
-    st = load_state(name) or {}
     rt = paths.rundir(name)
     marker = os.path.join(rt, "upgrade")
     force = os.path.exists(marker)
 
-    _teardown_runtime(name, st)
+    _teardown_runtime(name)
     for d in ("upper", "work", "files", "etc"):
         shutil.rmtree(os.path.join(rt, d), ignore_errors=True)
 
@@ -159,11 +157,9 @@ def setup(name):
         "status": "created",
         "created": time.time(),
         "networks": networks,
-        "publish": cfg.get("network", {}).get("publish", []) if networks is not None else [],
         "cgroup": paths.cgroup(name),
     }
     save_state(name, state)
-    net.apply_nft()
     if force:
         os.unlink(marker)
         images.prune({s["image-path"] for s in all_states()})
@@ -171,7 +167,7 @@ def setup(name):
 
 
 def _remove(name):
-    _teardown_runtime(name, load_state(name))
+    _teardown_runtime(name)
     shutil.rmtree(paths.rundir(name), ignore_errors=True)
 
 
@@ -182,7 +178,7 @@ def post(name):
         _remove(name)
         return
 
-    _teardown_runtime(name, load_state(name))
+    _teardown_runtime(name)
 
     stopping = os.path.join(paths.rundir(name), "stopping")
     if os.path.exists(stopping):
@@ -442,13 +438,6 @@ def stat():
         print(f"{name:<24} {mem:>10} {cpu:>10.2f} {pids:>6}")
 
 
-def gateway(subnet):
-    """Address of the container bridge in subnet, first host with prefix."""
-    import ipaddress
-    net = ipaddress.ip_network(subnet, strict=False)
-    print(f"{next(net.hosts())}/{net.prefixlen}")
-
-
 def _service(name):
     """The Finit service file a container is enabled with, its template
     is that of its restart policy."""
@@ -484,8 +473,8 @@ def reconcile():
     names = conf_names()
     for entry in os.listdir(paths.RUN):
         path = os.path.join(paths.RUN, entry)
-        if os.path.isdir(path) and entry not in ("net", "ipam") and entry not in names:
-            _teardown_runtime(entry, load_state(entry))
+        if os.path.isdir(path) and entry != "net" and entry not in names:
+            _teardown_runtime(entry)
             shutil.rmtree(path, ignore_errors=True)
     keep = set()
     for name in names:
@@ -497,7 +486,6 @@ def reconcile():
             keep.add(path)
     for path in images.prune(keep):
         log(f"Removed unreferenced image {path}")
-    net.apply_nft()
 
 
 # --- entry ----------------------------------------------------------------
@@ -539,7 +527,6 @@ def _parser():
     sub.add_parser("prune", help="remove unused images and volumes")
     sub.add_parser("usage", help="disk usage")
     sub.add_parser("stat", help="resource usage of running containers")
-    sub.add_parser("gateway", help="bridge address for a subnet").add_argument("subnet")
     sub.add_parser("netchange", help="container network changed").add_argument("ifname")
     sub.add_parser("netdel", help="container network removed").add_argument("ifname")
     sub.add_parser("reconcile", help="drop state of unconfigured containers")
@@ -603,8 +590,6 @@ def main(argv=None):
             usage()
         elif args.cmd == "stat":
             stat()
-        elif args.cmd == "gateway":
-            gateway(args.subnet)
         elif args.cmd == "netchange":
             netchange(args.ifname)
         elif args.cmd == "netdel":

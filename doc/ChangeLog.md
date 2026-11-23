@@ -5,6 +5,15 @@ All notable changes to the project are documented in this file.
 [v26.11.0][UNRELEASED]
 -------------------------
 
+> [!IMPORTANT]
+> This release includes **breaking changes** for containers.  A
+> container network of type `bridge`, i.e., the bridge interface itself
+> with its subnets, and the published ports of a container are removed
+> from the configuration on upgrade.  The containers that used the
+> bridge come up without that connection until it is set up again, see
+> [Container Behind a Bridge][ctrbridge].  Containers using an interface
+> of their own, e.g., one end of a VETH pair, are not affected.
+
 ### Changes
 
 - Upgrade Buildroot to 2025.02.20 (LTS)
@@ -21,12 +30,19 @@ All notable changes to the project are documented in this file.
   read-only system image without being unpacked at boot, so a container
   with a large image no longer slows down booting, and a container
   removed from the configuration leaves nothing behind on disk except
-  its named volumes.  Container networking is set up by Infix: the
-  container bridge is a regular bridge, IP forwarding is enabled on it
-  only, and published ports are nftables rules.  Images are pulled from
-  registries with skopeo.  The `container` admin-exec commands are
-  unchanged, the `ixcont` tool replaces `podman` in the shell, see
-  [Containers][containers]
+  its named volumes.  Images are pulled from registries with skopeo.
+  The `ixcont` tool replaces `podman` in the shell.  The admin-exec
+  commands `container remove` and `container save`, and the port,
+  detach and checksum options of `container run` and `container load`
+  are gone, see [Containers][containers]
+- The network outside a container is set up like for any other
+  interface.  An interface declared a `container-network` is moved into
+  the container that lists it, with its addresses and the container's
+  routes, and that is all.  The container bridge that created VETH
+  pairs, handed out addresses and masqueraded on its own is gone, as
+  are published ports: use a regular bridge with VETH pairs, IP
+  forwarding on the interfaces, and port forwarding and masquerading in
+  the firewall, see [Container Behind a Bridge][ctrbridge]
 - The OSPF and RIP routing tables are no longer operational data.  They
   are read from the routing daemon on request with the new `get-routes`
   action on the OSPF and RIP instances, which the `show ip ospf route`
@@ -433,6 +449,7 @@ All notable changes to the project are documented in this file.
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [containers]: https://www.kernelkit.org/infix/latest/container/
+[ctrbridge]: https://www.kernelkit.org/infix/latest/container/#container-behind-a-bridge
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port

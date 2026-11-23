@@ -16,13 +16,10 @@ import (
 
 // containerJSON matches the RESTCONF JSON for a single container entry.
 type containerJSON struct {
-	Name    string   `json:"name"`
-	Image   string   `json:"image"`
-	Running yangBool `json:"running"`
-	Status  string   `json:"status"`
-	Network struct {
-		Publish []string `json:"publish"`
-	} `json:"network"`
+	Name          string                     `json:"name"`
+	Image         string                     `json:"image"`
+	Running       yangBool                   `json:"running"`
+	Status        string                     `json:"status"`
 	ResourceUsage containerResourceUsageJSON `json:"resource-usage"`
 	ResourceLimit containerResourceLimitJSON `json:"resource-limit"`
 }
@@ -57,7 +54,6 @@ type ContainerEntry struct {
 	MemLimit string
 	MemPct   int
 	Uptime   string
-	Ports    []string
 }
 
 // containersData is the template data for the containers page.
@@ -123,7 +119,6 @@ func (h *ContainersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				Image:   c.Image,
 				Status:  c.Status,
 				Running: bool(c.Running),
-				Ports:   c.Network.Publish,
 			}
 
 			// CPU usage — round to int.

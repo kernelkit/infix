@@ -13,10 +13,11 @@ assign switch ports directly to containers, not just bridged VETH pairs.
 This is a rare and in many cases *unique* feature of Infix.
 
 All network specific settings are done using the IETF interfaces YANG
-model, with augments for containers.  Infix sets up container networking
-itself: there is no container network manager, no global IP forwarding
-is enabled behind your back, and masquerading and port forwarding are
-plain nftables rules.
+model.  A container gets its network from the interfaces handed to it,
+and everything outside the container, like bridges, routing, port
+forwarding and masquerading, is set up the same way as for any other
+interface on the system.  Nothing is created or enabled behind your
+back.
 
 > [!IMPORTANT]
 > Containers are managed with the CLI commands, or the `ixcont` tool
@@ -108,30 +109,34 @@ This message shows that your installation appears to be working correctly.
 
 ### Example: Web Server
 
-A web server with [nginx][], using a standard docker bridge.  Infix
-automatically creates a VETH pair for us, connecting the container to
-the `docker0` bridge:
+A web server with [nginx][], connected to the host with a VETH pair.
+The `web` end of the pair is handed to the container, with its address
+and a default route back to the host:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface docker0</b>
-admin@example:/config/interface/docker0/> <b>set container-network</b>
-admin@example:/config/interface/docker0/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0</b>
+admin@example:/config/interface/veth0/> <b>set veth peer web</b>
+admin@example:/config/interface/veth0/> <b>set ipv4 address 192.168.0.1 prefix-length 24</b>
+admin@example:/config/interface/veth0/> <b>end</b>
+admin@example:/config/> <b>edit interface web</b>
+admin@example:/config/interface/web/> <b>set ipv4 address 192.168.0.2 prefix-length 24</b>
+admin@example:/config/interface/web/> <b>set container-network route 0.0.0.0/0 gateway 192.168.0.1</b>
+admin@example:/config/interface/web/> <b>end</b>
 admin@example:/config/> <b>edit container web</b>
 admin@example:/config/container/web/> <b>set image docker://nginx:alpine</b>
-admin@example:/config/container/web/> <b>set network publish 8080:80</b>
-admin@example:/config/container/web/> <b>set network interface docker0</b>
+admin@example:/config/container/web/> <b>set network interface web</b>
 admin@example:/config/container/web/> <b>set volume cache target /var/cache</b>
 admin@example:/config/container/web/> <b>leave</b>
 admin@example:/> <b>show container</b>
 </code></pre>
 
-Exit to the shell and verify the service with curl, or try to attach
-to your device's IP address using your browser:
+Exit to the shell and verify the service with curl:
 
-<pre class="cli"><code>admin@example:~$ <b>curl http://localhost:8080</b>
+<pre class="cli"><code>admin@example:~$ <b>curl http://192.168.0.2</b>
 </code></pre>
 
-or connect to port 8080 of your running Infix system with a browser.
+To reach the web server from other networks, forward a port to it in
+the firewall, see [Container Behind a Bridge](#container-behind-a-bridge).
 See the following sections for how to add more interfaces and manage
 your container at runtime.
 
@@ -535,143 +540,128 @@ Networking and Containers
 -------------------------
 
 By default, unlike other systems, persistent[^1] containers have no
-networking enabled.  All network access has to be set up explicitly.
-Currently two types of of container networks are supported:
+networking enabled.  All network access has to be set up explicitly, by
+handing interfaces to the container.  An interface that is declared a
+`container-network` is moved into the container that lists it, e.g.,
+one end of a VETH pair, or even a physical interface, and returns to
+the host when the container stops.
 
- - `host`: an managed host interface, e.g., one end of a VETH pair,
-   or even a physical interface
- - `bridge`: an IP masquerading bridge
+Declaring the interface as a container network ensures it cannot be
+used by the system for any other purpose, e.g., it can never
+accidentally be added as a bridge or lag port.  Hence, to move an
+interface currently set as a `bridge-port` it must be removed from the
+bridge before being given to a container.
 
-In the former the interface is delegated to (moved into) the container,
-while in the latter a VETH pair is automatically created and one end
-delegated to the container, while the other end is assigned to the
-bridge (see the next section).
+Inside the container the interface gets:
+
+ - the IPv4/IPv6 addresses from its interface settings
+ - the MAC address from `custom-phys-address` in its interface settings
+ - the routes set in `container-network`, e.g., a default route
+ - the name `eth0`, `eth1`, in the order the interfaces are listed in
+   the container's `network`, unless set with the `interface_name`
+   option, see below
+
+DNS servers and search domain use the host's, but can be overridden
+from each container.
+
+Everything outside the container is regular Infix configuration: what
+the other end of a VETH pair connects to, IP forwarding, and port
+forwarding and masquerading in the [firewall][fw].
+
+> [!NOTE]
+> Releases before v26.11 had a `bridge` type of container network, which
+> created VETH pairs, handed out addresses and published ports on its
+> own.  When upgrading, such a container bridge is removed from the
+> configuration, with the published ports, and the containers that
+> used it come up without that connection.  Set them up again as shown
+> in [Container Behind a Bridge](#container-behind-a-bridge).
 
 > [!TIP]
 > For more information on VETH pairs, see the [Networking Guide][0].
+> Both ends of a VETH pair may be assigned to containers, connecting two
+> containers directly without involving the host namespace.
 
 
-### Container Bridge
+### Container Behind a Bridge
 
-A container bridge is what most container setups use and users want.
+A bridge that containers connect to, with the host as their gateway to
+the rest of the world, is what most container setups use.
 
 ![IP Masquerading Container Bridge](img/cni-bridge-firewall.svg)
 
-The difference from a regular bridge is that Infix connects containers
-to it with automatically created VETH pairs (look at the bridge port
-names), hands out addresses from its subnet, masquerades traffic leaving
-it and forwards published ports to the containers behind it.
-
-All interface configuration is done in configure context.
+It is built from parts you already know: a bridge with an address, a
+VETH pair per container with one end as a port in the bridge, and the
+firewall for anything that should pass between the containers and
+other networks.  Here a bridge `br0`, on the common 172.17.0.0/16
+subnet, and a container `web` at 172.17.0.2:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config> <b>edit interface docker0</b>
-admin@example:/config/interface/docker0/> <b>set container-network</b>
-admin@example:/config/interface/docker0/> <b>leave</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>set ipv4 address 172.17.0.1 prefix-length 16</b>
+admin@example:/config/interface/br0/> <b>set ipv4 forwarding</b>
+admin@example:/config/interface/br0/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set veth peer veth0b</b>
+admin@example:/config/interface/veth0a/> <b>set bridge-port bridge br0</b>
+admin@example:/config/interface/veth0a/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0b</b>
+admin@example:/config/interface/veth0b/> <b>set ipv4 address 172.17.0.2 prefix-length 16</b>
+admin@example:/config/interface/veth0b/> <b>set container-network route 0.0.0.0/0 gateway 172.17.0.1</b>
+admin@example:/config/interface/veth0b/> <b>end</b>
+admin@example:/config/> <b>set container web network interface veth0b</b>
 </code></pre>
 
-There is more to this story.  When using the CLI, and sticking to common
-interface nomenclature, Infix helps you with some of the boring stuff.
-E.g., creating a new interface with a name like `brN` or `dockerN`
-automatically *infers* the interface types, which you would otherwise
-have to set manually:
+The container can now talk to the host and to other containers on the
+bridge.  For it to reach other networks, enable `ipv4 forwarding` also
+on the interface facing that network, see [IP Forwarding][ip].
 
-<pre class="cli"><code>admin@example:/config/interface/docker0/> <b>set type bridge</b>
-admin@example:/config/interface/docker0/> <b>set container-network type bridge</b>
+Forwarding a port from the outside to the container, and hiding the
+containers behind the address of the host, is done in the firewall.
+Here the upstream interface `e1` is in zone `wan`, the bridge in zone
+`lan`, port 8080 on the outside goes to port 80 in the container, and
+traffic from the containers is masqueraded on its way out:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit firewall</b>
+admin@example:/config/firewall/> <b>set default wan</b>
+admin@example:/config/firewall/> <b>edit zone wan</b>
+admin@example:/config/firewall/…/wan/> <b>set action drop</b>
+admin@example:/config/firewall/…/wan/> <b>set interface e1</b>
+admin@example:/config/firewall/…/wan/> <b>end</b>
+admin@example:/config/firewall/> <b>edit zone wan port-forward 8080 tcp</b>
+admin@example:/config/firewall/…/tcp/> <b>set to addr 172.17.0.2</b>
+admin@example:/config/firewall/…/tcp/> <b>set to port 80</b>
+admin@example:/config/firewall/…/tcp/> <b>end</b>
+admin@example:/config/firewall/> <b>edit zone lan</b>
+admin@example:/config/firewall/…/lan/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan/> <b>set interface br0</b>
+admin@example:/config/firewall/…/lan/> <b>end</b>
+admin@example:/config/firewall/> <b>edit policy lan-to-wan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set ingress lan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set egress wan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set masquerade</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>leave</b>
 </code></pre>
 
 > [!IMPORTANT]
-> When configuring the system via an API such as NETCONF or RESTCONF, no
-> settings are inferred.  Instead it is up to the caller to fully define
-> the desired setup.  This makes the CLI very useful for first setup and
-> then extracting the resulting XML from the shell using the `cfg -X`
-> command.
+> With the firewall enabled every interface is in a zone, the default
+> one unless you say otherwise.  Make sure the interface you manage the
+> system over is in a zone that lets you in, see [Firewall][fw].
 
-We have to declare the interface as a container network, ensuring the
-interface cannot be used by the system for any other purpose.  E.g., a
-container `host` interface is supposed to be used by a container, by
-declaring it as such we can guarantee that it would never accidentally
-be added as a bridge or lag port.  Hence, to move an interface currently
-set as a `bridge-port` it must be removed from the bridge before being
-given to a container.
+The name of the interface inside the container is set with an option on
+the container's network interface:
 
-The default subnet for a container `bridge` is 172.17.0.0/16, the bridge
-takes the `.1` address and hands out the rest of the range to containers
-in order.  A container with this `network` gets an automatically created
-VETH pair connection to the bridge, a default route via the bridge, and
-the host's DNS servers unless overridden.  IP forwarding is enabled on
-the container bridge only; for containers to reach other networks, or
-for published ports to be reachable from them, enable `ipv4 forwarding`
-on the interface facing that network, see [IP Forwarding][ip].
-
-Some of the defaults of a container `bridge` can be changed, e.g.,
-instead of `set container-network type bridge`, above, do:
-
-<pre class="cli"><code>admin@example:/config/interface/docker0/> <b>edit container-network</b>
-admin@example:/config/…/container-network/> <b>set type bridge</b>
-admin@example:/config/…/container-network/> <b>edit subnet 192.168.0.0/16</b>
-admin@example:/config/…/subnet/192.168.0.0/16/> <b>set gateway 192.168.255.254</b>
-admin@example:/config/…/subnet/192.168.0.0/16/> <b>end</b>
-admin@example:/config/…/container-network/> <b>edit route 10.0.10.0/24</b>
-admin@example:/config/…/route/10.0.10.0/24/> <b>set gateway 192.168.10.254</b>
-admin@example:/config/…/route/10.0.10.0/24/> <b>end</b>
-admin@example:/config/…/container-network/> <b>end</b>
-admin@example:/config/interface/docker0/> <b>leave</b>
-</code></pre>
-
-Other network settings, like DNS and domain, use built-in defaults, but
-can be overridden from each container.  Other common settings per
-container is the IP address and name of the network interface inside the
-container.  The default, after each stop/start cycle, or reboot of the
-host, is to name the interfaces `eth0`, `eth1`, in the order they are
-given in the `network` list, and to give the container the next address
-in a `bridge`.  Below an example of a system container calls `set
-network interface docker0`, here we show how to set options for that
-network:
-
-<pre class="cli"><code>admin@example:/config/container/ntpd/> <b>edit network interface docker0</b>
-admin@example:/config/…/network/interface/docker0/>
-admin@example:/config/…/network/interface/docker0/> <b>set option</b>
-&lt;string&gt;  Options for masquerading container bridges.
-admin@example:/config/…/network/interface/docker0/> <b>help option</b>
-NAME
-        option &lt;string&gt;
-
-DESCRIPTION
-        Options for masquerading container bridges.
-
-        Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
-                 mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
-                 interface_name=foo0   -- set interface name inside container
-
-admin@example:/config/…/network/interface/docker0/> <b>set option ip=172.17.0.2</b>
-admin@example:/config/…/network/interface/docker0/> <b>set option interface_name=wan</b>
-admin@example:/config/…/network/interface/docker0/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/container/web/> <b>edit network interface veth0b</b>
+admin@example:/config/…/network/interface/veth0b/> <b>set option interface_name=wan</b>
+admin@example:/config/…/network/interface/veth0b/> <b>leave</b>
 </code></pre>
 
 
 ### Container Host Interface
 
-Another common use-case is to move network interfaces into the network
-namespace of a container[^3].  This of course works with plain Ethernet
-interfaces as well, but here we will use one end of a VETH pair as an
-example.
-
-The network `option` setting is available also for this case, but only
-the `interface_name=foo0` option works.  Which is still very useful.  To
-set:
-
- - IP address, use IPv4/IPv6 settings in the interface settings
- - MAC address, to use the `custom-phys-address` in the interface settings
-
-For an example of both, see the next section.
-
-> [!TIP]
-> Both ends of a VETH pair may be assigned to containers, connecting two
-> containers directly without involving the host namespace.
-
-[^3]: Something which the container bridge network type does behind the
-    scenes with one end of an automatically created VETH pair.
+Any interface can be moved into the network namespace of a container.
+This of course works with plain Ethernet interfaces as well, but here
+we will use one end of a VETH pair as an example.
 
 
 #### Routed Setup
@@ -699,9 +689,7 @@ admin@example:/config/interface/ntpd/> <b>set container-network</b>
 > [!TIP]
 > Notice how you can also set a custom MAC address at the same time.
 
-Adding the interface to the container is the same as before, but since
-everything for host interfaces is set up in the interfaces context, we
-can take a bit of a shortcut.
+Adding the interface to the container is the same as before:
 
 <pre class="cli"><code>admin@example:/config/container/ntpd/> <b>set network interface ntpd</b>
 admin@example:/config/container/ntpd/> <b>leave</b>
@@ -710,10 +698,6 @@ admin@example:/config/container/ntpd/> <b>leave</b>
 > [!TIP]
 > Use the `set network interface ntpd option interface_name=foo0` to set
 > the name of the interface inside the container to `foo0`.
-
-The point of the routed case is that port forwarding from the container
-in this case is limited to a single interface, not *all interfaces* as
-is the default in the masquerading container bridge setup.
 
 
 #### Bridged Setup
@@ -742,7 +726,6 @@ have a default route installed.  This can be added from the host with a
 admin@example:/config/interface/veth1a/> <b>show</b>
 type veth;
 container-network {
-  type host;
   route 0.0.0.0/0 {
     gateway 192.168.1.1;
   }
@@ -895,15 +878,19 @@ Example Containers
 ### System Container
 
 Let's try out what we've learned by setting up a system container, a
-container providing multiple services, using the `docker0` interface
-we created previously:
+container providing multiple services, behind the bridge `br0` from
+[Container Behind a Bridge](#container-behind-a-bridge), with a second
+VETH pair `veth1a` and `veth1b` set up the same way, at 172.17.0.3:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config> <b>edit container system</b>
 admin@example:/config/container/system/> <b>set image ghcr.io/kernelkit/curios:edge</b>
-admin@example:/config/container/system/> <b>set network interface docker0</b>
-admin@example:/config/container/system/> <b>set publish 222:22</b>
-admin@example:/config/container/system/> <b>leave</b>
+admin@example:/config/container/system/> <b>set network interface veth1b</b>
+admin@example:/config/container/system/> <b>end</b>
+admin@example:/config/> <b>edit firewall zone wan port-forward 222 tcp</b>
+admin@example:/config/firewall/…/tcp/> <b>set to addr 172.17.0.3</b>
+admin@example:/config/firewall/…/tcp/> <b>set to port 22</b>
+admin@example:/config/firewall/…/tcp/> <b>leave</b>
 </code></pre>
 
 > [!NOTE]
@@ -913,15 +900,14 @@ admin@example:/config/container/system/> <b>leave</b>
 > default route is added, and every 60 seconds.
 
 Provided the image is downloaded successfully, a new `system` container
-now runs behind the docker0 interface, forwarding container port 22 to
-port 222 on all of the host's interfaces.  (See `help publish` in the
-container configuration context for the full syntax.)
+now runs behind the bridge, with port 222 on the interfaces in the
+firewall's `wan` zone forwarded to port 22 in the container.
 
 Available containers can be accessed from admin-exec:
 
 <pre class="cli"><code>admin@example:/> <b>show container</b>
 <span class="header">NAME     STATUS        NETWORK  MEMORY (KiB)  CPU%</span>
-system   Up 16 hours   docker0       136/512  0.02
+system   Up 16 hours   br0           136/512  0.02
 </code></pre>
 
 This is a system container, so you can "attach" to it by starting a
@@ -1146,4 +1132,5 @@ Container Image](#embedded-container-images) (above).
 [nginx]:  https://hub.docker.com/_/nginx
 [crun]:   https://github.com/containers/crun
 [ip]:     ip.md
+[fw]:     firewall.md
 [Volume Management]: #volume-management

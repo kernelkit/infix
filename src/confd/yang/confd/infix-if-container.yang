@@ -16,10 +16,18 @@ submodule infix-if-container {
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
-  description  "Container network to interface mapping for ietf-interfaces.
+  description  "Hands an interface over to a container.
+
                 Ensures a container interface can never be a bridge port, or
                 LAG member, at the same time.";
 
+  revision 2026-11-16 {
+    description "An interface is handed to a container as it is, the network
+                 outside the container is set up like any other:
+                   - Drop the container-network type and its identities
+                   - Drop the subnet list of the masquerading container bridge";
+    reference "internal";
+  }
   revision 2024-11-15 {
     description "Two changes:
                    - Relocate 'feature containers' declaration to here
@@ -45,24 +53,6 @@ submodule infix-if-container {
   }
 
   /*
-   * Identities
-   */
-
-  identity container-network {
-    description "Container network type";
-  }
-
-  identity bridge {
-   base container-network;
-    description "Container bridge with IP masquerading, portmappping, and firewalling.";
-  }
-
-  identity host {
-    base container-network;
-    description "Host device, e.g., one end of a VETH pair or other host interface.";
-  }
-
-  /*
    * Data Nodes
    */
 
@@ -72,49 +62,23 @@ submodule infix-if-container {
 
     case container-network {
       container container-network {
-	presence "Container network mapping.";
+	presence "Hand the interface to a container.";
+	description "Hand the interface to a container.
 
-	leaf type {
-	  description "Masquerading container bridge or a host interface";
-	  type identityref {
-	    base container-network;
-	  }
-	}
-         leaf-list containers {
-                 type string;
-                 config false;
-                 description "List of containers using this interface";
-         }
-	list subnet {
-	  description "Static IP ranges to hand out addresses to containers from.
+                     The interface is moved into the container that lists it,
+                     with its IP addresses, and returns when the container stops.
+                     Anything outside the container, e.g., the other end of a
+                     VETH pair, a bridge, routing and firewall, is set up as for
+                     any other interface.";
 
-                       If no subnet is provided, a default 172.17.0.0/16 one is
-                       set up.  This is the default in a standard Docker setup.
-
-                       A container bridge forwards DNS, NTP, and SSH by default to
-                       the host interfaces.";
-	  when "../type = 'infix-if:bridge'";
-	  key subnet;
-
-	  leaf subnet {
-	    type inet:ip-prefix;
-	    description "Subnet to assign addresses from, round-robin assignment.";
-	  }
-
-	  leaf gateway {
-	    type inet:ip-address;
-	    description "Optional gateway address for the subnet, defaults to .1.
-
-	                 This will be used as the address of the container bridge.";
-	  }
+	leaf-list containers {
+	  type string;
+	  config false;
+	  description "List of containers using this interface";
 	}
 
 	list route {
-	  description "IPv4 or IPv6 routes to be added to container.
-
-                       For bridge type interfaces the gateway can be omitted, the
-                       IP address of the container bridge will then be used as the
-                       next-hop address.";
+	  description "IPv4 or IPv6 routes to be added inside the container.";
 	  key subnet;
 
 	  leaf subnet {

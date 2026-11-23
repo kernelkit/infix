@@ -253,9 +253,7 @@ table ip nat {
             {
                 "name": "veth0a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host",
-                },
+                "infix-interfaces:container-network": {},
                 "ipv4": {
                     "address": [
                         {
@@ -287,9 +285,7 @@ table ip nat {
             {
                 "name": "veth1a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
-                },
+                "infix-interfaces:container-network": {},
                 "infix-interfaces:veth": {
                     "peer": "veth1b"
                 },
@@ -313,8 +309,14 @@ table ip nat {
             {
                 "name": "veth2a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
+                "infix-interfaces:container-network": {},
+                "ipv4": {
+                    "address": [
+                        {
+                            "ip": "169.254.1.3", # This only for test, use zeroconf in real-life
+                            "prefix-length": 16
+                        }
+                    ]
                 },
                 "infix-interfaces:veth": {
                     "peer": "veth2b"
@@ -339,9 +341,7 @@ table ip nat {
             {
                 "name": "veth3a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
-                },
+                "infix-interfaces:container-network": {},
                 "infix-interfaces:veth": {
                     "peer": "veth3b"
                 },
@@ -389,8 +389,7 @@ table ip nat {
                                 "option": [
                                 "interface_name=br1"
                             ]}
-                        ],
-                        "publish": [ "91" ]
+                        ]
                     }
                 },
                 {
@@ -402,8 +401,7 @@ table ip nat {
                     "network": {
                         "interface": [
                         {
-                            "name": "veth2a",
-                            "option": ["ip=169.254.1.3"] # This only for test, use zeroconf in real-life
+                            "name": "veth2a"
                         },
                         {
                             "name": "veth3a"

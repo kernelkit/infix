@@ -16,8 +16,7 @@ const webState = `{
 	"cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v",
 	"status": "created",
 	"started": 1700000000,
-	"networks": [{"name": "docker0", "ifname": "eth0", "type": "bridge", "addresses": ["172.17.0.2"]}],
-	"publish": ["127.0.0.1:8080:80", "8443:443/tcp"],
+	"networks": [{"name": "veth0b", "ifname": "eth0", "addresses": ["172.17.0.2"]}],
 	"cgroup": "system/container@web/payload"
 }`
 
@@ -29,7 +28,6 @@ const hostState = `{
 	"cmdline": "/usr/sbin/ntpd -n",
 	"status": "created",
 	"networks": null,
-	"publish": [],
 	"cgroup": "system/container@ntpd/payload"
 }`
 
@@ -106,21 +104,14 @@ func TestContainerHostNetwork(t *testing.T) {
 	}
 }
 
-func TestContainerBridgeNetwork(t *testing.T) {
+func TestContainerInterfaceNetwork(t *testing.T) {
 	fs := fixture(map[string]string{"web": webState}, nil)
 	c := collectContainers(t, runner("web"), fs)[0]
 
 	net := c["network"].(map[string]interface{})
 	ifaces := net["interface"].([]interface{})
-	if len(ifaces) != 1 || ifaces[0].(map[string]interface{})["name"] != "docker0" {
+	if len(ifaces) != 1 || ifaces[0].(map[string]interface{})["name"] != "veth0b" {
 		t.Fatalf("interface mismatch: %v", ifaces)
-	}
-	publish := net["publish"].([]interface{})
-	if len(publish) != 2 {
-		t.Fatalf("expected 2 published ports, got %d", len(publish))
-	}
-	if publish[0] != "127.0.0.1:8080:80" || publish[1] != "8443:443/tcp" {
-		t.Fatalf("publish mismatch: %v", publish)
 	}
 }
 
@@ -202,11 +193,6 @@ func TestContainerStopped(t *testing.T) {
 	if _, ok := c["resource-usage"]; ok {
 		t.Fatalf("stopped container must not include resource-usage: %v", c["resource-usage"])
 	}
-	net := c["network"].(map[string]interface{})
-	publish := net["publish"].([]interface{})
-	if len(publish) != 0 {
-		t.Fatalf("stopped container must not include published ports, got %v", publish)
-	}
 }
 
 func TestContainerMultiple(t *testing.T) {
@@ -242,7 +228,7 @@ func TestContainerNone(t *testing.T) {
 func TestContainerNetworks(t *testing.T) {
 	fs := fixture(map[string]string{"web": webState, "ntpd": hostState}, nil)
 	networks := ContainerNetworks(fs)
-	if len(networks) != 1 || len(networks["docker0"]) != 1 || networks["docker0"][0] != "web" {
+	if len(networks) != 1 || len(networks["veth0b"]) != 1 || networks["veth0b"][0] != "web" {
 		t.Fatalf("networks = %v", networks)
 	}
 }
