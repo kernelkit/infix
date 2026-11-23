@@ -75,6 +75,7 @@ confd_plugin_la_SOURCES =			\
 	dhcp-common.c				\
 	dhcp-client.c				\
 	dhcpv6-client.c				\
+	dhcp-relay.c				\
 	dhcp-server.c				\
 	factory.c				\
 	firewall.c				\

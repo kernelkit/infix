@@ -285,6 +285,9 @@ int dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 /* dhcpv6-client.c */
 int dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
+/* dhcp-relay.c */
+int dhcp_relay_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+
 /* dhcp-server.c */
 int dhcp_server_candidate_init(struct confd *confd);
 int dhcp_server_rpc_init(struct confd *confd);

@@ -1,0 +1,299 @@
+module infix-dhcp-relay {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:dhcp-relay";
+  prefix dhcp-relay;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import iana-if-type {
+    prefix ianaift;
+  }
+  import infix-interfaces {
+    prefix infix-if;
+  }
+  import infix-dhcp-common {
+    prefix dhcp;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "This module implements a DHCPv4 relay agent with
+                support for the Relay Agent Information option (82).";
+
+  revision 2026-11-19 {
+    description "Initial revision.";
+    reference   "internal";
+  }
+
+  grouping server-group {
+    description "DHCP servers to relay requests to.";
+
+    list server {
+      description "DHCP server to relay requests to.
+
+                   Requests are sent to all servers in the list.";
+      key "address";
+
+      leaf address {
+        description "IPv4 address of the DHCP server.
+
+                     Use 127.0.0.1 for the DHCP server on this system, which
+                     requires option 82.";
+        type inet:ipv4-address-no-zone;
+        must "not(starts-with(., '127.')) or /dhcp-relay/option82" {
+          error-message "A DHCP server on this system requires option 82.";
+        }
+      }
+
+      leaf port {
+        description "UDP port of the DHCP server.";
+        type inet:port-number;
+        default 67;
+      }
+    }
+  }
+
+  container dhcp-relay {
+    description "DHCPv4 relay agent configuration.";
+
+    leaf enabled {
+      description "Globally enable or disable the DHCP relay agent.";
+      type boolean;
+      default true;
+    }
+
+    uses server-group {
+      refine "server" {
+        description "Default DHCP servers, used by interfaces that do not
+                     have their own server list.
+
+                     Requests are sent to all servers in the list.";
+      }
+    }
+
+    leaf force-server-identity {
+      description "Make clients send all requests through the relay agent.
+
+                   Adds the server identifier override sub-option to option
+                   82, with the gateway address.  The server then gives the
+                   gateway address as its own, so renewals are relayed too
+                   and get option 82.  The server must support the
+                   sub-option.  Always done for a server on this system,
+                   at 127.0.0.1.";
+      reference "RFC 5107: DHCP Server Identifier Override Suboption";
+      must ". = 'false' or ../option82" {
+        error-message "Requires option 82.";
+      }
+      type boolean;
+      default false;
+    }
+
+    container option82 {
+      presence "Enable the Relay Agent Information option (82).";
+      description "Relay Agent Information option (82).
+
+                   When enabled, the relay agent adds a circuit-id, identifying
+                   the port the request arrived on, and a remote-id, identifying
+                   this relay agent, to each request it relays.  The option is
+                   removed from server replies before they are sent to the
+                   client.";
+      reference "RFC 3046: DHCP Relay Agent Information Option";
+
+      leaf policy {
+        description "Handling of requests that already carry option 82.
+
+                     Applies to requests from clients.  On trusted ports
+                     option 82 is always kept.";
+        reference "RFC 3046, sec. 2.1";
+        type enumeration {
+          enum keep {
+            description "Forward the request with the existing option 82.";
+          }
+          enum replace {
+            description "Replace it with the option 82 of this relay agent.";
+          }
+          enum drop {
+            description "Drop the request.";
+          }
+        }
+        default replace;
+      }
+
+      container remote-id {
+        description "Remote-id sub-option (2), identifies this relay agent.";
+
+        choice id {
+          default type;
+
+          case type {
+            leaf type {
+              description "Value derived from the system.";
+              type enumeration {
+                enum mac {
+                  description "Base MAC address of the system.";
+                }
+                enum giaddr {
+                  description "Gateway address used when relaying.";
+                }
+                enum hostname {
+                  description "Hostname of the system.";
+                }
+              }
+              default mac;
+            }
+          }
+          case str {
+            leaf str {
+              description "Fixed string value.
+
+                           Example: switch-17";
+              type string {
+                length "1..50";
+                pattern '[^\p{Cc}]+';
+              }
+            }
+          }
+          case hex {
+            leaf hex {
+              description "Fixed binary value as colon-separated pairs of hex digits.
+
+                           Example: c0:ff:ee";
+              type dhcp:octet-string {
+                length "2..149";
+              }
+            }
+          }
+        }
+      }
+    }
+
+    list interface {
+      description "Interface to relay DHCP requests from.
+
+                   The address of the interface is used as gateway address,
+                   which the servers reply to and select the subnet from.
+
+                   On a bridge, or a VLAN interface on top of a bridge, the
+                   requests are relayed per bridge port.  All bridge ports
+                   relay, see the port list for exceptions.  On any other
+                   interface, requests received on the interface are relayed.";
+      key "name";
+      must "server or ../server" {
+        error-message "No DHCP server for the interface.";
+      }
+
+      leaf name {
+        description "Interface name.";
+        type if:interface-ref;
+      }
+
+      leaf option82 {
+        description "Add option 82 to requests from this interface.
+
+                     Only has effect when option 82 is enabled.  Disable for
+                     an interface that should only relay.";
+        type boolean;
+        default true;
+      }
+
+      uses server-group {
+        refine "server" {
+          description "DHCP servers for this interface, overrides the global list.
+
+                       Requests are sent to all servers in the list.";
+        }
+      }
+
+      list port {
+        when "derived-from-or-self(/if:interfaces/if:interface"
+           + "[if:name = current()/../name]/if:type, 'ianaift:bridge') or "
+           + "derived-from-or-self(/if:interfaces/if:interface"
+           + "[if:name = /if:interfaces/if:interface"
+           + "[if:name = current()/../name]/infix-if:vlan/infix-if:lower-layer-if]"
+           + "/if:type, 'ianaift:bridge')" {
+          description "Only for a bridge, or a VLAN interface on a bridge.";
+        }
+        description "Bridge port with other settings than the default.
+
+                     A bridge port that is not in this list relays requests,
+                     is not trusted, and has its name as circuit-id.";
+        key "name";
+
+        leaf name {
+          description "Name of the bridge port.";
+          type if:interface-ref;
+          must "/if:interfaces/if:interface[if:name = current()]"
+             + "/infix-if:bridge-port/infix-if:bridge = ../../name or "
+             + "/if:interfaces/if:interface[if:name = current()]"
+             + "/infix-if:bridge-port/infix-if:bridge = "
+             + "/if:interfaces/if:interface[if:name = current()/../../name]"
+             + "/infix-if:vlan/infix-if:lower-layer-if" {
+            error-message "Must be a port of the bridge.";
+          }
+        }
+
+        leaf enabled {
+          description "Relay requests from this port.
+
+                       When disabled, DHCP on the port is bridged as any
+                       other traffic.  Disable for a port where a DHCP server
+                       is connected.";
+          type boolean;
+          default true;
+        }
+
+        leaf trusted {
+          description "Trust the relay agent information in requests.
+
+                       Enable where another relay agent, or a switch that adds
+                       option 82, is connected.  Option 82 in a request is then
+                       kept, regardless of the option 82 policy, and requests
+                       already relayed by another relay agent are forwarded
+                       unmodified.  The client hardware address in a request is
+                       not checked against the sender of the frame.
+
+                       When disabled, the option 82 policy applies and requests
+                       already relayed by another relay agent are dropped, since
+                       a client could send such requests too.";
+          reference "RFC 3046, sec. 2.1";
+          type boolean;
+          default false;
+        }
+
+        container circuit-id {
+          description "Circuit-id sub-option (1), identifies the port.
+
+                       Defaults to the name of the port.";
+
+          choice id {
+            case str {
+              leaf str {
+                description "Fixed string value.
+
+                             Example: camera-18";
+                type string {
+                  length "1..50";
+                  pattern '[^\p{Cc}]+';
+                }
+              }
+            }
+            case hex {
+              leaf hex {
+                description "Fixed binary value as colon-separated pairs of hex digits.
+
+                             Example: c0:ff:ee";
+                type dhcp:octet-string {
+                  length "2..149";
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
