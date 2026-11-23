@@ -1,0 +1,55 @@
+From 7d4851ec073d4942f964c661e479486e0ca54479 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 19 Aug 2026 11:38:37 +0200
+Subject: [PATCH 085/124] arm64: dts: microchip: lan969x: add SDMMC nodes
+Organization: Wires
+
+The SoC has two SDMMC controllers, neither of which is described, so
+boards with eMMC have no way to enable it.  Add both, disabled by
+default.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm64/boot/dts/microchip/lan9691.dtsi | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/microchip/lan9691.dtsi b/arch/arm64/boot/dts/microchip/lan9691.dtsi
+index a8541c6a098d..dbf53f4c1c55 100644
+--- a/arch/arm64/boot/dts/microchip/lan9691.dtsi
++++ b/arch/arm64/boot/dts/microchip/lan9691.dtsi
+@@ -414,6 +414,17 @@ qspi0: spi@e0804000 {
+ 			status = "disabled";
+ 		};
+ 
++		sdmmc0: mmc@e0830000 {
++			compatible = "microchip,lan969x-sdhci";
++			reg = <0xe0830000 0x300>;
++			interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&clks GCK_ID_SDMMC0>, <&clks GCK_ID_SDMMC0>;
++			clock-names = "hclock", "multclk";
++			assigned-clocks = <&clks GCK_ID_SDMMC0>;
++			assigned-clock-rates = <100000000>;
++			status = "disabled";
++		};
++
+ 		qspi2: spi@e0834000 {
+ 			compatible = "microchip,lan9691-qspi";
+ 			reg = <0xe0834000 0x00000100>,
+@@ -429,6 +440,17 @@ qspi2: spi@e0834000 {
+ 			status = "disabled";
+ 		};
+ 
++		sdmmc1: mmc@e0838000 {
++			compatible = "microchip,lan969x-sdhci";
++			reg = <0xe0838000 0x300>;
++			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&clks GCK_ID_SDMMC1>, <&clks GCK_ID_SDMMC1>;
++			clock-names = "hclock", "multclk";
++			assigned-clocks = <&clks GCK_ID_SDMMC1>;
++			assigned-clock-rates = <45000000>;
++			status = "disabled";
++		};
++
+ 		reset: reset-controller@e201000c {
+ 			compatible = "microchip,lan9691-switch-reset",
+ 				     "microchip,lan966x-switch-reset";

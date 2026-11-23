@@ -1,0 +1,151 @@
+From 2e3e0b293ecdcfbfbb891cc0efee5ce10583ffab Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 10 Nov 2026 17:01:17 +0100
+Subject: [PATCH 080/124] net: sparx5: offload the taprio queueMaxSDU on
+ LAN969x
+Organization: Wires
+
+IEEE 802.1Q-2022 8.6.8.4 discards a traffic class's frames longer
+than its queueMaxSDU.  The driver does not report taprio caps, so
+taprio refuses an offloaded schedule with max-sdu:
+
+    tc qdisc replace dev eth0 root taprio ... max-sdu 0 1000 flags 0x2
+    Error: sch_taprio: Device does not handle queueMaxSDU.
+
+LAN969x drops frames over a class's max SDU when QMAXSDU_DISC_CFG is
+enabled, with the size in 64-byte units in TAS_QMAXSDU_CFG and the
+remainder in QMAXSDU_DISC_CFG.  TAS_QMAXSDU_CFG also sets the guard
+band, so a class with a max SDU gets a guard band of its largest frame,
+rounded down, as Microchip's MESA does.  SparX-5 has no discard.
+
+Report supports_queue_max_sdu on LAN969x, and program each class from
+the schedule, back to the full-size guard band when it is removed.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_tas.c    | 46 +++++++++++++++++--
+ .../net/ethernet/microchip/sparx5/sparx5_tc.c | 17 +++++++
+ 2 files changed, 58 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+index 790e75bf35ed..0c8a021daba1 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+@@ -526,14 +526,34 @@ static void sparx5_tas_gcl_setup(struct sparx5_port *port, int list, int base,
+ 	}
+ }
+ 
+-static void sparx5_tas_guard_band_set(struct sparx5 *sparx5, int portno)
++/* LAN969x drops a class's frames over its queueMaxSDU, read from the
++ * guard band register, so a class with one gets a guard band of its
++ * largest frame, rounded down.
++ */
++static void sparx5_tas_guard_band_set(struct sparx5 *sparx5, int portno,
++				      const u32 *max_sdu)
+ {
+ 	int tc;
+ 
+-	for (tc = 0; tc < SPX5_PRIOS; tc++)
+-		spx5_wr(HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL_SET(TAS_GB_DEFAULT),
++	for (tc = 0; tc < SPX5_PRIOS; tc++) {
++		u32 sdu = max_sdu ? max_sdu[tc] : 0;
++		u32 val = TAS_GB_DEFAULT, disc = 0;
++
++		if (sdu && sdu < ETH_DATA_LEN) {
++			val = TAS_FRAME(sdu) / TAS_GB_UNIT;
++			disc = HSCH_QMAXSDU_DISC_CFG_QMAXSDU_DISC_ENA_SET(1) |
++			       HSCH_QMAXSDU_DISC_CFG_QMAXSDU_LSB_SET(TAS_FRAME(sdu) %
++								     TAS_GB_UNIT);
++		}
++
++		spx5_wr(HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL_SET(val),
+ 			sparx5,
+ 			HSCH_TAS_QMAXSDU_CFG(portno, tc));
++		if (!is_sparx5(sparx5))
++			spx5_wr(disc,
++				sparx5,
++				HSCH_QMAXSDU_DISC_CFG(portno, tc));
++	}
+ }
+ 
+ int sparx5_tas_enable(struct sparx5_port *port,
+@@ -582,6 +602,15 @@ int sparx5_tas_enable(struct sparx5_port *port,
+ 		}
+ 	}
+ 
++	for (i = 0; i < SPX5_PRIOS; i++) {
++		if (qopt->max_sdu[i] &&
++		    TAS_FRAME(qopt->max_sdu[i]) < TAS_GB_UNIT) {
++			NL_SET_ERR_MSG_MOD(qopt->extack,
++					   "queueMaxSDU is below a minimum-size frame");
++			return -EINVAL;
++		}
++	}
++
+ 	mutex_lock(&sparx5->tas_lock);
+ 
+ 	sparx5_tas_gcl_flush(sparx5);
+@@ -646,6 +675,8 @@ int sparx5_tas_enable(struct sparx5_port *port,
+ 
+ 	sparx5_tas_gcl_setup(port, new_list, base, qopt);
+ 
++	sparx5_tas_guard_band_set(sparx5, port->portno, qopt->max_sdu);
++
+ 	/* The obsolete list keeps its entries until it reaches ADMIN */
+ 	port->tas_lists[slot].gcl_base = base;
+ 	port->tas_lists[slot].gcl_count = qopt->num_entries;
+@@ -743,7 +774,12 @@ int sparx5_tas_disable(struct sparx5_port *port)
+ 
+ 	mutex_unlock(&port->sparx5->tas_lock);
+ 
+-	return err ?: sparx5_tc_prio_tc_set(port, NULL);
++	if (err)
++		return err;
++
++	sparx5_tas_guard_band_set(port->sparx5, port->portno, NULL);
++
++	return sparx5_tc_prio_tc_set(port, NULL);
+ }
+ 
+ int sparx5_tas_init(struct sparx5 *sparx5)
+@@ -783,7 +819,7 @@ int sparx5_tas_init(struct sparx5 *sparx5)
+ 		if (!sparx5->ports[i])
+ 			continue;
+ 
+-		sparx5_tas_guard_band_set(sparx5, i);
++		sparx5_tas_guard_band_set(sparx5, i, NULL);
+ 
+ 		/* Associate profile with port (profile idx = port on lan969x) */
+ 		if (is_sparx5(sparx5))
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+index d97f7d751992..81abfd3d78da 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tc.c
+@@ -197,10 +197,27 @@ static int sparx5_tc_setup_qdisc_cbs(struct net_device *ndev,
+ 			      sparx5_tc_cbs_del(port, idx);
+ }
+ 
++/* Only LAN969x can drop the frames over a class's queueMaxSDU */
++static int sparx5_tc_query_caps(struct net_device *ndev,
++				struct tc_query_caps_base *base)
++{
++	struct sparx5_port *port = netdev_priv(ndev);
++	struct tc_taprio_caps *caps = base->caps;
++
++	if (base->type != TC_SETUP_QDISC_TAPRIO)
++		return -EOPNOTSUPP;
++
++	caps->supports_queue_max_sdu = !is_sparx5(port->sparx5);
++
++	return 0;
++}
++
+ int sparx5_port_setup_tc(struct net_device *ndev, enum tc_setup_type type,
+ 			 void *type_data)
+ {
+ 	switch (type) {
++	case TC_QUERY_CAPS:
++		return sparx5_tc_query_caps(ndev, type_data);
+ 	case TC_SETUP_BLOCK:
+ 		return sparx5_tc_setup_block(ndev, type_data);
+ 	case TC_SETUP_QDISC_MQPRIO:

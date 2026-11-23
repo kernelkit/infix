@@ -1,0 +1,106 @@
+From 90e0200ca4ed8aeb2ffe26efa7bd724b9f8fff90 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 10 Nov 2026 16:58:29 +0100
+Subject: [PATCH 079/124] net: sparx5: size the TAS guard band for a full-size
+ frame
+Organization: Wires
+
+IEEE 802.1Q-2022 8.6.8.4 holds back a frame that cannot finish before
+its gate closes, the media-dependent overhead included.  The switch
+does that with a guard band per traffic class of TAS_QMAXSDU_CFG
+minimum-size frames, which the driver leaves at its reset value of 24,
+or 1536 bytes.  A tagged 1522-byte frame needs 1542 with its preamble,
+SFD and interframe gap, and the queue system holds another one or two
+minimum-size frames when the gate closes.  So a full-size frame that
+starts at the edge of the guard band overruns into the next window.
+
+Size the guard band of every class for a 1500-byte frame with two VLAN
+tags, the overhead and two minimum-size frames: 27, or 13.8 us at
+1 Gbit/s.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../ethernet/microchip/sparx5/sparx5_tas.c    | 44 +++++++++++++++----
+ 1 file changed, 36 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+index e790a3670406..790e75bf35ed 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_tas.c
+@@ -32,6 +32,23 @@ enum sparx5_tas_link_speed {
+ /* STARTUP_TIME in units of 256 ns, must be non-zero for a list to start */
+ #define TAS_STARTUP_TIME_DEFAULT 8
+ 
++/* The guard band counts minimum-size frames */
++#define TAS_GB_UNIT (ETH_ZLEN + ETH_FCS_LEN)
++
++/* Largest frame for an SDU of @sdu bytes, with two VLAN tags */
++#define TAS_FRAME(sdu) ((sdu) + VLAN_ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN)
++
++/* Preamble, SFD and interframe gap, IEEE 802.1Q-2022 12.4.2.2 */
++#define TAS_WIRE_OVERHEAD 20
++
++/* Minimum-size frames in the queue system when a gate closes */
++#define TAS_GB_LATENCY 2
++
++/* A 1500-byte frame, its overhead and the queue system latency */
++#define TAS_GB_DEFAULT							\
++	(DIV_ROUND_UP(TAS_FRAME(ETH_DATA_LEN) + TAS_WIRE_OVERHEAD,	\
++		      TAS_GB_UNIT) + TAS_GB_LATENCY)
++
+ /* We use 2 TAS lists per present port, as far as the chip has lists:
+  * num_tas_lists = min(port_count * SPX5_TAS_ENTRIES_PER_PORT, n_tas_lists);
+  *
+@@ -48,8 +65,8 @@ enum sparx5_tas_link_speed {
+  * We use 1 TAS profile per port, shared by both of its lists:
+  * index = portno;
+  *
+- * We do not yet support frame preemption and the default guard band
+- * of 1536 bytes is always used on all queues.
++ * We do not yet support frame preemption and the guard band of a
++ * full-size frame is always used on all queues.
+  *
+  * The gate mask of each entry is written as is to the port's 8 queues,
+  * where bit n gates queue (QoS class) n. The mqprio parameters of the
+@@ -509,6 +526,16 @@ static void sparx5_tas_gcl_setup(struct sparx5_port *port, int list, int base,
+ 	}
+ }
+ 
++static void sparx5_tas_guard_band_set(struct sparx5 *sparx5, int portno)
++{
++	int tc;
++
++	for (tc = 0; tc < SPX5_PRIOS; tc++)
++		spx5_wr(HSCH_TAS_QMAXSDU_CFG_QMAXSDU_VAL_SET(TAS_GB_DEFAULT),
++			sparx5,
++			HSCH_TAS_QMAXSDU_CFG(portno, tc));
++}
++
+ int sparx5_tas_enable(struct sparx5_port *port,
+ 		      struct tc_taprio_qopt_offload *qopt)
+ {
+@@ -752,17 +779,18 @@ int sparx5_tas_init(struct sparx5 *sparx5)
+ 		 sparx5,
+ 		 HSCH_TAS_CFG_CTRL);
+ 
+-	/* Associate profile with port (profile idx = port on lan969x) */
+-	if (is_sparx5(sparx5)) {
+-		for (i = 0; i < num_ports; i++) {
+-			if (!sparx5->ports[i])
+-				continue;
++	for (i = 0; i < num_ports; i++) {
++		if (!sparx5->ports[i])
++			continue;
++
++		sparx5_tas_guard_band_set(sparx5, i);
+ 
++		/* Associate profile with port (profile idx = port on lan969x) */
++		if (is_sparx5(sparx5))
+ 			spx5_rmw(HSCH_TAS_PROFILE_CONFIG_PORT_NUM_SET(i),
+ 				 HSCH_TAS_PROFILE_CONFIG_PORT_NUM,
+ 				 sparx5,
+ 				 HSCH_TAS_PROFILE_CONFIG(i));
+-		}
+ 	}
+ 
+ 	return 0;
