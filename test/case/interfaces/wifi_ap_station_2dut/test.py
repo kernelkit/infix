@@ -99,6 +99,12 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(station, "wifi0", LEASE),
               interval=2)
 
+    with test.step("Verify wifi0 on the ap reports the radio it is on"):
+        until(lambda: wifi.radio_of(ap) == ap_radio)
+
+    with test.step("Verify wifi0 on the station reports the radio it is on"):
+        until(lambda: wifi.radio_of(station) == sta_radio)
+
     with test.step("Verify the ap's radio reports the configured band and channel as in use"):
         until(lambda: wifi.on_channel(ap, band, wifi.CHANNEL[band], ap_radio))
 

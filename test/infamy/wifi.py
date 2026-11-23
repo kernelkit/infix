@@ -157,6 +157,11 @@ def _wifi(ifc):
     return (ifc or {}).get("infix-interfaces:wifi") or (ifc or {}).get("wifi") or {}
 
 
+def radio_of(target, ifname="wifi0"):
+    """Radio an interface reports it sits on, None when it reports none"""
+    return _wifi(target.get_iface(ifname)).get("radio")
+
+
 def phys_address(target, ifname="wifi0"):
     """MAC address of ifname from operational data, lowercase, once it exists."""
     return until(lambda: _iface.get_phys_address(target, ifname),
