@@ -1,0 +1,16 @@
+# Hand Saline boards to vfio-pci for passthrough to a VM.
+#
+# Install on the host: cp 99-saline-vfio.rules /etc/udev/rules.d/
+#                      udevadm trigger -c add -s pci -a vendor=0x10ee
+
+ACTION!="add", GOTO="saline_end"
+SUBSYSTEM!="pci", GOTO="saline_end"
+ATTR{vendor}!="0x10ee", GOTO="saline_end"
+ATTR{device}!="0x9034|0x9024", GOTO="saline_end"
+
+ATTR{driver_override}="vfio-pci"
+RUN+="/sbin/modprobe -b vfio-pci"
+TEST=="driver", RUN+="/bin/sh -c 'echo %k >/sys%p/driver/unbind'"
+RUN+="/bin/sh -c 'echo %k >/sys/bus/pci/drivers_probe'"
+
+LABEL="saline_end"
