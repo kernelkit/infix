@@ -43,11 +43,10 @@ def verify_admin_status(test, target, port, admin_status, local_capture, remote_
         }
     })
 
-    rc = capture_traffic(port, 5)
-
-    if local_capture and "LLDP" not in rc.stdout:
-        test.fail()
-    if not local_capture and "LLDP" in rc.stdout:
+    if local_capture:
+        if not any("LLDP" in capture_traffic(port, 1).stdout for _ in range(5)):
+            test.fail()
+    elif "LLDP" in capture_traffic(port, 5).stdout:
         test.fail()
     
     if remote_detect:

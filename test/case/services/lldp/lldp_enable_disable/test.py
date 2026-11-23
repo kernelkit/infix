@@ -35,12 +35,20 @@ with infamy.Test() as test:
 
     sniffing_period = 10
 
+    def sniff(netns, sec):
+        snif = infamy.Sniffer(netns, "ether proto 0x88cc")
+        with snif:
+            print("host: collecting network traffic ...")
+            time.sleep(sec)
+
+        return snif.output()
+
     def verify(enabled, sec):
         """Verify lldp traffic, or no traffic if lldp is disabled."""
 
         with infamy.IsolatedMacVlan(hdata) as netns:
-            snif = infamy.Sniffer(netns, "ether proto 0x88cc")
             act = "enabling" if enabled else "disabling"
+            print(f"target: {act} LLDP service ...")
 
             target.put_config_dicts({
                 "ieee802-dot1ab-lldp": {
@@ -58,18 +66,14 @@ with infamy.Test() as test:
                         }
                     }
                 })
+                return any("LLDP" in sniff(netns, 1).stdout for _ in range(sec))
 
-            with snif:
-                print("host: collecting network traffic ...")
-                print(f"target: {act} LLDP service ...")
-                time.sleep(sec)
-
-            return snif.output()
+            return sniff(netns, sec)
 
     with test.step("Enable LLDP"):
-        rc = verify(True, sniffing_period)
+        seen = verify(True, sniffing_period)
         with test.step("Verify LLDP packets arrival on host:data"):
-            if "LLDP" not in rc.stdout:
+            if not seen:
                 test.fail()
 
     with test.step("Disable LLDP"):
