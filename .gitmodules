@@ -7,3 +7,6 @@
 [submodule "qeneth"]
 	path = test/qeneth
 	url = ../qeneth.git
+[submodule "modules"]
+	path = modules
+	url = ../modules.git
