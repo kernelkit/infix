@@ -11,11 +11,11 @@ CURIOS_HTTPD_LICENSE = GPL
 CURIOS_HTTPD_LICENSE_FILES = COPYING
 CURIOS_HTTPD_DEPENDENCIES = ixcont
 
-# Flattened at build time so the container runs straight from the rootfs
+# Converted at build time, the container runs straight from the image
 define CURIOS_HTTPD_INSTALL_TARGET_CMDS
-	$(call IXCONT_FLATTEN,$(CURIOS_HTTPD_DL_DIR)/$(CURIOS_HTTPD_SOURCE),$(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION))
-	ln -sfn $(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION) \
-		$(TARGET_DIR)/lib/oci/$(CURIOS_HTTPD_NAME)-latest
+	$(call IXCONT_SIF,$(CURIOS_HTTPD_DL_DIR)/$(CURIOS_HTTPD_SOURCE),$(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION))
+	ln -sf $(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION).sif \
+		$(TARGET_DIR)/lib/oci/$(CURIOS_HTTPD_NAME)-latest.sif
 endef
 
 $(eval $(generic-package))

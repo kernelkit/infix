@@ -16,7 +16,7 @@ import sys
 import syslog
 import time
 
-from . import bundle, image as images, net, oci, paths
+from . import bundle, image as images, net, paths
 from .state import (ContainerError, all_states, conf_names, cond_name, err, initctl,
                     load_conf, log, pid, running, save_state, sh, update_state)
 
@@ -40,13 +40,21 @@ def _umount(path):
         sh("umount", "-l", path, check=False)
 
 
-def _mount_overlay(rt, lower):
-    rootfs = os.path.join(rt, "rootfs")
+def _mount_rootfs(rt, img):
+    """The image's file system, read-only from its file, below an overlay
+    in tmpfs: crun needs to create mount points in the root it is given."""
+    rootfs, lower = os.path.join(rt, "rootfs"), os.path.join(rt, "image")
     upper, work = os.path.join(rt, "upper"), os.path.join(rt, "work")
-    for d in (rootfs, upper, work):
+    for d in (rootfs, lower, upper, work):
         os.makedirs(d, exist_ok=True)
+    sh("mount", "-t", "squashfs", "-o", f"loop,ro,offset={img.offset}", img.path, lower)
     sh("mount", "-t", "overlay", "overlay",
        "-o", f"lowerdir={lower},upperdir={upper},workdir={work}", rootfs)
+
+
+def _umount_rootfs(rt):
+    _umount(os.path.join(rt, "rootfs"))
+    _umount(os.path.join(rt, "image"))
 
 
 def _etc_files(rt, cfg, hostname, networks):
@@ -99,7 +107,7 @@ def _volumes(cfg, rootfs):
         path = os.path.join(paths.VOLUMES, f"{cfg['name']}-{v['name']}")
         if os.path.isdir(path):
             continue
-        src = oci.inside(rootfs, v["target"], follow=True)
+        src = bundle.inside(rootfs, v["target"])
         os.makedirs(paths.VOLUMES, exist_ok=True)
         if os.path.isdir(src):
             shutil.copytree(src, path, symlinks=True)
@@ -114,8 +122,7 @@ def _container_id(cfg, image_id):
 
 def _teardown_runtime(name):
     sh("crun", "delete", "-f", name, check=False, quiet=True)
-    rt = paths.rundir(name)
-    _umount(os.path.join(rt, "rootfs"))
+    _umount_rootfs(paths.rundir(name))
     net.teardown(name)
 
 
@@ -132,7 +139,7 @@ def setup(name):
         shutil.rmtree(os.path.join(rt, d), ignore_errors=True)
 
     img = images.resolve(cfg["image"], cfg.get("checksum"), force=force)
-    _mount_overlay(rt, img.rootfs)
+    _mount_rootfs(rt, img)
     rootfs = os.path.join(rt, "rootfs")
 
     _volumes(cfg, rootfs)
@@ -162,7 +169,7 @@ def setup(name):
     save_state(name, state)
     if force:
         os.unlink(marker)
-        images.prune({s["image-path"] for s in all_states()})
+        images.prune(_referenced)
     log(f"{name}: created from {img.path}")
 
 
@@ -318,7 +325,7 @@ def run(ref, cmd, detach=False):
         cfg["command"] = " ".join(cmd)
     img = images.resolve(ref)
     try:
-        _mount_overlay(rt, img.rootfs)
+        _mount_rootfs(rt, img)
         _etc_files(rt, cfg, name, None)
         config = bundle.build(cfg, img, rt, None)
         config["process"]["terminal"] = sys.stdin.isatty() and not detach
@@ -332,7 +339,7 @@ def run(ref, cmd, detach=False):
     finally:
         if not detach:
             sh("crun", "delete", "-f", name, check=False, quiet=True)
-            _umount(os.path.join(rt, "rootfs"))
+            _umount_rootfs(rt)
             shutil.rmtree(rt, ignore_errors=True)
 
 
@@ -355,15 +362,8 @@ def find(ifname, inner_pid=None):
 
 def list_(what, all_=False):
     if what == "images":
-        for d in images.builtin():
-            print(os.path.join(paths.BUILTIN, d))
-        for d in images.cached():
-            print(os.path.join(paths.IMAGES, d))
-    elif what == "oci":
-        for d in (paths.BUILTIN, paths.IMAGES):
-            if os.path.isdir(d):
-                for entry in sorted(os.listdir(d)):
-                    print(os.path.join(d, entry))
+        for path in images.builtin() + images.stored():
+            print(path)
     else:
         for name in conf_names():
             if all_ or running(name):
@@ -378,12 +378,9 @@ def _du(path):
 def show(what):
     if what == "images":
         print(f"{'IMAGE':<60} {'ID':<14} SIZE")
-        for d in images.builtin() + images.cached():
-            base = paths.BUILTIN if d in images.builtin() else paths.IMAGES
-            path = os.path.join(base, d)
-            with open(os.path.join(path, "digest")) as f:
-                digest = f.read().strip()
-            print(f"{path:<60} {digest[:12]:<14} {_du(path)}K")
+        for path in images.builtin() + images.stored():
+            size = os.path.getsize(path) // 1024
+            print(f"{path:<60} {images.Image(path).id[:12]:<14} {size}K")
     elif what == "volumes":
         print(f"{'VOLUME':<30} CONTAINER")
         if os.path.isdir(paths.VOLUMES):
@@ -399,9 +396,21 @@ def show(what):
             print(f"{st['name']:<24} {status:<16} {st.get('image', ''):<40} {nets}")
 
 
+def _referenced():
+    """The image files the configured containers run from."""
+    keep = set()
+    for name in conf_names():
+        try:
+            path = images.cached_path(load_conf(name)["image"])
+        except ContainerError:
+            continue
+        if path:
+            keep.add(path)
+    return keep
+
+
 def prune():
-    keep = {s["image-path"] for s in all_states()}
-    for path in images.prune(keep):
+    for path in images.prune(_referenced):
         print(f"Removed image {path}")
     names = conf_names()
     if os.path.isdir(paths.VOLUMES):
@@ -476,15 +485,8 @@ def reconcile():
         if os.path.isdir(path) and entry != "net" and entry not in names:
             _teardown_runtime(entry)
             shutil.rmtree(path, ignore_errors=True)
-    keep = set()
-    for name in names:
-        try:
-            path = images.cached_path(load_conf(name)["image"])
-        except ContainerError:
-            continue
-        if path:
-            keep.add(path)
-    for path in images.prune(keep):
+    images.sweep()
+    for path in images.prune(_referenced):
         log(f"Removed unreferenced image {path}")
 
 
@@ -516,11 +518,11 @@ def _parser():
     s.add_argument("command", nargs=argparse.REMAINDER)
     s = sub.add_parser("find", help="container PID for --net IFNAME, or 'ifname PID'")
     s.add_argument("args", nargs="*")
-    s = sub.add_parser("list", help="list containers, images or oci archives")
+    s = sub.add_parser("list", help="list containers or images")
     s.add_argument("what", nargs="?", default="containers")
     s = sub.add_parser("show", help="show containers, images or volumes")
     s.add_argument("what", nargs="?", default="containers")
-    s = sub.add_parser("load", help="load OCI archive or URL as image")
+    s = sub.add_parser("load", help="keep the image of a file, URL or registry")
     s.add_argument("src")
     s.add_argument("name", nargs="?")
     sub.add_parser("pull", help="pull image from a registry").add_argument("image")

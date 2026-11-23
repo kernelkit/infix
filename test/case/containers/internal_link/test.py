@@ -26,7 +26,7 @@ from infamy.util import parallel, until
 with infamy.Test() as test:
     LEFT,  IFACE_LEFT,  IP_LEFT  = "left",  "veth0a", "10.0.0.1"
     RIGHT, IFACE_RIGHT, IP_RIGHT = "right", "veth0b", "10.0.0.2"
-    IMAGE = f"oci-archive:{infamy.Container.HTTPD_IMAGE}"
+    IMAGE = infamy.Container.HTTPD_IMAGE
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()

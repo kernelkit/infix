@@ -26,7 +26,9 @@ module infix-containers {
     description "The network outside a container is set up like any other:
                    - Drop publish, ports are forwarded by the firewall
                    - Drop the ip, ip6 and mac interface options, the addresses
-                     of the interface are used";
+                     of the interface are used
+                 A container runs from a SIF image, other formats are converted,
+                 and an image may be given as a plain file name.";
     reference "internal";
   }
 
@@ -106,12 +108,12 @@ module infix-containers {
 
 
   typedef image-reference {
-    description "OCI image reference or transport URI.
-                 Allows registry references (e.g., quay.io/user/image:tag),
-                 transport prefixes (docker://, oci-archive:, dir:), and
-                 download URLs (ftp://, http://, https://).";
+    description "Image file, OCI image reference or transport URI.
+                 Allows file names (e.g., /lib/oci/image.sif), registry references
+                 (e.g., quay.io/user/image:tag), transport prefixes (docker://,
+                 oci-archive:, dir:), and download URLs (ftp://, http://, https://).";
     type string {
-      pattern '[a-zA-Z0-9][a-zA-Z0-9_./:@=+%~-]*';
+      pattern '[a-zA-Z0-9/][a-zA-Z0-9_./:@=+%~-]*';
     }
   }
 
@@ -191,22 +193,26 @@ module infix-containers {
       }
 
       leaf image {
-	description "Docker image for the container: [transport]name[:tag|@digest]
+	description "Image for the container: [transport]name[:tag|@digest]
 
+                     A container runs from a SIF image file, read-only and as it is.
+                     An image in any other format is converted to one first, which
+                     leaves it without a signature.
+
+                     /lib/oci/name.sif            -- SIF image in the system, or in any file
+                     oci-archive:/media/usb/arch  -- OCI archive, in .tar or .tar.gz format
                      quay.io/username/myimage     -- Pull myimage:latest
                      docker://busybox             -- Pull busybox:latest from Docker Hub
                      docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
-                     dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
                      docker-archive:/tmp/archive  -- Use archive:latest from tarball
-                     oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
-                                                     May be in .tar or .tar.gz format
+                     dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
 
-                     Additionally, the following URIs are also supported for setups
-                     that do not use a HUB or similar.  Recommend using 'checksum'!
+                     Additionally, a SIF image or an OCI archive can be fetched, for
+                     setups that do not use a HUB or similar.  Recommend using 'checksum'!
 
-                     ftp://addr/path/to/archive   -- Downloaded using wget
-                     http://addr/path/to/archive  -- Downloaded using curl
-                     https://addr/path/to/archive -- Downloaded using curl
+                     ftp://addr/path/to/image
+                     http://addr/path/to/image
+                     https://addr/path/to/image
 
                      Note: if a remote repository cannot be reached, the creation of the
                            container will be put on a queue that retries pull every time
@@ -216,7 +222,7 @@ module infix-containers {
       }
 
       container checksum {
-	description "Checksum for ftp/http/https OCI archives.";
+	description "Checksum of an image fetched with ftp/http/https.";
         choice checksum {
           leaf md5 {
             description "MD5 checksum for the archive.";
@@ -615,15 +621,15 @@ module infix-containers {
   }
 
   rpc oci-load {
-    description "Load an OCI archive from file or URL to an image.";
+    description "Keep the image of a file or URL, converted to a SIF image.";
     input {
       leaf uri {
-        description "The URL or local file path, e.g., /lib/oci/archive.tar.gz";
+        description "The URL or local file path, e.g., /media/usb/archive.tar.gz";
         type image-reference;
         mandatory true;
       }
       leaf name {
-        description "Image name[:tag], default: basename of archive dir + :latest";
+        description "Image name, default: the name of the file";
         type image-reference;
       }
     }

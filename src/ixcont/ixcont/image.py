@@ -1,97 +1,101 @@
-"""Resolve a YANG image reference to a flattened image directory.
+"""Resolve a YANG image reference to a SIF image.
 
-Supported references:
+A container only ever runs from a SIF image, see sif.py.  Supported
+references:
 
-  oci:/path, oci-archive:/path, docker-archive:/path, dir:/path, /path
-      A flattened image directory (rootfs + config.json), an OCI layout
-      directory, or an OCI archive.  A bare name is looked up in /lib/oci
-      and /var/lib/containers/images, with and without .tar/.tar.gz.
+  /path, oci:/path, oci-archive:/path
+      A SIF image, used where it is, or an OCI layout directory or OCI
+      archive, converted to one.  A bare name is looked up in /lib/oci
+      and /var/lib/containers/images, with or without .sif.
   http://, https://, ftp://
-      An OCI archive to fetch and flatten, optionally checksum verified.
+      A SIF image or an OCI archive to fetch, optionally checksum
+      verified.
   docker://registry/name[:tag|@digest], or a bare registry/name
-      Pulled with skopeo into an OCI layout, then flattened.  A bare name
-      without a registry, e.g. nginx:alpine, is looked up locally first
-      and then on docker.io, see /etc/containers/registries.conf.
+      Pulled with skopeo and converted, as are the other transports of
+      skopeo, docker-archive: and dir:.  A bare name without a registry,
+      e.g. nginx:alpine, is looked up locally first and then on
+      docker.io, see /etc/containers/registries.conf.
 
-Embedded images are flattened at build time and used in place.  Anything
-else is flattened once into /var/lib/containers/images/<name>-<sha12>
-and reused until the source archive changes, or until the container is
-upgraded for a fetched image.  A fetched image lists the references it
-was fetched as in <image>/refs, which is how it is found again.
+The images in the system image are used in place.  Anything fetched or
+converted is one file in /var/lib/containers/images, named after its
+reference, and reused until the container is upgraded.  A converted
+image is not signed.
 """
 import hashlib
 import os
 import shutil
 import subprocess
+import tarfile
 import tempfile
+import time
 
-from . import oci, paths
+from . import oci, paths, sif
 from .state import ContainerError, log, sh
 
-LOCAL = ("oci:", "oci-archive:", "docker-archive:", "dir:")
+LOCAL = ("oci:", "oci-archive:")
 REMOTE = ("http://", "https://", "ftp://")
 REGISTRY = "docker://"
-ARCHIVE_EXT = (".tar.gz", ".tgz", ".tar")
+SKOPEO = (REGISTRY, "docker-archive:", "dir:")
+EXT = (".tar.gz", ".tgz", ".tar", ".sif")
 
 
 class Image:
-    def __init__(self, path, config, digest):
+    def __init__(self, path):
+        try:
+            img = sif.Sif(path)
+            self.config = img.json(sif.CONFIG).get("config", {})
+            self.id = img.json(sif.SOURCE).get("digest") or img.id
+        except (sif.SifError, OSError) as e:
+            raise ContainerError(str(e))
         self.path = path
-        self.rootfs = os.path.join(path, "rootfs")
-        self.config = config.get("config", {})
-        self.id = digest
+        self.offset = img.offset
 
 
 def _strip_ext(name):
-    for ext in ARCHIVE_EXT:
+    for ext in EXT:
         if name.endswith(ext):
             return name[:-len(ext)]
     return name
 
 
-def _sha256(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+def _stored(ref, tag=""):
+    """Where the image of ref is kept, tag telling versions of it apart."""
+    base = _strip_ext(os.path.basename(ref.rstrip("/"))).replace(":", "-")
+    digest = hashlib.sha256((ref + tag).encode()).hexdigest()[:12]
+    return os.path.join(paths.IMAGES, f"{base}-{digest}.sif")
+
+
+def _convert(src, dst, source):
+    log(f"Converting {source} to {dst}")
+    try:
+        oci.convert(src, dst, source=source)
+    except (oci.ImageError, OSError, tarfile.TarError, KeyError, ValueError) as e:
+        raise ContainerError(f"{source}: {e}")
+    return Image(dst)
 
 
 def _candidates(path):
-    base = os.path.basename(path)
-    yield path
-    yield _strip_ext(path)
-    for d in (paths.BUILTIN, paths.IMAGES):
-        yield os.path.join(d, base)
-        yield os.path.join(d, _strip_ext(base))
+    """A reference may leave out .sif, and name the archive an image in
+    the system image once was."""
+    for d in ("", paths.BUILTIN, paths.IMAGES):
+        cand = path if not d else os.path.join(d, os.path.basename(path))
+        yield cand
+        yield _strip_ext(cand) + ".sif"
 
 
-def _flat(path):
-    return Image(path, *oci.load_flat(path))
-
-
-def _flatten(src, key):
-    """Flatten src into the image cache under key, reuse when unchanged."""
-    dst = os.path.join(paths.IMAGES, key)
-    if oci.is_flat(dst):
-        return _flat(dst)
-    log(f"Flattening image {src} to {dst}")
-    os.makedirs(paths.IMAGES, exist_ok=True)
-    config, digest = oci.flatten(src, dst)
-    return Image(dst, config, digest)
-
-
-def _local(path):
+def _local(path, convert=True):
     for cand in _candidates(path):
-        if oci.is_flat(cand):
-            return _flat(cand)
-    for cand in _candidates(path):
-        if os.path.isdir(cand) and os.path.isfile(os.path.join(cand, "index.json")):
-            key = os.path.basename(cand.rstrip("/"))
-            return _flatten(cand, key)
-        if os.path.isfile(cand):
-            key = f"{_strip_ext(os.path.basename(cand))}-{_sha256(cand)[:12]}"
-            return _flatten(cand, key)
+        if sif.is_sif(cand):
+            return Image(cand)
+
+    # An OCI layout or archive is converted again when it has changed
+    if os.path.exists(path):
+        st = os.stat(path)
+        dst = _stored(os.path.abspath(path), f"{st.st_size}-{st.st_mtime_ns}")
+        if sif.is_sif(dst):
+            return Image(dst)
+        if convert:
+            return _convert(path, dst, path)
     raise ContainerError(f"cannot find image {path}")
 
 
@@ -102,14 +106,13 @@ def _verify(path, checksum):
             for chunk in iter(lambda: f.read(1 << 20), b""):
                 h.update(chunk)
         if h.hexdigest().lower() != expect.lower():
-            os.unlink(path)
             raise ContainerError(f"{path}: {algo} checksum mismatch")
         log(f"{path} {algo} checksum verified OK")
 
 
-def _fetch(url, checksum, creds=None):
+def _fetch(url, dst, checksum=None, creds=None):
     os.makedirs(paths.IMAGES, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=".dl-", dir=paths.IMAGES)
+    fd, tmp = tempfile.mkstemp(prefix=".fetch-", dir=paths.IMAGES)
     os.close(fd)
     log(f"Fetching {url}")
     try:
@@ -121,16 +124,16 @@ def _fetch(url, checksum, creds=None):
                 cmd += ["-u", creds]
             sh(*cmd, url)
         _verify(tmp, checksum)
-        key = f"{_strip_ext(os.path.basename(url))}-{_sha256(tmp)[:12]}"
-        return _tag(_flatten(tmp, key), url)
+        if not sif.is_sif(tmp):
+            return _convert(tmp, dst, url)
+        os.replace(tmp, dst)
+        return Image(dst)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
 
 
-def _pull(ref, creds=None):
-    """Pull a registry image into the cache, keyed on its config digest."""
-    name = ref[len(REGISTRY):]
+def _pull(ref, dst, creds=None):
     os.makedirs(paths.IMAGES, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix=".pull-", dir=paths.IMAGES)
     log(f"Pulling {ref}")
@@ -139,56 +142,15 @@ def _pull(ref, creds=None):
         if creds:
             cmd += ["--src-creds", creds]
         sh(*cmd, ref, "oci:" + tmp)
-        config, digest = oci.load_layout(tmp)
-    except Exception:
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise
-    key = f"{_pull_prefix(name)}{digest[:12]}"
-    try:
-        return _tag(_flatten(tmp, key), ref)
+        return _convert(tmp, dst, ref)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _pull_prefix(name):
-    """Cache name of a registry image: last path element and tag."""
-    repo, _, _ = name.partition("@")
-    base = repo.rsplit("/", 1)[-1]
-    return base.replace(":", "-") + "-"
-
-
-def _refs(path):
-    try:
-        with open(os.path.join(path, "refs")) as f:
-            return f.read().split()
-    except OSError:
-        return []
-
-
-def _tag(img, ref):
-    """Record that ref now is img, and no longer any other cached image."""
-    for d in cached():
-        path = os.path.join(paths.IMAGES, d)
-        old = _refs(path)
-        new = [r for r in old if r != ref] + ([ref] if path == img.path else [])
-        if new != old:
-            with open(os.path.join(path, "refs"), "w") as f:
-                f.write("".join(r + "\n" for r in new))
-    return img
-
-
-def _cached_ref(ref):
-    for d in cached():
-        path = os.path.join(paths.IMAGES, d)
-        if ref in _refs(path):
-            return path
-    return None
-
-
 def _source(ref):
-    """What to fetch for ref, a URL or docker:// reference, None when it
+    """What to fetch for ref, a URL or a skopeo reference, None when it
     can only be a local image."""
-    if ref.startswith(REMOTE) or ref.startswith(REGISTRY):
+    if ref.startswith(REMOTE) or ref.startswith(SKOPEO):
         return ref
     if ref.startswith(LOCAL) or ref.startswith("/"):
         return None
@@ -202,6 +164,12 @@ def _path(ref):
     return ref
 
 
+def _get(src, dst, checksum=None, creds=None):
+    if src.startswith(REMOTE):
+        return _fetch(src, dst, checksum, creds)
+    return _pull(src, dst, creds)
+
+
 def _wait_for_network():
     """Block until an address or route changes, at most a minute."""
     subprocess.run(["timeout", "60", "sh", "-c", "ip monitor address route | head -n1"],
@@ -211,10 +179,9 @@ def _wait_for_network():
 def resolve(ref, checksum=None, force=False, creds=None):
     """Return the Image for a YANG image reference.
 
-    force re-fetches a remote image, it has no effect on local ones since
-    the cache key is the archive's own checksum.  A remote image that
-    cannot be fetched is retried on every network change, the service
-    stays in its setup phase until then.
+    force fetches a remote image again, it has no effect on local ones.
+    A remote image that cannot be fetched is retried on every network
+    change, the service stays in its setup phase until then.
     """
     src = _source(ref)
     if src is None:
@@ -228,68 +195,94 @@ def resolve(ref, checksum=None, force=False, creds=None):
 
     # What a reference leads to is only known by fetching it, so a
     # fetched image is reused until the container is upgraded.
-    if not force:
-        path = _cached_ref(src)
-        if path:
-            return _flat(path)
+    dst = _stored(src)
+    if not force and sif.is_sif(dst):
+        return Image(dst)
     while True:
         try:
-            if src.startswith(REGISTRY):
-                return _pull(src, creds)
-            return _fetch(src, checksum, creds)
+            return _get(src, dst, checksum, creds)
         except ContainerError as e:
             log(f"{e}, waiting for network changes ...")
             _wait_for_network()
 
 
 def cached_path(ref):
-    """The unpacked directory an image reference resolves to now, or None.
+    """The image file a reference resolves to now, or None.
 
-    Never fetches or unpacks anything, for callers that only need to know
-    what is already on disk, like the boot reconcile.
+    Never fetches or converts anything, for callers that only need to
+    know what is already on disk, like the boot reconcile.
     """
     src = _source(ref)
     if src != ref:
-        for cand in _candidates(_path(ref)):
-            if oci.is_flat(cand):
-                return cand
-    return _cached_ref(src) if src else None
+        try:
+            return _local(_path(ref), convert=False).path
+        except ContainerError:
+            pass
+    if src and sif.is_sif(_stored(src)):
+        return _stored(src)
+    return None
 
 
 def load(src, name=None, creds=None):
-    """The oci-load RPC: flatten a local archive, URL or registry image."""
-    if src.startswith(REMOTE):
-        return _fetch(src, None, creds)
-    if src.startswith(REGISTRY):
-        return _pull(src, creds)
-    key = name.replace(":", "-") if name else _strip_ext(os.path.basename(src))
-    for cand in _candidates(src):
-        if os.path.exists(cand):
-            os.makedirs(paths.IMAGES, exist_ok=True)
-            config, digest = oci.flatten(cand, os.path.join(paths.IMAGES, key))
-            return Image(os.path.join(paths.IMAGES, key), config, digest)
-    raise ContainerError(f"cannot find {src}")
+    """Keep the image of a file, URL or skopeo reference, as name if given."""
+    if name and name != os.path.basename(name):
+        raise ContainerError(f"{name}: not a name for an image")
+    dst = os.path.join(paths.IMAGES, name + ".sif") if name else None
+
+    if _source(src) == src:
+        return _get(src, dst or _stored(src), creds=creds)
+
+    path = _path(src)
+    if not os.path.exists(path):
+        raise ContainerError(f"cannot find {src}")
+    dst = dst or os.path.join(paths.IMAGES, _strip_ext(os.path.basename(path)) + ".sif")
+    if not sif.is_sif(path):
+        return _convert(path, dst, path)
+    os.makedirs(paths.IMAGES, exist_ok=True)
+    shutil.copyfile(path, dst + ".tmp")
+    os.replace(dst + ".tmp", dst)
+    return Image(dst)
 
 
-def cached():
-    """Flattened images in /var/lib/containers/images."""
-    if not os.path.isdir(paths.IMAGES):
+def _images(directory):
+    if not os.path.isdir(directory):
         return []
-    return sorted(d for d in os.listdir(paths.IMAGES) if oci.is_flat(os.path.join(paths.IMAGES, d)))
+    return sorted(os.path.join(directory, f) for f in os.listdir(directory)
+                  if sif.is_sif(os.path.join(directory, f)))
+
+
+def stored():
+    """The images in /var/lib/containers/images."""
+    return _images(paths.IMAGES)
 
 
 def builtin():
-    if not os.path.isdir(paths.BUILTIN):
-        return []
-    return sorted(d for d in os.listdir(paths.BUILTIN) if oci.is_flat(os.path.join(paths.BUILTIN, d)))
+    """The images in the system image."""
+    return _images(paths.BUILTIN)
 
 
-def prune(keep):
-    """Remove cached images whose path is not in keep."""
-    removed = []
-    for d in cached():
-        path = os.path.join(paths.IMAGES, d)
-        if path not in keep:
-            shutil.rmtree(path, ignore_errors=True)
-            removed.append(path)
+def prune(referenced):
+    """Remove the images in the store that referenced() does not list,
+    return what went.  One that appears meanwhile is left alone."""
+    candidates = stored()
+    keep = referenced()
+    removed = [path for path in candidates if path not in keep]
+    for path in removed:
+        os.unlink(path)
     return removed
+
+
+def sweep():
+    """Remove what an interrupted fetch or conversion left before this boot."""
+    if not os.path.isdir(paths.IMAGES):
+        return
+    with open("/proc/uptime") as f:
+        boot = time.time() - float(f.read().split()[0])
+    for entry in os.listdir(paths.IMAGES):
+        path = os.path.join(paths.IMAGES, entry)
+        if sif.is_sif(path) or os.lstat(path).st_mtime > boot:
+            continue
+        if os.path.isdir(path) and not os.path.islink(path):
+            shutil.rmtree(path, ignore_errors=True)
+        else:
+            os.unlink(path)

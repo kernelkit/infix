@@ -144,10 +144,18 @@ your container at runtime.
 Container Images
 ----------------
 
-Images are OCI image archives, as produced by `docker save` or the
-Docker [OCI exporter][5].  Infix unpacks an archive once into a flat
-root file system and runs containers straight from it, read-only.  In
-this section we present where images can come from and in the next
+A container runs from a single image file in the [Singularity Image
+Format][sif] (SIF): a compressed, read-only file system with what the
+image says about itself, e.g., the command to start.  The file is never
+unpacked, the container runs straight from it.
+
+Docker images, i.e., [OCI images][3] from a registry or as an archive
+produced by `docker save` or the Docker [OCI exporter][5], are converted
+to a SIF image when they are fetched.  The result is the same as for a
+SIF image you provide yourself, with one difference: an image converted
+on the device has no signature.
+
+In this section we present where images can come from and in the next
 section we show how to upgrade to a newer base image.
 
 
@@ -158,22 +166,26 @@ The CLI help shows:
     image &lt;string&gt;
 
 <b>DESCRIPTION</b>
-    Docker image for the container: [transport]name[:tag|@digest]
+    Image for the container: [transport]name[:tag|@digest]
 
+    A container runs from a SIF image file, read-only and as it is.
+    An image in any other format is converted to one first, which
+    leaves it without a signature.
+
+    /lib/oci/name.sif            -- SIF image in the system, or in any file
+    oci-archive:/media/usb/arch  -- OCI archive, in .tar or .tar.gz format
     quay.io/username/myimage     -- Pull myimage:latest
     docker://busybox             -- Pull busybox:latest from Docker Hub
     docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
-    dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
     docker-archive:/tmp/archive  -- Use archive:latest from tarball
-    oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
-                                    May be in .tar or .tar.gz format
+    dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
 
-    Additionally, the following URIs are also supported for setups
-    that do not use a HUB or similar.  Recommend using 'checksum'!
+    Additionally, a SIF image or an OCI archive can be fetched, for
+    setups that do not use a HUB or similar.  Recommend using 'checksum'!
 
-    ftp://addr/path/to/archive   -- Downloaded using wget
-    http://addr/path/to/archive  -- Downloaded using curl
-    https://addr/path/to/archive -- Downloaded using curl
+    ftp://addr/path/to/image
+    http://addr/path/to/image
+    https://addr/path/to/image
 
     Note: if a remote repository cannot be reached, the creation of the
           container will be put on a queue that retries pull every time
@@ -184,9 +196,9 @@ The CLI help shows:
 > The built-in help system in the CLI is generated from the YANG model,
 > so the same information is also available for remote NETCONF users.
 
-The three most common variants are `oci:/lib/oci/NAME`, an image embedded
+The three most common variants are `/lib/oci/NAME.sif`, an image embedded
 in the Infix image, `docker://` for an image pulled from a registry, and
-`https://` for an archive fetched at first start.
+`https://` for a SIF image or an archive fetched at first start.
 
 The `docker://` option requires a registry reachable over the network,
 which in turn requires [networking][0] to be up.  In a deployment phase
@@ -202,9 +214,7 @@ section, below.)
 Many users may not have, or do not want to, publish their images in a
 registry.  Use the Docker [OCI exporter][5] or any other tool that
 supports generating [OCI Image][3] format.  Infix supports loading both
-`.tar` or `.tar.gz` formats, and `oci:`, `oci-archive:` and `dir:` all
-accept an archive, an OCI layout directory, or an already unpacked
-image.
+`.tar` or `.tar.gz` formats, and `oci:` for an OCI layout directory.
 
 Here we show a simple example of fetching an OCI image to the system,
 but many others exist, tools like `wget`, `curl`, and `scp` come to
@@ -232,14 +242,14 @@ Importing the image can be done either from the CLI admin-exec
 context ...
 
 <pre class="cli"><code>admin@example:/var/tmp$ <b>cli</b>
-admin@example:/> <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge</b>
+admin@example:/> <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios-edge</b>
 </code></pre>
 
 > [!TIP]
-> The `name curios:edge` is the name you give the imported archive, it
-> is unpacked to `/var/lib/containers/images/curios-edge` which you can
-> then reference in your container image configuration:
-> `set image oci:curios-edge`.
+> The `name curios-edge` is the name you give the imported archive, it
+> is converted to `/var/lib/containers/images/curios-edge.sif` which you
+> can then reference in your container image configuration:
+> `set image curios-edge`.
 
 ... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):
@@ -267,8 +277,8 @@ admin@example:/> <b>show log</b>
 Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
-Nov 20 07:24:57 example container[5040]: Flattening image /var/lib/containers/images/.dl-x2c1 to /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652
-Nov 20 07:24:57 example container[5040]: sys: created from /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652
+Nov 20 07:24:57 example container[5040]: Converting ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz to /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652.sif
+Nov 20 07:24:57 example container[5040]: sys: created from /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652.sif
 </code></pre>
 
 
@@ -350,13 +360,14 @@ Infix intelligently manages container lifecycles to provide a smooth
 experience while minimizing unnecessary work:
 
 **At first setup:** When you configure a container for the first time,
-Infix fetches the image (if needed), unpacks it once, and creates the
-container instance.
+Infix fetches the image (if needed), converts it to a SIF image unless
+it already is one, and creates the container instance.
 
 **At boot time, and at every start:** the container is recreated from
-its configuration and the unpacked image.  Nothing is copied: an
-embedded image is used in place from the read-only Infix image, so a
-container with a large image starts as fast as one with a small one.
+its configuration and the image file.  Nothing is copied or unpacked:
+the file system in the image is mounted read-only, an embedded image
+straight from the Infix image, so a container with a large image starts
+as fast as one with a small one.
 
 **When configuration changes:** If you modify any container settings
 (network, volumes, environment, etc.), the container is automatically
@@ -386,7 +397,7 @@ admin@example:/config/container/web/> <b>leave</b>
 **What happens:**
 
  1. Your container is automatically stopped
- 2. Infix fetches and unpacks the new image (if not already present)
+ 2. Infix fetches the new image, and converts it unless it is a SIF image
  3. The container is recreated with the new image
  4. The container is started with your existing volumes intact
 
@@ -444,27 +455,26 @@ This command:
 An OCI archive image can be upgraded in a similar manner. First, get the
 new archive onto the system (see Container Images section above), then,
 provided the `oci-archive:/path/to/archive` format is used in your
-configuration, call the upgrade command.  The archive is unpacked again
-only when its contents changed.
+configuration, call the upgrade command.  The archive is converted again
+only when the file has changed.
 
 ### Embedded Container Images
 
 > [!TIP]
-> Containers running from OCI images embedded in the operating system,
-> e.g., `oci:/lib/oci/mycontainer`, are always in sync with the Infix
+> Containers running from images embedded in the operating system,
+> e.g., `/lib/oci/mycontainer.sif`, are always in sync with the Infix
 > system image version.
 >
 > **How it works:** When you build a custom Infix image with embedded
 > images, see `package/curios-httpd` for an example, the image is
-> unpacked at build time into `/lib/oci/NAME/` and the container runs
-> straight from that read-only directory.  Upgrading the Infix system
-> image upgrades the container with it, nothing is copied or checked
-> at boot.
+> converted at build time to `/lib/oci/NAME.sif` and the container runs
+> straight from that file.  Upgrading the Infix system image upgrades
+> the container with it, nothing is copied or checked at boot.
 >
 > **Example:** default builds of Infix include a couple of images for
-> reference, one is `/lib/oci/curios-nftables-v25.06.0`, but there is
-> also a symlink called `curios-nftables-latest` in the same directory,
-> which is what the Infix regression tests use in the image
+> reference, one is `/lib/oci/curios-nftables-v25.06.0.sif`, but there
+> is also a symlink called `curios-nftables-latest.sif` in the same
+> directory, which is what the Infix regression tests use in the image
 > configuration of the container.
 
 
@@ -1131,6 +1141,7 @@ Container Image](#embedded-container-images) (above).
 [tini]:   https://github.com/krallin/tini
 [nginx]:  https://hub.docker.com/_/nginx
 [crun]:   https://github.com/containers/crun
+[sif]:    https://github.com/apptainer/sif
 [ip]:     ip.md
 [fw]:     firewall.md
 [Volume Management]: #volume-management

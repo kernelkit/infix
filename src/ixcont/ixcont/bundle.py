@@ -3,7 +3,7 @@ import glob
 import os
 import shlex
 
-from . import oci, paths
+from . import paths
 from .state import ContainerError
 
 # The same hardening podman and Docker apply to an unprivileged container:
@@ -56,9 +56,34 @@ def _bind(src, dest, ro=True, recursive=True):
     return {"destination": dest, "type": "bind", "source": src, "options": opts}
 
 
+def inside(rootfs, relpath):
+    """Path of relpath in rootfs, with symlinks resolved as the container
+    sees them: an absolute target or a .. never leads out of rootfs."""
+    todo = [p for p in reversed(relpath.split("/")) if p not in ("", ".")]
+    done = []
+    links = 0
+    while todo:
+        part = todo.pop()
+        if part == "..":
+            del done[-1:]
+            continue
+        path = os.path.join(rootfs, *done, part)
+        if os.path.islink(path):
+            links += 1
+            if links > 40:
+                raise ContainerError(f"too many levels of symbolic links: {relpath}")
+            target = os.readlink(path)
+            if target.startswith("/"):
+                done = []
+            todo += [p for p in reversed(target.split("/")) if p not in ("", ".")]
+            continue
+        done.append(part)
+    return os.path.join(rootfs, *done)
+
+
 def _lookup(rootfs, dbfile, key):
     try:
-        with open(oci.inside(rootfs, "etc/" + dbfile, follow=True)) as f:
+        with open(inside(rootfs, "etc/" + dbfile)) as f:
             for line in f:
                 fields = line.rstrip("\n").split(":")
                 if len(fields) > 2 and fields[0] == key:
@@ -83,7 +108,7 @@ def _user(image, rootfs):
 
 def _lookup_gid(rootfs, uid):
     try:
-        with open(oci.inside(rootfs, "etc/passwd", follow=True)) as f:
+        with open(inside(rootfs, "etc/passwd")) as f:
             for line in f:
                 fields = line.rstrip("\n").split(":")
                 if len(fields) > 3 and fields[2] == str(uid):

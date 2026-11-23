@@ -25,12 +25,15 @@ All notable changes to the project are documented in this file.
   be acknowledged, closed, shelved and purged from the CLI, the WebUI
   and the management protocols, see [Alarms][alarms]
 - Containers are now run directly by the `crun` OCI runtime, supervised
-  by the system's service manager, instead of podman.  Images embedded
-  in the Infix image, `oci:/lib/oci/NAME`, run straight from the
-  read-only system image without being unpacked at boot, so a container
-  with a large image no longer slows down booting, and a container
-  removed from the configuration leaves nothing behind on disk except
-  its named volumes.  Images are pulled from registries with skopeo.
+  by the system's service manager, instead of podman.  A container runs
+  from a single read-only image file in the Singularity Image Format
+  (SIF), which is never unpacked: an image embedded in the Infix image,
+  `/lib/oci/NAME.sif`, a SIF image fetched from a URL, or a Docker (OCI)
+  image from a registry or an archive, which is converted to a SIF
+  image when fetched.  A container with a large image no longer slows
+  down booting, and a container removed from the configuration leaves
+  nothing behind on disk except its named volumes.  An image
+  configuration naming an archive in `/lib/oci` keeps working.
   The `ixcont` tool replaces `podman` in the shell.  The admin-exec
   commands `container remove` and `container save`, and the port,
   detach and checksum options of `container run` and `container load`

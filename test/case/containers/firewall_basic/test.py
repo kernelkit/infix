@@ -30,8 +30,8 @@ from infamy.util import until, to_binary, curl
 
 
 with infamy.Test() as test:
-    NFTABLES = f"oci-archive:{infamy.Container.NFTABLES_IMAGE}"
-    HTTPD = f"oci-archive:{infamy.Container.HTTPD_IMAGE}"
+    NFTABLES = infamy.Container.NFTABLES_IMAGE
+    HTTPD = infamy.Container.HTTPD_IMAGE
     WEBIP = "10.0.0.2"
     INTIP = "10.0.0.1"
     EXTIP = "192.168.0.1"

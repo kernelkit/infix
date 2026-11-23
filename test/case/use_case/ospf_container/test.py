@@ -369,7 +369,7 @@ table ip nat {
                 "container": [
                 {
                     "name": "container-A",
-                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "image": infamy.Container.HTTPD_IMAGE,
                     "command": "/usr/sbin/httpd -f -v -p 91",
                     "hostname": "web-container-%m",
                     "restart-policy": "retry",
@@ -394,7 +394,7 @@ table ip nat {
                 },
                 {
                     "name": "container-B",
-                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "image": infamy.Container.HTTPD_IMAGE,
                     "hostname": "web-container-%m",
                     "privileged": True,
                     "restart-policy": "retry",
@@ -411,7 +411,7 @@ table ip nat {
                     },
                     {
                         "name": "firewall",
-                        "image": f"oci-archive:{infamy.Container.NFTABLES_IMAGE}",
+                        "image": infamy.Container.NFTABLES_IMAGE,
                         "network": {
                                 "host": True
                             },

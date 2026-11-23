@@ -5,8 +5,8 @@ from infamy.util import warn
 
 class Container:
     """Helper methods"""
-    HTTPD_IMAGE = "/lib/oci/curios-httpd-latest"
-    NFTABLES_IMAGE = "/lib/oci/curios-nftables-latest"
+    HTTPD_IMAGE = "/lib/oci/curios-httpd-latest.sif"
+    NFTABLES_IMAGE = "/lib/oci/curios-nftables-latest.sif"
 
     def __init__(self, target):
         self.system = target

@@ -10,9 +10,9 @@ IXCONT_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/ixcont
 IXCONT_LICENSE = BSD-3-Clause
 IXCONT_LICENSE_FILES = LICENSE
 IXCONT_REDISTRIBUTE = NO
-IXCONT_DEPENDENCIES = crun python3 \
+IXCONT_DEPENDENCIES = crun python3 squashfs \
 	host-python3 host-python-pypa-build host-python-installer \
-	host-python-poetry-core
+	host-python-poetry-core host-squashfs
 
 define IXCONT_BUILD_CMDS
 	cd $(IXCONT_SITE) && \
@@ -48,10 +48,10 @@ endef
 
 $(eval $(generic-package))
 
-# Flatten an OCI archive into $(TARGET_DIR)/lib/oci/<name>, for packages
+# Convert an OCI archive to $(TARGET_DIR)/lib/oci/<name>.sif, for packages
 # that embed container images in the rootfs.  Usage from a package .mk:
 #
-#   $(call IXCONT_FLATTEN,$(FOO_DL_DIR)/$(FOO_SOURCE),foo-$(FOO_VERSION))
+#   $(call IXCONT_SIF,$(FOO_DL_DIR)/$(FOO_SOURCE),foo-$(FOO_VERSION))
 #
-IXCONT_FLATTEN = $(HOST_DIR)/bin/python3 -I $(IXCONT_SITE)/ixcont/oci.py flatten \
-	--arch $(GO_GOARCH) $(1) $(TARGET_DIR)/lib/oci/$(2)
+IXCONT_SIF = PATH=$(BR_PATH) PYTHONPATH=$(IXCONT_SITE) $(HOST_DIR)/bin/python3 -B \
+	-m ixcont.oci convert --arch $(GO_GOARCH) $(1) $(TARGET_DIR)/lib/oci/$(2).sif

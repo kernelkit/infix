@@ -25,13 +25,6 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
-<PTYPE name="ARCHIVES">
-  <COMPL>
-    <ACTION sym="script">doas ixcont list oci</ACTION>
-  </COMPL>
-  <ACTION sym="STRING"/>
-</PTYPE>
-
 <VIEW name="main">
 
 <COMMAND name="container" help="Manage containers, images, and volumes" mode="switch">
@@ -66,10 +59,10 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="load" help="Load a container OCI archive (.tar, .tar.gz) as an image">
-    <PARAM name="url" ptype="/ARCHIVES" help="Filename or URL, e.g. https://addr/rootfs-oci.tar.gz" />
+  <COMMAND name="load" help="Keep a container image, a SIF image or an OCI archive (.tar, .tar.gz)">
+    <PARAM name="url" ptype="/STRING" help="Filename or URL, e.g. https://addr/rootfs-oci.tar.gz" />
     <SWITCH name="optional" min="0">
-      <COMMAND name="name" help="Image name (default: archive name)">
+      <COMMAND name="name" help="Image name (default: file name)">
         <PARAM name="name" ptype="/STRING" help="name"/>
       </COMMAND>
       <COMMAND name="creds" help="Credentials for remote access">
@@ -164,11 +157,6 @@
       <COMMAND name="images" help="Show container images">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
 	  doas ixcont show images |pager
-	</ACTION>
-      </COMMAND>
-      <COMMAND name="oci" help="Show OCI archives (for loading as image)">
-        <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas ixcont list oci |pager
 	</ACTION>
       </COMMAND>
       <COMMAND name="stat" help="Show container resource usage">

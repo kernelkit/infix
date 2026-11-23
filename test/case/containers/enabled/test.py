@@ -49,7 +49,7 @@ with infamy.Test() as test:
                         {
                             "name": f"{NAME}",
                             "enabled": True,
-                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "image": infamy.Container.HTTPD_IMAGE,
                             "command": "/usr/sbin/httpd -f -v -p 91",
                             "network": {
                                 "host": True

@@ -10,9 +10,9 @@ NETCONF = os.path.join(RUN, "net")    # confd writes <ifname>.json here
 NETNS = "/run/netns"
 
 VAR = "/var/lib/containers"
-IMAGES = os.path.join(VAR, "images")  # flattened fetched images
+IMAGES = os.path.join(VAR, "images")  # fetched and converted images
 VOLUMES = os.path.join(VAR, "volumes")
-BUILTIN = "/lib/oci"                  # flattened at build time, read-only
+BUILTIN = "/lib/oci"                  # images in the system image
 
 CGROUP_ROOT = "/sys/fs/cgroup"
 
