@@ -1,0 +1,491 @@
+From db7a855c1c4f2f3b98d507b9b6492d5e35ebf14e Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Mon, 23 Nov 2026 14:07:31 +0100
+Subject: [PATCH 02/10] Report errors from "done" callbacks to the originator
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+Organization: Wires
+
+Applying a change can still fail in SR_EV_DONE, for example when the
+system is reconfigured there.  The caller needs to see that in the
+return code instead of having to read the logs.
+
+The earlier attempt made the subscriber fail its own event processing,
+the originator never saw the error.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/executables/srpd_rotation.c |  13 ++-
+ src/shm_sub.c                   | 143 +++++++++++++++++++++++---------
+ src/shm_types.h                 |   1 +
+ src/sysrepo.c                   |  10 +--
+ tests/test_apply_changes.c      | 113 +++++++++++++++++++++++++
+ 5 files changed, 231 insertions(+), 49 deletions(-)
+
+diff --git a/src/executables/srpd_rotation.c b/src/executables/srpd_rotation.c
+index acfe4b33..b9e17733 100644
+--- a/src/executables/srpd_rotation.c
++++ b/src/executables/srpd_rotation.c
+@@ -272,7 +272,7 @@ srpd_rotation_change_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), cons
+         const char *UNUSED(xpath), sr_event_t UNUSED(event), uint32_t UNUSED(request_id), void *private_data)
+ {
+     srpd_rotation_data_t *data = (srpd_rotation_data_t *)private_data;
+-    int rc = SR_ERR_OK, t_creat = 0;
++    int rc = SR_ERR_OK, r, t_creat = 0;
+     time_t time_value;
+     sr_change_iter_t *iter = NULL;
+     sr_change_oper_t oper;
+@@ -342,6 +342,7 @@ srpd_rotation_change_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), cons
+             }
+             if (rc == -1) {
+                 SRPLG_LOG_ERR(SRPD_PLUGIN_NAME, "asprintf() failed (%s:%d) (%s)", __FILE__, __LINE__, strerror(errno));
++                rc = SR_ERR_NO_MEMORY;
+                 goto cleanup;
+             }
+             ATOMIC_PTR_STORE_RELAXED(data->output_folder, dir_str);
+@@ -357,12 +358,18 @@ srpd_rotation_change_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), cons
+         }
+     }
+ 
++    if (rc != SR_ERR_NOT_FOUND) {
++        goto cleanup;
++    }
++    rc = SR_ERR_OK;
++
+     /* check whether a thread should be created */
+     if (t_creat) {
+         assert(ATOMIC_PTR_LOAD_RELAXED(data->output_folder));
+         ATOMIC_STORE_RELAXED(data->running, 1);
+-        if ((rc = pthread_create(&(data->tid), NULL, &srpd_rotation_loop, data))) {
+-            SRPLG_LOG_ERR(SRPD_PLUGIN_NAME, "Pthread create failed (%s).", strerror(rc));
++        if ((r = pthread_create(&(data->tid), NULL, &srpd_rotation_loop, data))) {
++            SRPLG_LOG_ERR(SRPD_PLUGIN_NAME, "Pthread create failed (%s).", strerror(r));
++            rc = SR_ERR_SYS;
+         }
+         t_creat = 0;
+     }
+diff --git a/src/shm_sub.c b/src/shm_sub.c
+index 38b189ef..9c70e408 100644
+--- a/src/shm_sub.c
++++ b/src/shm_sub.c
+@@ -432,6 +432,51 @@ event_handled:
+     return NULL;
+ }
+ 
++/**
++ * @brief Read callback errors written by a subscriber into sub data SHM.
++ *
++ * @param[in] ptr Pointer to the errors in sub data SHM.
++ * @param[in,out] cb_err_info Error info to add the errors to.
++ */
++static void
++sr_shmsub_notify_read_error(const char *ptr, sr_error_info_t **cb_err_info)
++{
++    sr_error_t err_code;
++    const char *err_msg, *err_format, *err_data;
++    uint32_t i, err_count;
++
++    /* error count */
++    err_count = *((uint32_t *)ptr);
++    ptr += SR_SHM_SIZE(sizeof err_count);
++
++    for (i = 0; i < err_count; ++i) {
++        /* error code */
++        err_code = *((sr_error_t *)ptr);
++        ptr += SR_SHM_SIZE(sizeof err_code);
++
++        /* error message */
++        err_msg = ptr;
++        ptr += sr_strshmlen(err_msg);
++
++        /* error data format */
++        err_format = ptr;
++        ptr += sr_strshmlen(err_format);
++        if (!err_format[0]) {
++            err_format = NULL;
++        }
++
++        /* error data */
++        err_data = ptr;
++        ptr += SR_SHM_SIZE(sr_ev_data_size(err_data));
++        if (!err_format) {
++            err_data = NULL;
++        }
++
++        /* add into err_info structure */
++        sr_errinfo_add(cb_err_info, err_code, err_format, err_data, err_msg, NULL);
++    }
++}
++
+ /**
+  * @brief Having WRITE lock, wait for subscribers to handle a generated event.
+  *
+@@ -464,10 +509,8 @@ _sr_shmsub_notify_wait_wr(sr_sub_shm_t *sub_shm, sr_sub_event_t event, uint32_t
+         int *lock_lost, sr_error_info_t **cb_err_info)
+ {
+     sr_error_info_t *err_info = NULL;
+-    sr_error_t err_code;
+-    const char *ptr, *err_msg, *err_format, *err_data;
+     sr_sub_event_t last_event;
+-    uint32_t last_request_id, i, err_count;
++    uint32_t last_request_id;
+     int ret, write_lock = 0;
+     struct timespec timeout_abs2;
+ 
+@@ -576,38 +619,7 @@ event_handled:
+             break;
+         case SR_SUB_EV_ERROR:
+             /* create error structure from the information in data SHM */
+-            ptr = shm_data_sub->addr;
+-
+-            /* error count */
+-            err_count = *((uint32_t *)ptr);
+-            ptr += SR_SHM_SIZE(sizeof err_count);
+-
+-            for (i = 0; i < err_count; ++i) {
+-                /* error code */
+-                err_code = *((sr_error_t *)ptr);
+-                ptr += SR_SHM_SIZE(sizeof err_code);
+-
+-                /* error message */
+-                err_msg = ptr;
+-                ptr += sr_strshmlen(err_msg);
+-
+-                /* error data format */
+-                err_format = ptr;
+-                ptr += sr_strshmlen(err_format);
+-                if (!err_format[0]) {
+-                    err_format = NULL;
+-                }
+-
+-                /* error data */
+-                err_data = ptr;
+-                ptr += SR_SHM_SIZE(sr_ev_data_size(err_data));
+-                if (!err_format) {
+-                    err_data = NULL;
+-                }
+-
+-                /* add into err_info structure */
+-                sr_errinfo_add(cb_err_info, err_code, err_format, err_data, err_msg, NULL);
+-            }
++            sr_shmsub_notify_read_error(shm_data_sub->addr, cb_err_info);
+ 
+             if (clear_ev_on_err) {
+                 /* clear the error */
+@@ -620,6 +632,18 @@ event_handled:
+                     sr_ev2str(last_event), sr_ev2str(expected_ev));
+             return err_info;
+         }
++    } else if ((expected_ev == SR_SUB_EV_FINISHED) && (last_event == SR_SUB_EV_ERROR)) {
++        /* the event was processed but a "done" callback failed, its error follows the event data */
++        if (!sub_shm->err_data_off || (sub_shm->err_data_off >= shm_data_sub->size)) {
++            sr_errinfo_new(&err_info, SR_ERR_INTERNAL, "Invalid sub SHM \"%s\" error offset %" PRIu32 ".",
++                    sr_ev2str(event), sub_shm->err_data_off);
++            return err_info;
++        }
++        sr_shmsub_notify_read_error(shm_data_sub->addr + sub_shm->err_data_off, cb_err_info);
++
++        /* clear it */
++        ATOMIC_STORE_RELAXED(sub_shm->event, SR_SUB_EV_NONE);
++        sub_shm->orig_cid = 0;
+     } else {
+         /* we expect a finished or none event */
+         if (ATOMIC_LOAD_RELAXED(sub_shm->event) == expected_ev) {
+@@ -825,6 +849,7 @@ sr_shmsub_notify_write_event(sr_sub_shm_t *sub_shm, sr_cid_t orig_cid, uint32_t
+     ATOMIC_STORE_RELAXED(sub_shm->priority, priority);
+     ATOMIC_STORE_RELAXED(sub_shm->subscriber_count, subscriber_count);
+     sub_shm->operation_id = operation_id;
++    sub_shm->err_data_off = 0;
+ 
+     /* remap if needed */
+     if (xpath || data_len) {
+@@ -3360,11 +3385,34 @@ sr_shmsub_listen_write_event(sr_sub_shm_t *sub_shm, uint32_t valid_subscr_count,
+ {
+     sr_error_info_t *err_info = NULL;
+     sr_sub_event_t event;
++    uint32_t err_off;
+ 
+     assert(ATOMIC_LOAD_RELAXED(sub_shm->subscriber_count) >= valid_subscr_count);
+ 
+     event = ATOMIC_LOAD_RELAXED(sub_shm->event);
+ 
++    if (event == SR_SUB_EV_DONE) {
++        if (err_code && data && data_len && !sub_shm->err_data_off) {
++            /* first failed callback, append the error after the event data, other subscribers may still need them */
++            if ((err_info = sr_shmsub_data_open_remap(NULL, NULL, -1, shm_data_sub, 0))) {
++                return err_info;
++            }
++            err_off = SR_SHM_SIZE(shm_data_sub->size);
++            if ((err_info = sr_shmsub_data_open_remap(NULL, NULL, -1, shm_data_sub, err_off + data_len))) {
++                return err_info;
++            }
++            memcpy(shm_data_sub->addr + err_off, data, data_len);
++            sub_shm->err_data_off = err_off;
++        }
++
++        if (ATOMIC_LOAD_RELAXED(sub_shm->subscriber_count) == valid_subscr_count) {
++            /* last subscriber finished, the changes are applied so the event cannot fail, only report an error */
++            ATOMIC_STORE_RELAXED(sub_shm->event, sub_shm->err_data_off ? SR_SUB_EV_ERROR : SR_SUB_EV_FINISHED);
++        }
++        ATOMIC_SUB_RELAXED(sub_shm->subscriber_count, valid_subscr_count);
++        goto print;
++    }
++
+     if ((ATOMIC_LOAD_RELAXED(sub_shm->subscriber_count) == valid_subscr_count) || err_code) {
+         /* last subscriber finished or an error, update event */
+         switch (event) {
+@@ -3379,9 +3427,8 @@ sr_shmsub_listen_write_event(sr_sub_shm_t *sub_shm, uint32_t valid_subscr_count,
+                 ATOMIC_STORE_RELAXED(sub_shm->event, SR_SUB_EV_SUCCESS);
+             }
+             break;
+-        case SR_SUB_EV_DONE:
+         case SR_SUB_EV_ABORT:
+-            /* notifier waits for these events to clear them and make shm ready for next notification */
++            /* notifier waits for this event to clear it and make shm ready for next notification */
+             assert(!err_code);
+             ATOMIC_STORE_RELAXED(sub_shm->event, SR_SUB_EV_FINISHED);
+             break;
+@@ -3409,6 +3456,7 @@ sr_shmsub_listen_write_event(sr_sub_shm_t *sub_shm, uint32_t valid_subscr_count,
+         memcpy(shm_data_sub->addr, data, data_len);
+     }
+ 
++print:
+     SR_LOG_DBG("EV LISTEN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " %s (remaining %" PRIu32 " subscribers).",
+             event_desc, sr_ev2str(event), sub_shm->operation_id, (uint32_t)ATOMIC_LOAD_RELAXED(sub_shm->priority),
+             result_str, (uint32_t)ATOMIC_LOAD_RELAXED(sub_shm->subscriber_count));
+@@ -3588,7 +3636,7 @@ sr_error_info_t *
+ sr_shmsub_change_listen_process_module_events(struct modsub_change_s *change_subs, sr_conn_ctx_t *conn)
+ {
+     sr_error_info_t *err_info = NULL;
+-    uint32_t i, data_len = 0;
++    uint32_t i, data_len = 0, valid_subscr_count = 0;
+     char *data = NULL, *shm_data_ptr;
+     int ret = SR_ERR_OK, filter_valid;
+     sr_lock_mode_t sub_lock = SR_LOCK_NONE;
+@@ -3717,8 +3765,19 @@ process_event:
+             }
+         }
+ 
+-        /* subscription processed this event, decrease subscriber count right away for possible later abort event */
+-        ATOMIC_DEC_RELAXED(sub_shm->subscriber_count);
++        if ((sub_info.event == SR_SUB_EV_DONE) && filter_valid && ret && !err_code) {
++            /* the changes are applied but the callback failed, report the first such error to the originator */
++            err_code = ret;
++            if ((err_info = sr_shmsub_prepare_error(err_code, ev_sess, &data, &data_len))) {
++                goto cleanup;
++            }
++
++            /* keep this subscriber counted until the error is written, the event must not be finished without it */
++            valid_subscr_count = 1;
++        } else {
++            /* subscription processed this event, decrease subscriber count right away for possible later abort event */
++            ATOMIC_DEC_RELAXED(sub_shm->subscriber_count);
++        }
+ 
+         /* remember request ID and event so that we do not process it again */
+         ATOMIC_STORE_RELAXED(change_sub->request_id, ATOMIC_LOAD_RELAXED(sub_shm->request_id));
+@@ -3747,6 +3806,8 @@ process_event:
+         }
+         break;
+     case SR_SUB_EV_DONE:
++        /* any error was already prepared */
++        break;
+     case SR_SUB_EV_ABORT:
+         /* nothing to do */
+         break;
+@@ -3775,7 +3836,7 @@ process_event:
+         sub_lock = SR_LOCK_WRITE_URGE;
+ 
+         /* finish event */
+-        err_info = sr_shmsub_listen_write_event(sub_shm, 0, err_code, &shm_data_sub, data, data_len,
++        err_info = sr_shmsub_listen_write_event(sub_shm, valid_subscr_count, err_code, &shm_data_sub, data, data_len,
+                 change_subs->module_name, err_code ? "fail" : "success");
+     } else {
+         SR_LOG_DBG("EV LISTEN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " success (remaining %" PRIu32 " subscribers).",
+diff --git a/src/shm_types.h b/src/shm_types.h
+index 9539b21a..38f06894 100644
+--- a/src/shm_types.h
++++ b/src/shm_types.h
+@@ -381,6 +381,7 @@ typedef struct {
+     ATOMIC_T priority;          /**< Priority of the subscriber. */
+     ATOMIC_T subscriber_count;  /**< Number of subscribers to process this event. */
+     uint32_t operation_id;      /**< Operation ID for the callback. */
++    uint32_t err_data_off;      /**< Offset in data SHM of the error of a failed "done" callback, 0 if none. */
+ } sr_sub_shm_t;
+ 
+ #endif /* _SHM_TYPES_H */
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 49f52d29..56c1fbae 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -1127,8 +1127,8 @@ sr_session_set_error(sr_session_ctx_t *session, const char *err_format_name, sr_
+     va_list vargs;
+ 
+     SR_CHECK_ARG_APIRET(!session || ((session->ev != SR_SUB_EV_CHANGE) && (session->ev != SR_SUB_EV_UPDATE) &&
+-            (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !err_code || !err_msg_format,
+-            session, err_info);
++            (session->ev != SR_SUB_EV_DONE) && (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !err_code ||
++            !err_msg_format, session, err_info);
+ 
+     va_start(vargs, err_msg_format);
+     sr_errinfo_add(&session->ev_err_info, err_code, err_format_name, NULL, err_msg_format, &vargs);
+@@ -1144,7 +1144,7 @@ sr_session_set_error_message(sr_session_ctx_t *session, const char *format, ...)
+     va_list vargs;
+ 
+     SR_CHECK_ARG_APIRET(!session || ((session->ev != SR_SUB_EV_CHANGE) && (session->ev != SR_SUB_EV_UPDATE) &&
+-            (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !format, session, err_info);
++            (session->ev != SR_SUB_EV_DONE) && (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !format, session, err_info);
+ 
+     va_start(vargs, format);
+     sr_errinfo_add(&session->ev_err_info, SR_ERR_OPERATION_FAILED, NULL, NULL, format, &vargs);
+@@ -1160,7 +1160,7 @@ sr_session_set_error_format(sr_session_ctx_t *session, const char *error_format)
+     char *err_format;
+ 
+     SR_CHECK_ARG_APIRET(!session || ((session->ev != SR_SUB_EV_CHANGE) && (session->ev != SR_SUB_EV_UPDATE) &&
+-            (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !session->ev_err_info, session, err_info);
++            (session->ev != SR_SUB_EV_DONE) && (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !session->ev_err_info, session, err_info);
+ 
+     if (error_format) {
+         if (!(err_format = strdup(error_format))) {
+@@ -1183,7 +1183,7 @@ sr_session_push_error_data(sr_session_ctx_t *session, uint32_t size, const void
+     sr_error_info_t *err_info = NULL;
+ 
+     SR_CHECK_ARG_APIRET(!session || ((session->ev != SR_SUB_EV_CHANGE) && (session->ev != SR_SUB_EV_UPDATE) &&
+-            (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !session->ev_err_info ||
++            (session->ev != SR_SUB_EV_DONE) && (session->ev != SR_SUB_EV_OPER) && (session->ev != SR_SUB_EV_RPC)) || !session->ev_err_info ||
+             !session->ev_err_info->err[session->ev_err_info->err_count - 1].error_format || !size || !data, session, err_info);
+ 
+     err_info = sr_ev_data_push(&session->ev_err_info->err[session->ev_err_info->err_count - 1].error_data, size, data);
+diff --git a/tests/test_apply_changes.c b/tests/test_apply_changes.c
+index a2db91fd..c6273c3d 100644
+--- a/tests/test_apply_changes.c
++++ b/tests/test_apply_changes.c
+@@ -8533,6 +8533,118 @@ test_change_enabled_race(void **state)
+     pthread_join(tid[1], NULL);
+ }
+ 
++/* TEST */
++static int
++module_done_fail_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name, const char *xpath,
++        sr_event_t event, uint32_t request_id, void *private_data)
++{
++    struct state *st = (struct state *)private_data;
++
++    (void)sub_id;
++    (void)module_name;
++    (void)xpath;
++    (void)request_id;
++
++    assert_int_equal(event, SR_EV_DONE);
++    ATOMIC_INC_RELAXED(st->cb_called);
++
++    sr_session_set_error(session, NULL, SR_ERR_OPERATION_FAILED, "Done callback failed.");
++    return SR_ERR_OPERATION_FAILED;
++}
++
++static int
++module_done_ok_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name, const char *xpath,
++        sr_event_t event, uint32_t request_id, void *private_data)
++{
++    struct state *st = (struct state *)private_data;
++
++    (void)session;
++    (void)sub_id;
++    (void)module_name;
++    (void)xpath;
++    (void)request_id;
++
++    assert_int_equal(event, SR_EV_DONE);
++    ATOMIC_INC_RELAXED(st->cb_called2);
++    return SR_ERR_OK;
++}
++
++static void
++test_done_fail(void **state)
++{
++    struct state *st = (struct state *)*state;
++    sr_subscription_ctx_t *subscr = NULL, *subscr2 = NULL;
++    sr_session_ctx_t *sess;
++    const sr_error_info_t *err_info;
++    sr_data_t *data;
++    uint32_t i;
++    int ret, found;
++
++    ret = sr_session_start(st->conn, SR_DS_RUNNING, &sess);
++    assert_int_equal(ret, SR_ERR_OK);
++
++    /* failing and succeeding subscription in one context, another succeeding one in its own context,
++     * all with the same priority */
++    ret = sr_module_change_subscribe(sess, "test", NULL, module_done_fail_cb, st, 0, SR_SUBSCR_DONE_ONLY, &subscr);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_module_change_subscribe(sess, "test", NULL, module_done_ok_cb, st, 0, SR_SUBSCR_DONE_ONLY, &subscr);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_module_change_subscribe(sess, "test", NULL, module_done_ok_cb, st, 0, SR_SUBSCR_DONE_ONLY, &subscr2);
++    assert_int_equal(ret, SR_ERR_OK);
++
++    /* the changes are stored, the callback error is reported */
++    ret = sr_set_item_str(sess, "/test:l1[k='key1']/v", "1", NULL, 0);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_apply_changes(sess, 0);
++    assert_int_equal(ret, SR_ERR_OK_CALLBACK_FAILED);
++
++    ret = sr_session_get_error(sess, &err_info);
++    assert_int_equal(ret, SR_ERR_OK);
++    assert_non_null(err_info);
++    found = 0;
++    for (i = 0; i < err_info->err_count; ++i) {
++        if ((err_info->err[i].err_code == SR_ERR_OPERATION_FAILED) &&
++                !strcmp(err_info->err[i].message, "Done callback failed.")) {
++            found = 1;
++        }
++    }
++    assert_int_equal(found, 1);
++
++    /* all the subscriptions got the event */
++    assert_int_equal(ATOMIC_LOAD_RELAXED(st->cb_called), 1);
++    assert_int_equal(ATOMIC_LOAD_RELAXED(st->cb_called2), 2);
++
++    ret = sr_get_data(sess, "/test:l1[k='key1']", 0, 0, 0, &data);
++    assert_int_equal(ret, SR_ERR_OK);
++    assert_non_null(data);
++    sr_release_data(data);
++
++    /* the subscriptions keep working */
++    ret = sr_delete_item(sess, "/test:l1[k='key1']", 0);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_apply_changes(sess, 0);
++    assert_int_equal(ret, SR_ERR_OK_CALLBACK_FAILED);
++    assert_int_equal(ATOMIC_LOAD_RELAXED(st->cb_called), 2);
++    assert_int_equal(ATOMIC_LOAD_RELAXED(st->cb_called2), 4);
++
++    /* no error without the failing subscription */
++    sr_unsubscribe(subscr);
++    ret = sr_set_item_str(sess, "/test:l1[k='key1']/v", "1", NULL, 0);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_apply_changes(sess, 0);
++    assert_int_equal(ret, SR_ERR_OK);
++    assert_int_equal(ATOMIC_LOAD_RELAXED(st->cb_called2), 5);
++
++    /* cleanup */
++    ret = sr_delete_item(sess, "/test:l1[k='key1']", 0);
++    assert_int_equal(ret, SR_ERR_OK);
++    ret = sr_apply_changes(sess, 0);
++    assert_int_equal(ret, SR_ERR_OK);
++
++    sr_unsubscribe(subscr2);
++    sr_session_stop(sess);
++}
++
+ /* MAIN */
+ int
+ main(void)
+@@ -8569,6 +8681,7 @@ main(void)
+         cmocka_unit_test_setup_teardown(test_write_starve, setup_f, teardown_f),
+         cmocka_unit_test_setup_teardown(test_mult_update, setup_f, teardown_f),
+         cmocka_unit_test_setup_teardown(test_done_timeout_priority, setup_f, teardown_f),
++        cmocka_unit_test_setup_teardown(test_done_fail, setup_f, teardown_f),
+         cmocka_unit_test_setup_teardown(test_list_replace, setup_f, teardown_f),
+         cmocka_unit_test_setup_teardown(test_lock_write, setup_f, teardown_f),
+         cmocka_unit_test_setup_teardown(test_change_enabled_race, setup_f, teardown_f),

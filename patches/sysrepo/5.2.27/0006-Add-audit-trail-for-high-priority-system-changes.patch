@@ -1,7 +1,8 @@
-From 494ac6248241cd3abd8cf0b4635f648dd1a002c6 Mon Sep 17 00:00:00 2001
+From 4c462ef475eaf05d12fa76fffedad660c5b23035 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:04:43 +0200
-Subject: [PATCH 6/9] Add audit trail for high priority system changes
+Subject: [PATCH 06/10] Add audit trail for high priority system changes
+Organization: Wires
 Organization: Wires
 
 Committing a change to running, copying to a datastore, or calling an
@@ -18,10 +19,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 12 insertions(+)
 
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 6296ff56..6693e412 100644
+index d33c7f92..d5db9e36 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -4936,6 +4936,9 @@ store:
+@@ -4773,6 +4773,9 @@ store:
          goto cleanup;
      }
  
@@ -31,7 +32,7 @@ index 6296ff56..6693e412 100644
      /* generate the netconf-config-change notification before the "done" event, the changes are
       * already committed at this point; otherwise a notification subscription created by a "done"
       * callback would receive this change, which predates it */
-@@ -4951,6 +4954,9 @@ store:
+@@ -4788,6 +4791,9 @@ store:
      }
  
  cleanup:
@@ -41,7 +42,7 @@ index 6296ff56..6693e412 100644
      if (change_sub_lock) {
          assert(change_sub_lock == SR_LOCK_READ);
  
-@@ -5678,6 +5684,9 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+@@ -5515,6 +5521,9 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
          }
      }
  
@@ -51,7 +52,7 @@ index 6296ff56..6693e412 100644
  cleanup:
      /* MODULES UNLOCK */
      sr_shmmod_modinfo_unlock(&mod_info);
-@@ -8339,6 +8348,9 @@ sr_rpc_send_tree_internal(sr_session_ctx_t *session, struct lyd_node *input, uin
+@@ -8176,6 +8185,9 @@ sr_rpc_send_tree_internal(sr_session_ctx_t *session, struct lyd_node *input, uin
          }
      }
  

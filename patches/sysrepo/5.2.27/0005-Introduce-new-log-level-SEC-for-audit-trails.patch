@@ -1,7 +1,8 @@
-From 264cc5babfe191491b733c78d883608f9046b372 Mon Sep 17 00:00:00 2001
+From 4975aa4324fb187fbcbe1f3df4d943ce7bcf35dd Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:00:35 +0200
-Subject: [PATCH 5/9] Introduce new log level [SEC] for audit trails
+Subject: [PATCH 05/10] Introduce new log level [SEC] for audit trails
+Organization: Wires
 Organization: Wires
 
 This adds a new log level for security and audit trail related log

@@ -184,6 +184,8 @@ All notable changes to the project are documented in this file.
   configured channel
 - Wi-Fi interfaces could be renamed at boot, e.g., to `wlan123`, so
   their configuration was not applied
+- A configuration change that could not be applied, e.g., an address
+  refused by the kernel, was reported as successful
 - Changing the mode of a Wi-Fi interface, e.g., from station to mesh
   point, made the whole configuration change fail to apply, although
   the commit was reported as successful
