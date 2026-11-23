@@ -78,8 +78,8 @@ with infamy.Test() as test:
         match = re.search(r" (\S+) - - - Plain message, no frills$", line)
         if not match:
             test.fail(f"Unexpected header for default message: {line}")
-        # NETCONF carries the user, RESTCONF carries no caller identity at
-        # all, and then the tag must stay nil rather than name a daemon.
+        # NETCONF and RESTCONF both carry the user, the tag must never
+        # name a daemon.
         if match.group(1) in ("root", "confd"):
             test.fail(f"Default app-name claims a system identity: {line}")
 

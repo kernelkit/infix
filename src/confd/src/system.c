@@ -1919,6 +1919,45 @@ int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 	return SR_ERR_OK;
 }
 
+/* '/infix-system:whoami' */
+static int rpc_whoami(sr_session_ctx_t *session, uint32_t sub_id, const char *path,
+		      const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+		      struct lyd_node *output, void *priv)
+{
+	const char *via, *user = rpc_user(session, &via) ?: via;
+	sr_session_ctx_t *cfg;
+	sr_val_t *groups = NULL;
+	size_t cnt = 0;
+	int rc;
+
+	if (!is_valid_username(user))
+		return rpc_failed(session, "Cannot tell who is calling");
+
+	if (lyd_new_term(output, NULL, "username", user, LYD_NEW_VAL_OUTPUT, NULL))
+		return SR_ERR_INTERNAL;
+
+	if (sr_session_start(sr_session_get_connection(session), SR_DS_RUNNING, &cfg))
+		return SR_ERR_INTERNAL;
+
+	rc = srx_get_items(cfg, &groups, &cnt, NACM_BASE_"/groups/group[user-name='%s']/name", user);
+	sr_session_stop(cfg);
+	if (rc == SR_ERR_NOT_FOUND)
+		rc = SR_ERR_OK;
+	if (rc)
+		return rc;
+
+	for (size_t i = 0; i < cnt; i++) {
+		if (lyd_new_term(output, NULL, "group", groups[i].data.string_val,
+				 LYD_NEW_VAL_OUTPUT, NULL)) {
+			rc = SR_ERR_INTERNAL;
+			break;
+		}
+	}
+	sr_free_values(groups, cnt);
+
+	return rc;
+}
+
 int system_rpc_init(struct confd *confd)
 {
 	int rc;
@@ -1929,6 +1968,7 @@ int system_rpc_init(struct confd *confd)
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &confd->sub);
+	REGISTER_RPC_TREE(confd->session, "/infix-system:whoami", rpc_whoami, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
