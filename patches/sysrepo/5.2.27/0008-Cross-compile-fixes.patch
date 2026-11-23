@@ -1,7 +1,8 @@
-From eb4f2063d4225fc9a41dc4ae648d62299c768061 Mon Sep 17 00:00:00 2001
+From 394b6850e0823d12f92f6e89e8f3c12d9ca5c702 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 16 Dec 2025 08:18:32 +0100
-Subject: [PATCH 8/9] Cross compile fixes
+Subject: [PATCH 08/10] Cross compile fixes
+Organization: Wires
 Organization: Wires
 
 ---

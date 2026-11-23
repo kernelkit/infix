@@ -1,7 +1,8 @@
-From 1fb495404020832a02059a36a15c8940a2ca4564 Mon Sep 17 00:00:00 2001
+From 830418c1d56a7a020de1653f6ae1107a5195d635 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 8 May 2024 17:00:50 +0200
-Subject: [PATCH 3/9] Allow to copy from factory default
+Subject: [PATCH 03/10] Allow to copy from factory default
+Organization: Wires
 Organization: Wires
 
 ---
@@ -9,10 +10,10 @@ Organization: Wires
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 9a858a55..bdef7dba 100644
+index 56c1fbae..95728d8e 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -5536,7 +5536,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+@@ -5373,7 +5373,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
      const struct lys_module *ly_mod = NULL;
      sr_datastore_t ds1, ds2;
  

@@ -1,7 +1,8 @@
-From 2c57fd6f7e03fd95459c8274e97406526709c4fd Mon Sep 17 00:00:00 2001
+From 6944bc2bcb4593135d63fe54fc19da01ddfe4e06 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 23 Aug 2024 12:22:06 +0200
-Subject: [PATCH 7/9] On error in sr_shmsub_listen_thread(), exit process
+Subject: [PATCH 07/10] On error in sr_shmsub_listen_thread(), exit process
+Organization: Wires
 Organization: Wires
 
 If processing callback events in, e.g., sysrepo-plugind, make sure to
@@ -14,10 +15,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/src/shm_sub.c b/src/shm_sub.c
-index 3fe8c8e6..2ab31ed3 100644
+index 9c70e408..07102f8e 100644
 --- a/src/shm_sub.c
 +++ b/src/shm_sub.c
-@@ -5035,5 +5035,7 @@ error:
+@@ -5082,5 +5082,7 @@ error:
      /* free our own resources */
      ATOMIC_STORE_RELAXED(subscr->thread_running, 0);
      pthread_detach(pthread_self());

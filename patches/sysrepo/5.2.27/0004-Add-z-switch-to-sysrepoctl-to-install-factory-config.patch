@@ -1,8 +1,9 @@
-From ab7a3331c38945ddbcdc2c88f382dfbfbc41c884 Mon Sep 17 00:00:00 2001
+From 54e4a93c828ac26315aa9870acdfb675c5ceb7b6 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 4/9] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 04/10] Add -z switch to sysrepoctl to install factory config
  from a json file
+Organization: Wires
 Organization: Wires
 
 This to be able to load the yang modules during build time instead on boot.
@@ -84,7 +85,7 @@ index c1c2ea7a..1cdf2436 100644
 +
  #endif
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index bdef7dba..6296ff56 100644
+index 95728d8e..d33c7f92 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
 @@ -1768,6 +1768,55 @@ sr_free_int_install_mods(sr_int_install_mod_t *new_mods, uint32_t new_mod_count)

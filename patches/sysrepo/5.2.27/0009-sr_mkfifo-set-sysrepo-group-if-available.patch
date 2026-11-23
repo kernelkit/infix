@@ -1,7 +1,8 @@
-From d2155166da3d9fd7a2e8180106fc3f02bb69226f Mon Sep 17 00:00:00 2001
+From 9439f07ecdd61d918747f469bf92320c6b6c931d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Jan 2026 18:09:32 +0100
-Subject: [PATCH 9/9] sr_mkfifo(): set sysrepo group if available
+Subject: [PATCH 09/10] sr_mkfifo(): set sysrepo group if available
+Organization: Wires
 Organization: Wires
 
 We already set the umask, set the group to allow users of the sysrepo
@@ -13,7 +14,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/src/common.c b/src/common.c
-index 0a96a8f4..6f82bd4d 100644
+index f59c5621..e6a6052d 100644
 --- a/src/common.c
 +++ b/src/common.c
 @@ -3952,6 +3952,17 @@ sr_mkfifo(const char *path, mode_t mode)
