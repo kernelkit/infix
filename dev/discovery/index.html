@@ -1444,6 +1444,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#lldp-fast-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLDP Fast Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#lldp-administrative-status-per-interface" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2717,6 +2728,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#lldp-fast-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLDP Fast Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#lldp-administrative-status-per-interface" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3018,6 +3040,15 @@ admin@example:/config/&gt; <b>leave</b>
 by the IEEE standard. Infix allows this value to be customized.
 To change it using the CLI:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>set lldp message-tx-interval 1</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="lldp-fast-start">LLDP Fast Start<a class="headerlink" href="#lldp-fast-start" title="Permanent link">¶</a></h3>
+<p>When a new neighbor is detected on a port, the device answers at once
+with four LLDP messages in a row, ahead of the next regular
+transmission.  The time between these messages is set with
+<code>message-fast-tx</code>, default 1 second:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>set lldp message-fast-tx 2</b>
 admin@example:/config/&gt; <b>leave</b>
 </code></pre>
 
