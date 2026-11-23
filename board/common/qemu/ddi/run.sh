@@ -549,6 +549,21 @@ gen_gdb()
     q sect gdb chardev:gdbqemu
 }
 
+gen_append()
+{
+    [ "$IX_QEMU_LOADER_QEMU" ] || return 0
+
+    _append=$(cat "$qdir"/append)
+    q sect append "\"$_append $IX_QEMU_APPEND $*\""
+}
+
+gen_extra()
+{
+    [ "$IX_QEMU_EXTRA" ] || return 0
+
+    printf ' \\\n\t%s' "$IX_QEMU_EXTRA" >>"$qdir"/qemu.sh
+}
+
 gen_all()
 {
     local _append
@@ -575,11 +590,10 @@ EOF
     gen_wifi
     gen_gdb
 
-    if [ "$IX_QEMU_LOADER_QEMU" ]; then
-	_append=$(cat "$qdir"/append)
-	q sect append "\"$_append $IX_QEMU_APPEND $*\""
-    fi
+    # Must run last to capture arguments added by previous generators
+    gen_append "$@"
 
+    gen_extra
     echo >>"$qdir"/qemu.sh
 }
 
