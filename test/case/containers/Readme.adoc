@@ -4,6 +4,7 @@
 Tests verifying link:https://opencontainers.org/[OCI container] support:
 
  - Basic web server container running in host network mode
+ - Container without an image, running the web server of the system itself
  - Container enable/disable functionality via configuration  
  - Container environment variable configuration and access
  - Common setup behind a bridge, with a VETH pair and firewall port forwarding
@@ -15,6 +16,10 @@ Tests verifying link:https://opencontainers.org/[OCI container] support:
  - NETCONF port 830 forwarded to a container, which connects back to NETCONF on the host
 
 include::basic/Readme.adoc[]
+
+<<<
+
+include::system/Readme.adoc[]
 
 <<<
 

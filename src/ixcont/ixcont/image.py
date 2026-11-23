@@ -20,6 +20,9 @@ The images in the system image are used in place.  Anything fetched or
 converted is one file in /var/lib/containers/images, named after its
 reference, and reused until the container is upgraded.  A converted
 image is not signed.
+
+A container without an image runs from the root file system of the
+system itself, see System.
 """
 import hashlib
 import os
@@ -49,6 +52,26 @@ class Image:
             raise ContainerError(str(e))
         self.path = path
         self.offset = img.offset
+
+
+class System:
+    """The system's own root file system for an image: the software Infix
+    ships, with the /etc of the system image, not that of the running
+    system.  It has no init for a container, so tini starts the command."""
+    path = "/"
+    offset = None
+    config = {"Entrypoint": ["/usr/bin/tini", "--"]}
+
+    def __init__(self):
+        self.id = "system"
+        try:
+            with open("/etc/os-release") as f:
+                for line in f:
+                    key, _, val = line.strip().partition("=")
+                    if key == "VERSION_ID":
+                        self.id = val.strip('"')
+        except OSError:
+            pass
 
 
 def _strip_ext(name):
@@ -183,6 +206,9 @@ def resolve(ref, checksum=None, force=False, creds=None):
     A remote image that cannot be fetched is retried on every network
     change, the service stays in its setup phase until then.
     """
+    if not ref:
+        return System()
+
     src = _source(ref)
     if src is None:
         return _local(_path(ref))
@@ -212,6 +238,9 @@ def cached_path(ref):
     Never fetches or converts anything, for callers that only need to
     know what is already on disk, like the boot reconcile.
     """
+    if not ref:
+        return None
+
     src = _source(ref)
     if src != ref:
         try:

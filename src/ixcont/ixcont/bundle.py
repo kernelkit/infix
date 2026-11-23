@@ -126,7 +126,7 @@ def _args(image, cfg):
     else:
         cmd = image.config.get("Cmd") or []
     args = list(entrypoint) + list(cmd)
-    if not args:
+    if not args or (image.offset is None and not cmd):
         raise ContainerError("image has no entrypoint or command")
     return args
 

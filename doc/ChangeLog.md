@@ -34,6 +34,10 @@ All notable changes to the project are documented in this file.
   down booting, and a container removed from the configuration leaves
   nothing behind on disk except its named volumes.  An image
   configuration naming an archive in `/lib/oci` keeps working.
+- A container can run without an image.  It then runs the software of
+  Infix itself, from the system image, e.g., a second web server or DNS
+  and DHCP server with a configuration of its own as a content mount,
+  see [Containers Without an Image][ctrsystem]
   The `ixcont` tool replaces `podman` in the shell.  The admin-exec
   commands `container remove` and `container save`, and the port,
   detach and checksum options of `container run` and `container load`
@@ -453,6 +457,7 @@ All notable changes to the project are documented in this file.
 [alarms]: https://www.kernelkit.org/infix/latest/alarms/
 [containers]: https://www.kernelkit.org/infix/latest/container/
 [ctrbridge]: https://www.kernelkit.org/infix/latest/container/#container-behind-a-bridge
+[ctrsystem]: https://www.kernelkit.org/infix/latest/container/#containers-without-an-image
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port

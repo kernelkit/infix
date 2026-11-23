@@ -28,7 +28,8 @@ module infix-containers {
                    - Drop the ip, ip6 and mac interface options, the addresses
                      of the interface are used
                  A container runs from a SIF image, other formats are converted,
-                 and an image may be given as a plain file name.";
+                 and an image may be given as a plain file name.  Without an
+                 image a container runs the software of the system itself.";
     reference "internal";
   }
 
@@ -175,6 +176,10 @@ module infix-containers {
     list container {
       key "name";
 
+      must "image or command" {
+        error-message "A container without an image needs a command to run.";
+      }
+
       leaf enabled {
 	description "Enable or disable a container configuration.";
 	type boolean;
@@ -214,10 +219,13 @@ module infix-containers {
                      http://addr/path/to/image
                      https://addr/path/to/image
 
+                     Without an image the container runs the software of the system
+                     itself, from the root file system of its system image, which
+                     follows the system when that is upgraded.  It needs a 'command'.
+
                      Note: if a remote repository cannot be reached, the creation of the
                            container will be put on a queue that retries pull every time
                            there is a route change in the host's system.";
-	mandatory true;
 	type image-reference;
       }
 
@@ -251,7 +259,8 @@ module infix-containers {
       }
 
       leaf image-id {
-        description "Docker image ID, exact hash used.";
+        description "Image ID, the exact hash used, or the version of the system
+                     for a container without an image.";
         config false;
         type string;
       }

@@ -3,6 +3,9 @@
 - name: Container Basic
   case: basic/test.py
 
+- name: Container without Image
+  case: system/test.py
+
 - name: Container Enabled/Disabled
   case: enabled/test.py
 

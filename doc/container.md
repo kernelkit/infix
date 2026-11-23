@@ -458,6 +458,38 @@ provided the `oci-archive:/path/to/archive` format is used in your
 configuration, call the upgrade command.  The archive is converted again
 only when the file has changed.
 
+### Containers Without an Image
+
+A container does not need an image of its own.  Without one it runs
+the software Infix itself ships, from the root file system of the
+system image.  This is a simple way to run a second, separate instance
+of a service that already is in the system, e.g., a web server or a DNS
+and DHCP server, with a configuration of your own as a [content
+mount](#content-mounts):
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit container web</b>
+admin@example:/config/container/web/> <b>set command "/usr/sbin/httpd -f -v -p 8080 -h /var/www"</b>
+admin@example:/config/container/web/> <b>set network host</b>
+admin@example:/config/container/web/> <b>edit mount index.html</b>
+admin@example:/config/container/…/index.html/> <b>set target /var/www/index.html</b>
+admin@example:/config/container/…/index.html/> <b>edit content</b>
+admin@example:/config/container/…/index.html/> <b>leave</b>
+</code></pre>
+
+A few things are good to know about such a container:
+
+ - It has no `image`, so it must have a `command` to run
+ - The command is started by [tini][], which forwards signals to it and
+   cleans up after it
+ - It sees the system as shipped, not as configured: `/etc` is that of
+   the system image, without your users, keys and settings, and `/var`,
+   `/cfg` and `/home` are empty.  Use mounts and volumes for what the
+   service needs
+ - It follows the system: upgrading Infix upgrades the container
+ - It is isolated like any other container in what it can do and see
+   at runtime, but all the software of the system is there to run
+
 ### Embedded Container Images
 
 > [!TIP]

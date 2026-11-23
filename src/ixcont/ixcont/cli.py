@@ -47,7 +47,10 @@ def _mount_rootfs(rt, img):
     upper, work = os.path.join(rt, "upper"), os.path.join(rt, "work")
     for d in (rootfs, lower, upper, work):
         os.makedirs(d, exist_ok=True)
-    sh("mount", "-t", "squashfs", "-o", f"loop,ro,offset={img.offset}", img.path, lower)
+    if img.offset is None:
+        lower = img.path
+    else:
+        sh("mount", "-t", "squashfs", "-o", f"loop,ro,offset={img.offset}", img.path, lower)
     sh("mount", "-t", "overlay", "overlay",
        "-o", f"lowerdir={lower},upperdir={upper},workdir={work}", rootfs)
 
@@ -138,7 +141,7 @@ def setup(name):
     for d in ("upper", "work", "files", "etc"):
         shutil.rmtree(os.path.join(rt, d), ignore_errors=True)
 
-    img = images.resolve(cfg["image"], cfg.get("checksum"), force=force)
+    img = images.resolve(cfg.get("image"), cfg.get("checksum"), force=force)
     _mount_rootfs(rt, img)
     rootfs = os.path.join(rt, "rootfs")
 
@@ -156,7 +159,7 @@ def setup(name):
     state = {
         "name": name,
         "id": _container_id(cfg, img.id),
-        "image": cfg["image"],
+        "image": cfg.get("image"),
         "image-id": img.id,
         "image-path": img.path,
         "hostname": hostname,
@@ -278,7 +281,7 @@ def restart(name):
 
 def upgrade(name, reset_volumes=False):
     cfg = load_conf(name)
-    print(f">> Upgrading container {name} from image {cfg['image']} ...")
+    print(f">> Upgrading container {name} from image {cfg.get('image', 'of the system')} ...")
     if running(name):
         print(">> Stopping container ... ", end="", flush=True)
         stop(name)
@@ -393,7 +396,7 @@ def show(what):
         for st in all_states():
             status = "running" if running(st["name"]) else st.get("status", "")
             nets = ", ".join(n["name"] for n in st.get("networks") or [])
-            print(f"{st['name']:<24} {status:<16} {st.get('image', ''):<40} {nets}")
+            print(f"{st['name']:<24} {status:<16} {st.get('image') or '':<40} {nets}")
 
 
 def _referenced():
@@ -401,7 +404,7 @@ def _referenced():
     keep = set()
     for name in conf_names():
         try:
-            path = images.cached_path(load_conf(name)["image"])
+            path = images.cached_path(load_conf(name).get("image"))
         except ContainerError:
             continue
         if path:
