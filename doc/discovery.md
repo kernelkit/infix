@@ -176,6 +176,17 @@ To change it using the CLI:
 admin@example:/config/> <b>leave</b>
 </code></pre>
 
+### LLDP Fast Start
+
+When a new neighbor is detected on a port, the device answers at once
+with four LLDP messages in a row, ahead of the next regular
+transmission.  The time between these messages is set with
+`message-fast-tx`, default 1 second:
+
+<pre class="cli"><code>admin@example:/config/> <b>set lldp message-fast-tx 2</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
 ### LLDP Administrative Status per Interface
 
 Infix supports configuring the LLDP administrative status on a per-port

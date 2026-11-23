@@ -469,12 +469,15 @@ static int lldp_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		node = lydx_get_xpathf(config, LLDP_XPATH);
 		if (lydx_is_enabled(node, "enabled")){
 			const char *tx_interval = lydx_get_cattr(node, "message-tx-interval");
+			const char *fast_tx = lydx_get_cattr(node, "message-fast-tx");
 			FILE *fp = fopen(LLDP_CONFIG_NEXT, "w");
 			if (!fp) {
 				ERRNO("Failed to open %s for writing", LLDP_CONFIG_NEXT);
 				break;
 			}
 			fprintf(fp, "configure lldp tx-interval %s\n", tx_interval);
+			if (fast_tx)
+				fprintf(fp, "configure lldp fast-start tx-interval %s\n", fast_tx);
 
 			if (!fput_list(fp, node, "management-interface", LLDP_MGMT_PATTERN))
 				fputs(LLDP_MGMT_PATTERN "*\n", fp);

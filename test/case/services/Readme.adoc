@@ -37,6 +37,10 @@ include::lldp/lldp_management_address/Readme.adoc[]
 
 <<<
 
+include::lldp/lldp_fast_start/Readme.adoc[]
+
+<<<
+
 include::restconf/rate_limit/Readme.adoc[]
 
 <<<
