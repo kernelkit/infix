@@ -67,12 +67,23 @@ serves the page as plain files, from a snippet in `/etc/nginx/app/`,
 and `/etc/default/webui` says who gets it:
 
 ```sh
-WEBUI_HOME=operator=/panel/ service=/service/
+WEBUI_HOME=operator=/panel/ @guest=/stats/ @service=/service/
 ```
 
-A user listed there lands on their page after login and cannot leave
-it.  Everyone else gets the regular pages.  The page uses the same
-login as the WebUI, and two endpoints:
+An entry is `user=/path`, or `@group=/path` for all members of a NACM
+group.  Anyone listed lands on their page after login and cannot leave
+it.  Everyone else gets the regular pages.  A group suits users that
+are created after the image is built: the factory configuration ships
+the group and its NACM rules, and every user added to it later gets
+the page.
+
+An entry for a user wins over one for a group.  A user in more than one
+listed group gets the page of the group that comes first in the list.
+A group entry never applies to an administrator, i.e. a user allowed to
+read the NACM configuration.  Group membership is read at login, so a
+change takes effect the next time the user logs in.
+
+The page uses the same login as the WebUI, and two endpoints:
 
 | **Endpoint**           | **Use**                                                    |
 |------------------------|------------------------------------------------------------|

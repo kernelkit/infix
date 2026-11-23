@@ -124,30 +124,29 @@ func TestSameOriginIgnoresForwardedHost(t *testing.T) {
 	}
 }
 
-// A user with a home page, see WEBUI_HOME, is sent there from every
+// A session with a home page, see WEBUI_HOME, is sent there from every
 // regular page but keeps the API the page reads from, and logout.
 func TestHomeUserIsKeptOnHomePage(t *testing.T) {
 	store := auth.NewSessionStore()
-	homes := map[string]string{"guest": "/stats"}
-	h := authMiddleware(store, nil, homes, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	h := authMiddleware(store, nil, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	for _, tc := range []struct {
-		user, method, path string
+		home, method, path string
 		want               int
 	}{
-		{"guest", http.MethodGet, "/", http.StatusSeeOther},
-		{"guest", http.MethodGet, "/configure/tree", http.StatusSeeOther},
-		{"guest", http.MethodGet, "/api/data", http.StatusSeeOther},
-		{"guest", http.MethodGet, "/api/restconf/data/ietf-hardware:hardware", http.StatusOK},
-		{"guest", http.MethodGet, "/api/session", http.StatusOK},
-		{"guest", http.MethodPost, "/logout", http.StatusOK},
-		{"guest", http.MethodGet, "/stats/missing.js", http.StatusOK},
-		{"guest", http.MethodGet, "/stats", http.StatusOK},
-		{"guest", http.MethodGet, "/statsother", http.StatusSeeOther},
-		{"guest", http.MethodGet, "/status/tree", http.StatusSeeOther},
-		{"admin", http.MethodGet, "/", http.StatusOK},
+		{"/stats", http.MethodGet, "/", http.StatusSeeOther},
+		{"/stats", http.MethodGet, "/configure/tree", http.StatusSeeOther},
+		{"/stats", http.MethodGet, "/api/data", http.StatusSeeOther},
+		{"/stats", http.MethodGet, "/api/restconf/data/ietf-hardware:hardware", http.StatusOK},
+		{"/stats", http.MethodGet, "/api/session", http.StatusOK},
+		{"/stats", http.MethodPost, "/logout", http.StatusOK},
+		{"/stats", http.MethodGet, "/stats/missing.js", http.StatusOK},
+		{"/stats", http.MethodGet, "/stats", http.StatusOK},
+		{"/stats", http.MethodGet, "/statsother", http.StatusSeeOther},
+		{"/stats", http.MethodGet, "/status/tree", http.StatusSeeOther},
+		{"", http.MethodGet, "/", http.StatusOK},
 	} {
-		token, _, err := store.Create(tc.user, "pw", nil)
+		token, _, err := store.Create("user", "pw", nil, tc.home)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -156,10 +155,10 @@ func TestHomeUserIsKeptOnHomePage(t *testing.T) {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		if w.Code != tc.want {
-			t.Errorf("%s %s %s: status %d, want %d", tc.user, tc.method, tc.path, w.Code, tc.want)
+			t.Errorf("%q %s %s: status %d, want %d", tc.home, tc.method, tc.path, w.Code, tc.want)
 		}
 		if tc.want == http.StatusSeeOther && w.Header().Get("Location") != "/stats" {
-			t.Errorf("%s %s: redirected to %q, want /stats", tc.user, tc.path, w.Header().Get("Location"))
+			t.Errorf("%q %s: redirected to %q, want /stats", tc.home, tc.path, w.Header().Get("Location"))
 		}
 	}
 }

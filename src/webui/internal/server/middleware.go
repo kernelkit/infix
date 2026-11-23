@@ -21,7 +21,7 @@ const cookieName = "session"
 // the token up in the in-memory store, and attaches the session's
 // credentials to the context.  Unauthenticated requests are
 // redirected to /login (or get a 401 if the request comes from HTMX).
-func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, homes map[string]string, next http.Handler) http.Handler {
+func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublicPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
@@ -34,14 +34,14 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, homes map[str
 			return
 		}
 
-		username, password, csrf, features, ok := store.Lookup(cookie.Value)
+		sess, ok := store.Lookup(cookie.Value)
 		if !ok {
 			deny(w, r)
 			return
 		}
 
-		if home := homes[username]; home != "" && !homeAllowed(r.URL.Path, home) {
-			redirect(w, r, home)
+		if sess.Home != "" && !homeAllowed(r.URL.Path, sess.Home) {
+			redirect(w, r, sess.Home)
 			return
 		}
 
@@ -56,10 +56,10 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, homes map[str
 		}
 
 		ctx := restconf.ContextWithCredentials(r.Context(), restconf.Credentials{
-			Username: username,
-			Password: password,
+			Username: sess.Username,
+			Password: sess.Password,
 		})
-		ctx = security.WithToken(ctx, csrf)
+		ctx = security.WithToken(ctx, sess.CSRF)
 
 		// The console / netbrowse shortcuts are toggleable in running-config at
 		// runtime, unlike the other (per-boot) capabilities baked into the
@@ -69,11 +69,11 @@ func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, homes map[str
 		// never re-draw them, so they're skipped (no read per request).
 		fullPageLoad := !polling && r.Header.Get("HX-Request") != "true"
 		if rc != nil && fullPageLoad {
-			features = maps.Clone(features) // don't mutate the shared session map
-			handlers.ApplyWebShortcuts(ctx, rc, features)
+			sess.Features = maps.Clone(sess.Features) // don't mutate the shared session map
+			handlers.ApplyWebShortcuts(ctx, rc, sess.Features)
 		}
 
-		ctx = handlers.ContextWithCapabilities(ctx, handlers.NewCapabilities(features))
+		ctx = handlers.ContextWithCapabilities(ctx, handlers.NewCapabilities(sess.Features))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
