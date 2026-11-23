@@ -265,6 +265,17 @@ static void add(const char *subnet, struct lyd_node *cfg)
 				ifname ?: "", ifname ? "," : "", tag,
 				start, end, lydx_get_cattr(node, "lease-time"));
 		}
+	} else {
+		unsigned int a, b, c, d, len;
+		struct in_addr mask;
+
+		/* Without a range the subnet is not served at all */
+		if (sscanf(subnet, "%u.%u.%u.%u/%u", &a, &b, &c, &d, &len) == 5 && len <= 32) {
+			mask.s_addr = len ? htonl(~0U << (32 - len)) : 0;
+			fprintf(fp, "\n# Static hosts only\n");
+			fprintf(fp, "dhcp-range=%s%sset:%s,%u.%u.%u.%u,static,%s\n",
+				ifname ?: "", ifname ? "," : "", tag, a, b, c, d, inet_ntoa(mask));
+		}
 	}
 
 err:
