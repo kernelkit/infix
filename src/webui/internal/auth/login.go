@@ -91,9 +91,11 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	admin := handlers.DetectNACMAccess(ctx, h.RC)
 	caps.Features()["nacm"] = admin
 
-	home, err := h.Homes.Resolve(ctx, username, admin, handlers.NACMGroups)
+	home, err := h.Homes.Resolve(ctx, username, admin, func(ctx context.Context) ([]string, error) {
+		return handlers.WhoamiGroups(ctx, h.RC)
+	})
 	if err != nil {
-		log.Printf("login refused for %q, cannot read NACM groups: %v", username, err)
+		log.Printf("login refused for %q, cannot look up its NACM groups: %v", username, err)
 		h.renderLogin(w, r, "Unable to reach the device. Please try again later.")
 		return
 	}

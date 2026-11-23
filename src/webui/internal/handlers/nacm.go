@@ -3,16 +3,11 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
-	"os/exec"
-	"slices"
 	"strings"
-	"time"
 
 	"infix/webui/internal/restconf"
 )
@@ -44,35 +39,18 @@ type nacmGroupJSON struct {
 	UserNames []string `json:"user-name"`
 }
 
-// NACMGroups returns the NACM groups user is a member of.  It reads
-// straight from sysrepo, outside NACM: only an admin may read the NACM
-// data over RESTCONF.
-func NACMGroups(ctx context.Context, user string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "sysrepocfg", "-X", "-d", "running", "-f", "json",
-		"-x", "/ietf-netconf-acm:nacm/groups").Output()
-	if err != nil {
+// WhoamiGroups returns the NACM groups of the user behind ctx, who need
+// not be allowed to read the NACM data.
+func WhoamiGroups(ctx context.Context, rc restconf.Fetcher) ([]string, error) {
+	var reply struct {
+		Output struct {
+			Groups []string `json:"group"`
+		} `json:"infix-system:output"`
+	}
+	if err := rc.CallRPC(ctx, "/operations/infix-system:whoami", nil, &reply); err != nil {
 		return nil, err
 	}
-	return nacmGroupsOf(out, user)
-}
-
-func nacmGroupsOf(data []byte, user string) ([]string, error) {
-	var raw nacmWrapper
-	// No groups at all comes back as no output
-	if len(bytes.TrimSpace(data)) > 0 {
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return nil, err
-		}
-	}
-	var groups []string
-	for _, g := range raw.NACM.Groups.Group {
-		if slices.Contains(g.UserNames, user) {
-			groups = append(groups, g.Name)
-		}
-	}
-	return groups, nil
+	return reply.Output.Groups, nil
 }
 
 type nacmRuleListJSON struct {

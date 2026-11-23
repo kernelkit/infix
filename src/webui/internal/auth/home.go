@@ -46,11 +46,11 @@ func ParseHomes(v string) Homes {
 // It never does for an admin, who could not get back to the regular
 // pages to leave the group.
 func (h Homes) Resolve(ctx context.Context, user string, admin bool,
-	lookup func(context.Context, string) ([]string, error)) (string, error) {
+	lookup func(context.Context) ([]string, error)) (string, error) {
 	if home := h.users[user]; home != "" || admin || len(h.groups) == 0 {
 		return home, nil
 	}
-	groups, err := lookup(ctx, user)
+	groups, err := lookup(ctx)
 	if err != nil {
 		return "", err
 	}

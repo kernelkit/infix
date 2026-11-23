@@ -30,11 +30,11 @@ func TestHomesResolve(t *testing.T) {
 		"op":      {"guest"},
 		"admin":   {"admin", "guest"},
 	}
-	lookups := 0
-	lookup := func(_ context.Context, user string) ([]string, error) {
+	lookups, user := 0, ""
+	lookup := func(context.Context) ([]string, error) {
 		lookups++
 		if user == "broken" {
-			return nil, errors.New("no sysrepo")
+			return nil, errors.New("denied")
 		}
 		return members[user], nil
 	}
@@ -55,7 +55,7 @@ func TestHomesResolve(t *testing.T) {
 		{"op", true, "/op/", 0},
 		{"admin", true, "", 0},
 	} {
-		lookups = 0
+		lookups, user = 0, tc.user
 		got, err := h.Resolve(context.Background(), tc.user, tc.admin, lookup)
 		if err != nil || got != tc.want || lookups != tc.lookups {
 			t.Errorf("%s: got %q, %v after %d lookups, want %q after %d",
@@ -63,11 +63,12 @@ func TestHomesResolve(t *testing.T) {
 		}
 	}
 
-	if _, err := h.Resolve(context.Background(), "broken", false, lookup); err == nil {
+	user = "broken"
+	if _, err := h.Resolve(context.Background(), user, false, lookup); err == nil {
 		t.Error("failed group lookup: no error")
 	}
 
-	lookups = 0
+	lookups, user = 0, "jane"
 	got, err := ParseHomes("op=/op/").Resolve(context.Background(), "jane", false, lookup)
 	if err != nil || got != "" || lookups != 0 {
 		t.Errorf("no group homes: got %q, %v after %d lookups", got, err, lookups)

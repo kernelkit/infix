@@ -83,6 +83,10 @@ A group entry never applies to an administrator, i.e. a user allowed to
 read the NACM configuration.  Group membership is read at login, so a
 change takes effect the next time the user logs in.
 
+The groups come from the `infix-system:whoami` RPC, called as the user.
+The NACM rules must permit the members of a listed group to call it,
+like the factory rules do for `guest`, otherwise their login is refused.
+
 The page uses the same login as the WebUI, and two endpoints:
 
 | **Endpoint**           | **Use**                                                    |

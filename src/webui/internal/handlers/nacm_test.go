@@ -2,23 +2,39 @@
 
 package handlers
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"slices"
+	"testing"
 
-func TestNACMGroupsOf(t *testing.T) {
-	data := []byte(`{"ietf-netconf-acm:nacm":{"groups":{"group":[
-		{"name":"admin","user-name":["admin"]},
-		{"name":"guest","user-name":["jane","joe"]},
-		{"name":"empty"},
-		{"name":"service","user-name":["jane"]}]}}}`)
+	"infix/webui/internal/testutil"
+)
 
-	got, err := nacmGroupsOf(data, "jane")
-	if err != nil || len(got) != 2 || got[0] != "guest" || got[1] != "service" {
-		t.Errorf("jane: got %v, %v", got, err)
+func TestWhoamiGroups(t *testing.T) {
+	const path = "/operations/infix-system:whoami"
+
+	rc := testutil.NewMockFetcher()
+	rc.SetResponse(path, map[string]any{
+		"infix-system:output": map[string]any{
+			"username": "jane",
+			"group":    []string{"guest", "service"},
+		},
+	})
+	got, err := WhoamiGroups(context.Background(), rc)
+	if err != nil || !slices.Equal(got, []string{"guest", "service"}) {
+		t.Errorf("got %v, %v", got, err)
 	}
-	if got, err := nacmGroupsOf(nil, "jane"); err != nil || len(got) != 0 {
-		t.Errorf("no data: got %v, %v", got, err)
+
+	rc.SetResponse(path, map[string]any{
+		"infix-system:output": map[string]any{"username": "jane"},
+	})
+	if got, err := WhoamiGroups(context.Background(), rc); err != nil || len(got) != 0 {
+		t.Errorf("no groups: got %v, %v", got, err)
 	}
-	if _, err := nacmGroupsOf([]byte("{"), "jane"); err == nil {
-		t.Error("bad data: no error")
+
+	rc.SetError(path, errors.New("access denied"))
+	if _, err := WhoamiGroups(context.Background(), rc); err == nil {
+		t.Error("denied: no error")
 	}
 }
