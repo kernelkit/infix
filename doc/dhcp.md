@@ -92,6 +92,32 @@ ASCII string "c0:ff:ee", eight bytes, is used.
 > `htype` field of the option to `00`.  See RFC 2132 for details.
 
 
+## Address per Port
+
+A host can also be matched on the relay agent information, option 82,
+that a [DHCP relay agent](dhcp-relay.md) adds to the requests it
+relays.  The circuit-id identifies the port the client is connected to
+and the remote-id the relay agent.  Whatever is connected to that port
+then gets the address, without anyone having to know its MAC address:
+
+<pre class="cli"><code>admin@example:/config/dhcp-server/…/192.168.1.0/24/> <b>edit host 192.168.1.42</b>
+admin@example:/config/dhcp-server/…/192.168.1.42/> <b>set match option82 circuit-id str camera-18</b>
+admin@example:/config/dhcp-server/…/192.168.1.42/> <b>set match option82 remote-id str switch-17</b>
+admin@example:/config/dhcp-server/…/192.168.1.42/> <b>set preempt true</b>
+admin@example:/config/dhcp-server/…/192.168.1.42/> <b>leave</b>
+</code></pre>
+
+Set the circuit-id, the remote-id, or both, in which case both must
+match.  Use `hex` instead of `str` for binary values, e.g., a remote-id
+that is a MAC address.
+
+A lease is normally kept for the client that got it until it expires.
+When a device is replaced, the new one would not get the address of
+the port until then.  With `preempt` the new client takes over the
+address at once.  Only one client at a time can have the address, so
+use it for ports where a single device is connected.
+
+
 ## Custom DHCP Options
 
 Configure additional DHCP options globally, per subnet, or per host:

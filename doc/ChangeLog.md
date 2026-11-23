@@ -26,6 +26,14 @@ All notable changes to the project are documented in this file.
   action on the Ethernet container of the interface, which the `show
   interface <port>` command and the WebUI interface page run.  The octet
   counters of an interface remain in the operational datastore
+- New DHCP relay agent, with support for option 82, the relay agent
+  information option.  It relays per bridge port, to a server in the
+  network or on the device itself, see [DHCP Relay][dhcp-relay], issue
+  #438
+- DHCP server: a static host can match on option 82, circuit-id and
+  remote-id, for an address per port, and has a `preempt` setting that
+  lets a replacement device take over the address at once, see
+  [DHCP Server][dhcp-port], issue #705
 - Banana Pi BPI-R64: the board identity, base MAC address included, can
   be stored in `/mnt/aux/vpd.bin`, see [VPD][vpd].  The ports then get
   permanent addresses derived from the chassis MAC instead of random
@@ -338,6 +346,8 @@ All notable changes to the project are documented in this file.
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [modem]: https://www.kernelkit.org/infix/latest/modem/
 [alarms]: https://www.kernelkit.org/infix/latest/alarms/
+[dhcp-relay]: https://www.kernelkit.org/infix/latest/dhcp-relay/
+[dhcp-port]: https://www.kernelkit.org/infix/latest/dhcp/#address-per-port
 [vpd]: https://www.kernelkit.org/infix/latest/vpd/#vpd-file-on-the-aux-partition
 [usb]: https://www.kernelkit.org/infix/latest/hardware/#usb-ports
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
