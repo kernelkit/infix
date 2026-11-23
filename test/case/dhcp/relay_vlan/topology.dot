@@ -1,0 +1,42 @@
+graph "relay vlan" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt0> mgmt0 |  <mgmt2> mgmt2 }",
+	    pos="0,12!",
+	    requires="controller",
+	];
+
+	relay [
+	    label="{ <link1> link1 | <mgmt> mgmt | <link2> link2 } | relay",
+	    pos="15,12!",
+
+	    requires="infix",
+	];
+
+        client1 [
+	    label="{ <mgmt> mgmt | <link> link} | client1",
+	    pos="15,18!",
+
+	    requires="infix",
+	];
+
+        client2 [
+	    label="{ <link> link | <mgmt> mgmt } | client2",
+	    pos="15,6!",
+
+	    requires="infix",
+	];
+
+        host:mgmt0 -- relay:mgmt [requires="mgmt", color=lightgrey]
+	host:mgmt1 -- client1:mgmt [requires="mgmt", color=lightgrey]
+        host:mgmt2 -- client2:mgmt [requires="mgmt", color=lightgrey]
+
+	relay:link1 -- client1:link [color=black, fontcolor=black, taillabel="VLAN 10"]
+	relay:link2 -- client2:link [color=black, fontcolor=black, taillabel="VLAN 10, 20 tagged"]
+}

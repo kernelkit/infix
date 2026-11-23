@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: relay vlan Pages: 1 -->
+<svg width="1203pt" height="924pt"
+ viewBox="0.00 0.00 1202.50 923.50" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 919.5)">
+<title>relay vlan</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-919.5 1198.5,-919.5 1198.5,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-419.88 0,-495.62 106.25,-495.62 106.25,-419.88 0,-419.88"/>
+<text text-anchor="middle" x="24.5" y="-453.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="49,-419.88 49,-495.62"/>
+<text text-anchor="middle" x="77.62" y="-478.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="49,-470.38 106.25,-470.38"/>
+<text text-anchor="middle" x="77.62" y="-453.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt0</text>
+<polyline fill="none" stroke="black" points="49,-445.12 106.25,-445.12"/>
+<text text-anchor="middle" x="77.62" y="-427.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- relay -->
+<g id="node2" class="node">
+<title>relay</title>
+<polygon fill="none" stroke="black" points="1075.88,-419.88 1075.88,-495.62 1190.38,-495.62 1190.38,-419.88 1075.88,-419.88"/>
+<text text-anchor="middle" x="1104.5" y="-478.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">link1</text>
+<polyline fill="none" stroke="black" points="1075.88,-470.38 1133.12,-470.38"/>
+<text text-anchor="middle" x="1104.5" y="-453.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="1075.88,-445.12 1133.12,-445.12"/>
+<text text-anchor="middle" x="1104.5" y="-427.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">link2</text>
+<polyline fill="none" stroke="black" points="1133.12,-419.88 1133.12,-495.62"/>
+<text text-anchor="middle" x="1161.75" y="-453.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">relay</text>
+</g>
+<!-- host&#45;&#45;relay -->
+<g id="edge1" class="edge">
+<title>host:mgmt0&#45;&#45;relay:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M106.12,-457.75C106.12,-457.75 1076.12,-457.75 1076.12,-457.75"/>
+</g>
+<!-- client1 -->
+<g id="node3" class="node">
+<title>client1</title>
+<polygon fill="none" stroke="black" points="1071.75,-864.5 1071.75,-915 1194.5,-915 1194.5,-864.5 1071.75,-864.5"/>
+<text text-anchor="middle" x="1096.25" y="-897.7" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="1071.75,-889.75 1120.75,-889.75"/>
+<text text-anchor="middle" x="1096.25" y="-872.45" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="1120.75,-864.5 1120.75,-915"/>
+<text text-anchor="middle" x="1157.62" y="-885.08" font-family="DejaVu Sans Mono, Book" font-size="14.00">client1</text>
+</g>
+<!-- host&#45;&#45;client1 -->
+<g id="edge2" class="edge">
+<title>host:mgmt1&#45;&#45;client1:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M106.12,-482.75C106.12,-482.75 1072.12,-902.75 1072.12,-902.75"/>
+</g>
+<!-- client2 -->
+<g id="node4" class="node">
+<title>client2</title>
+<polygon fill="none" stroke="black" points="1071.75,-0.5 1071.75,-51 1194.5,-51 1194.5,-0.5 1071.75,-0.5"/>
+<text text-anchor="middle" x="1096.25" y="-33.7" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="1071.75,-25.75 1120.75,-25.75"/>
+<text text-anchor="middle" x="1096.25" y="-8.45" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="1120.75,-0.5 1120.75,-51"/>
+<text text-anchor="middle" x="1157.62" y="-21.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">client2</text>
+</g>
+<!-- host&#45;&#45;client2 -->
+<g id="edge3" class="edge">
+<title>host:mgmt2&#45;&#45;client2:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M106.12,-432.75C106.12,-432.75 1072.12,-12.75 1072.12,-12.75"/>
+</g>
+<!-- relay&#45;&#45;client1 -->
+<g id="edge4" class="edge">
+<title>relay:link1&#45;&#45;client1:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M1104.12,-495.75C1104.12,-495.75 1096.12,-864.75 1096.12,-864.75"/>
+<text text-anchor="middle" x="1072.62" y="-499.7" font-family="DejaVu Serif, Book" font-size="14.00">VLAN 10</text>
+</g>
+<!-- relay&#45;&#45;client2 -->
+<g id="edge5" class="edge">
+<title>relay:link2&#45;&#45;client2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M1104.12,-419.75C1104.12,-419.75 1096.12,-50.75 1096.12,-50.75"/>
+<text text-anchor="middle" x="1032.12" y="-406.45" font-family="DejaVu Serif, Book" font-size="14.00">VLAN 10, 20 tagged</text>
+</g>
+</g>
+</svg>

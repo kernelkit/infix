@@ -15,6 +15,11 @@ Tests verifying DHCPv4/DHCPv6 client and server functionality:
  - DHCPv4 server with host-specific IP reservations
  - DHCPv4 server with multiple subnet configurations
  - DHCPv4 server network boot parameters, per subnet and per host
+ - DHCPv4 relay with option 82 to a server on another subnet
+ - DHCPv4 relay to a server on the same device, address per port
+ - DHCPv4 relay from an interface that is not a bridge, without option 82
+ - DHCPv4 relay in a chain of switches, with a switch as DHCP client
+ - DHCPv4 relay on a VLAN filtering bridge, with access and trunk ports
 
 include::client_basic/Readme.adoc[]
 
@@ -61,3 +66,23 @@ include::server_subnets/Readme.adoc[]
 <<<
 
 include::server_boot/Readme.adoc[]
+
+<<<
+
+include::relay_basic/Readme.adoc[]
+
+<<<
+
+include::relay_local/Readme.adoc[]
+
+<<<
+
+include::relay_plain/Readme.adoc[]
+
+<<<
+
+include::relay_chain/Readme.adoc[]
+
+<<<
+
+include::relay_vlan/Readme.adoc[]

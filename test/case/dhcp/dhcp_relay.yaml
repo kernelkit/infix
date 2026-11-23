@@ -1,0 +1,18 @@
+---
+- settings:
+    test-spec: Readme.adoc
+
+- name: DHCP Relay
+  case: relay_basic/test.py
+
+- name: DHCP Relay with Local Server
+  case: relay_local/test.py
+
+- name: DHCP Relay without Option 82
+  case: relay_plain/test.py
+
+- name: DHCP Relay Chain
+  case: relay_chain/test.py
+
+- name: DHCP Relay with VLANs
+  case: relay_vlan/test.py

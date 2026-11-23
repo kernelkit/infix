@@ -1,0 +1,42 @@
+graph "relay basic" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt0> mgmt0 |  <mgmt2> mgmt2 }",
+	    pos="0,12!",
+	    requires="controller",
+	];
+
+	relay [
+	    label="{ <link1> link1 | <mgmt> mgmt | <link2> link2 } | relay",
+	    pos="15,12!",
+
+	    requires="infix",
+	];
+
+        client [
+	    label="{ <mgmt> mgmt | <link> link} | client",
+	    pos="15,18!",
+
+	    requires="infix",
+	];
+
+        server [
+	    label="{ <link> link | <mgmt> mgmt } | server",
+	    pos="15,6!",
+
+	    requires="infix",
+	];
+
+        host:mgmt0 -- relay:mgmt [requires="mgmt", color=lightgrey]
+	host:mgmt1 -- client:mgmt [requires="mgmt", color=lightgrey]
+        host:mgmt2 -- server:mgmt [requires="mgmt", color=lightgrey]
+
+	relay:link1 -- client:link [color=black, fontcolor=black, taillabel="br0 192.168.1.1/24"]
+	relay:link2 -- server:link [color=black, fontcolor=black, taillabel="192.168.2.1/24", headlabel="192.168.2.2/24"]
+}
