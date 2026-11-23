@@ -1,5 +1,5 @@
-# From https://github.com/kernelkit/dhcprelayd/releases/tag/v3.0-rc2
-sha256  dfd8707b6f536d198b64a281f82f10d4e9ce4e9925d2741c2326e7d8d75b34c6  dhcprelayd-3.0-rc2.tar.gz
+# From https://github.com/kernelkit/dhcprelayd/releases/tag/v3.0-rc3
+sha256  5f2ecad80f60b80749ae381bf17216eb248b105c3f2630dcebb0c5de8f7d8751  dhcprelayd-3.0-rc3.tar.gz
 
 # Locally calculated
 sha256  ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6  COPYING

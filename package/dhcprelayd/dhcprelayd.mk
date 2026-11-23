@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-DHCPRELAYD_VERSION = 3.0-rc2
+DHCPRELAYD_VERSION = 3.0-rc3
 DHCPRELAYD_SITE    = https://github.com/kernelkit/dhcprelayd/releases/download/v$(DHCPRELAYD_VERSION)
 DHCPRELAYD_LICENSE = GPL-2.0 or GPL-3.0
 DHCPRELAYD_LICENSE_FILES = COPYING
