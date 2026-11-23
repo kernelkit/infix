@@ -90,10 +90,6 @@ with infamy.Test() as test:
             return alarm and is_true(alarm["is-cleared"])
         until(cleared)
 
-    with test.step("Remove veth pair"):
-        target.put_config_dicts({}, delete=["/ietf-interfaces:interfaces/interface[name='veth0a']",
-                                            "/ietf-interfaces:interfaces/interface[name='veth0b']"])
-
     with test.step("Purge cleared alarms"):
         target.call_action_output(f"{ALARMS}/alarm-list/purge-alarms",
                                   {"alarm-clearance-status": "cleared"})
