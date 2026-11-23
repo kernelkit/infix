@@ -426,6 +426,9 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 
 	ms := m.kernelState(si)(iface)
 	result := make(map[string]any)
+	if radio := nl80211.PhyName(iface); radio != "" {
+		result["radio"] = radio
+	}
 
 	switch detectMode(si, status, ms.iftype) {
 	case "ap":

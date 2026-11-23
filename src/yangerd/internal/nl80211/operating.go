@@ -32,7 +32,7 @@ func (c *Client) Operating() (map[string]Operating, error) {
 		if !ok {
 			continue
 		}
-		phy := readPhyName(ifname)
+		phy := PhyName(ifname)
 		if phy == "" {
 			continue
 		}
@@ -89,7 +89,8 @@ func channelWidthMHz(width uint32) int {
 	return 0
 }
 
-func readPhyName(ifname string) string {
+// PhyName is the radio a wireless interface sits on, "" for any other.
+func PhyName(ifname string) string {
 	name, err := os.ReadFile(filepath.Join("/sys/class/net", ifname, "phy80211", "name"))
 	if err != nil {
 		return ""
