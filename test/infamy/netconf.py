@@ -344,7 +344,8 @@ class Device(Transport):
 
     def get_config_dict(self, xpath):
         """Get Python dictionary version of XML configuration"""
-        return self.get_config(xpath).print_dict()
+        cfg = self.get_config(xpath)
+        return cfg.print_dict() if cfg else None
 
     def put_config(self, edit, retries=3):
         """Send XML configuration over NETCONF"""
