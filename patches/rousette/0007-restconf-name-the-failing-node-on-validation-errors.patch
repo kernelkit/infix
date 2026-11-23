@@ -1,7 +1,7 @@
 From 070f95df623400c5c36304f5b4e09b137fabcad6 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 9 Nov 2026 09:24:58 +0100
-Subject: [PATCH 7/7] restconf: name the failing node on validation errors
+Subject: [PATCH 7/8] restconf: name the failing node on validation errors
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
