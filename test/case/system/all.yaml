@@ -11,6 +11,9 @@
 - name: Basic NACM Permissions
   case: nacm-basic/test.py
 
+- name: Who Am I
+  case: whoami/test.py
+
 - name: Set Timezone Using Timezone Name
   case: timezone/test.py
 

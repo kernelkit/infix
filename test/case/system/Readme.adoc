@@ -27,6 +27,10 @@ include::nacm-basic/Readme.adoc[]
 
 <<<
 
+include::whoami/Readme.adoc[]
+
+<<<
+
 include::timezone/Readme.adoc[]
 
 <<<

@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"context"
 	"html/template"
 	"log"
 	"net/http"
@@ -36,6 +37,20 @@ type nacmGroupsJSON struct {
 type nacmGroupJSON struct {
 	Name      string   `json:"name"`
 	UserNames []string `json:"user-name"`
+}
+
+// WhoamiGroups returns the NACM groups of the user behind ctx, who need
+// not be allowed to read the NACM data.
+func WhoamiGroups(ctx context.Context, rc restconf.Fetcher) ([]string, error) {
+	var reply struct {
+		Output struct {
+			Groups []string `json:"group"`
+		} `json:"infix-system:output"`
+	}
+	if err := rc.CallRPC(ctx, "/operations/infix-system:whoami", nil, &reply); err != nil {
+		return nil, err
+	}
+	return reply.Output.Groups, nil
 }
 
 type nacmRuleListJSON struct {

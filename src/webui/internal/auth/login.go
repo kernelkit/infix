@@ -28,9 +28,7 @@ type LoginHandler struct {
 	// foreground, so implementations should start their own goroutines for
 	// slow work.  May be nil.
 	OnLogin func(ctx context.Context)
-	// Homes maps a username to the page it lands on after login, for
-	// users that should not get the dashboard.  May be nil.
-	Homes map[string]string
+	Homes   Homes
 }
 
 type loginData struct {
@@ -90,14 +88,24 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	// The User's Guide is bundled at build time (a filesystem check, not
 	// config); gate the Help entry on its presence.
 	caps.Features()["docs"] = handlers.DetectDocs()
-	caps.Features()["nacm"] = handlers.DetectNACMAccess(ctx, h.RC)
+	admin := handlers.DetectNACMAccess(ctx, h.RC)
+	caps.Features()["nacm"] = admin
+
+	home, err := h.Homes.Resolve(ctx, username, admin, func(ctx context.Context) ([]string, error) {
+		return handlers.WhoamiGroups(ctx, h.RC)
+	})
+	if err != nil {
+		log.Printf("login refused for %q, cannot look up its NACM groups: %v", username, err)
+		h.renderLogin(w, r, "Unable to reach the device. Please try again later.")
+		return
+	}
 
 	// Trigger any post-login hooks (e.g. schema sync) with full credentials.
 	if h.OnLogin != nil {
 		h.OnLogin(ctx)
 	}
 
-	token, csrfToken, err := h.Store.Create(username, password, caps.Features())
+	token, csrfToken, err := h.Store.Create(username, password, caps.Features(), home)
 	if err != nil {
 		log.Printf("session create error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -114,7 +122,6 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	security.EnsureToken(w, r, csrfToken)
 
-	home := h.Homes[username]
 	if home == "" {
 		home = "/"
 	}

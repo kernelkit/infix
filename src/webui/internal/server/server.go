@@ -21,7 +21,7 @@ func New(
 	schemaCache *schema.Cache,
 	templateFS fs.FS,
 	staticFS fs.FS,
-	homes map[string]string,
+	homes auth.Homes,
 ) (http.Handler, error) {
 	// Parse templates per page so each can define its own "content" block
 	// without collisions.
@@ -549,7 +549,7 @@ func New(
 	mux.HandleFunc("GET /status/tree/children", statusTreeH.TreeChildren)
 	mux.HandleFunc("GET /status/tree/node",     statusTreeH.TreeNode)
 
-	handler := authMiddleware(store, rc, homes, mux)
+	handler := authMiddleware(store, rc, mux)
 	handler = csrfMiddleware(handler)
 	handler = securityHeadersMiddleware(handler)
 	return handler, nil

@@ -510,9 +510,9 @@ static int log_severity(const char *name)
 /*
  * The event session runs as confd, so its own user says nothing about the
  * caller.  Only the originator crosses over: netopeer2 pushes [nc-sid,
- * username], the CLI and the rpc tool set their originator name to the
- * user.  RESTCONF sets neither, then the tag is left at NILVALUE rather
- * than naming root, or confd, which libsyslog would fall back to.
+ * username], RESTCONF, the CLI and the rpc tool set their originator
+ * name to the user.  A session with neither leaves the tag at NILVALUE
+ * rather than naming root, or confd, which libsyslog would fall back to.
  */
 static const char *log_user(sr_session_ctx_t *session)
 {

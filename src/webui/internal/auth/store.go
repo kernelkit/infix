@@ -16,15 +16,21 @@ const sessionTimeout = 1 * time.Hour
 // its idle timeout, "Off" included.
 const sessionLifetime = 24 * time.Hour
 
+// Session is what the store hands out about a live session.
+type Session struct {
+	Username string
+	Password string
+	CSRF     string
+	Features map[string]bool
+	Home     string // page the user is kept on, empty for none
+}
+
 // sessionEntry is the in-memory state of a single authenticated
 // session.  The user's password is kept alongside the token so the
 // webui can re-authenticate to RESTCONF on the user's behalf on each
 // request; it is never written to disk or surfaced over the wire.
 type sessionEntry struct {
-	username   string
-	password   string
-	csrfToken  string
-	features   map[string]bool
+	Session
 	createdAt  time.Time
 	lastSeenAt time.Time
 	timeout    time.Duration // idle timeout; 0 = never expire ("Off")
@@ -61,7 +67,7 @@ func NewSessionStore() *SessionStore {
 
 // Create issues a session for the given credentials, returning the
 // session token (cookie value) and a freshly minted CSRF token.
-func (s *SessionStore) Create(username, password string, features map[string]bool) (string, string, error) {
+func (s *SessionStore) Create(username, password string, features map[string]bool, home string) (string, string, error) {
 	token, err := security.RandomToken()
 	if err != nil {
 		return "", "", fmt.Errorf("session token: %w", err)
@@ -74,10 +80,13 @@ func (s *SessionStore) Create(username, password string, features map[string]boo
 	now := time.Now()
 	s.mu.Lock()
 	s.sessions[token] = &sessionEntry{
-		username:   username,
-		password:   password,
-		csrfToken:  csrf,
-		features:   features,
+		Session: Session{
+			Username: username,
+			Password: password,
+			CSRF:     csrf,
+			Features: features,
+			Home:     home,
+		},
 		createdAt:  now,
 		lastSeenAt: now,
 		timeout:    sessionTimeout,
@@ -86,16 +95,15 @@ func (s *SessionStore) Create(username, password string, features map[string]boo
 	return token, csrf, nil
 }
 
-// Lookup returns the credentials associated with a session token, or
-// ok=false if the token is unknown or expired.  An expired entry is
-// reaped as a side effect.
-func (s *SessionStore) Lookup(token string) (username, password, csrf string, features map[string]bool, ok bool) {
+// Lookup returns the session behind a token, or ok=false if the token
+// is unknown or expired.  An expired entry is reaped as a side effect.
+func (s *SessionStore) Lookup(token string) (Session, bool) {
 	s.mu.RLock()
 	e, present := s.sessions[token]
 	if present && !expired(e) {
-		username, password, csrf, features = e.username, e.password, e.csrfToken, e.features
+		sess := e.Session
 		s.mu.RUnlock()
-		return username, password, csrf, features, true
+		return sess, true
 	}
 	s.mu.RUnlock()
 
@@ -110,7 +118,7 @@ func (s *SessionStore) Lookup(token string) (username, password, csrf string, fe
 		}
 		s.mu.Unlock()
 	}
-	return "", "", "", nil, false
+	return Session{}, false
 }
 
 // SetTimeout updates a session's idle timeout (0 = never expire) so the

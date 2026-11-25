@@ -271,7 +271,7 @@ rule matches.
 ## Example: Factory Configuration
 
 The factory configuration permits by default and denies the sensitive
-items, with six rules in total:
+items, with seven rules in total:
 
 ```json
 {
@@ -319,6 +319,14 @@ items, with six rules in total:
         "name": "guest-acl",
         "group": ["guest"],
         "rule": [
+          {
+            "name": "permit-whoami",
+            "module-name": "infix-system",
+            "rpc-name": "whoami",
+            "access-operations": "exec",
+            "action": "permit",
+            "comment": "Guests can ask who they are and what groups they are in"
+          },
           {
             "name": "deny-all-write+exec",
             "module-name": "*",
@@ -368,13 +376,19 @@ and truststore are denied for everyone else through the `"*"` group.
 Factory reset and software upgrade are not mentioned at all, their YANG
 annotations keep them admin-only.
 
+Guests are denied all RPCs but one.  The `infix-system:whoami` RPC
+returns the name of the calling user and the groups that user is in.
+Only an admin can read the NACM configuration, so this is how any other
+user, or an application acting for that user, learns its own groups.
+The permit rule must come before the deny, the first match wins.
+
 The resulting permissions per group:
 
 | Group    | Read | Write | Exec | Exceptions                                    |
 |----------|------|-------|------|-----------------------------------------------|
 | admin    | All  | All   | All  | None                                          |
 | operator | All  | All   | All  | Cannot access passwords, keystore, truststore |
-| guest    | All  | None  | None | Read-only access                              |
+| guest    | All  | None  | None | Read-only access, may call `whoami`           |
 
 ## Common Patterns
 

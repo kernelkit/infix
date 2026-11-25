@@ -38,6 +38,9 @@ All notable changes to the project are documented in this file.
 - Wi-Fi: a radio without a band no longer accepts a channel, channel
   width or legacy rates.  They had no effect there and are dropped from
   the configuration on upgrade
+- New `infix-system:whoami` RPC, returns the calling user and the NACM
+  groups the user is in.  Guests are permitted to call it, see [NACM][nacm],
+  and the rule for that is added to existing configurations on upgrade
 - WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
   and the channel is picked from the channels of the selected band.
   The country code is set in one place on the interfaces page
@@ -427,6 +430,7 @@ All notable changes to the project are documented in this file.
 [gps]: https://www.kernelkit.org/infix/latest/hardware/#anchor-a-gps-receiver-to-a-usb-port
 [locate]: https://www.kernelkit.org/infix/latest/hardware/#locate
 [hw]: https://www.kernelkit.org/infix/latest/hardware/#processor
+[nacm]: https://www.kernelkit.org/infix/latest/nacm/#example-factory-configuration
 [ripng]: https://www.kernelkit.org/infix/latest/routing/#ripng-routing
 [ospfv3]: https://www.kernelkit.org/infix/latest/routing/#ospfv3-routing
 [fdb]: https://www.kernelkit.org/infix/latest/bridging/#unicast-forwarding-database

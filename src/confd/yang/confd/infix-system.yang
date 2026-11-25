@@ -39,7 +39,8 @@ module infix-system {
   description  "Infix augments and deviations to ietf-system.";
 
   revision 2026-11-09 {
-    description "Explain a rejected hostname in words instead of the pattern.";
+    description "Explain a rejected hostname in words instead of the pattern.
+                 Add the whoami RPC.";
     reference "internal";
   }
 
@@ -951,6 +952,25 @@ module infix-system {
     description "Extended password hash, including missing types, and $factory$.";
     deviate replace {
       type infix-sys:crypt-hash;
+    }
+  }
+
+  rpc whoami {
+    description
+      "Show the calling user and the NACM groups the user is in.
+
+       Only the groups in the NACM configuration are listed.  A user
+       that is not allowed to read that configuration can still learn
+       its own groups this way, but nothing about other users.";
+    output {
+      leaf username {
+        type infix-sys:username;
+        description "Name of the calling user.";
+      }
+      leaf-list group {
+        type nacm:group-name-type;
+        description "NACM group the user is a member of.";
+      }
     }
   }
 

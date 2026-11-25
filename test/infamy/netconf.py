@@ -344,7 +344,8 @@ class Device(Transport):
 
     def get_config_dict(self, xpath):
         """Get Python dictionary version of XML configuration"""
-        return self.get_config(xpath).print_dict()
+        cfg = self.get_config(xpath)
+        return cfg.print_dict() if cfg else None
 
     def put_config(self, edit, retries=3):
         """Send XML configuration over NETCONF"""
@@ -457,18 +458,25 @@ class Device(Transport):
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def rpc_output(self, module, rpc, input_data=None):
-        """Call RPC, returning output leaves as a dict of strings"""
+        """Call RPC, returning output leaves as a dict of strings, lists for leaf-lists"""
         reply = self.call_dict(module, {rpc: input_data or {}})
         xml = reply.xml
         if isinstance(xml, str):
             xml = xml.encode()
+
+        schema = next(self.ly.find_path(f"/{module}:{rpc}"))
+        lists = {c.name() for c in schema.output()
+                 if isinstance(c, libyang.schema.SLeafList)}
 
         output = {}
         for node in fromstring(xml).iter():
             if len(node) or not node.text:
                 continue
             leaf = lxml.etree.QName(node).localname
-            output[leaf] = node.text.strip()
+            if leaf in lists:
+                output.setdefault(leaf, []).append(node.text.strip())
+            else:
+                output[leaf] = node.text.strip()
 
         return output
 
