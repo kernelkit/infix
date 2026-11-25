@@ -2842,8 +2842,6 @@ def _build_radio_table(wifi_radios):
         Column('MANUFACTURER', flexible=True),
         Column('BANDS', 'right'),
         Column('STANDARDS', 'right'),
-        Column('CHANNEL', 'right'),
-        Column('WIDTH', 'right'),
         Column('MAX AP', 'right')
     ])
 
@@ -2883,10 +2881,34 @@ def _build_radio_table(wifi_radios):
         max_if = radio_data.get("max-interfaces", {})
         max_ap = max_if.get('ap', 'N/A') if max_if else 'N/A'
 
-        channel = radio_data.get("channel", "-") if "frequency" in radio_data else "-"
-        chwidth = radio_data.get("channel-width", "-") if "frequency" in radio_data else "-"
+        table.row(phy, manufacturer, bands_str, standard_str, max_ap)
+    return table
 
-        table.row(phy, manufacturer, bands_str, standard_str, channel, chwidth, max_ap)
+
+def _radios_in_use(wifi_radios):
+    return [c for c in wifi_radios
+            if "frequency" in c.get("infix-hardware:wifi-radio", {})]
+
+
+def _build_radio_channel_table(wifi_radios):
+    table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('BAND', 'right'),
+        Column('CHANNEL', 'right'),
+        Column('WIDTH', 'right'),
+        Column('FREQUENCY', 'right'),
+        Column('TX POWER', 'right')
+    ])
+
+    for component in wifi_radios:
+        radio = component["infix-hardware:wifi-radio"]
+        txpower = f"{radio['tx-power']} dBm" if "tx-power" in radio else "-"
+        table.row(component.get("name", ""),
+                  radio.get("band", "-"),
+                  radio.get("channel", "-"),
+                  radio.get("channel-width", "-"),
+                  f"{radio['frequency']} MHz",
+                  txpower)
     return table
 
 
@@ -3047,6 +3069,7 @@ def show_hardware(json):
 
     for title, build, items in (
             ("WiFi radios", _build_radio_table, wifi_radios),
+            ("WiFi channels in use", _build_radio_channel_table, _radios_in_use(wifi_radios)),
             ("GPS/GNSS Receivers", _build_gps_table, gps_receivers),
             ("USB Ports", _build_usb_table, usb_ports),
             ("Attached USB Devices", _build_usb_device_table, usb_devices),
@@ -3119,10 +3142,6 @@ def show_hardware_detail(json, ref):
     ms = comp.get("infix-hardware:modem-state", {})
     usb = comp.get("infix-hardware:usb-device", {})
     dev = USBdevice(comp)
-    radio = comp.get("infix-hardware:wifi-radio", {})
-    if "frequency" not in radio:
-        radio = {}
-
     for label, val in (
         ("Name",          comp.get("name", "")),
         ("Class",         cls.split(":")[-1]),
@@ -3136,11 +3155,6 @@ def show_hardware_detail(json, ref):
         ("USB Version",   usb.get("usb-version", "")),
         ("Speed",         f"{usb['speed']} Mbps" if usb.get("speed") else ""),
         ("Authorized",    dev.authorized),
-        ("Band",          radio.get("band", "")),
-        ("Channel",       radio.get("channel", "")),
-        ("Channel Width", radio.get("channel-width", "")),
-        ("Frequency",     f"{radio['frequency']} MHz" if radio else ""),
-        ("TX Power",      f"{radio['tx-power']} dBm" if "tx-power" in radio else ""),
         ("URI",           ", ".join(comp.get("uri", []))),
         ("Admin State",   state.get("admin-state", "")),
         ("Oper State",    state.get("oper-state", "")),
