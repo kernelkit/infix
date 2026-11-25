@@ -50,6 +50,28 @@ static const char *cd_home(kcontext_t *ctx)
 	return user;
 }
 
+/* A set-group-ID klishd has the group of sysrepo and saved the user's own */
+static int drop_group(void)
+{
+	gid_t rgid, egid, sgid;
+
+	if (!geteuid())
+		return 0;
+	if (getresgid(&rgid, &egid, &sgid))
+		return -1;
+
+	return setresgid(sgid, sgid, sgid);
+}
+
+/* Become the CLI user, a klishd that is not root only has a group to give up */
+static int become_user(const struct passwd *pw)
+{
+	if (!geteuid() && initgroups(pw->pw_name, pw->pw_gid))
+		return -1;
+
+	return setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) || setuid(pw->pw_uid);
+}
+
 /*
  * Safe subprocess execution without shell interpretation.
  * Use this instead of system()/systemf() when arguments come from user input.
@@ -61,6 +83,8 @@ static int run(char *const argv[])
 
 	pid = fork();
 	if (pid == 0) {
+		if (drop_group())
+			_exit(1);
 		execvp(argv[0], argv);
 		_exit(127);
 	}
@@ -83,8 +107,7 @@ static int run(char *const argv[])
 }
 
 /*
- * Like run(), but drops privileges to the given user before exec.
- * Use for commands that must run as the CLI user, not root (klishd).
+ * Like run(), but as the given user also when klishd is root.
  */
 static int run_as_user(const char *user, char *const argv[])
 {
@@ -107,7 +130,7 @@ static int run_as_user(const char *user, char *const argv[])
 		setenv("LOGNAME", user, 1);
 		setenv("HOME", pw->pw_dir, 1);
 
-		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (become_user(pw)) {
 			fprintf(stderr, "Aborting, failed dropping privileges to "
 				"(UID:%d GID:%d): %s\n",
 				pw->pw_uid, pw->pw_gid, strerror(errno));
@@ -142,7 +165,6 @@ static int shellf(const char *fmt, ...)
 	va_list ap;
 	char *cmd;
 	int len;
-	int rc;
 
 	va_start(ap, fmt);
 	len = vsnprintf(NULL, 0, fmt, ap);
@@ -158,19 +180,7 @@ static int shellf(const char *fmt, ...)
 	vsnprintf(cmd, len, fmt, ap);
 	va_end(ap);
 
-	rc = system(cmd);
-	if (rc == -1)
-		return -1;
-
-	if (WIFEXITED(rc)) {
-		errno = 0;
-		rc = WEXITSTATUS(rc);
-	} else if (WIFSIGNALED(rc)) {
-		errno = EINTR;
-		rc = -1;
-	}
-
-	return rc;
+	return run((char *[]){ "sh", "-c", cmd, NULL });
 }
 
 /*
@@ -349,14 +359,14 @@ int infix_dir(kcontext_t *ctx)
 int infix_ifaces(kcontext_t *ctx)
 {
 	(void)ctx;
-	system("ip -j link | jq -r '.[] | select(.group != \"internal\") | .ifname'");
+	shellf("ip -j link | jq -r '.[] | select(.group != \"internal\") | .ifname'");
 	return 0;
 }
 
 int infix_wifi_radios(kcontext_t *ctx)
 {
 	(void)ctx;
-	system("ls /sys/class/ieee80211/ 2>/dev/null");
+	shellf("ls /sys/class/ieee80211/ 2>/dev/null");
 	return 0;
 }
 
@@ -532,7 +542,7 @@ int infix_shell(kcontext_t *ctx)
 		};
 
 		pw = getpwnam(user);
-		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (become_user(pw)) {
 			fprintf(stderr, "Aborting, failed dropping privileges to (UID:%d GID:%d): %s\n",
 				pw->pw_uid, pw->pw_gid, strerror(errno));
 			_exit(1);
@@ -793,7 +803,7 @@ int infix_ssh_add_known_host(kcontext_t *ctx)
 	if (!pid) {
 		FILE *f;
 
-		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (become_user(pw)) {
 			fprintf(stderr, "Aborting, failed dropping privileges: %s\n",
 				strerror(errno));
 			_exit(1);

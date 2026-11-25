@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-KLISH_VERSION = 5a42de6e3b11348414a1dd1d06c21112b120fb65
+KLISH_VERSION = 2a1773aaf9d48932f7b4be79757f4011729b3432
 KLISH_SITE = https://github.com/kernelkit/klish.git
 #KLISH_VERSION = tags/3.0.0
 #KLISH_SITE = https://src.libcode.org/pkun/klish.git
@@ -32,9 +32,16 @@ endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_XML
 endif
 
-# The klish client starts klishd for the session, see klish.conf
+# klish starts klishd for the session, only group klish gets into the directory
+define KLISH_INSTALL_SERVER
+	mkdir -p $(TARGET_DIR)/usr/libexec/klish
+	mv $(TARGET_DIR)/usr/bin/klishd $(TARGET_DIR)/usr/libexec/klish/
+endef
+KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_SERVER
+
 define KLISH_PERMISSIONS
-	/usr/bin/klishd  f 04750 root klish - - - - -
+	/usr/libexec/klish         d 0750  root klish   - - - - -
+	/usr/libexec/klish/klishd  f 02755 root sysrepo - - - - -
 endef
 
 $(eval $(autotools-package))
