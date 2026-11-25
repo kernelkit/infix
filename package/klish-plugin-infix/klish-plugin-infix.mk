@@ -17,7 +17,7 @@ define KLISH_PLUGIN_INFIX_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
-ifeq ($(BR2_PACKAGE_PODMAN),y)
+ifeq ($(BR2_PACKAGE_IXCONT),y)
 KLISH_PLUGIN_INFIX_CONF_OPTS += --enable-containers
 else
 KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-containers

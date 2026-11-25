@@ -14,7 +14,7 @@ def get_hostname(dut):
     return oper["system"]["hostname"]
 
 with infamy.Test() as test:
-    cont_image = f"oci-archive:{infamy.Container.NFTABLES_IMAGE}"
+    cont_image = infamy.Container.NFTABLES_IMAGE
     cont_name = "cont0"
     hostname_init = "container-host"
     hostname_new = "coffee"

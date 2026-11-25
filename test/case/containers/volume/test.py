@@ -31,7 +31,7 @@ with infamy.Test() as test:
                     "container": [
                         {
                             "name": f"{NAME}",
-                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "image": infamy.Container.HTTPD_IMAGE,
                             "command": f"/usr/sbin/httpd -f -v -p {PORT}",
                             "network": {
                                 "host": True
@@ -51,14 +51,14 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME))
 
     with test.step("Modify container volume content"):
-        cmd = f"sudo container shell {NAME} 'echo {MESG} >/var/www/index.html'"
+        cmd = f"sudo ixcont shell {NAME} 'echo {MESG} >/var/www/index.html'"
         tgtssh.runsh(cmd)
 
     with test.step("Verify container volume content"):
         until(lambda: MESG in curl(URL))
 
     with test.step("Upgrade container"):
-        out = tgtssh.runsh(f"sudo container upgrade {NAME}")
+        out = tgtssh.runsh(f"sudo ixcont upgrade {NAME}")
         if f">> Container {NAME} upgraded successfully." not in out.stdout:
             msg = f"Failed upgrading container {NAME}:\n" \
                 f"STDOUT:\n{out.stdout}\n" \

@@ -45,14 +45,14 @@ with infamy.Test() as test:
                     "container": [
                         {
                             "name": f"{NAME}",
-                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "image": infamy.Container.HTTPD_IMAGE,
                             "command": "/usr/sbin/httpd -f -v -p 91",
                             "network": {
                                 "host": True
                             },
                             "resource-limit": {
-                                "memory": 512,  # 512 KiB
-                                "cpu": 500      # 50% of one CPU (0.5 cores)
+                                "memory": 65536,  # 64 MiB
+                                "cpu": 500        # 50% of one CPU (0.5 cores)
                             }
                         }
                     ]
@@ -73,7 +73,7 @@ with infamy.Test() as test:
         web = next((c for c in containers if c["name"] == NAME), None)
 
         limits = web.get("resource-limit", {})
-        assert limits.get("memory") == 512, "Memory limit not set correctly"
+        assert limits.get("memory") == 65536, "Memory limit not set correctly"
         assert limits.get("cpu") == 500, "CPU limit not set correctly"
 
         rusage = web.get("resource-usage", {})

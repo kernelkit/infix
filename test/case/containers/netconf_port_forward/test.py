@@ -37,7 +37,7 @@ from infamy.util import until, to_binary
 
 
 with infamy.Test() as test:
-    NFTABLES = f"oci-archive:{infamy.Container.NFTABLES_IMAGE}"
+    NFTABLES = infamy.Container.NFTABLES_IMAGE
     NETCONF_CONTAINER_IP = "10.0.0.2"
     INTIP = "10.0.0.1"
     EXTIP = "192.168.0.1"

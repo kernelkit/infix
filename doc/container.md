@@ -3,7 +3,8 @@ Docker Container Support
 
 ![Docker whale](img/docker.webp){ align=right width="360" }
 
-Infix comes with native support for Docker containers using [podman][].
+Infix comes with native support for OCI (Docker) containers, run with
+the [crun][] runtime and supervised by the system's service manager.
 The [YANG model][1] describes the current level of support, complete
 enough to run both system and application containers.
 
@@ -12,14 +13,16 @@ assign switch ports directly to containers, not just bridged VETH pairs.
 This is a rare and in many cases *unique* feature of Infix.
 
 All network specific settings are done using the IETF interfaces YANG
-model, with augments for containers to ensure smooth integration with
-container networking in podman.
+model.  A container gets its network from the interfaces handed to it,
+and everything outside the container, like bridges, routing, port
+forwarding and masquerading, is set up the same way as for any other
+interface on the system.  Nothing is created or enabled behind your
+back.
 
 > [!IMPORTANT]
-> Even though the `podman` command can be used directly from a shell
-> prompt, we strongly recommend using the CLI commands instead.  They
-> employ the services of a wrapper `container` script which handles the
-> integration of Docker containers in the system.
+> Containers are managed with the CLI commands, or the `ixcont` tool
+> from a shell prompt.  Calling `crun` directly bypasses the system's
+> bookkeeping.
 
 
 Caution
@@ -60,10 +63,10 @@ In the CLI, containers can be run in one of two ways:
  2. enter `configure` context, then `edit container NAME`
 
 The first is useful mostly for testing, or running single commands in
-an image.  It is a wrapper for `podman run -it --rm ...`.
+an image.  Nothing of it persists.
 
 The second creates a read-only container that by default automatically
-start at every boot.   It basically wraps `podman create ...`.
+starts at every boot.
 
 When non-volatile storage is needed two complementary options exist:
 
@@ -74,9 +77,8 @@ When non-volatile storage is needed two complementary options exist:
   mounted into the container is kept along with the container
   configuration in the device's `startup-config`
 
-Podman ensures (using tmpfs) all containers have writable directories
-for certain critical file system paths: `/dev`, `/dev/shm`, `/run`,
-`/tmp`, and `/var/tmp`.  Meaning, what you most often need is writable
+All containers get writable `tmpfs` directories for certain critical
+file system paths: `/dev`, `/dev/shm`, `/run`, `/tmp`, and `/var/tmp`.  Meaning, what you most often need is writable
 volumes for `/var/lib` and `/etc`, or only file mounts for a few files
 in `/etc`.  The [actual requirements](#container-requirements) depend on
 your container image and application to run.
@@ -107,30 +109,34 @@ This message shows that your installation appears to be working correctly.
 
 ### Example: Web Server
 
-A web server with [nginx][], using standard docker bridge.  Podman will
-automatically create a VETH pair for us, connecting the container to the
-`docker0` bridge:
+A web server with [nginx][], connected to the host with a VETH pair.
+The `web` end of the pair is handed to the container, with its address
+and a default route back to the host:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface docker0</b>
-admin@example:/config/interface/docker0/> <b>set container-network</b>
-admin@example:/config/interface/docker0/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0</b>
+admin@example:/config/interface/veth0/> <b>set veth peer web</b>
+admin@example:/config/interface/veth0/> <b>set ipv4 address 192.168.0.1 prefix-length 24</b>
+admin@example:/config/interface/veth0/> <b>end</b>
+admin@example:/config/> <b>edit interface web</b>
+admin@example:/config/interface/web/> <b>set ipv4 address 192.168.0.2 prefix-length 24</b>
+admin@example:/config/interface/web/> <b>set container-network route 0.0.0.0/0 gateway 192.168.0.1</b>
+admin@example:/config/interface/web/> <b>end</b>
 admin@example:/config/> <b>edit container web</b>
 admin@example:/config/container/web/> <b>set image docker://nginx:alpine</b>
-admin@example:/config/container/web/> <b>set network publish 8080:80</b>
-admin@example:/config/container/web/> <b>set network interface docker0</b>
+admin@example:/config/container/web/> <b>set network interface web</b>
 admin@example:/config/container/web/> <b>set volume cache target /var/cache</b>
 admin@example:/config/container/web/> <b>leave</b>
 admin@example:/> <b>show container</b>
 </code></pre>
 
-Exit to the shell and verify the service with curl, or try to attach
-to your device's IP address using your browser:
+Exit to the shell and verify the service with curl:
 
-<pre class="cli"><code>admin@example:~$ <b>curl http://localhost:8080</b>
+<pre class="cli"><code>admin@example:~$ <b>curl http://192.168.0.2</b>
 </code></pre>
 
-or connect to port 8080 of your running Infix system with a browser.
+To reach the web server from other networks, forward a port to it in
+the firewall, see [Container Behind a Bridge](#container-behind-a-bridge).
 See the following sections for how to add more interfaces and manage
 your container at runtime.
 
@@ -138,10 +144,20 @@ your container at runtime.
 Container Images
 ----------------
 
-The underlying `podman` project supports importing and fetching images in
-a variety of ways, the most common ones are also supported by Infix.  In
-this section we present how to use them and in the next section we show
-how to upgrade to a newer base image.
+A container runs from a single image file in the [Singularity Image
+Format][sif] (SIF): a compressed, read-only file system with what the
+image says about itself, e.g., the command to start.  The file is never
+unpacked, the container runs straight from it.
+
+Docker images, i.e., [OCI images][3] from a registry or as an archive
+produced by `docker save` or the Docker [OCI exporter][5], are converted
+to a SIF image when they are fetched.  The result is the same as for a
+SIF image you provide yourself, with one difference: an image converted
+on the device has no signature.
+
+In this section we present where images can come from and in the next
+section we show how to upgrade to a newer base image.
+
 
 The CLI help shows:
 
@@ -150,22 +166,26 @@ The CLI help shows:
     image &lt;string&gt;
 
 <b>DESCRIPTION</b>
-    Docker image for the container: [transport]name[:tag|@digest]
+    Image for the container: [transport]name[:tag|@digest]
 
+    A container runs from a SIF image file, read-only and as it is.
+    An image in any other format is converted to one first, which
+    leaves it without a signature.
+
+    /lib/oci/name.sif            -- SIF image in the system, or in any file
+    oci-archive:/media/usb/arch  -- OCI archive, in .tar or .tar.gz format
     quay.io/username/myimage     -- Pull myimage:latest
     docker://busybox             -- Pull busybox:latest from Docker Hub
     docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
-    dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
     docker-archive:/tmp/archive  -- Use archive:latest from tarball
-    oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
-                                    May be in .tar or .tar.gz format
+    dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
 
-    Additionally, the following URIs are also supported for setups
-    that do not use a HUB or similar.  Recommend using 'checksum'!
+    Additionally, a SIF image or an OCI archive can be fetched, for
+    setups that do not use a HUB or similar.  Recommend using 'checksum'!
 
-    ftp://addr/path/to/archive   -- Downloaded using wget
-    http://addr/path/to/archive  -- Downloaded using curl
-    https://addr/path/to/archive -- Downloaded using curl
+    ftp://addr/path/to/image
+    http://addr/path/to/image
+    https://addr/path/to/image
 
     Note: if a remote repository cannot be reached, the creation of the
           container will be put on a queue that retries pull every time
@@ -176,25 +196,25 @@ The CLI help shows:
 > The built-in help system in the CLI is generated from the YANG model,
 > so the same information is also available for remote NETCONF users.
 
-The two most common variants are `docker://` and `oci-archive:/`.
+The three most common variants are `/lib/oci/NAME.sif`, an image embedded
+in the Infix image, `docker://` for an image pulled from a registry, and
+`https://` for a SIF image or an archive fetched at first start.
 
-The former requires a working Docker registry and the latter operates on
-a plain OCI archive.  Infix does not come with a built-in registry, so
-the `docker://` option is best used with external services, which in
-turn require [networking][0] to be up.  In a deployment phase the
-easiest may be to set up a single interface on your host system with
-DHCP client.
+The `docker://` option requires a registry reachable over the network,
+which in turn requires [networking][0] to be up.  In a deployment phase
+the easiest may be to set up a single interface on your host system
+with DHCP client.  The default method is `docker://`, so when setting
+the `image` for your container, you can omit the `docker://` prefix.  A
+name without a registry, e.g. `nginx:alpine`, is looked up on Docker Hub.
+You can also use the admin-exec command `container pull docker://...`,
+and when configuring a container Infix checks first if it already has
+the image before trying to download anything.  (See also the upgrade
+section, below.)
 
-The default method is `docker://`, so when setting the `image` for your
-container, you can omit the `docker://` prefix.  You can also use the
-admin-exec command `container pull docker://...`, and when configuring a
-container `podman` will check first if it has the image before trying to
-download anything.  (See also the upgrade section, below.)
-
-The `oci-archive:/` is interesting since many users may not have, or do
-not want to, publish their images in a registry.  Use the Docker [OCI
-exporter][5] or any other tool that supports generating [OCI Image][3]
-format.  Infix supports loading both `.tar` or `.tar.gz` formats.
+Many users may not have, or do not want to, publish their images in a
+registry.  Use the Docker [OCI exporter][5] or any other tool that
+supports generating [OCI Image][3] format.  Infix supports loading both
+`.tar` or `.tar.gz` formats, and `oci:` for an OCI layout directory.
 
 Here we show a simple example of fetching an OCI image to the system,
 but many others exist, tools like `wget`, `curl`, and `scp` come to
@@ -218,17 +238,18 @@ drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
 drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
 </code></pre>
 
-Importing the image into Podman can be done either from the CLI
-admin-exec context ...
+Importing the image can be done either from the CLI admin-exec
+context ...
 
 <pre class="cli"><code>admin@example:/var/tmp$ <b>cli</b>
-admin@example:/> <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge</b>
+admin@example:/> <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios-edge</b>
 </code></pre>
 
 > [!TIP]
-> The `name curios:edge` is the tag you give the imported (raw) archive
-> which you can then reference in your container image configuration:
-> `set image curios:edge`.
+> The `name curios-edge` is the name you give the imported archive, it
+> is converted to `/var/lib/containers/images/curios-edge.sif` which you
+> can then reference in your container image configuration:
+> `set image curios-edge`.
 
 ... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):
@@ -256,9 +277,8 @@ admin@example:/> <b>show log</b>
 Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
-Nov 20 07:24:57 example container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 example container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 example container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
+Nov 20 07:24:57 example container[5040]: Converting ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz to /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652.sif
+Nov 20 07:24:57 example container[5040]: sys: created from /var/lib/containers/images/curios-oci-amd64-v24.05.0-4f0107703652.sif
 </code></pre>
 
 
@@ -340,27 +360,28 @@ Infix intelligently manages container lifecycles to provide a smooth
 experience while minimizing unnecessary work:
 
 **At first setup:** When you configure a container for the first time,
-Infix fetches the image (if needed) and creates the container instance.
+Infix fetches the image (if needed), converts it to a SIF image unless
+it already is one, and creates the container instance.
 
-**At boot time:** Infix checks if the container needs to be recreated by
-comparing checksums for:
-
- - The image archive that the container was built from
- - The container configuration script
+**At boot time, and at every start:** the container is recreated from
+its configuration and the image file.  Nothing is copied or unpacked:
+the file system in the image is mounted read-only, an embedded image
+straight from the Infix image, so a container with a large image starts
+as fast as one with a small one.
 
 **When configuration changes:** If you modify any container settings
 (network, volumes, environment, etc.), the container is automatically
 recreated with the new configuration.
 
 **When explicitly upgraded:** Using the `container upgrade` command forces
-a fresh pull of the image and recreates the container.
+a fresh fetch of the image and recreates the container.
 
-This means that in most cases, **containers persist across reboots** and
-are only recreated when actually necessary. Your container's state stored
-in volumes is preserved across recreations.  Since Infix containers use a
-read-only root filesystem, any changes written outside of volumes or the
-writable paths provided by Podman (`/dev`, `/dev/shm`, `/run`, `/tmp`,
-`/var/tmp`) will be lost when the container is recreated.
+Only your container's state stored in volumes persists across restarts
+and reboots.  Since Infix containers use a read-only root filesystem,
+any changes written outside of volumes or the writable `tmpfs` paths
+(`/dev`, `/dev/shm`, `/run`, `/tmp`, `/var/tmp`) are lost when the
+container stops.  A container removed from the configuration leaves
+nothing behind but its named volumes, see [Volume Management][].
 
 ### Method 1: Upgrading Immutable Tags
 
@@ -375,8 +396,8 @@ admin@example:/config/container/web/> <b>leave</b>
 
 **What happens:**
 
- 1. Podman pulls the new image in the background (if not already present)
- 2. Your container is automatically stopped
+ 1. Your container is automatically stopped
+ 2. Infix fetches the new image, and converts it unless it is a SIF image
  3. The container is recreated with the new image
  4. The container is started with your existing volumes intact
 
@@ -411,19 +432,22 @@ This command:
  3. Recreates the container with the new image
  4. Starts the container automatically
 
-**Example using registry:**
+**Example using a registry:**
 
 <pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
-system
-Trying to pull ghcr.io/kernelkit/curios:edge...
-Getting image source signatures
-Copying blob 07bfba95fe93 done
-Copying config 0cb6059c0f done
-Writing manifest to image destination
-Storing signatures
-0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
-system: not running.
-59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+>> Upgrading container system from image ghcr.io/kernelkit/curios:edge ...
+>> Stopping container ... done
+>> Recreating container ...
+>> Container system upgraded successfully.
+</code></pre>
+
+**Example using an archive served over http:**
+
+<pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
+>> Upgrading container system from image http://192.168.0.1/curios-latest.tar.gz ...
+>> Stopping container ... done
+>> Recreating container ...
+>> Container system upgraded successfully.
 </code></pre>
 
 **Example using local OCI archive:**
@@ -431,39 +455,59 @@ system: not running.
 An OCI archive image can be upgraded in a similar manner. First, get the
 new archive onto the system (see Container Images section above), then,
 provided the `oci-archive:/path/to/archive` format is used in your
-configuration, call the upgrade command:
+configuration, call the upgrade command.  The archive is converted again
+only when the file has changed.
 
-<pre class="cli"><code>admin@example:/> <b>container upgrade system</b>
-Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
-7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+### Containers Without an Image
+
+A container does not need an image of its own.  Without one it runs
+the software Infix itself ships, from the root file system of the
+system image.  This is a simple way to run a second, separate instance
+of a service that already is in the system, e.g., a web server or a DNS
+and DHCP server, with a configuration of your own as a [content
+mount](#content-mounts):
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit container web</b>
+admin@example:/config/container/web/> <b>set command "/usr/sbin/httpd -f -v -p 8080 -h /var/www"</b>
+admin@example:/config/container/web/> <b>set network host</b>
+admin@example:/config/container/web/> <b>edit mount index.html</b>
+admin@example:/config/container/…/index.html/> <b>set target /var/www/index.html</b>
+admin@example:/config/container/…/index.html/> <b>edit content</b>
+admin@example:/config/container/…/index.html/> <b>leave</b>
 </code></pre>
 
-OCI archives can also be fetched from ftp/http/https URLs. In that case,
-the upgrade works the same way as a registry image — Infix downloads the
-new archive and recreates the container.
+A few things are good to know about such a container:
+
+ - It has no `image`, so it must have a `command` to run
+ - The command is started by [tini][], which forwards signals to it and
+   cleans up after it
+ - It sees the system as shipped, not as configured: `/etc` is that of
+   the system image, without your users, keys and settings, and `/var`,
+   `/cfg` and `/home` are empty.  Use mounts and volumes for what the
+   service needs
+ - It follows the system: upgrading Infix upgrades the container
+ - It is isolated like any other container in what it can do and see
+   at runtime, but all the software of the system is there to run
 
 ### Embedded Container Images
 
 > [!TIP]
-> Containers running from OCI images embedded in the operating system,
-> e.g., `/lib/oci/mycontainer.tar.gz`, are automatically kept in sync
-> with the Infix system image version.
+> Containers running from images embedded in the operating system,
+> e.g., `/lib/oci/mycontainer.sif`, are always in sync with the Infix
+> system image version.
 >
-> **How it works:** When you build a custom Infix image with embedded OCI
-> archives, those containers will be upgraded whenever you upgrade the
-> Infix operating system itself. At boot, Infix checks if the embedded
-> image has changed and automatically recreates the container if needed.
+> **How it works:** When you build a custom Infix image with embedded
+> images, see `package/curios-httpd` for an example, the image is
+> converted at build time to `/lib/oci/NAME.sif` and the container runs
+> straight from that file.  Upgrading the Infix system image upgrades
+> the container with it, nothing is copied or checked at boot.
 >
-> **Example:** default builds of Infix include a couple of OCI images
-> for reference, one is `/lib/oci/curios-nftables-v24.11.0.tar.gz`, but
-> there is also a symlink called `curios-nftables-latest.tar.gz` in the
-> same directory, which is what the Infix regression tests use in the
-> image configuration of the container. When the system is upgraded and
-> the embedded image changes, the test containers are automatically
-> recreated with the new version.
->
-> This approach ensures your embedded containers always match your system
-> version without any manual intervention.
+> **Example:** default builds of Infix include a couple of images for
+> reference, one is `/lib/oci/curios-nftables-v25.06.0.sif`, but there
+> is also a symlink called `curios-nftables-latest.sif` in the same
+> directory, which is what the Infix regression tests use in the image
+> configuration of the container.
 
 
 Capabilities
@@ -538,142 +582,128 @@ Networking and Containers
 -------------------------
 
 By default, unlike other systems, persistent[^1] containers have no
-networking enabled.  All network access has to be set up explicitly.
-Currently two types of of container networks are supported:
+networking enabled.  All network access has to be set up explicitly, by
+handing interfaces to the container.  An interface that is declared a
+`container-network` is moved into the container that lists it, e.g.,
+one end of a VETH pair, or even a physical interface, and returns to
+the host when the container stops.
 
- - `host`: an managed host interface, e.g., one end of a VETH pair,
-   or even a physical interface
- - `bridge`: an IP masquerading bridge
+Declaring the interface as a container network ensures it cannot be
+used by the system for any other purpose, e.g., it can never
+accidentally be added as a bridge or lag port.  Hence, to move an
+interface currently set as a `bridge-port` it must be removed from the
+bridge before being given to a container.
 
-In the former the interface is delegated to (moved into) the container,
-while in the latter a VETH pair is automatically created by Podman and
-one end delegated to the container, while the other end is assigned to
-the bridge (see the next section).
+Inside the container the interface gets:
+
+ - the IPv4/IPv6 addresses from its interface settings
+ - the MAC address from `custom-phys-address` in its interface settings
+ - the routes set in `container-network`, e.g., a default route
+ - the name `eth0`, `eth1`, in the order the interfaces are listed in
+   the container's `network`, unless set with the `interface_name`
+   option, see below
+
+DNS servers and search domain use the host's, but can be overridden
+from each container.
+
+Everything outside the container is regular Infix configuration: what
+the other end of a VETH pair connects to, IP forwarding, and port
+forwarding and masquerading in the [firewall][fw].
+
+> [!NOTE]
+> Releases before v26.11 had a `bridge` type of container network, which
+> created VETH pairs, handed out addresses and published ports on its
+> own.  When upgrading, such a container bridge is removed from the
+> configuration, with the published ports, and the containers that
+> used it come up without that connection.  Set them up again as shown
+> in [Container Behind a Bridge](#container-behind-a-bridge).
 
 > [!TIP]
 > For more information on VETH pairs, see the [Networking Guide][0].
+> Both ends of a VETH pair may be assigned to containers, connecting two
+> containers directly without involving the host namespace.
 
 
-### Container Bridge
+### Container Behind a Bridge
 
-A container bridge is what most container setups use and users want.
+A bridge that containers connect to, with the host as their gateway to
+the rest of the world, is what most container setups use.
 
 ![IP Masquerading Container Bridge](img/cni-bridge-firewall.svg)
 
-The difference from a regular bridge is that the container runtime fully
-manages them -- connecting containers with automatically created VETH
-pairs (look at the bridge port names) and setting up firewall rules
-between the host and other containers, as well as managing port
-forwarding.  This transparent background management is what makes
-container use seem to be so simple.
-
-All interface configuration is done in configure context.
+It is built from parts you already know: a bridge with an address, a
+VETH pair per container with one end as a port in the bridge, and the
+firewall for anything that should pass between the containers and
+other networks.  Here a bridge `br0`, on the common 172.17.0.0/16
+subnet, and a container `web` at 172.17.0.2:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config> <b>edit interface docker0</b>
-admin@example:/config/interface/docker0/> <b>set container-network</b>
-admin@example:/config/interface/docker0/> <b>leave</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>set ipv4 address 172.17.0.1 prefix-length 16</b>
+admin@example:/config/interface/br0/> <b>set ipv4 forwarding</b>
+admin@example:/config/interface/br0/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set veth peer veth0b</b>
+admin@example:/config/interface/veth0a/> <b>set bridge-port bridge br0</b>
+admin@example:/config/interface/veth0a/> <b>end</b>
+admin@example:/config/> <b>edit interface veth0b</b>
+admin@example:/config/interface/veth0b/> <b>set ipv4 address 172.17.0.2 prefix-length 16</b>
+admin@example:/config/interface/veth0b/> <b>set container-network route 0.0.0.0/0 gateway 172.17.0.1</b>
+admin@example:/config/interface/veth0b/> <b>end</b>
+admin@example:/config/> <b>set container web network interface veth0b</b>
 </code></pre>
 
-There is more to this story.  When using the CLI, and sticking to common
-interface nomenclature, Infix helps you with some of the boring stuff.
-E.g., creating a new interface with a name like `brN` or `dockerN`
-automatically *infers* the interface types, which you would otherwise
-have to set manually:
+The container can now talk to the host and to other containers on the
+bridge.  For it to reach other networks, enable `ipv4 forwarding` also
+on the interface facing that network, see [IP Forwarding][ip].
 
-<pre class="cli"><code>admin@example:/config/interface/docker0/> <b>set type bridge</b>
-admin@example:/config/interface/docker0/> <b>set container-network type bridge</b>
+Forwarding a port from the outside to the container, and hiding the
+containers behind the address of the host, is done in the firewall.
+Here the upstream interface `e1` is in zone `wan`, the bridge in zone
+`lan`, port 8080 on the outside goes to port 80 in the container, and
+traffic from the containers is masqueraded on its way out:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit firewall</b>
+admin@example:/config/firewall/> <b>set default wan</b>
+admin@example:/config/firewall/> <b>edit zone wan</b>
+admin@example:/config/firewall/…/wan/> <b>set action drop</b>
+admin@example:/config/firewall/…/wan/> <b>set interface e1</b>
+admin@example:/config/firewall/…/wan/> <b>end</b>
+admin@example:/config/firewall/> <b>edit zone wan port-forward 8080 tcp</b>
+admin@example:/config/firewall/…/tcp/> <b>set to addr 172.17.0.2</b>
+admin@example:/config/firewall/…/tcp/> <b>set to port 80</b>
+admin@example:/config/firewall/…/tcp/> <b>end</b>
+admin@example:/config/firewall/> <b>edit zone lan</b>
+admin@example:/config/firewall/…/lan/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan/> <b>set interface br0</b>
+admin@example:/config/firewall/…/lan/> <b>end</b>
+admin@example:/config/firewall/> <b>edit policy lan-to-wan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set ingress lan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set egress wan</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>set masquerade</b>
+admin@example:/config/firewall/…/lan-to-wan/> <b>leave</b>
 </code></pre>
 
 > [!IMPORTANT]
-> When configuring the system via an API such as NETCONF or RESTCONF, no
-> settings are inferred.  Instead it is up to the caller to fully define
-> the desired setup.  This makes the CLI very useful for first setup and
-> then extracting the resulting XML from the shell using the `cfg -X`
-> command.
+> With the firewall enabled every interface is in a zone, the default
+> one unless you say otherwise.  Make sure the interface you manage the
+> system over is in a zone that lets you in, see [Firewall][fw].
 
-We have to declare the interface as a container network, ensuring the
-interface cannot be used by the system for any other purpose.  E.g., a
-container `host` interface is supposed to be used by a container, by
-declaring it as such we can guarantee that it would never accidentally
-be added as a bridge or lag port.  Hence, to move an interface currently
-set as a `bridge-port` it must be removed from the bridge before being
-given to a container.
+The name of the interface inside the container is set with an option on
+the container's network interface:
 
-The default subnet for a container `bridge` is 172.17.0.0/16, the bridge
-takes the `.1` address and hand out the rest of the range to containers
-in a round-robin like fashion.  A container with this `network` get an
-automatically created VETH pair connection to the bridge and a lot of
-other networking parameters (DNS, default route) are set up.
-
-Some of the defaults of a container `bridge` can be changed, e.g.,
-instead of `set container-network type bridge`, above, do:
-
-<pre class="cli"><code>admin@example:/config/interface/docker0/> <b>edit container-network</b>
-admin@example:/config/…/container-network/> <b>set type bridge</b>
-admin@example:/config/…/container-network/> <b>edit subnet 192.168.0.0/16</b>
-admin@example:/config/…/subnet/192.168.0.0/16/> <b>set gateway 192.168.255.254</b>
-admin@example:/config/…/subnet/192.168.0.0/16/> <b>end</b>
-admin@example:/config/…/container-network/> <b>edit route 10.0.10.0/24</b>
-admin@example:/config/…/route/10.0.10.0/24/> <b>set gateway 192.168.10.254</b>
-admin@example:/config/…/route/10.0.10.0/24/> <b>end</b>
-admin@example:/config/…/container-network/> <b>end</b>
-admin@example:/config/interface/docker0/> <b>leave</b>
-</code></pre>
-
-Other network settings, like DNS and domain, use built-in defaults, but
-can be overridden from each container.  Other common settings per
-container is the IP address and name of the network interface inside the
-container.  The default, after each stop/start cycle, or reboot of the
-host, is to name the interfaces `eth0`, `eth1`, in the order they are
-given in the `network` list, and to give the container the next address
-in a `bridge`.  Below an example of a system container calls `set
-network interface docker0`, here we show how to set options for that
-network:
-
-<pre class="cli"><code>admin@example:/config/container/ntpd/> <b>edit network interface docker0</b>
-admin@example:/config/…/network/interface/docker0/>
-admin@example:/config/…/network/interface/docker0/> <b>set option</b>
-&lt;string&gt;  Options for masquerading container bridges.
-admin@example:/config/…/network/interface/docker0/> <b>help option</b>
-NAME
-        option &lt;string&gt;
-
-DESCRIPTION
-        Options for masquerading container bridges.
-
-        Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
-                 mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
-                 interface_name=foo0   -- set interface name inside container
-
-admin@example:/config/…/network/interface/docker0/> <b>set option ip=172.17.0.2</b>
-admin@example:/config/…/network/interface/docker0/> <b>set option interface_name=wan</b>
-admin@example:/config/…/network/interface/docker0/> <b>leave</b>
+<pre class="cli"><code>admin@example:/config/container/web/> <b>edit network interface veth0b</b>
+admin@example:/config/…/network/interface/veth0b/> <b>set option interface_name=wan</b>
+admin@example:/config/…/network/interface/veth0b/> <b>leave</b>
 </code></pre>
 
 
 ### Container Host Interface
 
-Another common use-case is to move network interfaces into the network
-namespace of a container[^3].  This of course works with plain Ethernet
-interfaces as well, but here we will use one end of a VETH pair as an
-example.
-
-The network `option` setting is available also for this case, but only
-the `interface_name=foo0` option works.  Which is still very useful.  To
-set:
-
- - IP address, use IPv4/IPv6 settings in the interface settings
- - MAC address, to use the `custom-phys-address` in the interface settings
-
-For an example of both, see the next section.
-
-> [!TIP]
-> Both ends of a VETH pair may be assigned to containers, connecting two
-> containers directly without involving the host namespace.
-
-[^3]: Something which the container bridge network type does behind the
-    scenes with one end of an automatically created VETH pair.
+Any interface can be moved into the network namespace of a container.
+This of course works with plain Ethernet interfaces as well, but here
+we will use one end of a VETH pair as an example.
 
 
 #### Routed Setup
@@ -701,9 +731,7 @@ admin@example:/config/interface/ntpd/> <b>set container-network</b>
 > [!TIP]
 > Notice how you can also set a custom MAC address at the same time.
 
-Adding the interface to the container is the same as before, but since
-everything for host interfaces is set up in the interfaces context, we
-can take a bit of a shortcut.
+Adding the interface to the container is the same as before:
 
 <pre class="cli"><code>admin@example:/config/container/ntpd/> <b>set network interface ntpd</b>
 admin@example:/config/container/ntpd/> <b>leave</b>
@@ -712,10 +740,6 @@ admin@example:/config/container/ntpd/> <b>leave</b>
 > [!TIP]
 > Use the `set network interface ntpd option interface_name=foo0` to set
 > the name of the interface inside the container to `foo0`.
-
-The point of the routed case is that port forwarding from the container
-in this case is limited to a single interface, not *all interfaces* as
-is the default in the masquerading container bridge setup.
 
 
 #### Bridged Setup
@@ -744,7 +768,6 @@ have a default route installed.  This can be added from the host with a
 admin@example:/config/interface/veth1a/> <b>show</b>
 type veth;
 container-network {
-  type host;
   route 0.0.0.0/0 {
     gateway 192.168.1.1;
   }
@@ -805,10 +828,10 @@ created read-writable entity that follows the life of your container.
 </code></pre>
 
 Volumes are persistent across both reboots and upgrades of the base
-image.  They are created by Podman when the container first starts up,
-unlike a regular bind mount it synchronizes with the contents of the
-underlying container image's path at first use.  I.e., "bind-mount, if
-empty: then rsync".
+image.  They are created in `/var/lib/containers/volumes` when the
+container first starts up, unlike a regular bind mount a volume is
+initialized with the contents of the underlying container image's path
+at first use.
 
 > [!NOTE]
 > Infix support named volumes (only), and it is not possible to share a
@@ -897,15 +920,19 @@ Example Containers
 ### System Container
 
 Let's try out what we've learned by setting up a system container, a
-container providing multiple services, using the `docker0` interface
-we created previously:
+container providing multiple services, behind the bridge `br0` from
+[Container Behind a Bridge](#container-behind-a-bridge), with a second
+VETH pair `veth1a` and `veth1b` set up the same way, at 172.17.0.3:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config> <b>edit container system</b>
 admin@example:/config/container/system/> <b>set image ghcr.io/kernelkit/curios:edge</b>
-admin@example:/config/container/system/> <b>set network interface docker0</b>
-admin@example:/config/container/system/> <b>set publish 222:22</b>
-admin@example:/config/container/system/> <b>leave</b>
+admin@example:/config/container/system/> <b>set network interface veth1b</b>
+admin@example:/config/container/system/> <b>end</b>
+admin@example:/config/> <b>edit firewall zone wan port-forward 222 tcp</b>
+admin@example:/config/firewall/…/tcp/> <b>set to addr 172.17.0.3</b>
+admin@example:/config/firewall/…/tcp/> <b>set to port 22</b>
+admin@example:/config/firewall/…/tcp/> <b>leave</b>
 </code></pre>
 
 > [!NOTE]
@@ -915,15 +942,14 @@ admin@example:/config/container/system/> <b>leave</b>
 > default route is added, and every 60 seconds.
 
 Provided the image is downloaded successfully, a new `system` container
-now runs behind the docker0 interface, forwarding container port 22 to
-port 222 on all of the host's interfaces.  (See `help publish` in the
-container configuration context for the full syntax.)
+now runs behind the bridge, with port 222 on the interfaces in the
+firewall's `wan` zone forwarded to port 22 in the container.
 
 Available containers can be accessed from admin-exec:
 
 <pre class="cli"><code>admin@example:/> <b>show container</b>
 <span class="header">NAME     STATUS        NETWORK  MEMORY (KiB)  CPU%</span>
-system   Up 16 hours   docker0       136/512  0.02
+system   Up 16 hours   br0           136/512  0.02
 </code></pre>
 
 This is a system container, so you can "attach" to it by starting a
@@ -1109,18 +1135,18 @@ Depending on your needs, here is a checklist:
    - BusyBox init, a classic most embedded developers know, but read on ...
  - a system container only need the bare necessities of a system bringup
    - E.g., BusyBox's init, [but not everything][15]
-   - Some of the networking is set up by Podman and CNI for you, but
-     you may want to run a DHCP client?
+   - Addresses and routes are set up by Infix for you, but you may want
+     to run a DHCP client?
    - Do *not* rename interfaces inside the container, use the dedicated
      `interface_name` option in the configuration instead
-   - Remember, Podman provides a `tmpfs` for all critical system paths:
+   - Remember, Infix provides a `tmpfs` for all critical system paths:
      `/dev`, `/dev/shm`, `/run`, `/tmp`, and `/var/tmp`, so you don't
      need to clean or set up any of these mount points
 
 Examples using `tini` and BusyBox init are available from the KernelKit
 [curiOS project][14].  It is a small Buildroot based container image
 builder that generates OCI compatible image tarballs without any tools
-from Docker or Podman -- ready-made images exist for testing on both
+from Docker -- ready-made images exist for testing on both
 AMD64 and ARM64 targets, as well as `docker pull` images and and OCI
 tarballs with SHA256 checksums for integrity checking.
 
@@ -1146,4 +1172,8 @@ Container Image](#embedded-container-images) (above).
 [15]:     https://github.com/kernelkit/curiOS/blob/2e4748f65e356b2c117f586cd9420d7ba66f79d5/board/system/rootfs/etc/inittab
 [tini]:   https://github.com/krallin/tini
 [nginx]:  https://hub.docker.com/_/nginx
-[podman]: https://podman.io
+[crun]:   https://github.com/containers/crun
+[sif]:    https://github.com/apptainer/sif
+[ip]:     ip.md
+[fw]:     firewall.md
+[Volume Management]: #volume-management

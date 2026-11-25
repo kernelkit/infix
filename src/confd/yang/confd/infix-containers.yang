@@ -22,6 +22,17 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2026-11-16 {
+    description "The network outside a container is set up like any other:
+                   - Drop publish, ports are forwarded by the firewall
+                   - Drop the ip, ip6 and mac interface options, the addresses
+                     of the interface are used
+                 A container runs from a SIF image, other formats are converted,
+                 and an image may be given as a plain file name.  Without an
+                 image a container runs the software of the system itself.";
+    reference "internal";
+  }
+
   revision 2026-04-20 {
     description "Add cmdline operational leaf showing the full process command line
                  (entrypoint + args) from 'podman inspect'.  Allow environment variable
@@ -98,12 +109,12 @@ module infix-containers {
 
 
   typedef image-reference {
-    description "OCI image reference or transport URI.
-                 Allows registry references (e.g., quay.io/user/image:tag),
-                 transport prefixes (docker://, oci-archive:, dir:), and
-                 download URLs (ftp://, http://, https://).";
+    description "Image file, OCI image reference or transport URI.
+                 Allows file names (e.g., /lib/oci/image.sif), registry references
+                 (e.g., quay.io/user/image:tag), transport prefixes (docker://,
+                 oci-archive:, dir:), and download URLs (ftp://, http://, https://).";
     type string {
-      pattern '[a-zA-Z0-9][a-zA-Z0-9_./:@=+%~-]*';
+      pattern '[a-zA-Z0-9/][a-zA-Z0-9_./:@=+%~-]*';
     }
   }
 
@@ -165,6 +176,10 @@ module infix-containers {
     list container {
       key "name";
 
+      must "image or command" {
+        error-message "A container without an image needs a command to run.";
+      }
+
       leaf enabled {
 	description "Enable or disable a container configuration.";
 	type boolean;
@@ -183,32 +198,39 @@ module infix-containers {
       }
 
       leaf image {
-	description "Docker image for the container: [transport]name[:tag|@digest]
+	description "Image for the container: [transport]name[:tag|@digest]
 
+                     A container runs from a SIF image file, read-only and as it is.
+                     An image in any other format is converted to one first, which
+                     leaves it without a signature.
+
+                     /lib/oci/name.sif            -- SIF image in the system, or in any file
+                     oci-archive:/media/usb/arch  -- OCI archive, in .tar or .tar.gz format
                      quay.io/username/myimage     -- Pull myimage:latest
                      docker://busybox             -- Pull busybox:latest from Docker Hub
                      docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
-                     dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
                      docker-archive:/tmp/archive  -- Use archive:latest from tarball
-                     oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
-                                                     May be in .tar or .tar.gz format
+                     dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
 
-                     Additionally, the following URIs are also supported for setups
-                     that do not use a HUB or similar.  Recommend using 'checksum'!
+                     Additionally, a SIF image or an OCI archive can be fetched, for
+                     setups that do not use a HUB or similar.  Recommend using 'checksum'!
 
-                     ftp://addr/path/to/archive   -- Downloaded using wget
-                     http://addr/path/to/archive  -- Downloaded using curl
-                     https://addr/path/to/archive -- Downloaded using curl
+                     ftp://addr/path/to/image
+                     http://addr/path/to/image
+                     https://addr/path/to/image
+
+                     Without an image the container runs the software of the system
+                     itself, from the root file system of its system image, which
+                     follows the system when that is upgraded.  It needs a 'command'.
 
                      Note: if a remote repository cannot be reached, the creation of the
                            container will be put on a queue that retries pull every time
                            there is a route change in the host's system.";
-	mandatory true;
 	type image-reference;
       }
 
       container checksum {
-	description "Checksum for ftp/http/https OCI archives.";
+	description "Checksum of an image fetched with ftp/http/https.";
         choice checksum {
           leaf md5 {
             description "MD5 checksum for the archive.";
@@ -237,7 +259,8 @@ module infix-containers {
       }
 
       leaf image-id {
-        description "Docker image ID, exact hash used.";
+        description "Image ID, the exact hash used, or the version of the system
+                     for a container without an image.";
         config false;
         type string;
       }
@@ -270,9 +293,9 @@ module infix-containers {
 
       leaf cmdline {
         description "Full process command line currently executing in the container,
-                     combining the entrypoint and its arguments as reported by
-                     'podman inspect'.  May differ from the configured 'command'
-                     override when the image provides its own entrypoint wrapper.";
+                     combining the entrypoint and its arguments.  May differ from
+                     the configured 'command' override when the image provides its
+                     own entrypoint wrapper.";
         config false;
         type string;
       }
@@ -305,7 +328,7 @@ module infix-containers {
 	description "Select network mode: none, host, or container network interfaces.";
 
         leaf host {
-          description "Run in same network namespace as host, share DNS and publish all ports.";
+          description "Run in same network namespace as host, sharing its interfaces and DNS.";
           type boolean;
         }
 
@@ -314,40 +337,20 @@ module infix-containers {
           key name;
 
           leaf name {
-            description "Container network (interface name) to connect to the container.";
+            description "Interface to move into the container.";
             type if:interface-ref;
             must "/if:interfaces/if:interface[if:name = current()]/infix-if:container-network" {
-              error-message "Container networks must be interfaces classified as container-network.";
+              error-message "Only an interface set as container-network can be moved into a container.";
             }
           }
 
           leaf-list option {
             description "Options for interface inside container, e.g., interface_name=foo0
 
-                         Options: ip=1.2.3.4                      -- Set static IPv4 address*
-                                  ip6=2001:0:130f::9c0:876a:130b  -- Set static IPv6 address*
-                                  mac=00:01:02:c0:ff:ee           -- Set fixed MAC address
-                                  interface_name=foo0             -- Set interface name
-
-                         NOTE: Some (*) options only work with masquerading container bridges,
-                               which automatically create VETH pairs with one end in the host
-                               bridge and the other in the container.";
+                         Options: interface_name=foo0             -- Set interface name";
             type string {
               pattern '[a-zA-Z_][a-zA-Z0-9_]*=[a-zA-Z0-9.:_/-]+';
             }
-          }
-        }
-
-        leaf-list publish {
-          description "Publish container port, or a range of ports, to the host.
-
-                         Syntax: [[ip:][hostPort]:]containerPort[/protocol]
-
-                         Sample: 8080:80           -- forward tcp port 8080 to container port 80
-                                 69:69/udp         -- forward udp port 69 to container port 69
-                                 127.0.0.1:8080:80 -- forward only from loopback interface";
-          type string {
-            pattern '[0-9.:\[\]]+(/[a-zA-Z]+)?';
           }
         }
 
@@ -627,15 +630,15 @@ module infix-containers {
   }
 
   rpc oci-load {
-    description "Load an OCI archive from file or URL to an image.";
+    description "Keep the image of a file or URL, converted to a SIF image.";
     input {
       leaf uri {
-        description "The URL or local file path, e.g., /lib/oci/archive.tar.gz";
+        description "The URL or local file path, e.g., /media/usb/archive.tar.gz";
         type image-reference;
         mandatory true;
       }
       leaf name {
-        description "Image name[:tag], default: basename of archive dir + :latest";
+        description "Image name, default: the name of the file";
         type image-reference;
       }
     }

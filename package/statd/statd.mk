@@ -21,7 +21,7 @@ endef
 
 STATD_CONF_OPTS = --prefix= --disable-silent-rules
 
-ifeq ($(BR2_PACKAGE_PODMAN),y)
+ifeq ($(BR2_PACKAGE_IXCONT),y)
 STATD_CONF_OPTS += --enable-containers
 else
 STATD_CONF_OPTS += --disable-containers

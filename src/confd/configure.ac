@@ -1,6 +1,6 @@
 AC_PREREQ(2.61)
 # confd version is same as system YANG model version, step on breaking changes
-AC_INIT([confd], [1.13], [https://github.com/kernelkit/infix/issues])
+AC_INIT([confd], [1.14], [https://github.com/kernelkit/infix/issues])
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)
 
@@ -27,6 +27,7 @@ AC_CONFIG_FILES([
 	share/migrate/1.11/Makefile
 	share/migrate/1.12/Makefile
 	share/migrate/1.13/Makefile
+	share/migrate/1.14/Makefile
 	yang/Makefile
 	yang/confd/Makefile
 	yang/test-mode/Makefile

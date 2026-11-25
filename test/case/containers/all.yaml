@@ -3,11 +3,17 @@
 - name: Container Basic
   case: basic/test.py
 
+- name: Container without Image
+  case: system/test.py
+
 - name: Container Enabled/Disabled
   case: enabled/test.py
 
 - name: Container Environment Variables
   case: environment/test.py
+
+- name: Container Restart Policy
+  case: restart_policy/test.py
 
 - name: Container with Bridge Network
   case: bridge/test.py

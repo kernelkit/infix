@@ -253,9 +253,7 @@ table ip nat {
             {
                 "name": "veth0a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host",
-                },
+                "infix-interfaces:container-network": {},
                 "ipv4": {
                     "address": [
                         {
@@ -287,9 +285,7 @@ table ip nat {
             {
                 "name": "veth1a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
-                },
+                "infix-interfaces:container-network": {},
                 "infix-interfaces:veth": {
                     "peer": "veth1b"
                 },
@@ -313,8 +309,14 @@ table ip nat {
             {
                 "name": "veth2a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
+                "infix-interfaces:container-network": {},
+                "ipv4": {
+                    "address": [
+                        {
+                            "ip": "169.254.1.3", # This only for test, use zeroconf in real-life
+                            "prefix-length": 16
+                        }
+                    ]
                 },
                 "infix-interfaces:veth": {
                     "peer": "veth2b"
@@ -339,9 +341,7 @@ table ip nat {
             {
                 "name": "veth3a",
                 "type": "infix-if-type:veth",
-                "infix-interfaces:container-network": {
-                    "type": "host"
-                },
+                "infix-interfaces:container-network": {},
                 "infix-interfaces:veth": {
                     "peer": "veth3b"
                 },
@@ -369,7 +369,7 @@ table ip nat {
                 "container": [
                 {
                     "name": "container-A",
-                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "image": infamy.Container.HTTPD_IMAGE,
                     "command": "/usr/sbin/httpd -f -v -p 91",
                     "hostname": "web-container-%m",
                     "restart-policy": "retry",
@@ -389,21 +389,19 @@ table ip nat {
                                 "option": [
                                 "interface_name=br1"
                             ]}
-                        ],
-                        "publish": [ "91" ]
+                        ]
                     }
                 },
                 {
                     "name": "container-B",
-                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "image": infamy.Container.HTTPD_IMAGE,
                     "hostname": "web-container-%m",
                     "privileged": True,
                     "restart-policy": "retry",
                     "network": {
                         "interface": [
                         {
-                            "name": "veth2a",
-                            "option": ["ip=169.254.1.3"] # This only for test, use zeroconf in real-life
+                            "name": "veth2a"
                         },
                         {
                             "name": "veth3a"
@@ -413,7 +411,7 @@ table ip nat {
                     },
                     {
                         "name": "firewall",
-                        "image": f"oci-archive:{infamy.Container.NFTABLES_IMAGE}",
+                        "image": infamy.Container.NFTABLES_IMAGE,
                         "network": {
                                 "host": True
                             },

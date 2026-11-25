@@ -1,0 +1,14 @@
+config BR2_PACKAGE_IXCONT
+	bool "ixcont"
+	select BR2_PACKAGE_CRUN
+	select BR2_PACKAGE_IPROUTE2
+	select BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_PYTHON3_ZLIB
+	select BR2_PACKAGE_SKOPEO_TARGET
+	select BR2_PACKAGE_SQUASHFS
+	select BR2_PACKAGE_TINI
+	help
+	  Infix container runtime: runs SIF images with crun, read-only
+	  straight from the image file, supervised by Finit.  OCI images
+	  are converted to SIF, and a container without an image runs
+	  the software of the system itself.  Replaces podman.

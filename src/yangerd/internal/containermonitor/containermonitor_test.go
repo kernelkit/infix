@@ -3,6 +3,8 @@ package containermonitor
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -47,9 +49,12 @@ func TestUpdateTreeDeletesWhenEmpty(t *testing.T) {
 	}
 }
 
-// An event in the stream must trigger a re-read; here the re-read clears a
-// previously-present container, proving the stream drives reconciliation.
-func TestEventTriggersRefresh(t *testing.T) {
+// A state file appearing in a new container directory must trigger a
+// re-read; here the re-read clears a previously-present container,
+// proving the watch drives reconciliation.
+func TestStateFileTriggersRefresh(t *testing.T) {
+	StateDir = t.TempDir()
+
 	calls := 0
 	m, tr := newTestMonitor(t, func() json.RawMessage {
 		calls++
@@ -60,9 +65,18 @@ func TestEventTriggersRefresh(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go m.refreshLoop(ctx)
+	go m.runOnce(ctx)
 
-	// A container "died" event, newline-framed as podman emits it.
-	go m.readEvents(strings.NewReader(`{"Type":"container","Status":"died","Name":"gone"}` + "\n"))
+	// Give runOnce time to arm the watch, then do what ixcont does.
+	time.Sleep(100 * time.Millisecond)
+	dir := filepath.Join(StateDir, "gone")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := os.WriteFile(filepath.Join(dir, "state.json"), []byte(`{"name":"gone"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Must comfortably exceed debounceDelay, or this races the re-read.
 	deadline := time.After(debounceDelay + 3*time.Second)
@@ -98,14 +112,5 @@ func TestUpdateTreeRunsHook(t *testing.T) {
 
 	if calls != 2 {
 		t.Fatalf("hook ran %d times, want 2", calls)
-	}
-}
-
-func TestEventStatus(t *testing.T) {
-	if s := eventStatus([]byte(`{"Status":"start"}`)); s != "start" {
-		t.Errorf("eventStatus = %q, want start", s)
-	}
-	if s := eventStatus([]byte(`not json`)); s != "" {
-		t.Errorf("eventStatus on garbage = %q, want empty", s)
 	}
 }
