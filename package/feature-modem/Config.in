@@ -6,6 +6,7 @@ config BR2_PACKAGE_FEATURE_MODEM
 	select BR2_PACKAGE_MODEM_MANAGER_LIBMBIM
 	select BR2_PACKAGE_MODEM_MANAGER_LIBQMI
 	select BR2_PACKAGE_MODEM_MANAGER_LIBQRTR
+	select BR2_PACKAGE_PPPD
 	help
 	  Enables cellular modem support via ModemManager and the
 	  modemd management daemon.  Includes drivers for common
