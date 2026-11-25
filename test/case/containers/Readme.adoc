@@ -7,6 +7,7 @@ Tests verifying link:https://opencontainers.org/[OCI container] support:
  - Container without an image, running the web server of the system itself
  - Container enable/disable functionality via configuration  
  - Container environment variable configuration and access
+ - Container restart policies for a container that exits
  - Common setup behind a bridge, with a VETH pair and firewall port forwarding
  - Connecting containers with VETH pairs to standard Linux bridges
  - Assigning physical Ethernet interfaces to containers
@@ -28,6 +29,10 @@ include::enabled/Readme.adoc[]
 <<<
 
 include::environment/Readme.adoc[]
+
+<<<
+
+include::restart_policy/Readme.adoc[]
 
 <<<
 
