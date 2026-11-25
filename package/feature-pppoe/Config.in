@@ -1,0 +1,7 @@
+config BR2_PACKAGE_FEATURE_PPPOE
+	bool "Feature PPPoE client"
+	select BR2_PACKAGE_PPPD
+	help
+	  Enables the PPPoE client, a PPP session over an Ethernet
+	  interface to a broadband access server, with pppd and its
+	  PPPoE plugin.

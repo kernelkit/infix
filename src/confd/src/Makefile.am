@@ -58,7 +58,6 @@ confd_plugin_la_SOURCES =			\
 	  if-qos.c				\
 	  if-wifi.c				\
           if-wireguard.c			\
-	  if-ppp.c				\
 	  if-modem.c				\
 	  modem.c				\
 	keystore.c				\
@@ -90,6 +89,10 @@ confd_plugin_la_SOURCES =			\
 
 if CONTAINERS
 confd_plugin_la_SOURCES += containers.c cni.c cni.h
+endif
+
+if PPPOE
+confd_plugin_la_SOURCES += if-ppp.c
 endif
 
 if SNMP

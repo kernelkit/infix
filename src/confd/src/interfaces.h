@@ -180,11 +180,19 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* if-ppp.c, PPP links, so far only PPPoE */
+#ifdef HAVE_PPPOE
 int ppp_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif);
 int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *cif,
 	    struct dagger *net);
 int ppp_del(struct lyd_node *dif, struct dagger *net);
 int ppp_add_deps(struct lyd_node *cif);
+#else
+static inline int ppp_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif) { return 0; }
+static inline int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *cif,
+			  struct dagger *net) { return 0; }
+static inline int ppp_del(struct lyd_node *dif, struct dagger *net) { return 0; }
+static inline int ppp_add_deps(struct lyd_node *cif) { return 0; }
+#endif
 
 /* if-modem.c */
 int modem_add_iface(struct lyd_node *cif, struct dagger *net);

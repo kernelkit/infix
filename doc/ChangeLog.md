@@ -86,6 +86,9 @@ All notable changes to the project are documented in this file.
 - LLDP now answers a new neighbor at once, with four messages sent
   `message-fast-tx` seconds apart, default 1.  Before, the neighbor had
   to wait for the next regular transmission, issue #181
+- The PPPoE client is now an optional feature of the build, included
+  in all default builds.  A product built without it has no `pppoe`
+  interface type
 - QoS changes, see [QoS][qos]:
   - IEEE 802.1Qav credit-based and IEEE 802.1Qbv time-aware shapers on
     products built with the TSN feature, configured and read back with

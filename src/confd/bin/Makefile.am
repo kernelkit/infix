@@ -1,7 +1,9 @@
 pkglibexec_SCRIPTS = bareboxcfg gen-config gen-hostname gen-interfaces gen-motd \
 		     gen-hardware gen-version mstpd-wait-online wait-interface
+if PPPOE
 pkglibexec_PROGRAMS = pppmon
 pppmon_SOURCES     = pppmon.c
 pppmon_CFLAGS      = $(libite_CFLAGS)
 pppmon_LDADD       = $(libite_LIBS)
+endif
 sbin_SCRIPTS       = dagger migrate firewall
