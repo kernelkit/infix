@@ -225,6 +225,9 @@ All notable changes to the project are documented in this file.
   as only one of them is enabled.  The others keep their settings, e.g.,
   for another network, and are switched to with the `enabled` flag
 - NanoPi R2S: the LAN port got a random MAC address on every boot
+- Locking a USB port left a hub plugged into it authorized.  A hub is
+  now locked like any other device, as it already was after boot, and
+  the devices behind it are listed again when the port is unlocked
 - `show interface` was slow, in particular on devices with a modem
 - The octet counters of an interface stopped counting after a while,
   e.g., they stayed at zero on a switch port

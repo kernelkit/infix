@@ -218,13 +218,12 @@ locked, all connected devices will get power, but never authorized by
 Linux to use.  Devices built into the board stay authorized, e.g. a
 modem in an M.2 or mPCIe slot wired to the same USB bus as the port.
 
-Every device plugged into a port is listed under *Attached USB Devices*, also
-when it sits behind a hub, and also when the port is locked.  On a
-locked port the device shows `no` in the AUTHORIZED column: the system
-sees it, but it cannot be used.  The exception is a hub plugged into a
-port that is already locked: the hub is listed, the devices behind it
-only once the port is unlocked.  BUS is the device's position:
-`1-1.2` is port 2 of the hub plugged into the USB port.
+Every device plugged into a port is listed under *Attached USB Devices*,
+also when the port is locked.  On a locked port the device shows `no` in
+the AUTHORIZED column: the system sees it, but it cannot be used.  This
+goes for a hub too, so the devices behind a hub are listed only while
+the port is unlocked.  BUS is the device's position: `1-1.2` is port 2
+of the hub plugged into the USB port.
 
 The port and each device have a detail view with everything known
 about them.  The URI of a device is its attachment point, which is
