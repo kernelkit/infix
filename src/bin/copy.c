@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: ISC */
 #include "config.h"
 
+#include <fcntl.h>
 #include <getopt.h>
 #include <pwd.h>
 #include <grp.h>
@@ -8,6 +9,7 @@
 #include <stdarg.h>
 #include <libgen.h>
 
+#include <sys/fsuid.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -53,11 +55,7 @@ static int dry_run;
 static int sanitize;
 static int redact;
 
-/*
- * Current system user, same as sysrepo user.  We use getuid() here
- * because `copy` is SUID root to work around sysrepo issues with a
- * /dev/shm that's moounted 01777.
- */
+/* Current system user, same as sysrepo user */
 static const char *getuser(void)
 {
 	const struct passwd *pw;
@@ -274,9 +272,6 @@ static char *mktmp(void)
 	if (fd < 0)
 		goto err;
 
-	if (chown(path, getuid(), -1))
-		dbg("Failed to chown %s: %s", path, strerror(errno));
-
 	close(fd);
 	return path;
 err:
@@ -453,22 +448,47 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 	return err;
 }
 
+/* Open a file as the user, without the group we have for sysrepo */
+static int open_as_user(const char *path)
+{
+	gid_t rgid, egid, sgid;
+	int fd;
+
+	if (getresgid(&rgid, &egid, &sgid))
+		return -1;
+
+	setfsgid(sgid);
+	fd = open(path, O_RDONLY | O_CLOEXEC);
+	setfsgid(egid);
+
+	return fd;
+}
+
 static int sysrepo_import(const struct infix_ds *ds, const char *path)
 {
 	const struct ly_ctx *ly;
 	sr_session_ctx_t *sess;
 	struct lyd_node *data;
-	int err;
+	int err, fd;
+
+	fd = open_as_user(path);
+	if (fd < 0) {
+		warn("%s", path);
+		return 1;
+	}
 
 	sess = sysrepo_session(ds);
-	if (!sess)
+	if (!sess) {
+		close(fd);
 		return 1;
+	}
 
 	ly = sr_acquire_context(sr_session_get_connection(sess));
 
-	err = lyd_parse_data_path(ly, path, LYD_JSON,
-				  LYD_PARSE_NO_STATE | LYD_PARSE_ONLY |
-				  LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT, 0, &data);
+	err = lyd_parse_data_fd(ly, fd, LYD_JSON,
+				LYD_PARSE_NO_STATE | LYD_PARSE_ONLY |
+				LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT, 0, &data);
+	close(fd);
 	if (err) {
 		warnx("failed parsing %s data", ds->name);
 		goto out;
@@ -492,6 +512,11 @@ static int subprocess(char * const *argv)
 
 	pid = fork();
 	if (!pid) {
+		gid_t rgid, egid, sgid;
+
+		/* Programs we start get the user's own group back */
+		if (getresgid(&rgid, &egid, &sgid) || setresgid(sgid, sgid, sgid))
+			exit(1);
 		execvp(argv[0], argv);
 		exit(1);
 	}
@@ -1195,6 +1220,10 @@ static int rpc_main(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	prognm = basename(argv[0]);
+
+	/* Set-group-ID sysrepo, which checks files by the real group */
+	if (setresgid(getegid(), getegid(), getgid()))
+		err(1, "failed setting group");
 
 	if (!strcmp(prognm, "rpc"))
 		return rpc_main(argc, argv);
