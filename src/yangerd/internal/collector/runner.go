@@ -63,6 +63,14 @@ func (OSFileReader) Glob(pattern string) ([]string, error) {
 // paying a connect and auth handshake per query.
 type DBusInstaller struct{}
 
+// installerProperty does not start rauc, which runs only when needed.
+func installerProperty(obj dbus.BusObject, name string) (dbus.Variant, error) {
+	var v dbus.Variant
+	err := obj.Call("org.freedesktop.DBus.Properties.Get", dbus.FlagNoAutoStart,
+		"de.pengutronix.rauc.Installer", name).Store(&v)
+	return v, err
+}
+
 func (DBusInstaller) GetInstallStatus() (string, string, int, string, error) {
 	conn, err := dbus.SystemBus()
 	if err != nil {
@@ -71,12 +79,16 @@ func (DBusInstaller) GetInstallStatus() (string, string, int, string, error) {
 
 	obj := conn.Object("de.pengutronix.rauc", "/")
 
-	operation, _ := obj.GetProperty("de.pengutronix.rauc.Installer.Operation")
-	lastError, _ := obj.GetProperty("de.pengutronix.rauc.Installer.LastError")
+	// rauc is stopped when it has nothing to do and nothing to report
+	operation, err := installerProperty(obj, "Operation")
+	if err != nil {
+		return "idle", "", 0, "", nil
+	}
+	lastError, _ := installerProperty(obj, "LastError")
 
 	var pct int
 	var msg string
-	progress, err := obj.GetProperty("de.pengutronix.rauc.Installer.Progress")
+	progress, err := installerProperty(obj, "Progress")
 	if err == nil {
 		if vals, ok := progress.Value().([]interface{}); ok && len(vals) >= 2 {
 			if p, ok := vals[0].(int32); ok {

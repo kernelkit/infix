@@ -1,0 +1,17 @@
+#!/bin/sh
+# Stop rauc when it has had nothing to do for five minutes.  It is
+# started again over D-Bus by whoever calls it next.  After a failed
+# install it is left running, it is the only one that knows why.
+
+idle=0
+while sleep 60; do
+	if ! rauc-installation-status | jq -e '.operation == "idle" and ."last-error" == null' >/dev/null; then
+		idle=0
+		continue
+	fi
+
+	idle=$((idle + 1))
+	if [ $idle -ge 5 ]; then
+		exec initctl -bq stop rauc
+	fi
+done

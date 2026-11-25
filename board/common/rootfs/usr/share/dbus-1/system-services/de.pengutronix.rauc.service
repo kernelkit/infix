@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=de.pengutronix.rauc
+Exec=/sbin/initctl -bq start rauc
+User=root

@@ -9,7 +9,7 @@ static RaucInstaller *infix_system_sw_new_rauc(void) {
 	RaucInstaller *rauc;
 	GError *raucerr = NULL;
 
-	rauc = rauc_installer_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+	rauc = rauc_installer_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
 						     "de.pengutronix.rauc", "/", NULL, &raucerr);
 	if (raucerr) {
 		fprintf(stderr, "Unable to connect to RAUC: %s\n", raucerr->message);
