@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-KLISH_VERSION = 5880300b23ea7378a4af186d510a61be64dfd630
+KLISH_VERSION = 5a42de6e3b11348414a1dd1d06c21112b120fb65
 KLISH_SITE = https://github.com/kernelkit/klish.git
 #KLISH_VERSION = tags/3.0.0
 #KLISH_SITE = https://src.libcode.org/pkun/klish.git
@@ -32,13 +32,9 @@ endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_XML
 endif
 
-define KLISH_INSTALL_FINIT_SVC
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_INFIX_PATH)/package/klish/klish.svc \
-		$(FINIT_D)/available/klish.conf
-	$(INSTALL) -d -m 0755 $(FINIT_D)/enabled
-	ln -sf ../available/klish.conf $(FINIT_D)/enabled/klish.conf
+# The klish client starts klishd for the session, see klish.conf
+define KLISH_PERMISSIONS
+	/usr/bin/klishd  f 04750 root klish - - - - -
 endef
-
-KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_FINIT_SVC
 
 $(eval $(autotools-package))
