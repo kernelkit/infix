@@ -3270,9 +3270,14 @@ and services are required on your system:</p>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">                   </span>ethtool<span class="w"> </span>gdb-multiarch<span class="w"> </span>tcpdump<span class="w"> </span>tshark
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>..
 </code></pre></div>
-<p>To be able to build the test specification you also need:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-graphviz<span class="w"> </span>ruby-asciidoctor-pdf
+<p>The tests themselves run in a container, so <code>make test</code> also needs
+Docker, or podman:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker.io
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>..
+</code></pre></div>
+<p>To be able to build the test specification you also need:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-graphviz<span class="w"> </span>python3-yaml<span class="w"> </span>ruby-asciidoctor-pdf
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>..
 </code></pre></div>
 <h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">¶</a></h3>
 <p>The documentation is written in Markdown, with GitHub extensions, and
@@ -3282,9 +3287,9 @@ GitHub -- this is OK.</p>
 <p>MkDocs is packaged and available to install via <code>apt</code>, but not all of
 the plugins and extensions we rely on are available, so instead we do
 recommend using <code>pipx</code> to install the necessary tooling:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>pipx
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>$<span class="w"> </span>pipx<span class="w"> </span>install<span class="w"> </span>mkdocs
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>$<span class="w"> </span>pipx<span class="w"> </span>inject<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>pymdown-extensions<span class="w"> </span>mkdocs-callouts<span class="w"> </span>mike<span class="w"> </span>mkdocs-to-pdf<span class="w"> </span>mkdocs-glightbox
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>pipx
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>$<span class="w"> </span>pipx<span class="w"> </span>install<span class="w"> </span>mkdocs
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>$<span class="w"> </span>pipx<span class="w"> </span>inject<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>pymdown-extensions<span class="w"> </span>mkdocs-callouts<span class="w"> </span>mike<span class="w"> </span>mkdocs-to-pdf<span class="w"> </span>mkdocs-glightbox
 </code></pre></div>
 <p>The <code>mike</code> and <code>mkdocs-to-pdf</code> packages are used for online versioning
 and PDF generation by GitHub Actions, but since every plugin is listed
@@ -3308,8 +3313,8 @@ of the device the example was run on, like <code>admin@test-00-01-00</code>.  A
 real hostname is fine when the example is about the name itself, as in
 the mDNS section of <code>doc/discovery.md</code>.</p>
 <p>Preview with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$ cd ~/src/infix/
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>$ mkdocs serve
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$ cd ~/src/infix/
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>$ mkdocs serve
 </code></pre></div>
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">¶</a></h2>
 <p>Developing with Infix is the same as <a href="https://buildroot.org/downloads/manual/manual.html#_developer_guide">developing with Buildroot</a>.
@@ -3419,16 +3424,16 @@ the code in <code>/etc/interface-quirks.json</code>, shipped from
 from its <code>board/&lt;arch&gt;/&lt;board&gt;/rootfs/usr/share/product/&lt;compatible&gt;/</code>
 directory, which overrides the former entry by entry.  Each entry names
 an interface, or a pattern matching several, and holds its quirks:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nt">"sfp1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">        </span><span class="nt">"comment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reports it supports autoneg, but if setting it, dagger crashes"</span><span class="p">,</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="nt">"broken-autoneg"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">"@driver=sparx5-switch"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="nt">"qos-trust-order"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"pcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp-pcp"</span><span class="p">],</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="nt">"qos-root-qdisc"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ets"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mqprio"</span><span class="p">,</span><span class="w"> </span><span class="s2">"taprio"</span><span class="p">]</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nt">"sfp1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">        </span><span class="nt">"comment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reports it supports autoneg, but if setting it, dagger crashes"</span><span class="p">,</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="nt">"broken-autoneg"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">"@driver=sparx5-switch"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">        </span><span class="nt">"qos-trust-order"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"pcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dscp-pcp"</span><span class="p">],</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="nt">"qos-root-qdisc"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ets"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mqprio"</span><span class="p">,</span><span class="w"> </span><span class="s2">"taprio"</span><span class="p">]</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">}</span>
 </code></pre></div>
 <p>An <code>@driver=&lt;name&gt;</code> entry matches every interface whose device is bound
 to that kernel driver, as <code>/sys/class/net/&lt;if&gt;/device/uevent</code> names it,
@@ -3457,13 +3462,13 @@ like <code>infix-if-wifi</code>, are not listed there.</p>
 <p>The CLI help text is the first line of a node's description, so start
 every description with a short, complete sentence, followed by a blank
 line and any details:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">leaf</span><span class="w"> </span><span class="nv">ssid</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nc">string</span><span class="p">;</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="k">description</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="s2">"Network name.</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s2">     Absent for a hidden network, which does not announce its name."</span><span class="p">;</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">leaf</span><span class="w"> </span><span class="nv">ssid</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nc">string</span><span class="p">;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="k">description</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="s2">"Network name.</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="s2">     Absent for a hidden network, which does not announce its name."</span><span class="p">;</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">}</span>
 </code></pre></div>
 <p>Descriptions are read by operators, keep daemon and driver names out
 of them.</p>
@@ -3753,12 +3758,12 @@ fork, and then use GitHub to create a <em>Pull Reqeuest</em>.</p>
 <li><a href="https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow">Deactivate the Actions</a> you don't want in your fork</li>
 <li>Please read the <a href="https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md">Contributing Guidelines</a> as well!</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>...
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/Projects
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USER_NAME/infix.git
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>...
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>infix/
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>$<span class="w"> </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>...
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
