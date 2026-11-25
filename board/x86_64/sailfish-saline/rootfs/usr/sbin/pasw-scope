@@ -1,0 +1,49 @@
+#!/bin/sh
+# Live view of per-second pasw switch and port MAC counter rates
+
+dev=$(lspci -k | grep pasw | awk '{ printf("0000:%s\n", $1); exit; }')
+ports=$(devlink --json port | jq -r '.port[] | select(.netdev) | .netdev')
+
+while :; do
+        swatch baseline cat /sys/kernel/debug/pasw/"$dev"/stats
+
+        for p in $ports; do
+                swatch baseline ethtool -S $p
+        done
+
+        sleep 1 || break
+
+        printf '\e[2J\e[H'
+        echo PASW
+        swatch single cat /sys/kernel/debug/pasw/"$dev"/stats
+        echo
+
+        for p in $ports; do
+                swatch single ethtool -S $p | nl -s " $p "
+        done | awk '
+        {
+                ports[$2] = 1;
+                cnt[$3] = 1;
+                val[$2, $3] = $4;
+        }
+
+        END {
+                printf("%-50s", "MAC-COUNTERS");
+                for (p in ports)
+                        printf(" %10s", p);
+                printf("\n");
+
+                for (c in cnt) {
+                        printf("%-50s", c);
+                        for (p in ports) {
+                                v = val[p, c];
+                                if (v)
+                                        printf(" %10d", v);
+                                else
+                                        printf(" %10s", "-");
+                        }
+                        printf("\n");
+                }
+        }
+        '
+done

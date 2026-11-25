@@ -1,0 +1,39 @@
+config BR2_PACKAGE_MODULES
+	bool "modules"
+	depends on BR2_LINUX_KERNEL
+	help
+	  External kernel modules
+
+	  https://github.com/kernelkit/modules
+
+if BR2_PACKAGE_MODULES
+
+config BR2_PACKAGE_MODULES_PTP_PG210_PTP
+	bool "AMD/Xilinx PG210 PTP Timer Syncer"
+	help
+	  PTP Hardware Clock (PHC) driver for AMDs Timer syncer block
+	  in PG210.
+
+config BR2_PACKAGE_MODULES_NET_DSA_PASW
+	bool "Packet Architects FlexSwitch"
+	select BR2_PACKAGE_HOST_PYTHON3
+	select BR2_PACKAGE_HOST_PYTHON_PYYAML
+	help
+	  DSA driver for the FlexSwitch switch core from Packet
+	  Architects.
+
+config BR2_PACKAGE_MODULES_NET_DSA_PASW_TOOL
+	bool "PASW debug tool"
+	depends on BR2_PACKAGE_MODULES_NET_DSA_PASW
+	select BR2_PACKAGE_PYTHON3
+	help
+	  Install debug tool to access switch registers via symbolic
+	  names.
+
+config BR2_PACKAGE_MODULES_NET_ETH_XDMA_NET
+	bool "AMD/Xilinx XDMA netdevice"
+	help
+	  Netdevice for XDMA engines connected to AXI-S channels
+	  carrying Ethernet frames.
+
+endif
