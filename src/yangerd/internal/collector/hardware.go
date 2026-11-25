@@ -62,6 +62,7 @@ type HardwareCollector struct {
 	gpsTTY   map[string]string                 // receiver name -> tty behind /dev/gpsN
 	radios   []interface{}                     // radio capabilities
 	wifiInfo map[string]map[string]interface{} // PHY info the radios were built from
+	country  string                            // regulatory domain in effect
 	reported map[string]bool                   // duplicate names already warned about
 
 	cpuOnce sync.Once
@@ -137,8 +138,9 @@ func (c *HardwareCollector) RunRadios(ctx context.Context) error {
 	}
 	for {
 		radios, wifiInfo := c.radioCapabilities(ctx)
+		country := kernelCountry()
 		c.mu.Lock()
-		c.radios, c.wifiInfo = radios, wifiInfo
+		c.radios, c.wifiInfo, c.country = radios, wifiInfo, country
 		c.mu.Unlock()
 
 		select {
@@ -169,6 +171,7 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 	gps := cloneComponents(c.gps)
 	gpsTTY := c.gpsTTY
 	wifiInfo := c.wifiInfo
+	country := c.country
 	c.mu.Unlock()
 
 	sensors := c.sensorComponents(ctx, wifiInfo)
@@ -180,13 +183,49 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 	components = append(components, radios...)
 	components = append(components, gps...)
 
-	data, err := json.Marshal(map[string]interface{}{
+	hardware := map[string]interface{}{
 		"component": c.usbDeviceParents(c.uniqueNames(components), gpsTTY),
-	})
+	}
+	if country != "" {
+		hardware["infix-hardware:wifi"] = map[string]interface{}{"country-code": country}
+	}
+	data, err := json.Marshal(hardware)
 	if err != nil {
 		return nil
 	}
 	return data
+}
+
+// kernelCountry asks the kernel for the regulatory domain in effect.
+// The model takes "00" and ISO codes only, the kernel also has "98"
+// and "99" for a domain no single country describes.
+func kernelCountry() string {
+	client, err := nl80211.Dial()
+	if err != nil {
+		return ""
+	}
+	defer client.Close()
+
+	alpha2, err := client.Country()
+	if err != nil || !validCountry(alpha2) {
+		return ""
+	}
+	return alpha2
+}
+
+func validCountry(alpha2 string) bool {
+	if alpha2 == "00" {
+		return true
+	}
+	if len(alpha2) != 2 {
+		return false
+	}
+	for _, r := range alpha2 {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 // kernelOperating asks the kernel which channel each radio is on.

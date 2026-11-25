@@ -968,3 +968,11 @@ func TestApplyOperating(t *testing.T) {
 		t.Errorf("radio2 = %v, want %v", got, want)
 	}
 }
+
+func TestValidCountry(t *testing.T) {
+	for alpha2, want := range map[string]bool{"00": true, "SE": true, "99": false, "98": false, "": false} {
+		if got := validCountry(alpha2); got != want {
+			t.Errorf("validCountry(%q) = %v, want %v", alpha2, got, want)
+		}
+	}
+}

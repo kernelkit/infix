@@ -49,3 +49,13 @@ func TestParseOperatingUnknownTxPower(t *testing.T) {
 		t.Errorf("TxPower = %d (has %v), want none", op.TxPower, op.HasTxPower)
 	}
 }
+
+func TestParseCountry(t *testing.T) {
+	msg := encode(t, func(ae *netlink.AttributeEncoder) {
+		ae.String(unix.NL80211_ATTR_REG_ALPHA2, "SE")
+	})
+
+	if got := parseCountry(msg); got != "SE" {
+		t.Errorf("parseCountry = %q, want SE", got)
+	}
+}

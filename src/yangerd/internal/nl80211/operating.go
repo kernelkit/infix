@@ -97,3 +97,30 @@ func PhyName(ifname string) string {
 	}
 	return strings.TrimSpace(string(name))
 }
+
+// Country returns the alpha2 of the regulatory domain in effect.
+func (c *Client) Country() (string, error) {
+	msgs, err := c.execute(unix.NL80211_CMD_GET_REG, nil, netlink.Request)
+	if err != nil {
+		return "", err
+	}
+	for _, msg := range msgs {
+		if alpha2 := parseCountry(msg.Data); alpha2 != "" {
+			return alpha2, nil
+		}
+	}
+	return "", nil
+}
+
+func parseCountry(data []byte) string {
+	ad, err := netlink.NewAttributeDecoder(data)
+	if err != nil {
+		return ""
+	}
+	for ad.Next() {
+		if ad.Type() == unix.NL80211_ATTR_REG_ALPHA2 {
+			return ad.String()
+		}
+	}
+	return ""
+}
