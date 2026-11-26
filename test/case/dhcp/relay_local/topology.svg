@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: relay local Pages: 1 -->
+<svg width="1198pt" height="924pt"
+ viewBox="0.00 0.00 1198.38 923.50" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 919.5)">
+<title>relay local</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-919.5 1194.38,-919.5 1194.38,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-432.5 0,-483 106.25,-483 106.25,-432.5 0,-432.5"/>
+<text text-anchor="middle" x="24.5" y="-453.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="49,-432.5 49,-483"/>
+<text text-anchor="middle" x="77.62" y="-465.7" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="49,-457.75 106.25,-457.75"/>
+<text text-anchor="middle" x="77.62" y="-440.45" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- relay -->
+<g id="node2" class="node">
+<title>relay</title>
+<polygon fill="none" stroke="black" points="1080,-0.5 1080,-51 1186.25,-51 1186.25,-0.5 1080,-0.5"/>
+<text text-anchor="middle" x="1104.5" y="-33.7" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="1080,-25.75 1129,-25.75"/>
+<text text-anchor="middle" x="1104.5" y="-8.45" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="1129,-0.5 1129,-51"/>
+<text text-anchor="middle" x="1157.62" y="-21.07" font-family="DejaVu Sans Mono, Book" font-size="14.00">relay</text>
+</g>
+<!-- host&#45;&#45;relay -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;relay:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M106.12,-444.75C106.12,-444.75 1080.12,-12.75 1080.12,-12.75"/>
+</g>
+<!-- client -->
+<g id="node3" class="node">
+<title>client</title>
+<polygon fill="none" stroke="black" points="1075.88,-864.5 1075.88,-915 1190.38,-915 1190.38,-864.5 1075.88,-864.5"/>
+<text text-anchor="middle" x="1100.38" y="-897.7" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="1075.88,-889.75 1124.88,-889.75"/>
+<text text-anchor="middle" x="1100.38" y="-872.45" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="1124.88,-864.5 1124.88,-915"/>
+<text text-anchor="middle" x="1157.62" y="-885.08" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
+</g>
+<!-- host&#45;&#45;client -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;client:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M106.12,-470.75C106.12,-470.75 1076.12,-902.75 1076.12,-902.75"/>
+</g>
+<!-- relay&#45;&#45;client -->
+<g id="edge3" class="edge">
+<title>relay:link&#45;&#45;client:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M1104.12,-50.75C1104.12,-50.75 1100.12,-864.75 1100.12,-864.75"/>
+<text text-anchor="middle" x="1035.5" y="-54.7" font-family="DejaVu Serif, Book" font-size="14.00">br0 192.168.1.1/24</text>
+</g>
+</g>
+</svg>

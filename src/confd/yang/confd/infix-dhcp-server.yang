@@ -20,6 +20,12 @@ module infix-dhcp-server {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 server";
 
+  revision 2026-11-23 {
+    description "Add static-host match on relay agent information, option
+                 82, and the preempt setting for static hosts.";
+    reference   "internal";
+  }
+
   revision 2026-10-18 {
     description "Allow any character except control characters in the
                  static-host match client-id string.";
@@ -48,6 +54,32 @@ module infix-dhcp-server {
   revision 2025-01-29 {
     description "Initial revision adapted for Infix from DHCPv6 model.";
     reference   "internal";
+  }
+
+  grouping option82-id {
+    description "Value of an option 82 sub-option to match on.";
+
+    choice id {
+      case str {
+        leaf str {
+          description "String value.
+
+                       Example: camera-18";
+          type string {
+            length "1..255";
+            pattern '[^\p{Cc}]+';
+          }
+        }
+      }
+      case hex {
+        leaf hex {
+          description "Binary data as colon-separated pairs of hex digits.
+
+                       Example: c0:ff:ee";
+          type dhcp:octet-string;
+        }
+      }
+    }
   }
 
   typedef dhcp-lease-time {
@@ -337,9 +369,47 @@ module infix-dhcp-server {
                 }
               }
             }
-            /* case option82 here ... */
+            case option82 {
+              container option82 {
+                description "Match on relay agent information, DHCP option 82.
+
+                             A relay agent adds the option to the requests it
+                             relays.  The circuit-id identifies the port the
+                             client is connected to and the remote-id the relay
+                             agent.  With both set, both must match.";
+                reference "RFC 3046: DHCP Relay Agent Information Option";
+                must "circuit-id/str or circuit-id/hex or remote-id/str or remote-id/hex" {
+                  error-message "Set circuit-id, remote-id, or both.";
+                }
+
+                container circuit-id {
+                  description "Circuit-id sub-option (1).";
+                  uses option82-id;
+                }
+
+                container remote-id {
+                  description "Remote-id sub-option (2).";
+                  uses option82-id;
+                }
+              }
+            }
           }
           /* More advanced match rules, e.g., option82 + client-id are not supported. */
+        }
+
+        leaf preempt {
+          description "Let a new client take over the address at once.
+
+                       A lease is otherwise kept for the client that got it
+                       until it expires, and another client matching this
+                       host does not get the address until then.  Enable
+                       when the match identifies a place in the network, like
+                       a port, rather than a device, so that a replacement
+                       for a broken device gets the same address at once.
+
+                       Only one client at a time can have the address.";
+          type boolean;
+          default false;
         }
 
         leaf hostname {

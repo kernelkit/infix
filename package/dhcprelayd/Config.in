@@ -1,0 +1,10 @@
+config BR2_PACKAGE_DHCPRELAYD
+	bool "dhcprelayd"
+	select BR2_PACKAGE_LIBCONFUSE
+	select BR2_PACKAGE_LIBEV
+	select BR2_PACKAGE_NFTABLES # runtime, on bridge ports
+	help
+	  DHCP relay agent with option 82 support, for an IP address
+	  per port on a switch.
+
+	  https://github.com/kernelkit/dhcprelayd

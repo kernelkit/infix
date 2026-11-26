@@ -51,6 +51,7 @@ nav:
       - Cellular Modem (wwan): modem.md
   - Services:
       - Device Discovery: discovery.md
+      - DHCP Relay: dhcp-relay.md
       - DHCP Server: dhcp.md
       - NTP Server: ntp.md
       - PTP (IEEE 1588/802.1AS): ptp.md

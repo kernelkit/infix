@@ -4,3 +4,6 @@
 
 - name: DHCP Server Tests
   suite: dhcp_server.yaml
+
+- name: DHCP Relay Tests
+  suite: dhcp_relay.yaml
