@@ -38,5 +38,13 @@ image::topology.svg[WiFi AP and Station Association across two DUTs on 2.4GHz to
 . Verify the station associates to the ap over the wifi link
 . Verify the station's wifi0 operational status is up
 . Verify the station leases its address from the ap over wifi
+. Verify wifi0 on the ap reports the radio it is on
+. Verify wifi0 on the station reports the radio it is on
+. Verify the ap's radio reports the configured band and channel as in use
+. Verify the station's radio reports the band and channel of the ap as in use
+. Verify the station reports the 802.11 standard of the connection
+. Verify the ap reports the 802.11 standard of its station
+. Verify the ap counts the frames it sent again to its station
+. Verify the connected time of the station on the ap keeps counting
 
 

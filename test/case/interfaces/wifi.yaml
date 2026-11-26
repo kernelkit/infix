@@ -5,6 +5,9 @@
 - name: WiFi Access Point serving three Stations
   case: wifi_ap_multi_station/test.py
 
+- name: WiFi Access Point with client isolation
+  case: wifi_ap_client_isolation/test.py
+
 - name: WiFi Mesh backhaul with roaming Access Points
   case: wifi_mesh_roaming/test.py
 

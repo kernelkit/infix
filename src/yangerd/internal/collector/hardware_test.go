@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/testutil"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
@@ -932,6 +933,46 @@ func TestSupportedModes(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("supportedModes = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestApplyOperating(t *testing.T) {
+	radios := []interface{}{
+		map[string]interface{}{"name": "radio0",
+			"infix-hardware:wifi-radio": map[string]interface{}{"driver": "mt798x-wmac"}},
+		map[string]interface{}{"name": "radio1",
+			"infix-hardware:wifi-radio": map[string]interface{}{"driver": "mt798x-wmac"}},
+		map[string]interface{}{"name": "radio2"},
+	}
+	applyOperating(radios, map[string]nl80211.Operating{
+		"radio0": {Frequency: 5180, Width: 80, TxPower: 23, HasTxPower: true},
+		"radio2": {Frequency: 2412, Width: 320},
+	})
+
+	want := map[string]interface{}{
+		"driver": "mt798x-wmac", "frequency": 5180, "channel": 36,
+		"band": "5GHz", "channel-width": "80MHz", "tx-power": 23,
+	}
+	if got := radios[0].(map[string]interface{})["infix-hardware:wifi-radio"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("radio0 = %v, want %v", got, want)
+	}
+
+	idle := map[string]interface{}{"driver": "mt798x-wmac"}
+	if got := radios[1].(map[string]interface{})["infix-hardware:wifi-radio"]; !reflect.DeepEqual(got, idle) {
+		t.Errorf("radio1 is on no channel, got %v", got)
+	}
+
+	want = map[string]interface{}{"frequency": 2412, "channel": 1, "band": "2.4GHz"}
+	if got := radios[2].(map[string]interface{})["infix-hardware:wifi-radio"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("radio2 = %v, want %v", got, want)
+	}
+}
+
+func TestValidCountry(t *testing.T) {
+	for alpha2, want := range map[string]bool{"00": true, "SE": true, "99": false, "98": false, "": false} {
+		if got := validCountry(alpha2); got != want {
+			t.Errorf("validCountry(%q) = %v, want %v", alpha2, got, want)
 		}
 	}
 }

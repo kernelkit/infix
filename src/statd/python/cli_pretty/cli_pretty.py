@@ -1414,6 +1414,7 @@ class Iface:
         print("\nCONNECTED STATIONS:")
         stations_table = SimpleTable([
             Column('MAC'),
+            Column('STD'),
             Column('SIGNAL'),
             Column('TIME'),
             Column('RX PKT'),
@@ -1443,8 +1444,9 @@ class Iface:
             rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
             tx_speed_str = f"{tx_speed / 10:.1f}" if tx_speed else "-"
 
-            stations_table.row(mac, signal_str, time_str, rx_pkt, tx_pkt,
-                             rx_bytes, tx_bytes, rx_speed_str, tx_speed_str)
+            stations_table.row(mac, station.get("standard", "-"), signal_str,
+                               time_str, rx_pkt, tx_pkt, rx_bytes, tx_bytes,
+                               rx_speed_str, tx_speed_str)
 
         stations_table.print()
 
@@ -1823,6 +1825,8 @@ class Iface:
                 print(f"{'ssid':<{19}}: {ssid}")
                 if bssid is not None:
                     print(f"{'bssid':<{19}}: {bssid}")
+                if station.get('standard'):
+                    print(f"{'standard':<{19}}: {station['standard']}")
                 if signal is not None:
                     signal_status = signal_to_status(signal)
                     print(f"{'signal':<{19}}: {signal} dBm ({signal_status})")
@@ -2881,6 +2885,33 @@ def _build_radio_table(wifi_radios):
     return table
 
 
+def _radios_in_use(wifi_radios):
+    return [c for c in wifi_radios
+            if "frequency" in c.get("infix-hardware:wifi-radio", {})]
+
+
+def _build_radio_channel_table(wifi_radios):
+    table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('BAND', 'right'),
+        Column('CHANNEL', 'right'),
+        Column('WIDTH', 'right'),
+        Column('FREQUENCY', 'right'),
+        Column('TX POWER', 'right')
+    ])
+
+    for component in wifi_radios:
+        radio = component["infix-hardware:wifi-radio"]
+        txpower = f"{radio['tx-power']} dBm" if "tx-power" in radio else "-"
+        table.row(component.get("name", ""),
+                  radio.get("band", "-"),
+                  radio.get("channel", "-"),
+                  radio.get("channel-width", "-"),
+                  f"{radio['frequency']} MHz",
+                  txpower)
+    return table
+
+
 def _build_gps_table(gps_receivers):
     table = SimpleTable([
         Column('NAME'),
@@ -3038,6 +3069,7 @@ def show_hardware(json):
 
     for title, build, items in (
             ("WiFi radios", _build_radio_table, wifi_radios),
+            ("WiFi channels in use", _build_radio_channel_table, _radios_in_use(wifi_radios)),
             ("GPS/GNSS Receivers", _build_gps_table, gps_receivers),
             ("USB Ports", _build_usb_table, usb_ports),
             ("Attached USB Devices", _build_usb_device_table, usb_devices),
@@ -3110,7 +3142,6 @@ def show_hardware_detail(json, ref):
     ms = comp.get("infix-hardware:modem-state", {})
     usb = comp.get("infix-hardware:usb-device", {})
     dev = USBdevice(comp)
-
     for label, val in (
         ("Name",          comp.get("name", "")),
         ("Class",         cls.split(":")[-1]),

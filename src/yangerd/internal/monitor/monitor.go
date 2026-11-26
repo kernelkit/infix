@@ -53,6 +53,9 @@ type NLMonitor struct {
 	log        *slog.Logger
 	fc         iface.FileChecker
 
+	// wifiStations is asked for the kernel station table on every GET.
+	wifiStations func(ifnames []string) map[string]map[string]map[string]any
+
 	// initDone is closed after the first initialDump completes.
 	// initDoneOnce ensures it is only closed once across restarts.
 	initDone     chan struct{}
@@ -207,6 +210,13 @@ func (m *NLMonitor) SetQuerierSource(fn func() []mcd.Querier) {
 // of each modem interface, by name, on every GET.
 func (m *NLMonitor) SetWwanSource(fn func() map[string]any) {
 	m.wwan = fn
+}
+
+// SetWifiStationSource sets an optional function asked for the kernel
+// station table of a Wi-Fi interface, leaves by MAC address, on every
+// GET.
+func (m *NLMonitor) SetWifiStationSource(fn func(ifnames []string) map[string]map[string]map[string]any) {
+	m.wifiStations = fn
 }
 
 func (m *NLMonitor) linkSetChanged() {
@@ -1298,14 +1308,14 @@ func (m *NLMonitor) OnDemand() json.RawMessage {
 		stamps[k] = v
 	}
 	m.mu.Unlock()
-	if len(stamps) == 0 && m.fc == nil && m.queriers == nil && m.wwan == nil {
+	if len(stamps) == 0 && m.fc == nil && m.queriers == nil && m.wwan == nil && m.wifiStations == nil {
 		return nil
 	}
 
-	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc, m.queriers, m.wwan)
+	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc, m.queriers, m.wwan, m.wifiStations)
 }
 
-func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker, queriers func() []mcd.Querier, wwan func() map[string]any) json.RawMessage {
+func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker, queriers func() []mcd.Querier, wwan func() map[string]any, wifiStations func([]string) map[string]map[string]map[string]any) json.RawMessage {
 	var root map[string]any
 	if err := json.Unmarshal(doc, &root); err != nil {
 		return nil
@@ -1316,6 +1326,7 @@ func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc
 	}
 
 	uppers := vlanUppers(ifaceArr)
+	live := liveWifi(ifaceArr, wifiStations)
 	var qs []mcd.Querier
 	var modems map[string]any
 	for _, entry := range ifaceArr {
@@ -1339,6 +1350,9 @@ func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc
 			}
 			applyQueriers(br, name, qs, uppers)
 		}
+		if wifi, ok := ifaceObj["infix-interfaces:wifi"].(map[string]any); ok {
+			refreshWifi(wifi, live[name])
+		}
 		if ifaceObj["type"] == "infix-if-type:modem" && wwan != nil {
 			if modems == nil {
 				modems = wwan()
@@ -1354,6 +1368,83 @@ func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc
 		return nil
 	}
 	return out
+}
+
+// linkLeaves are the station table leaves a station or wds-link
+// container has for its one link.
+var linkLeaves = []string{"signal-strength", "rx-speed", "tx-speed"}
+
+// wifiLinks are the parts of a wifi container the kernel station
+// table has current values for: the stations of an access point or
+// the peers of a mesh point, or the one link of a connected station
+// or wds-link.
+func wifiLinks(wifi map[string]any) (entries []any, link map[string]any) {
+	if ap, ok := wifi["access-point"].(map[string]any); ok {
+		stations, _ := ap["stations"].(map[string]any)
+		entries, _ = stations["station"].([]any)
+	} else if mesh, ok := wifi["mesh-point"].(map[string]any); ok {
+		peers, _ := mesh["peers"].(map[string]any)
+		entries, _ = peers["peer"].([]any)
+	} else if sta, ok := wifi["station"].(map[string]any); ok && sta["bssid"] != nil {
+		link = sta
+	} else if wds, ok := wifi["wds-link"].(map[string]any); ok && wds["connected"] == true {
+		link = wds
+	}
+	return entries, link
+}
+
+// liveWifi asks for the kernel station table of every interface that
+// has somebody connected, all in one call.
+func liveWifi(ifaceArr []any, source func([]string) map[string]map[string]map[string]any) map[string]map[string]map[string]any {
+	if source == nil {
+		return nil
+	}
+
+	var names []string
+	for _, entry := range ifaceArr {
+		ifaceObj, _ := entry.(map[string]any)
+		wifi, ok := ifaceObj["infix-interfaces:wifi"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if entries, link := wifiLinks(wifi); len(entries) > 0 || link != nil {
+			if name, _ := ifaceObj["name"].(string); name != "" {
+				names = append(names, name)
+			}
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return source(names)
+}
+
+// refreshWifi replaces signal, rates and counters with the current
+// ones from the kernel station table.  Who is connected stays as the
+// events left it, a station the kernel does not list keeps its values.
+func refreshWifi(wifi map[string]any, live map[string]map[string]any) {
+	if len(live) == 0 {
+		return
+	}
+
+	entries, link := wifiLinks(wifi)
+	for _, e := range entries {
+		entry, _ := e.(map[string]any)
+		mac, _ := entry["mac-address"].(string)
+		for leaf, v := range live[strings.ToLower(mac)] {
+			entry[leaf] = v
+		}
+	}
+	// The other end of a station or wds-link is the only entry.
+	if link != nil && len(live) == 1 {
+		for _, leaves := range live {
+			for _, leaf := range linkLeaves {
+				if v, ok := leaves[leaf]; ok {
+					link[leaf] = v
+				}
+			}
+		}
+	}
 }
 
 // vlanUppers maps each bridge to its VLAN interfaces, by VID.

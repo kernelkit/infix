@@ -38,6 +38,7 @@ PSK = "infixinfix"          # 8-63 printable ASCII, see doc/wifi.md
 SUBNET = "192.168.20.0/24"
 AP_IP = "192.168.20.1"
 LEASE = "192.168.20.100"        # single-address pool -> deterministic lease
+STANDARDS = {"11n", "11ac", "11ax"}
 
 
 with infamy.Test() as test:
@@ -97,5 +98,32 @@ with infamy.Test() as test:
     with test.step("Verify the station leases its address from the ap over wifi"):
         until(lambda: iface.address_exist(station, "wifi0", LEASE),
               interval=2)
+
+    with test.step("Verify wifi0 on the ap reports the radio it is on"):
+        until(lambda: wifi.radio_of(ap) == ap_radio)
+
+    with test.step("Verify wifi0 on the station reports the radio it is on"):
+        until(lambda: wifi.radio_of(station) == sta_radio)
+
+    with test.step("Verify the ap's radio reports the configured band and channel as in use"):
+        until(lambda: wifi.on_channel(ap, band, wifi.CHANNEL[band], ap_radio))
+
+    with test.step("Verify the station's radio reports the band and channel of the ap as in use"):
+        until(lambda: wifi.on_channel(station, band, wifi.CHANNEL[band], sta_radio))
+
+    with test.step("Verify the station reports the 802.11 standard of the connection"):
+        until(lambda: wifi.station(station).get("standard") in STANDARDS)
+
+    with test.step("Verify the ap reports the 802.11 standard of its station"):
+        until(lambda: [sta.get("standard") in STANDARDS
+                       for sta in wifi.ap_station_entries(ap)] == [True])
+
+    with test.step("Verify the ap counts the frames it sent again to its station"):
+        until(lambda: [sta.get("tx-retries") is not None
+                       for sta in wifi.ap_station_entries(ap)] == [True])
+
+    with test.step("Verify the connected time of the station on the ap keeps counting"):
+        before = wifi.ap_station_entries(ap)[0]["connected-time"]
+        until(lambda: wifi.ap_station_entries(ap)[0]["connected-time"] > before)
 
     test.succeed()

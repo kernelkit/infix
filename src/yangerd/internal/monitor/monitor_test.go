@@ -427,7 +427,7 @@ func TestOverlayStampsLastChange(t *testing.T) {
 	changed := time.Now()
 	stamps := map[string]time.Time{"e1": changed}
 
-	out := overlay(doc, stamps, changed.Add(time.Minute), nil, nil, nil)
+	out := overlay(doc, stamps, changed.Add(time.Minute), nil, nil, nil, nil)
 	want := changed.UTC().Format("2006-01-02T15:04:05+00:00")
 	if !strings.Contains(string(out), `{"last-change":"`+want+`","name":"e1"}`) {
 		t.Errorf("want %s on e1 in %s", want, out)
@@ -435,7 +435,7 @@ func TestOverlayStampsLastChange(t *testing.T) {
 	if !strings.Contains(string(out), `{"name":"e2"}`) {
 		t.Errorf("e2 must be untouched in %s", out)
 	}
-	if got := overlay(json.RawMessage(`garbage`), stamps, changed, nil, nil, nil); got != nil {
+	if got := overlay(json.RawMessage(`garbage`), stamps, changed, nil, nil, nil, nil); got != nil {
 		t.Errorf("bad doc must yield no overlay, got %s", got)
 	}
 }
@@ -456,7 +456,7 @@ func TestOverlayQueriers(t *testing.T) {
 	var root struct {
 		Interface []map[string]json.RawMessage `json:"interface"`
 	}
-	if err := json.Unmarshal(overlay(doc, nil, time.Now(), nil, func() []mcd.Querier { return qs }, nil), &root); err != nil {
+	if err := json.Unmarshal(overlay(doc, nil, time.Now(), nil, func() []mcd.Querier { return qs }, nil, nil), &root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -474,7 +474,7 @@ func TestOverlayQueriers(t *testing.T) {
 		}
 	}
 
-	out := overlay(doc, nil, time.Now(), nil, nil, nil)
+	out := overlay(doc, nil, time.Now(), nil, nil, nil, nil)
 	if strings.Contains(string(out), "querier") {
 		t.Errorf("no querier source must leave the bridges alone: %s", out)
 	}
@@ -833,5 +833,71 @@ func TestBatchSafe(t *testing.T) {
 		if got := batchSafe(name); got != want {
 			t.Errorf("batchSafe(%q) = %v, want %v", name, got, want)
 		}
+	}
+}
+
+func TestOverlayRefreshesWifiStations(t *testing.T) {
+	doc := json.RawMessage(`{"interface":[
+		{"name":"wifi0","infix-interfaces:wifi":{"access-point":{"ssid":"a","stations":{"station":[
+			{"mac-address":"02:00:00:00:00:02","signal-strength":-70,"rx-bytes":"1","standard":"11ax"},
+			{"mac-address":"02:00:00:00:00:03","signal-strength":-60}]}}}},
+		{"name":"wifi1","infix-interfaces:wifi":{"station":{"ssid":"a","bssid":"02:00:00:00:00:01","signal-strength":-80}}},
+		{"name":"wifi2","infix-interfaces:wifi":{"station":{}}}]}`)
+	asked := map[string]int{}
+	calls := 0
+	source := func(ifnames []string) map[string]map[string]map[string]any {
+		calls++
+		for _, ifname := range ifnames {
+			asked[ifname]++
+		}
+		return map[string]map[string]map[string]any{
+			"wifi0": {"02:00:00:00:00:02": {
+				"signal-strength": -45, "rx-bytes": "900", "tx-retries": 7, "tx-failed": 1}},
+			"wifi1": {"02:00:00:00:00:01": {
+				"signal-strength": -50, "tx-speed": 8667, "rx-bytes": "5"}},
+		}
+	}
+
+	var root struct {
+		Interface []struct {
+			Name string `json:"name"`
+			Wifi struct {
+				AP struct {
+					Stations struct {
+						Station []map[string]any `json:"station"`
+					} `json:"stations"`
+				} `json:"access-point"`
+				Station map[string]any `json:"station"`
+			} `json:"infix-interfaces:wifi"`
+		} `json:"interface"`
+	}
+	if err := json.Unmarshal(overlay(doc, nil, time.Now(), nil, nil, nil, source), &root); err != nil {
+		t.Fatal(err)
+	}
+
+	stas := root.Interface[0].Wifi.AP.Stations.Station
+	if stas[0]["signal-strength"] != float64(-45) || stas[0]["rx-bytes"] != "900" ||
+		stas[0]["tx-retries"] != float64(7) || stas[0]["tx-failed"] != float64(1) {
+		t.Errorf("station not refreshed from the kernel: %v", stas[0])
+	}
+	if stas[0]["standard"] != "11ax" {
+		t.Errorf("standard lost: %v", stas[0])
+	}
+	if stas[1]["signal-strength"] != float64(-60) {
+		t.Errorf("a station the kernel does not list must keep its values: %v", stas[1])
+	}
+
+	link := root.Interface[1].Wifi.Station
+	if link["signal-strength"] != float64(-50) || link["tx-speed"] != float64(8667) {
+		t.Errorf("station link not refreshed: %v", link)
+	}
+	if _, ok := link["rx-bytes"]; ok {
+		t.Errorf("station link got a leaf it does not have: %v", link)
+	}
+	if asked["wifi2"] != 0 {
+		t.Error("an unconnected station has no link to ask the kernel about")
+	}
+	if calls != 1 || asked["wifi0"] != 1 || asked["wifi1"] != 1 {
+		t.Errorf("the kernel is asked once for all interfaces, got %d calls for %v", calls, asked)
 	}
 }

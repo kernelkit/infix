@@ -51,7 +51,8 @@ Where `N` is a number (0, 1, 2, ...).
 
 ## Supported Wi-Fi Adapters
 
-Wi-Fi support is primarily tested with Realtek chipset-based adapters.
+The Wi-Fi regression tests run on the built-in radios of the Banana Pi
+BPI-R3.  The other chipsets below have been verified by hand.
 
 ### Known Working Chipsets
 
@@ -181,6 +182,12 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 > TX power is still determined by the driver based on regulatory
 > constraints and hardware capabilities.  Channel width can now be set
 > explicitly for AP mode, or left at `auto` to let the driver choose.
+
+`show hardware` lists what each radio supports under *WiFi radios*.  The
+radios that are in use are listed again under *WiFi channels in use*, with
+the band, channel, channel width, frequency and TX power each ended up
+with, e.g., the channel a station found its access point on.
+`show hardware radio0` shows the same for one radio.
 
 ### Bands and Channels
 
@@ -392,6 +399,7 @@ physical address   : f0:09:0d:36:5f:86
 mode               : station
 ssid               : MyHomeNetwork
 bssid              : b4:fb:e4:17:b6:a7
+standard           : 11ax
 signal             : -52 dBm (good)
 </code></pre>
 
@@ -477,6 +485,8 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 - `radio`: Reference to the Wi-Fi radio (mandatory)
 - `access-point ssid`: Network name (SSID) to broadcast
 - `access-point hidden`: Set to `true` to hide SSID (optional, default: false)
+- `access-point client-isolation`: Set to `true` to keep the clients from
+  reaching each other (optional, default: false)
 - `access-point security mode`: Security mode (see below)
 - `access-point security secret`: Reference to keystore entry (for secured networks)
 
@@ -494,6 +504,24 @@ To create a hidden network that doesn't broadcast its SSID:
 
 <pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi access-point hidden true</b>
 </code></pre>
+
+### Client Isolation
+
+On a guest network the clients usually have no business with each other.
+Client isolation stops all traffic between the clients of an access
+point.  They still reach the device itself and whatever is behind it,
+e.g., the Internet:
+
+<pre class="cli"><code>admin@example:/config/interface/wifi0/> <b>set wifi access-point client-isolation true</b>
+</code></pre>
+
+Services that clients find on each other, such as printing and screen
+casting, stop working on an isolated network.
+
+> [!NOTE]
+> Isolation applies per access point.  Clients of two access points in
+> the same bridge, e.g., the same SSID on 2.4 and 5 GHz, still reach each
+> other through the bridge, as do clients and wired hosts on that bridge.
 
 ### Multi-SSID Configuration
 
@@ -586,6 +614,7 @@ All APs on the same radio share the same channel and physical layer settings
 - SSID (network name)
 - Security mode and passphrase
 - Hidden/visible SSID setting
+- Client isolation
 - Bridge membership
 
 You can verify the configuration with `show hardware radio0` to see

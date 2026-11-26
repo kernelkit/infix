@@ -1,0 +1,5 @@
+[7mCOMPONENT: radio0                                             [0m
+  Name                : radio0
+  Class               : wifi
+  Description         : WiFi Radio
+  Manufacturer        : Virtual (hwsim)

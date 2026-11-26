@@ -241,6 +241,7 @@ func main() {
 		iwmon := iwmonitor.New(slogLog)
 		iwmon.SetOnUpdate(nlmon.SetWifiData)
 		iwmon.SetOnRadioChange(hardware.RequestRadioRefresh)
+		nlmon.SetWifiStationSource(iwmon.LiveStations)
 		spawn("iwmonitor", iwmon.Run)
 	}
 

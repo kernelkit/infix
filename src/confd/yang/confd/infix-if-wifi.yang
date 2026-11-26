@@ -52,7 +52,10 @@ submodule infix-if-wifi {
   revision 2026-11-02 {
     description
       "A radio may hold several station or mesh point interfaces as long
-       as only one of them is enabled.";
+       as only one of them is enabled.  Add client-isolation to the
+       access point.  Add the 802.11 standard in use to the station and
+       to the stations of an access point.  Add tx-retries and tx-failed
+       to the stations of an access point and to the mesh peers.";
     reference "internal";
   }
 
@@ -140,6 +143,27 @@ submodule infix-if-wifi {
       "802.11r Mobility Domain identifier (4 hex digits).
 
        Use 'hash' to automatically derive it from the SSID.";
+  }
+
+  typedef standard {
+    type enumeration {
+      enum legacy {
+        description "802.11a, b or g.";
+      }
+      enum 11n {
+        description "802.11n, Wi-Fi 4.";
+      }
+      enum 11ac {
+        description "802.11ac, Wi-Fi 5.";
+      }
+      enum 11ax {
+        description "802.11ax, Wi-Fi 6 and 6E.";
+      }
+      enum 11be {
+        description "802.11be, Wi-Fi 7.";
+      }
+    }
+    description "802.11 standard of a Wi-Fi connection.";
   }
 
   augment "/if:interfaces/if:interface" {
@@ -353,6 +377,16 @@ submodule infix-if-wifi {
                  the station is on.";
             }
 
+            leaf standard {
+              config false;
+              type standard;
+              description
+                "802.11 standard of the connection.
+
+                 The newest one both the station and its access point
+                 support.  Only present while connected.";
+            }
+
             leaf signal-strength {
               config false;
               type int16;
@@ -457,6 +491,21 @@ submodule infix-if-wifi {
 
                  Note: This provides minimal security benefit and may
                  cause compatibility issues with some clients.";
+            }
+
+            leaf client-isolation {
+              type boolean;
+              default false;
+              description
+                "Stop clients of this access point from reaching each other.
+
+                 Clients still reach the device itself and whatever is
+                 behind it, e.g., the Internet, but not other clients
+                 on the same access point.  Typical for guest networks.
+
+                 It applies per access point.  Clients of two access
+                 points in the same bridge, e.g., one per band, still
+                 reach each other through the bridge.";
             }
 
             container security {
@@ -678,6 +727,15 @@ submodule infix-if-wifi {
                   description "Client MAC address.";
                 }
 
+                leaf standard {
+                  type standard;
+                  description
+                    "802.11 standard of the connection.
+
+                     The newest one both the station and the access
+                     point support.";
+                }
+
                 leaf signal-strength {
                   type int16;
                   units "dBm";
@@ -734,6 +792,23 @@ submodule infix-if-wifi {
                      - 10 = 1 Mbps
                      - 65 = 6.5 Mbps
                      - 866 = 86.6 Mbps";
+                }
+
+                leaf tx-retries {
+                  type yang:counter32;
+                  description
+                    "Frames sent again to the station.
+
+                     A frame is sent again when it is not acknowledged.  A
+                     count that grows fast points at a weak or noisy link.";
+                }
+
+                leaf tx-failed {
+                  type yang:counter32;
+                  description
+                    "Frames to the station given up on.
+
+                     No attempt at sending the frame was acknowledged.";
                 }
               }
             }
@@ -876,6 +951,23 @@ submodule infix-if-wifi {
                   units "100 kbps";
                   description
                     "Last transmitted data rate to this peer in 100 kbps.";
+                }
+
+                leaf tx-retries {
+                  type yang:counter32;
+                  description
+                    "Frames sent again to the peer.
+
+                     A frame is sent again when it is not acknowledged.  A
+                     count that grows fast points at a weak or noisy link.";
+                }
+
+                leaf tx-failed {
+                  type yang:counter32;
+                  description
+                    "Frames to the peer given up on.
+
+                     No attempt at sending the frame was acknowledged.";
                 }
               }
             }

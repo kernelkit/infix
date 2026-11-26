@@ -1,0 +1,47 @@
+graph "wifi-ap-client-isolation" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 | <mgmt3> mgmt3 }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	ap [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | ap",
+	    pos="6,0!",
+	    requires="infix",
+	];
+
+	station1 [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | station1",
+	    pos="11,2!",
+	    requires="infix",
+	];
+
+	station2 [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | station2",
+	    pos="11,-2!",
+	    requires="infix",
+	];
+
+	// One AP cell shared by the ap and both stations.
+	cell [
+	    label="cell",
+	    pos="8.5,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- ap:mgmt       [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- station1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- station2:mgmt [requires="mgmt", color="lightgray"]
+
+	ap:wifi -- cell       [requires="wifi2.4GHz", style="dashed"]
+	station1:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+	station2:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+}

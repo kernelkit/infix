@@ -92,6 +92,7 @@ build vendors them from `go.sum`.
 | | Ethernet speed, duplex, PMD | event | ethtool genetlink monitor, sweep at start; the frame counters are the `get-statistics` action in confd |
 | | QoS capabilities, profile, egress shaper, shapers | event | rtnetlink TC and DCB, inotify on `/run/qos`, re-read with `tc` batch and DCB over rtnetlink |
 | | Wi-Fi station, AP, mesh point | event | nl80211 and wpa_supplicant/hostapd control sockets |
+| | Wi-Fi signal, rates and station counters | on demand | nl80211 station dump, the last answer when the driver takes more than 200 ms |
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
@@ -111,7 +112,7 @@ build vendors them from `go.sum`.
 | | NTP sources | on demand | chronyd cmdmon |
 | `ietf-hardware:hardware` | mainboard, VPD, USB ports | on demand | `/run/system.json`, sysfs |
 | | CPU cores and clocks | on demand | sysfs cpufreq, `/run/system.json`, `/proc/cpuinfo`, all but the clocks read once |
-| | radio capabilities | event | nl80211 phy, regulatory and interface events |
+| | radio capabilities, operating channel | event | nl80211 phy, regulatory, interface and connect events, hostapd/wpa_supplicant channel events |
 | | radio channel survey | on demand | nl80211 survey dump |
 | | sensors | on demand | hwmon, thermal zones |
 | | GPS receivers | poll 10 s | gpsd |

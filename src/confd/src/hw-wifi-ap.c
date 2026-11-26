@@ -303,6 +303,8 @@ void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *
 		fprintf(hostapd, "ssid=%s\n", ssid);
 	if (hidden && !strcmp(hidden, "true"))
 		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
+	if (lydx_is_enabled(ap, "client-isolation"))
+		fprintf(hostapd, "ap_isolate=1\n");
 
 	/*
 	 * Sane defaults for AP operation

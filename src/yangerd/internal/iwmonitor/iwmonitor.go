@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/wpactrl"
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
@@ -54,6 +55,15 @@ type IWMonitor struct {
 	wdsPorts func() []string
 	// wifiIfaces lists every wireless netdev; overridable in tests.
 	wifiIfaces func() []string
+	// stations dumps the kernel station table of an interface;
+	// overridable in tests.
+	stations func(ifname string) ([]nl80211.Station, error)
+
+	liveMu     sync.Mutex
+	live       map[string]map[string]map[string]any // ifname → MAC → leaves, last dump
+	liveBusy   map[string]bool                      // a dump is under way
+	liveGen    map[string]uint64                    // bumped when the stations change
+	liveFailed map[string]bool                      // the last dump failed
 }
 
 func New(log *slog.Logger) *IWMonitor {
@@ -64,6 +74,11 @@ func New(log *slog.Logger) *IWMonitor {
 		meshState:  kernelMeshState,
 		wdsPorts:   kernelWDSPorts,
 		wifiIfaces: kernelWifiInterfaces,
+		stations:   kernelStations,
+		live:       make(map[string]map[string]map[string]any),
+		liveBusy:   make(map[string]bool),
+		liveGen:    make(map[string]uint64),
+		liveFailed: make(map[string]bool),
 	}
 }
 
@@ -71,7 +86,8 @@ func (m *IWMonitor) SetOnUpdate(fn func(string, json.RawMessage)) {
 	m.onUpdate = fn
 }
 
-// SetOnRadioChange sets a callback for changes to what a radio can do:
+// SetOnRadioChange sets a callback for changes to what a radio can do
+// or which channel it is on:
 // a phy came or went, the regulatory domain or its interfaces changed.
 func (m *IWMonitor) SetOnRadioChange(fn func()) {
 	m.onRadioChange = fn
@@ -162,11 +178,16 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 			m.log.Debug("nl80211: connect", "iface", ifname)
 			m.refreshInterface(ctx, ifname)
 		}
+		m.radioChanged()
 	case unix.NL80211_CMD_DISCONNECT:
 		if ifname != "" {
 			m.log.Debug("nl80211: disconnect", "iface", ifname)
 			m.clearInterface(ifname)
 		}
+		m.radioChanged()
+	case unix.NL80211_CMD_CH_SWITCH_NOTIFY:
+		m.log.Debug("nl80211: channel switch", "iface", ifname)
+		m.radioChanged()
 	case unix.NL80211_CMD_REG_CHANGE:
 		m.log.Debug("nl80211: reg_change")
 		m.refreshAllInterfaces(ctx)
@@ -308,6 +329,7 @@ func (m *IWMonitor) attachLoop(ctx context.Context, ifname string) {
 func (m *IWMonitor) onAttach(ctx context.Context, ifname string) {
 	m.refreshInterface(ctx, ifname)
 	m.refreshWDSPorts(ctx)
+	m.radioChanged()
 }
 
 // onDetach publishes an interface whose daemon is gone as having no
@@ -315,9 +337,13 @@ func (m *IWMonitor) onAttach(ctx context.Context, ifname string) {
 func (m *IWMonitor) onDetach(ctx context.Context, ifname string) {
 	m.clearInterface(ifname)
 	m.refreshWDSPorts(ctx)
+	m.radioChanged()
 }
 
 func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpactrl.Event) {
+	if channelEvent(ev) {
+		m.radioChanged()
+	}
 	switch {
 	case ev.Name == "AP-STA-CONNECTED" || ev.Name == "AP-STA-DISCONNECTED":
 		m.refreshInterface(ctx, ifname)
@@ -370,6 +396,7 @@ func (m *IWMonitor) refreshInterface(ctx context.Context, iface string) {
 	l := m.ifLock(iface)
 	l.Lock()
 	defer l.Unlock()
+	m.dropLive(iface)
 	wifi := m.buildWifiData(ctx, iface)
 	m.publishWifi(iface, wifi)
 }
@@ -380,6 +407,7 @@ func (m *IWMonitor) clearInterface(iface string) {
 	l := m.ifLock(iface)
 	l.Lock()
 	defer l.Unlock()
+	m.dropLive(iface)
 	m.publishWifi(iface, nil)
 }
 
@@ -398,6 +426,9 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 
 	ms := m.kernelState(si)(iface)
 	result := make(map[string]any)
+	if radio := nl80211.PhyName(iface); radio != "" {
+		result["radio"] = radio
+	}
 
 	switch detectMode(si, status, ms.iftype) {
 	case "ap":
@@ -479,6 +510,9 @@ func (m *IWMonitor) buildStationData(ctx context.Context, iface string, si wpact
 	if bssid := status["bssid"]; bssid != "" && bssid != "00:00:00:00:00:00" {
 		sta["bssid"] = bssid
 	}
+	if std := generationStandard(status["wifi_generation"]); std != "" {
+		sta["standard"] = std
+	}
 
 	if si.Daemon == "wpa_supplicant" {
 		conn, err := wpactrl.Dial(si.Path)
@@ -518,11 +552,12 @@ func (m *IWMonitor) formatStations(stas []map[string]string) map[string]any {
 		TxBytes       string `json:"tx-bytes,omitempty"`
 		RxSpeed       uint32 `json:"rx-speed,omitempty"`
 		TxSpeed       uint32 `json:"tx-speed,omitempty"`
+		Standard      string `json:"standard,omitempty"`
 	}
 
 	var out []stationEntry
 	for _, st := range stas {
-		s := stationEntry{MAC: st["addr"]}
+		s := stationEntry{MAC: st["addr"], Standard: flagsStandard(st["flags"])}
 		if v := st["signal"]; v != "" {
 			if sig, err := strconv.ParseInt(v, 10, 16); err == nil {
 				s.Signal = int16(sig)

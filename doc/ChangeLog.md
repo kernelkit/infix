@@ -41,6 +41,19 @@ All notable changes to the project are documented in this file.
 - New `infix-system:whoami` RPC, returns the calling user and the NACM
   groups the user is in.  Guests are permitted to call it, see [NACM][nacm],
   and the rule for that is added to existing configurations on upgrade
+- Wi-Fi: new `client-isolation` setting on an access point keeps its
+  clients from reaching each other, e.g., on a guest network, see
+  [Wi-Fi][wifi]
+- Wi-Fi: the operational data of a radio now has the band, channel,
+  channel width, frequency and TX power in use, shown by `show hardware`
+  and the WebUI.  The radio `noise` leaf, which was never set, is
+  removed, the channel survey has the noise
+- Wi-Fi: the 802.11 standard of a connection, e.g., `11ax`, is shown for
+  a station and for each station of an access point
+- Wi-Fi: signal, rates and counters of the stations of an access point
+  and of mesh peers are now current when read, they used to stay as
+  they were when the station connected.  New counters for frames sent
+  again and frames given up on, `tx-retries` and `tx-failed`
 - WebUI: the Wi-Fi radio forms offer only the bands the radio supports,
   and the channel is picked from the channels of the selected band.
   The country code is set in one place on the interfaces page
@@ -126,6 +139,8 @@ All notable changes to the project are documented in this file.
   point capability as disabled
 - Wi-Fi: the supported channels of a radio listed only the last
   channel of each band, and the 6 GHz band could be missing
+- WebUI: the Wi-Fi status page showed the radios but not the interfaces
+  on them, so the connected stations were missing
 - A change to a VLAN filtering bridge with spanning tree enabled was
   not applied once its ports were members of a VLAN
 - Disabling spanning tree on a bridge left its ports disabled, and the
