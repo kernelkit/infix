@@ -17,28 +17,28 @@ $(2)_DEPENDENCIES += \
 $(2)_MAKE ?= $$(BR2_MAKE)
 
 define $(2)_DTBS_BUILD
-	@test -d $$(@D)/dts && \
-	@$$(call MESSAGE,"Building device tree blob(s)") && \
-	$$(LINUX_MAKE_ENV) $$($$(PKG)_MAKE) \
-		-C $$(LINUX_DIR) \
-		$$(LINUX_MAKE_FLAGS) \
-		$$($(2)_DTB_MAKE_OPTS) \
-		PWD=$$(@D)/dts \
-		M=$$(@D)/dts \
-		modules || \
-	true
+	@if test -d $$(@D)/dts; then \
+		$$(call MESSAGE,"Building device tree blob(s)"); \
+		$$(LINUX_MAKE_ENV) $$($$(PKG)_MAKE) \
+			-C $$(LINUX_DIR) \
+			$$(LINUX_MAKE_FLAGS) \
+			$$($(2)_DTB_MAKE_OPTS) \
+			PWD=$$(@D)/dts \
+			M=$$(@D)/dts \
+			modules; \
+	fi
 endef
 $(2)_POST_BUILD_HOOKS += $(2)_DTBS_BUILD
 
 define $(2)_DTBS_INSTALL_TARGET
-	@test -d $$(@D)/dts && \
-	@$$(call MESSAGE,"Installing device tree blob(s)") && \
-	$$(TARGET_MAKE_ENV) $$(TARGET_CONFIGURE_OPTS) $$($$(PKG)_MAKE) \
-		-f $$(BR2_EXTERNAL_INFIX_PATH)/board/dtb-inst.makefile \
-		-C $$(@D)/dts \
-		DESTDIR="$$(TARGET_DIR)" \
-		install || \
-	true
+	@if test -d $$(@D)/dts; then \
+		$$(call MESSAGE,"Installing device tree blob(s)"); \
+		$$(TARGET_MAKE_ENV) $$(TARGET_CONFIGURE_OPTS) $$($$(PKG)_MAKE) \
+			-f $$(BR2_EXTERNAL_INFIX_PATH)/board/dtb-inst.makefile \
+			-C $$(@D)/dts \
+			DESTDIR="$$(TARGET_DIR)" \
+			install; \
+	fi
 endef
 $(2)_POST_INSTALL_TARGET_HOOKS += $(2)_DTBS_INSTALL_TARGET
 
