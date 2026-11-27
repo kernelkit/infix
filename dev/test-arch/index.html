@@ -2477,6 +2477,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#dut-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DUT Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#test-mode-on-virtual-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2800,6 +2811,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#dut-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DUT Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#test-mode-on-virtual-devices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2957,6 +2979,8 @@ reused by other tests.</p>
   NETCONF</li>
 <li>Pushing/pulling NETCONF data to/from a device</li>
 <li>Generating TAP compliant output</li>
+<li>Saving the support bundle of each device when a test fails, see
+  <a href="../testing/#support-bundles-from-failed-tests">Support Bundles From Failed Tests</a></li>
 </ul>
 <h3 id="9pm">9PM<a class="headerlink" href="#9pm" title="Permanent link">¶</a></h3>
 <p>To run multiple tests, we employ <a href="https://github.com/rical/9pm">9PM</a>. It let's us define test
@@ -3139,22 +3163,84 @@ Infamy:</p>
   once, instead of the <code>test-config</code> (used by tests that verify
   save-and-reboot behaviour)</li>
 </ul>
-<p>Test mode is activated by the presence of an empty file named
-<code>test-mode</code> on the device's <code>aux</code> partition (<code>/mnt/aux/test-mode</code>).</p>
+<p>Test mode is activated by the presence of a file named <code>test-mode</code> on
+the device's <code>aux</code> partition (<code>/mnt/aux/test-mode</code>).  The file may be
+empty, or hold the device's test mode settings as a JSON object:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"management-interface"</span><span class="p">:</span><span class="w"> </span><span class="s2">"e1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"physical-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dut1"</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h3 id="dut-logs">DUT Logs<a class="headerlink" href="#dut-logs" title="Permanent link">¶</a></h3>
+<p>When a test fails in CI, the DUTs' logs often show why, but by then
+the DUTs are gone.  So every DUT in test mode sends all its logs to the
+test controller, and the test environment saves them.</p>
+<p>With <code>management-interface</code> in the test mode settings, the DUT sends
+its logs in RFC 5424 format to the multicast group <code>ff02::161</code> on that
+interface.  This is set up at boot, outside the configuration, so it
+keeps working when a test configures syslog, and after a reboot.  With
+<code>physical-name</code> set, each message also carries <code>[device@32473
+name="dut1"]</code>, because tests change the hostname.</p>
+<p><code>test/env</code> always starts a syslog sink, <code>test/syslog-sink</code>.  It listens
+for the group on each of the controller's management ports and saves
+the logs of all DUTs in one file, <code>test/.log/syslog-&lt;time&gt;.log</code>.
+Infamy does not know about the sink, it only logs markers in the DUTs'
+logs with the <code>infix-syslog:log</code> RPC:</p>
+<table>
+<thead>
+<tr>
+<th>MSGID</th>
+<th>Logged</th>
+<th>Structured data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test-start</code></td>
+<td>on attach to a DUT</td>
+<td><code>[test@32473 name="&lt;test&gt;" role="&lt;node&gt;"]</code></td>
+</tr>
+<tr>
+<td><code>step</code></td>
+<td>when a step starts, on all DUTs</td>
+<td>as above, and <code>step="&lt;num&gt;"</code></td>
+</tr>
+<tr>
+<td><code>test-stop</code></td>
+<td>when the test exits, on all DUTs</td>
+<td>as above</td>
+</tr>
+</tbody>
+</table>
+<p>The test name is the one 9PM gives it, e.g., <code>0006-test</code>, or the
+test's directory name when it runs on its own.</p>
+<p><code>test/utils/syslog_split.py</code> uses the markers to filter the log on a
+test or a device, or to split it into one file per test and device.
+After <code>make test</code> the split logs are in <code>test/.log/last/syslog/</code>, and
+packed in <code>test/.log/last/logs.tar.gz</code>, which CI uploads as the
+<code>dut-syslog</code> artifact.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>32473</code> is the documentation enterprise number from RFC 5612, a
+placeholder until KernelKit has a Private Enterprise Number.</p>
+</div>
 <h3 id="test-mode-on-virtual-devices">Test Mode on Virtual Devices<a class="headerlink" href="#test-mode-on-virtual-devices" title="Permanent link">¶</a></h3>
-<p>When the test environment is started with Qeneth, the <code>inject-test-mode</code>
-script (<code>test/inject-test-mode</code>) is run automatically.  It copies the
-base disk image and writes the <code>test-mode</code> marker into the <code>aux</code>
-partition of that copy, which is then used as the Qeneth backing image.</p>
+<p>All virtual DUTs share one disk image, so Qeneth gives each node its
+test mode settings over QEMU's <code>fw_cfg</code> (<code>opt/test-mode</code>): its
+management port and its name in the topology.  At boot, the device
+copies them to the <code>test-mode</code> file on <code>aux</code>, which turns test mode on.</p>
 <h3 id="test-mode-on-physical-devices">Test Mode on Physical Devices<a class="headerlink" href="#test-mode-on-physical-devices" title="Permanent link">¶</a></h3>
 <p>For a physical device, log in as <code>root</code> (or <code>admin</code>) and create the
 marker file on the <code>aux</code> partition, then reboot:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># touch /mnt/aux/test-mode
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a># reboot
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># touch /mnt/aux/test-mode
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a># reboot
+</code></pre></div>
+<p>To also collect the device's logs during tests, write its management
+port and its name in the topology to the file, see
+<a href="#dut-logs">DUT Logs</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a># echo '{ "management-interface": "e1", "physical-name": "dut1" }' &gt;/mnt/aux/test-mode
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a># reboot
 </code></pre></div>
 <p>Alternatively, if you want to prepare the disk image before flashing,
 use the <code>inject-test-mode</code> script:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$ test/inject-test-mode -b infix-&lt;board&gt;.img -o infix-&lt;board&gt;-test.img
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$ test/inject-test-mode -b infix-&lt;board&gt;.img -o infix-&lt;board&gt;-test.img
 </code></pre></div>
 <p>Flash <code>infix-&lt;board&gt;-test.img</code> to the device instead of the plain
 image.  The device will boot into test mode on first power-on.</p>
