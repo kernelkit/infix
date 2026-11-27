@@ -30,6 +30,9 @@ FRR_POST_BUILD_HOOKS += FRR_POST_BUILD_HOOK
 #
 NETSNMP_CONF_OPTS += --enable-read-only
 
+# Not in the sticky /dev/shm, group members replace each other's files
+SYSREPO_CONF_OPTS += -DSHM_DIR=/dev/shm/sysrepo
+
 # Some of these assumes the presence of systemd, so skip them.
 LVM2_CONF_OPTS += --disable-udev_rules
 

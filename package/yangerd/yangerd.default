@@ -5,4 +5,4 @@ YANGERD_LOG_LEVEL=info
 # Soft heap limit, the live data is well under 1 MiB and the rest is
 # garbage; without it RSS drifts past 100 MiB on a 512 MiB box and the
 # OOM killer picks yangerd during upgrades
-GOMEMLIMIT=64MiB
+GOMEMLIMIT=32MiB

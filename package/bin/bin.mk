@@ -20,8 +20,17 @@ define BIN_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
+# copy has the group of sysrepo, only group klish gets into the directory
+define BIN_INSTALL_COPY
+	mkdir -p $(TARGET_DIR)/usr/libexec/klish
+	mv $(TARGET_DIR)/usr/bin/copy $(TARGET_DIR)/usr/libexec/klish/
+	ln -sf ../libexec/klish/copy $(TARGET_DIR)/usr/bin/copy
+endef
+BIN_POST_INSTALL_TARGET_HOOKS += BIN_INSTALL_COPY
+
 define BIN_PERMISSIONS
-	/usr/bin/copy  f 04750 root klish - - - - -
+	/usr/libexec/klish       d 0750  root klish   - - - - -
+	/usr/libexec/klish/copy  f 02755 root sysrepo - - - - -
 endef
 
 define BIN_BUILD_PYTHON

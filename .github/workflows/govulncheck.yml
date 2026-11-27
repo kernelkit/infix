@@ -6,12 +6,10 @@ on:
       - main
     paths:
       - 'src/webui/**'
-      - 'src/netbrowse/**'
       - '.github/workflows/govulncheck.yml'
   pull_request:
     paths:
       - 'src/webui/**'
-      - 'src/netbrowse/**'
       - '.github/workflows/govulncheck.yml'
   schedule:
     - cron: '5 0 * * 6'  # Saturday at 00:05 UTC, same as Coverity
@@ -29,7 +27,6 @@ jobs:
       matrix:
         module:
           - src/webui
-          - src/netbrowse
     steps:
       - uses: actions/checkout@v7
 

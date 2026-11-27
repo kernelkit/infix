@@ -1,10 +1,6 @@
 package schema
 
-import (
-	"strings"
-
-	"github.com/openconfig/goyang/pkg/yang"
-)
+import "strings"
 
 // IdentityOption is a schema-resolved identity/enum value for use in select dropdowns.
 type IdentityOption struct {
@@ -61,45 +57,23 @@ func OptionDescriptions(opts []IdentityOption) map[string]string {
 	return m
 }
 
-// valueDescriptions collects the descriptions of a leaf's enum values or
-// derived identities, by bare name.  Enums sit on the type statement that
-// declares them: the leaf's own, or the base of a typedef chain.
+// valueDescriptions returns the descriptions of a leaf's enum values or
+// derived identities, by bare name.
 func valueDescriptions(mgr *Manager, path string) map[string]string {
 	e, err := mgr.entryAt(path)
 	if err != nil || e == nil || e.Type == nil {
 		return nil
 	}
-	desc := map[string]string{}
-	if e.Type.IdentityBase != nil {
-		for _, id := range e.Type.IdentityBase.Values {
-			if id.Description != nil {
-				desc[id.Name] = id.Description.Name
+	if e.Type.Kind == "identityref" {
+		desc := map[string]string{}
+		for _, id := range e.Type.Identities {
+			if d := mgr.t.IdentityDesc[id]; d != "" {
+				desc[StripModulePrefix(id)] = d
 			}
 		}
 		return desc
 	}
-	var t *yang.Type
-	switch n := e.Node.(type) {
-	case *yang.Leaf:
-		t = n.Type
-	case *yang.LeafList:
-		t = n.Type
-	}
-	for t != nil && len(t.Enum) == 0 {
-		next := (*yang.Type)(nil)
-		if t.YangType != nil && t.YangType.Base != t {
-			next = t.YangType.Base
-		}
-		t = next
-	}
-	if t != nil {
-		for _, en := range t.Enum {
-			if en.Description != nil {
-				desc[en.Name] = en.Description.Name
-			}
-		}
-	}
-	return desc
+	return e.EnumDesc
 }
 
 // RangeBounds splits a YANG range such as "1..100" into its ends; a

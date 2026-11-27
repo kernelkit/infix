@@ -311,17 +311,9 @@ static int put(sr_data_t *cfg)
 	return SR_ERR_OK;
 }
 
-/*
- * Enable or disable a named service: manage nginx symlinks and mDNS
- * records, then start or stop via initctl.  Does NOT touch (restart)
- * the service -- call finit_reload() separately when only config
- * changes and the service is already running.
- */
-static void svc_enable(int ena, svc type, const char *svcname)
+/* Add or remove what nginx serves for a service, the caller reloads nginx */
+static void nginx_enable(int ena, const char *svcname)
 {
-	if (!svcname)
-		svcname = name[type];
-
 	if (fexistf("/etc/nginx/available/%s.conf", svcname)) {
 		char src[256], dst[256];
 
@@ -346,11 +338,31 @@ static void svc_enable(int ena, svc type, const char *svcname)
 			erase(dst);
 		}
 	}
+}
 
+/*
+ * Enable or disable a named service: manage nginx symlinks and mDNS
+ * records, then start or stop via initctl.  Does NOT touch (restart)
+ * the service -- call finit_reload() separately when only config
+ * changes and the service is already running.
+ */
+static void svc_enable(int ena, svc type, const char *svcname)
+{
+	if (!svcname)
+		svcname = name[type];
+
+	nginx_enable(ena, svcname);
 	ena ? finit_enable(svcname) : finit_disable(svcname);
 
 	if (type != none)
 		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
+}
+
+/* The network browser is part of webui, it has no service of its own */
+static void netbrowse_enable(int ena)
+{
+	nginx_enable(ena, name[netbrowse]);
+	mdns_records(ena ? MDNS_ADD : MDNS_DELETE, netbrowse);
 }
 
 static int fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
@@ -581,7 +593,7 @@ static int netbrowse_change(sr_session_ctx_t *session, struct lyd_node *config, 
 
 	ena = have_netbrowse && lydx_is_enabled(srv, "enabled") &&
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
-	svc_enable(ena, netbrowse, NULL);
+	netbrowse_enable(ena);
 	mdns_alias_conf(ena);
 	finit_reload("nginx");
 	finit_reload("mdns-alias");
@@ -864,7 +876,7 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		svc_enable(have_console && ena &&
 			   lydx_is_enabled(lydx_get_xpathf(config, WEB_CONSOLE_XPATH), "enabled"),
 			   ttyd, "ttyd");
-		svc_enable(nb_ena, netbrowse, "netbrowse");
+		netbrowse_enable(nb_ena);
 		/* Rousette follows web/enabled; external access is gated separately via restconf/enabled */
 		ena ? finit_enable("restconf") : finit_disable("restconf");
 		have_webui && ena ? finit_enable("webui") : finit_disable("webui");

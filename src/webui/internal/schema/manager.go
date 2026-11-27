@@ -1,90 +1,98 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"reflect"
-	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/openconfig/goyang/pkg/yang"
 )
 
-// Manager holds a fully processed goyang module set and provides schema queries.
-// All modules are loaded before Process() is called so that cross-module
-// identityref resolution and augments work correctly.
+// Manager answers schema queries from a compiled tree.
 type Manager struct {
-	ms       *yang.Modules
+	t        *tree
 	features map[string]bool // "module:feature" the device enables; nil gates nothing
 }
 
-// Load parses all .yang files in yangDir and returns a Manager.
-// Errors from Process() that are non-fatal (e.g. unresolved augments for
-// modules that were not downloaded) are logged but do not abort loading.
-func Load(yangDir string) (mgr *Manager, err error) {
-	// goyang dereferences nil on some malformed input, for example a
-	// module file cut short, instead of returning an error.  The cache is
-	// rebuilt from the device on failure, so turn that into an error.
-	defer func() {
-		if r := recover(); r != nil {
-			mgr, err = nil, fmt.Errorf("schema: parse %s: %v", yangDir, r)
-		}
-	}()
-
-	ms := yang.NewModules()
-	ms.Path = []string{yangDir}
-
-	entries, err := os.ReadDir(yangDir)
-	if err != nil {
-		return nil, fmt.Errorf("schema: read yang dir: %w", err)
-	}
-
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yang") {
-			continue
-		}
-		if err := ms.Read(filepath.Join(yangDir, e.Name())); err != nil {
-			// Non-fatal: goyang may still register the module partially.
-			log.Printf("schema: parse (non-fatal) %s: %v", e.Name(), err)
-		}
-	}
-
-	errs := ms.Process()
-	for _, err := range errs {
-		// goyang v1.6.3 has known YANG 1.1 gaps (must/when substatements,
-		// duplicate augments).  These are non-fatal; log at debug level.
-		log.Printf("schema: process (non-fatal): %v", err)
-	}
-
-	return &Manager{ms: ms, features: readFeatures(yangDir)}, nil
+// tree is the schema of a module set, reduced to what the queries need.
+type tree struct {
+	Modules map[string]*module `json:"modules"`
+	// Identities maps an identity name, without module, to the names
+	// derived from it.
+	Identities map[string][]string `json:"identities"`
+	// IdentityDesc maps an identity, "module:name", to its description.
+	IdentityDesc map[string]string `json:"identity-desc,omitempty"`
 }
 
-// enabled reports whether every if-feature on the entry holds.  A
-// feature is named "prefix:name", or bare for the entry's own module,
-// and an expression may combine them with not, and, or and parentheses.
-func (m *Manager) enabled(e *yang.Entry) bool {
+type module struct {
+	Dir []*entry `json:"dir,omitempty"`
+}
+
+// entry is one schema node.  Dir is sorted by name.
+type entry struct {
+	Name        string    `json:"name"`
+	Kind        string    `json:"kind"`
+	Module      string    `json:"module,omitempty"` // instantiating module
+	Description string    `json:"description,omitempty"`
+	Keys        []string  `json:"keys,omitempty"`
+	ReadOnly    bool      `json:"read-only,omitempty"` // config false
+	NoData      bool      `json:"no-data,omitempty"`   // rpc, notification, anydata, anyxml, deprecated or obsolete
+	Mandatory   bool      `json:"mandatory,omitempty"`
+	Default     *string   `json:"default,omitempty"`
+	Type        *TypeInfo `json:"type,omitempty"`
+	When        string    `json:"when,omitempty"`
+	Presence    string    `json:"presence,omitempty"`
+	// IfFeature holds the if-feature expressions, features as "module:feature"
+	IfFeature []string `json:"if-feature,omitempty"`
+	// EnumDesc maps an enum value to its description
+	EnumDesc map[string]string `json:"enum-desc,omitempty"`
+	Dir      []*entry          `json:"dir,omitempty"`
+}
+
+func (e *entry) IsChoice() bool    { return e.Kind == "choice" }
+func (e *entry) IsCase() bool      { return e.Kind == "case" }
+func (e *entry) IsList() bool      { return e.Kind == "list" }
+func (e *entry) IsContainer() bool { return e.Kind == "container" }
+
+// Read loads a schema written by Write.
+func Read(path string) (*Manager, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	t := &tree{}
+	if err := json.Unmarshal(data, t); err != nil {
+		return nil, fmt.Errorf("schema: parse %s: %w", path, err)
+	}
+	return &Manager{t: t}, nil
+}
+
+// Write saves the schema to path for Read.
+func (m *Manager) Write(path string) error {
+	data, err := json.Marshal(m.t)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// WithFeatures returns a Manager for the same schema that hides the nodes
+// behind features not in set, "module:feature".
+func (m *Manager) WithFeatures(set map[string]bool) *Manager {
+	return &Manager{t: m.t, features: set}
+}
+
+// enabled reports whether every if-feature on the entry holds.
+func (m *Manager) enabled(e *entry) bool {
 	if m.features == nil {
 		return true
 	}
-	on := func(f string) bool {
-		mod, name := "", f
-		if i := strings.Index(f, ":"); i >= 0 {
-			if fm := yang.FindModuleByPrefix(e.Node, f[:i]); fm != nil {
-				mod = fm.Name
-			}
-			name = f[i+1:]
-		} else if root := yang.RootNode(e.Node); root != nil {
-			mod = root.Name
-			if root.BelongsTo != nil {
-				mod = root.BelongsTo.Name
-			}
-		}
-		return m.features[mod+":"+name]
-	}
-	for _, expr := range entryIfFeatures(e) {
+	on := func(f string) bool { return m.features[f] }
+	for _, expr := range e.IfFeature {
 		if !ifFeatureExpr(expr, on) {
 			return false
 		}
@@ -95,8 +103,7 @@ func (m *Manager) enabled(e *yang.Entry) bool {
 // ifFeatureExpr evaluates a YANG 1.1 if-feature expression, RFC 7950
 // section 7.20.2: "not" binds tightest, then "and", then "or".
 func ifFeatureExpr(expr string, on func(string) bool) bool {
-	expr = strings.ReplaceAll(strings.ReplaceAll(expr, "(", " ( "), ")", " ) ")
-	tokens := strings.Fields(expr)
+	tokens := ifFeatureTokens(expr)
 	pos := 0
 	peek := func() string {
 		if pos < len(tokens) {
@@ -158,27 +165,9 @@ func atomNot(peek func() string, pos *int, on func(string) bool, group func() bo
 	return on(t)
 }
 
-func entryIfFeatures(e *yang.Entry) []string {
-	var vals []*yang.Value
-	switch n := e.Node.(type) {
-	case *yang.Container:
-		vals = n.IfFeature
-	case *yang.Leaf:
-		vals = n.IfFeature
-	case *yang.LeafList:
-		vals = n.IfFeature
-	case *yang.List:
-		vals = n.IfFeature
-	case *yang.Choice:
-		vals = n.IfFeature
-	case *yang.Case:
-		vals = n.IfFeature
-	}
-	var names []string
-	for _, v := range vals {
-		names = append(names, v.Name)
-	}
-	return names
+func ifFeatureTokens(expr string) []string {
+	expr = strings.ReplaceAll(strings.ReplaceAll(expr, "(", " ( "), ")", " ) ")
+	return strings.Fields(expr)
 }
 
 // Children returns the direct config-relevant child Nodes of the node at path.
@@ -230,24 +219,10 @@ func (m *Manager) NodeAt(path string) (*Node, error) {
 
 // IdentitiesOf returns the names of all identities derived (directly or
 // transitively) from baseName. baseName may be "name" or "module:name".
-// Searches across all loaded modules.
+// Identities of that name are searched for across all loaded modules.
 func (m *Manager) IdentitiesOf(baseName string) []string {
-	// Strip module prefix if present; search by identity name.
 	_, localName := splitPrefix(baseName)
-
-	for _, mod := range m.ms.Modules {
-		for _, id := range mod.Identities() {
-			if id.Name == localName {
-				var names []string
-				for _, v := range id.Values {
-					names = append(names, v.Name)
-				}
-				sort.Strings(names)
-				return names
-			}
-		}
-	}
-	return nil
+	return m.t.Identities[localName]
 }
 
 // ResolveLeafref converts a YANG leafref path expression to an absolute schema
@@ -291,89 +266,16 @@ func normalizeLeafrefPath(p string) string {
 	return "/" + strings.Join(segs, "/")
 }
 
-// canonicalizeLeafrefPath rewrites a YANG leafref path into the RESTCONF
-// canonical form (RFC 8040 §3.5.3): each segment's prefix alias is
-// resolved to its canonical module name, and the "module:" qualifier
-// is dropped from segments whose module matches the preceding
-// qualified segment. Unknown prefixes are left untouched.
-//
-// Example: "/if:interfaces/if:interface/if:name" with the `if` prefix
-// pointing at `ietf-interfaces` becomes
-// "/ietf-interfaces:interfaces/interface/name", which is what
-// nodeSegment() produces for ordinary paths and what RESTCONF expects.
-func canonicalizeLeafrefPath(node yang.Node, p string) string {
-	if node == nil || p == "" {
-		return p
-	}
-	segs := strings.Split(p, "/")
-	var lastMod string
-	for i, seg := range segs {
-		if seg == "" || seg == ".." || seg == "." {
-			continue
-		}
-		bare, pred := seg, ""
-		if b := strings.IndexByte(seg, '['); b >= 0 {
-			bare, pred = seg[:b], seg[b:]
-		}
-		colon := strings.IndexByte(bare, ':')
-		if colon < 0 {
-			// Unprefixed segments inherit the prevailing module.
-			continue
-		}
-		prefix, rest := bare[:colon], bare[colon+1:]
-		mod := yang.FindModuleByPrefix(node, prefix)
-		if mod == nil {
-			continue
-		}
-		modName := mod.Name
-		if mod.BelongsTo != nil {
-			modName = mod.BelongsTo.Name
-		}
-		if modName == lastMod {
-			segs[i] = rest + pred
-		} else {
-			segs[i] = modName + ":" + rest + pred
-			lastMod = modName
-		}
-	}
-	return strings.Join(segs, "/")
-}
-
-// derefSiblingPattern captures the `deref(.)/../<sibling>` XPath idiom
-// used by Infix YANG must statements to constrain a leafref's target
-// to objects that carry a specific sibling node (e.g. `bridge-port/
-// bridge`'s must says the referenced interface must have a `bridge`
-// container — i.e. it has to be a bridge). The capture group is the
-// local sibling name; any prefix (`tt:type`) is matched non-capturing
-// so callers don't have to strip it.
-var derefSiblingPattern = regexp.MustCompile(`deref\s*\(\s*\.\s*\)\s*/\s*\.\.\s*/\s*(?:[a-zA-Z][\w-]*:)?([a-zA-Z][\w-]*)`)
-
-// leafrefSiblingFilter looks at the leaf's must statements (only Leaf
-// nodes carry must in goyang's Entry tree) for the deref(.)/../X
-// pattern and returns X, or "" when no such constraint exists.
-func leafrefSiblingFilter(e *yang.Entry) string {
-	leaf, ok := e.Node.(*yang.Leaf)
-	if !ok {
-		return ""
-	}
-	for _, m := range leaf.Must {
-		if m == nil {
-			continue
-		}
-		if match := derefSiblingPattern.FindStringSubmatch(m.Name); len(match) == 2 {
-			return match[1]
-		}
-	}
-	return ""
-}
-
 // Default returns the YANG default value for the leaf at path, if any.
 func (m *Manager) Default(path string) (string, bool) {
 	e, err := m.entryAt(path)
 	if err != nil {
 		return "", false
 	}
-	return e.SingleDefaultValue()
+	if e.Default == nil {
+		return "", false
+	}
+	return *e.Default, true
 }
 
 // ModuleName returns the module name for the schema node at path.
@@ -382,7 +284,10 @@ func (m *Manager) ModuleName(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return e.InstantiatingModule()
+	if e.Module == "" {
+		return "", fmt.Errorf("schema: no module for %s", path)
+	}
+	return e.Module, nil
 }
 
 // ModuleQualifiedName returns "module:name" for the schema node at path.
@@ -393,11 +298,10 @@ func (m *Manager) ModuleQualifiedName(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	modName, err := e.InstantiatingModule()
-	if err != nil {
-		return "", err
+	if e.Module == "" {
+		return "", fmt.Errorf("schema: no module for %s", path)
 	}
-	return modName + ":" + e.Name, nil
+	return e.Module + ":" + e.Name, nil
 }
 
 // internalOperationalTopNodes lists bare node names that must not appear at
@@ -426,14 +330,14 @@ var internalModules = map[string]bool{
 	"ietf-inet-types":    true,
 	"ietf-yang-types":    true,
 	// YANG library / schema mount
-	"ietf-datastores":        true,
-	"ietf-yang-schema-mount": true,
-	"ietf-yang-library":      true,
+	"ietf-datastores":         true,
+	"ietf-yang-schema-mount":  true,
+	"ietf-yang-library":       true,
 	// NETCONF infrastructure
-	"ietf-netconf":               true,
-	"ietf-netconf-with-defaults": true,
-	"ietf-origin":                true,
-	"ietf-netconf-notifications": true,
+	"ietf-netconf":                  true,
+	"ietf-netconf-with-defaults":    true,
+	"ietf-origin":                   true,
+	"ietf-netconf-notifications":    true,
 	// sysrepo internals
 	"sysrepo":            true,
 	"sysrepo-monitoring": true,
@@ -442,37 +346,27 @@ var internalModules = map[string]bool{
 	"infix-test": true,
 	"infix-meta": true,
 	// NETCONF server / transport infrastructure — managed by the system, not users
-	"ietf-netconf-server":        true,
-	"libnetconf2-netconf-server": true,
-	"ietf-truststore":            true,
+	"ietf-netconf-server":          true,
+	"libnetconf2-netconf-server":   true,
+	"ietf-truststore":              true,
 	// Notification subscriptions and filters — not user-configurable via WebUI
 	"ietf-subscribed-notifications": true,
 	// ACL, key-chains, network-instances — not exposed in WebUI yet
-	"ietf-access-control-list": true,
-	"ietf-key-chain":           true,
-	"ietf-network-instance":    true,
+	"ietf-access-control-list":  true,
+	"ietf-key-chain":            true,
+	"ietf-network-instance":     true,
 }
 
 // topLevelNodes returns a Node for each config-relevant top-level schema node
-// across all loaded modules. Submodules, versioned aliases, internal modules,
-// and config:false top-level nodes are all excluded.
+// across all loaded modules. Internal modules and config:false top-level
+// nodes are excluded.
 func (m *Manager) topLevelNodes() []*Node {
 	var nodes []*Node
-	for key, mod := range m.ms.Modules {
-		if strings.Contains(key, "@") {
-			continue // versioned alias (e.g. "ieee802-dot1ab-lldp@2022-03-15") — duplicate
-		}
-		if mod.BelongsTo != nil {
-			continue // submodule — content appears under the parent module
-		}
+	for key, mod := range m.t.Modules {
 		if internalModules[key] {
 			continue
 		}
-		e := yang.ToEntry(mod)
-		if e == nil || e.Dir == nil {
-			continue
-		}
-		for _, child := range sortedEntries(e.Dir) {
+		for _, child := range mod.Dir {
 			if isNonConfigNode(child) || !m.enabled(child) {
 				continue
 			}
@@ -491,11 +385,11 @@ func (m *Manager) topLevelNodes() []*Node {
 	return nodes
 }
 
-// entryAt resolves a RESTCONF-style path to a goyang Entry.
+// entryAt resolves a RESTCONF-style path to its schema entry.
 // Path format: /module:top-node/child[key='val']/grandchild
 // Key predicates ([key='val']) are stripped — they carry instance identity,
 // not schema identity. choice/case nodes are skipped during traversal.
-func (m *Manager) entryAt(path string) (*yang.Entry, error) {
+func (m *Manager) entryAt(path string) (*entry, error) {
 	path = strings.TrimPrefix(path, "/")
 	parts := strings.SplitN(path, "/", 2)
 
@@ -506,17 +400,12 @@ func (m *Manager) entryAt(path string) (*yang.Entry, error) {
 		return nil, fmt.Errorf("schema: path must start with module prefix: %s", path)
 	}
 
-	mod, ok := m.ms.Modules[moduleName]
+	mod, ok := m.t.Modules[moduleName]
 	if !ok {
 		return nil, fmt.Errorf("schema: module not found: %s", moduleName)
 	}
 
-	root := yang.ToEntry(mod)
-	if root == nil {
-		return nil, fmt.Errorf("schema: no entry for module: %s", moduleName)
-	}
-
-	e := findInDir(root.Dir, nodeName)
+	e := findInDir(mod.Dir, nodeName)
 	if e == nil {
 		return nil, fmt.Errorf("schema: %s not found in %s", nodeName, moduleName)
 	}
@@ -553,16 +442,15 @@ func stripPredicate(seg string) string {
 	return seg
 }
 
-// findInDir looks up name in a dir map, transparently descending into
+// findInDir looks up name in a dir, transparently descending into
 // choice/case nodes which are not part of the RESTCONF path.
-func findInDir(dir map[string]*yang.Entry, name string) *yang.Entry {
-	if dir == nil {
-		return nil
-	}
+func findInDir(dir []*entry, name string) *entry {
 	// Direct match — but if it is a choice/case, descend into it because YANG
 	// commonly names a case identically to the leaf it contains (e.g. the
 	// ietf-system timezone-name case wrapping the timezone-name leaf).
-	if e, ok := dir[name]; ok {
+	i := sort.Search(len(dir), func(i int) bool { return dir[i].Name >= name })
+	if i < len(dir) && dir[i].Name == name {
+		e := dir[i]
 		if !e.IsChoice() && !e.IsCase() {
 			return e
 		}
@@ -593,7 +481,7 @@ func findInDir(dir map[string]*yang.Entry, name string) *yang.Entry {
 //   - "static-routes"  always collapses (ietf-routing, asymmetric naming)
 //   - "mdb"            never collapses
 //   - "ipv4", "ipv6"   never collapse (would confuse routing subtrees)
-func isContainerList(e *yang.Entry) bool {
+func isContainerList(e *entry) bool {
 	if !e.IsContainer() || e.Dir == nil {
 		return false
 	}
@@ -615,7 +503,7 @@ func isContainerList(e *yang.Entry) bool {
 
 // listChildOf returns the single list child of a collapsible container (panics if
 // called on a non-collapsible container — callers must guard with isContainerList).
-func listChildOf(e *yang.Entry) *yang.Entry {
+func listChildOf(e *entry) *entry {
 	for _, child := range e.Dir {
 		if child.IsList() && !isNonConfigNode(child) {
 			return child
@@ -626,7 +514,7 @@ func listChildOf(e *yang.Entry) *yang.Entry {
 
 // listChildOfAll is like listChildOf but uses the data-node filter (includes
 // config:false lists), used by dirToNodesAll / the operational status tree.
-func listChildOfAll(e *yang.Entry) *yang.Entry {
+func listChildOfAll(e *entry) *entry {
 	for _, child := range e.Dir {
 		if child.IsList() && !isNonDataNode(child) {
 			return child
@@ -639,21 +527,11 @@ func listChildOfAll(e *yang.Entry) *yang.Entry {
 // nodes, for use by the operational status tree.
 func (m *Manager) topLevelNodesAll() []*Node {
 	var nodes []*Node
-	for key, mod := range m.ms.Modules {
-		if strings.Contains(key, "@") {
-			continue
-		}
-		if mod.BelongsTo != nil {
-			continue
-		}
+	for key, mod := range m.t.Modules {
 		if internalModules[key] {
 			continue
 		}
-		e := yang.ToEntry(mod)
-		if e == nil || e.Dir == nil {
-			continue
-		}
-		for _, child := range sortedEntries(e.Dir) {
+		for _, child := range mod.Dir {
 			if isNonDataNode(child) || !m.enabled(child) {
 				continue
 			}
@@ -676,15 +554,15 @@ func (m *Manager) topLevelNodesAll() []*Node {
 
 // dirToNodesAll is like dirToNodes but uses isNonDataNode, including
 // config:false leaves and containers in the result.
-func (m *Manager) dirToNodesAll(dir map[string]*yang.Entry, parentPath string) []*Node {
+func (m *Manager) dirToNodesAll(dir []*entry, parentPath string) []*Node {
 	parentMod := extractModuleFromPath(parentPath)
 	var nodes []*Node
-	for _, e := range sortedEntries(dir) {
+	for _, e := range dir {
 		if !m.enabled(e) {
 			continue
 		}
 		if e.IsChoice() || e.IsCase() {
-			caseWhen := extractWhen(e)
+			caseWhen := e.When
 			for _, child := range m.dirToNodesAll(e.Dir, parentPath) {
 				if caseWhen != "" && child.When == "" {
 					child.When = caseWhen
@@ -708,7 +586,7 @@ func (m *Manager) dirToNodesAll(dir map[string]*yang.Entry, parentPath string) [
 	return nodes
 }
 
-// dirToNodes converts a goyang Dir map to a sorted slice of Nodes.
+// dirToNodes converts a dir to a slice of Nodes, in the same order.
 // choice/case children are inlined (their contents promoted to this level).
 // Collapsible container-list wrappers are transparent: the list child is surfaced
 // directly under the parent with the full (un-collapsed) RESTCONF path.
@@ -718,10 +596,10 @@ func (m *Manager) dirToNodesAll(dir map[string]*yang.Entry, parentPath string) [
 // module differs from its parent's — the common case being augmented nodes.
 // e.g. infix-lldp augments ieee802-dot1ab-lldp:lldp, so the path is
 // /ieee802-dot1ab-lldp:lldp/infix-lldp:enabled, not /…/enabled.
-func (m *Manager) dirToNodes(dir map[string]*yang.Entry, parentPath string) []*Node {
+func (m *Manager) dirToNodes(dir []*entry, parentPath string) []*Node {
 	parentMod := extractModuleFromPath(parentPath)
 	var nodes []*Node
-	for _, e := range sortedEntries(dir) {
+	for _, e := range dir {
 		if !m.enabled(e) {
 			continue
 		}
@@ -731,7 +609,7 @@ func (m *Manager) dirToNodes(dir map[string]*yang.Entry, parentPath string) []*N
 			// lag-port only for ethernetCsmacd, bridge-port only for bridge).
 			// Propagate that constraint to each promoted child that has no when of
 			// its own; if the child already has one, leave it alone.
-			caseWhen := extractWhen(e)
+			caseWhen := e.When
 			for _, child := range m.dirToNodes(e.Dir, parentPath) {
 				if caseWhen != "" && child.When == "" {
 					child.When = caseWhen
@@ -758,12 +636,11 @@ func (m *Manager) dirToNodes(dir map[string]*yang.Entry, parentPath string) []*N
 
 // nodeSegment returns the path segment for e, qualified as "module:name" when
 // e's instantiating module differs from parentMod (RESTCONF RFC 8040 §3.5.3).
-func nodeSegment(e *yang.Entry, parentMod string) string {
-	mod, err := e.InstantiatingModule()
-	if err != nil || mod == parentMod {
+func nodeSegment(e *entry, parentMod string) string {
+	if e.Module == "" || e.Module == parentMod {
 		return e.Name
 	}
-	return mod + ":" + e.Name
+	return e.Module + ":" + e.Name
 }
 
 // extractModuleFromPath returns the module from the rightmost module-qualified
@@ -782,232 +659,37 @@ func extractModuleFromPath(path string) string {
 // isNonConfigNode returns true for schema nodes that do not belong in the
 // configuration tree: RPCs, notifications, anydata/anyxml, config:false subtrees,
 // and nodes with YANG status deprecated or obsolete.
-// goyang propagates config:false from parent to children during Process(), so a
-// single check at each level is sufficient to prune entire read-only subtrees.
-func isNonConfigNode(e *yang.Entry) bool {
-	return e.RPC != nil ||
-		e.Kind == yang.NotificationEntry ||
-		e.Kind == yang.AnyDataEntry ||
-		e.Kind == yang.AnyXMLEntry ||
-		e.Config == yang.TSFalse ||
-		isDeprecatedOrObsolete(e)
+// config:false is inherited from parent to children, so a single check at
+// each level is sufficient to prune entire read-only subtrees.
+func isNonConfigNode(e *entry) bool {
+	return e.NoData || e.ReadOnly
 }
 
 // isNonDataNode is like isNonConfigNode but keeps config:false nodes.
 // Used by ChildrenAll / the operational status tree which shows all data —
 // operational state reuses read-write schema nodes alongside state-only leaves.
-func isNonDataNode(e *yang.Entry) bool {
-	return e.RPC != nil ||
-		e.Kind == yang.NotificationEntry ||
-		e.Kind == yang.AnyDataEntry ||
-		e.Kind == yang.AnyXMLEntry ||
-		isDeprecatedOrObsolete(e)
+func isNonDataNode(e *entry) bool {
+	return e.NoData
 }
 
-// entryPresence returns the YANG presence statement string for e, or "".
-// Presence is stored on the underlying Container Node via reflection because
-// yang.Entry does not expose it directly.
-func entryPresence(e *yang.Entry) string {
-	if e.Node == nil {
-		return ""
-	}
-	v := reflect.ValueOf(e.Node)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	f := v.FieldByName("Presence")
-	if !f.IsValid() || f.Kind() != reflect.Ptr || f.IsNil() {
-		return ""
-	}
-	name := f.Elem().FieldByName("Name")
-	if !name.IsValid() {
-		return ""
-	}
-	return name.String()
-}
-
-// isDeprecatedOrObsolete returns true when the YANG node carries
-// "status deprecated" or "status obsolete". goyang does not expose status
-// directly on Entry, so we reach through to the underlying Node via reflection.
-// All concrete yang node types (Container, Leaf, List, …) have Status *Value.
-func isDeprecatedOrObsolete(e *yang.Entry) bool {
-	if e.Node == nil {
-		return false
-	}
-	v := reflect.ValueOf(e.Node)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	f := v.FieldByName("Status")
-	if !f.IsValid() || f.Kind() != reflect.Ptr || f.IsNil() {
-		return false
-	}
-	name := f.Elem().FieldByName("Name")
-	if !name.IsValid() {
-		return false
-	}
-	s := name.String()
-	return s == "deprecated" || s == "obsolete"
-}
-
-// entryToNode converts a goyang Entry to a schema Node (no children populated).
-func entryToNode(e *yang.Entry, path string) *Node {
+// entryToNode converts an entry to a schema Node (no children populated).
+func entryToNode(e *entry, path string) *Node {
 	n := &Node{
 		Path:        path,
 		Name:        e.Name,
-		Kind:        entryKind(e),
+		Kind:        e.Kind,
 		Description: e.Description,
-		Config:      e.Config != yang.TSFalse,
-		Mandatory:   e.Mandatory == yang.TSTrue,
-		When:        extractWhen(e),
-		Presence:    entryPresence(e),
+		Keys:        e.Keys,
+		Config:      !e.ReadOnly,
+		Mandatory:   e.Mandatory,
+		Type:        e.Type,
+		When:        e.When,
+		Presence:    e.Presence,
 	}
-
-	if def, ok := e.SingleDefaultValue(); ok {
-		n.Default = def
+	if e.Default != nil {
+		n.Default = *e.Default
 	}
-
-	if strings.Contains(e.Key, " ") || e.Key != "" {
-		n.Keys = strings.Fields(e.Key)
-	}
-
-	if e.IsLeaf() || e.IsLeafList() {
-		n.Type = yangTypeInfo(e)
-	}
-
 	return n
-}
-
-// prefixInXPath matches a "prefix:X" token where X is a letter or underscore,
-// the first character of an identifier.  The matched letter is included so
-// ReplaceAllStringFunc can reattach it after resolving the prefix.
-var prefixInXPath = regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9_\-]*:[a-zA-Z_]`)
-
-// extractWhen returns the pre-resolved YANG when expression for e, or "".
-// It first checks e itself (when directly on the node), then checks parent
-// augments — the Infix convention is to put when on the augment, not on the
-// top-level container inside the augment.
-func extractWhen(e *yang.Entry) string {
-	if xpath, ok := e.GetWhenXPath(); ok && xpath != "" {
-		return resolveWhenPrefixes(e.Node, xpath)
-	}
-	// Check parent's augment list: the augment may carry the when expression
-	// even though the individual container inside it does not.
-	if e.Parent == nil {
-		return ""
-	}
-	for _, aug := range e.Parent.Augmented {
-		if _, found := aug.Dir[e.Name]; !found {
-			continue
-		}
-		if xpath, ok := aug.GetWhenXPath(); ok && xpath != "" {
-			return resolveWhenPrefixes(aug.Node, xpath)
-		}
-	}
-	return ""
-}
-
-// resolveWhenPrefixes replaces "prefix:x" tokens in an XPath expression with
-// the canonical "module:x" form using FindModuleByPrefix on the given node.
-// Unknown prefixes (not imported by the node's module) are left unchanged.
-func resolveWhenPrefixes(node yang.Node, xpath string) string {
-	return prefixInXPath.ReplaceAllStringFunc(xpath, func(m string) string {
-		colon := strings.IndexByte(m, ':')
-		prefix := m[:colon]
-		rest := m[colon+1:] // the single identifier-start character
-		mod := yang.FindModuleByPrefix(node, prefix)
-		if mod == nil {
-			return m
-		}
-		modName := mod.Name
-		if mod.BelongsTo != nil {
-			modName = mod.BelongsTo.Name
-		}
-		return modName + ":" + rest
-	})
-}
-
-// entryKind maps a goyang Entry to a kind string.
-func entryKind(e *yang.Entry) string {
-	switch {
-	case e.IsLeaf():
-		return "leaf"
-	case e.IsLeafList():
-		return "leaf-list"
-	case e.IsList():
-		return "list"
-	case e.IsContainer():
-		return "container"
-	case e.IsChoice():
-		return "choice"
-	case e.IsCase():
-		return "case"
-	case e.Kind == yang.AnyDataEntry:
-		return "anydata"
-	case e.Kind == yang.AnyXMLEntry:
-		return "anyxml"
-	case e.RPC != nil:
-		return "rpc"
-	default:
-		return "unknown"
-	}
-}
-
-// yangTypeInfo builds a TypeInfo from a leaf's YangType.
-func yangTypeInfo(e *yang.Entry) *TypeInfo {
-	t := e.Type
-	if t == nil {
-		return nil
-	}
-
-	info := &TypeInfo{
-		Kind: yang.TypeKindToName[t.Kind],
-	}
-
-	switch t.Kind {
-	case yang.Yenum:
-		if t.Enum != nil {
-			info.Enums = t.Enum.Names()
-			sort.Strings(info.Enums)
-		}
-	case yang.Yidentityref:
-		if t.IdentityBase != nil {
-			for _, v := range t.IdentityBase.Values {
-				name := v.Name
-				if root := yang.RootNode(v); root != nil {
-					modName := root.Name
-					if root.Kind() == "submodule" && root.BelongsTo != nil {
-						modName = root.BelongsTo.Name
-					}
-					name = modName + ":" + v.Name
-				}
-				info.Identities = append(info.Identities, name)
-			}
-			sort.Strings(info.Identities)
-		}
-	case yang.Yleafref:
-		info.Leafref = canonicalizeLeafrefPath(e.Node, t.Path)
-		info.LeafrefSibling = leafrefSiblingFilter(e)
-	case yang.Yunion:
-		for _, sub := range t.Type {
-			if sub.Kind == yang.Yenum && sub.Enum != nil {
-				info.Enums = append(info.Enums, sub.Enum.Names()...)
-			}
-		}
-		if len(info.Enums) > 0 {
-			sort.Strings(info.Enums)
-		}
-	}
-
-	if len(t.Pattern) > 0 {
-		info.Pattern = strings.Join(t.Pattern, "|")
-	}
-
-	if len(t.Range) > 0 {
-		info.Range = t.Range.String()
-	}
-
-	return info
 }
 
 // splitPrefix splits "module:name" into ("module", "name").
@@ -1017,18 +699,4 @@ func splitPrefix(s string) (prefix, name string) {
 		return s[:i], s[i+1:]
 	}
 	return "", s
-}
-
-// sortedEntries returns the entries in a Dir map sorted by name.
-func sortedEntries(dir map[string]*yang.Entry) []*yang.Entry {
-	keys := make([]string, 0, len(dir))
-	for k := range dir {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	result := make([]*yang.Entry, 0, len(keys))
-	for _, k := range keys {
-		result = append(result, dir[k])
-	}
-	return result
 }

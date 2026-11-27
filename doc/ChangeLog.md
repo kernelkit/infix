@@ -71,6 +71,17 @@ All notable changes to the project are documented in this file.
   the hardware operational data, shown by `show hardware`, `show system`
   and the WebUI Overview and Hardware pages, see [Hardware][hw]
 - WebUI: the DHCP leases are grouped by subnet, in address order
+- WebUI: uses less memory.  The network browser at network.local is now
+  served by the same program
+- CLI: a session now runs as the user who logged in, there is no
+  longer a CLI service running as root.  The `klishd` service is gone
+  from `show services`.  The `copy` command no longer runs as root
+- The software update service is only started when it is needed, for
+  an upgrade, and is stopped again when idle.  In `show services` it
+  is then listed as stopped
+- New build, `aarch64_edge_defconfig`, for access points and small
+  switches with 256 MiB of RAM.  The same as `aarch64_defconfig` but
+  without dynamic routing, containers and the firewall
 - `show dhcp-server` now shows the server statistics with the leases,
   and `show dhcp-server brief` only the leases.  The `statistics` and
   `detailed` keywords are removed

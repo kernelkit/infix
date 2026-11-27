@@ -1,5 +1,0 @@
-config BR2_PACKAGE_NETBROWSE
-	bool netbrowse
-	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
-	help
-	  Browse mDNS hosts on your network from https://network.local

@@ -18,6 +18,8 @@ type Cache struct {
 	mu      sync.RWMutex
 	manager *Manager
 	syncing bool // guarded by mu
+	fixed   bool // guarded by mu, the schema came from LoadFile
+	gated   bool // guarded by mu, a fixed schema has the device's features
 	dir     string
 	version string // image version the cached files belong to
 	rc      restconf.Fetcher
@@ -59,6 +61,20 @@ func (c *Cache) drop() error {
 	}
 	stamp := filepath.Join(c.dir, ".version")
 	return os.WriteFile(stamp, []byte(c.version+"\n"), 0640)
+}
+
+// LoadFile loads a schema compiled when the image was built.  It holds the
+// modules the device has, so after this Refresh only asks for the features.
+func (c *Cache) LoadFile(path string) error {
+	mgr, err := Read(path)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	c.manager = mgr
+	c.fixed = true
+	c.mu.Unlock()
+	return nil
 }
 
 // LoadFromCache parses whatever .yang files are already in the cache
@@ -118,11 +134,12 @@ func (c *Cache) LoadFromCacheBackground() {
 // Only one refresh runs at a time; concurrent calls return immediately.
 func (c *Cache) Refresh(ctx context.Context) error {
 	c.mu.Lock()
-	if c.syncing {
+	if c.syncing || c.gated {
 		c.mu.Unlock()
 		return nil
 	}
 	c.syncing = true
+	fixed := c.fixed
 	c.mu.Unlock()
 
 	defer func() {
@@ -130,6 +147,19 @@ func (c *Cache) Refresh(ctx context.Context) error {
 		c.syncing = false
 		c.mu.Unlock()
 	}()
+
+	// A compiled schema has the modules, only the features are missing
+	if fixed {
+		mods, err := listModules(ctx, c.rc)
+		if err != nil {
+			return fmt.Errorf("schema refresh: features: %w", err)
+		}
+		c.mu.Lock()
+		c.manager = c.manager.WithFeatures(FeatureSet(mods))
+		c.gated = true
+		c.mu.Unlock()
+		return nil
+	}
 
 	if _, err := FetchModules(ctx, c.rc, c.dir); err != nil {
 		return fmt.Errorf("schema refresh: fetch: %w", err)

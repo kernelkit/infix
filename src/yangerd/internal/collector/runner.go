@@ -69,26 +69,26 @@ func (DBusInstaller) GetInstallStatus() (string, string, int, string, error) {
 		return "", "", 0, "", err
 	}
 
-	obj := conn.Object("de.pengutronix.rauc", "/")
-
-	operation, _ := obj.GetProperty("de.pengutronix.rauc.Installer.Operation")
-	lastError, _ := obj.GetProperty("de.pengutronix.rauc.Installer.LastError")
+	// rauc runs only when needed: do not start it, it is idle when stopped
+	var props map[string]dbus.Variant
+	err = conn.Object("de.pengutronix.rauc", "/").Call("org.freedesktop.DBus.Properties.GetAll",
+		dbus.FlagNoAutoStart, "de.pengutronix.rauc.Installer").Store(&props)
+	if err != nil {
+		return "idle", "", 0, "", nil
+	}
 
 	var pct int
 	var msg string
-	progress, err := obj.GetProperty("de.pengutronix.rauc.Installer.Progress")
-	if err == nil {
-		if vals, ok := progress.Value().([]interface{}); ok && len(vals) >= 2 {
-			if p, ok := vals[0].(int32); ok {
-				pct = int(p)
-			}
-			if s, ok := vals[1].(string); ok {
-				msg = s
-			}
+	if vals, ok := props["Progress"].Value().([]interface{}); ok && len(vals) >= 2 {
+		if p, ok := vals[0].(int32); ok {
+			pct = int(p)
+		}
+		if s, ok := vals[1].(string); ok {
+			msg = s
 		}
 	}
 
-	return variantString(operation), variantString(lastError), pct, msg, nil
+	return variantString(props["Operation"]), variantString(props["LastError"]), pct, msg, nil
 }
 
 func variantString(v dbus.Variant) string {

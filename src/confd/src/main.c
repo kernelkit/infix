@@ -377,7 +377,7 @@ static void wipe_sysrepo_shm(void)
 {
 	glob_t gl;
 
-	if (glob("/dev/shm/sr_*", 0, NULL, &gl) == 0) {
+	if (glob("/dev/shm/sysrepo/sr_*", 0, NULL, &gl) == 0) {
 		for (size_t i = 0; i < gl.gl_pathc; i++)
 			unlink(gl.gl_pathv[i]);
 		globfree(&gl);
@@ -578,7 +578,7 @@ static void handle_startup_failure(sr_session_ctx_t *sess, const char *failure_p
 		ERROR("sr_copy_config(factory-default) failed: %s", sr_strerror(r));
 		/* Nuclear option: wipe everything */
 		banner_append("CRITICAL ERROR: Logins are disabled, no credentials available");
-		systemf("rm -f /etc/sysrepo/data/*startup* /etc/sysrepo/data/*running* /dev/shm/sr_*");
+		systemf("rm -f /etc/sysrepo/data/*startup* /etc/sysrepo/data/*running* /dev/shm/sysrepo/sr_*");
 		set_finit_cond("failure-config-error");
 		return;
 	}
