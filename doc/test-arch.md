@@ -59,6 +59,8 @@ Some of the core functions provided by Infamy are:
   NETCONF
 - Pushing/pulling NETCONF data to/from a device
 - Generating TAP compliant output
+- Saving the support bundle of each device when a test fails, see
+  [Support Bundles From Failed Tests](testing.md#support-bundles-from-failed-tests)
 
 ### 9PM
 
@@ -262,15 +264,58 @@ Infamy:
   once, instead of the `test-config` (used by tests that verify
   save-and-reboot behaviour)
 
-Test mode is activated by the presence of an empty file named
-`test-mode` on the device's `aux` partition (`/mnt/aux/test-mode`).
+Test mode is activated by the presence of a file named `test-mode` on
+the device's `aux` partition (`/mnt/aux/test-mode`).  The file may be
+empty, or hold the device's test mode settings as a JSON object:
+
+```json
+{ "management-interface": "e1", "physical-name": "dut1" }
+```
+
+### DUT Logs
+
+When a test fails in CI, the DUTs' logs often show why, but by then
+the DUTs are gone.  So every DUT in test mode sends all its logs to the
+test controller, and the test environment saves them.
+
+With `management-interface` in the test mode settings, the DUT sends
+its logs in RFC 5424 format to the multicast group `ff02::161` on that
+interface.  This is set up at boot, outside the configuration, so it
+keeps working when a test configures syslog, and after a reboot.  With
+`physical-name` set, each message also carries `[device@32473
+name="dut1"]`, because tests change the hostname.
+
+`test/env` always starts a syslog sink, `test/syslog-sink`.  It listens
+for the group on each of the controller's management ports and saves
+the logs of all DUTs in one file, `test/.log/syslog-<time>.log`.
+Infamy does not know about the sink, it only logs markers in the DUTs'
+logs with the `infix-syslog:log` RPC:
+
+| MSGID        | Logged                          | Structured data                     |
+|--------------|---------------------------------|-------------------------------------|
+| `test-start` | on attach to a DUT              | `[test@32473 name="<test>" role="<node>"]` |
+| `step`       | when a step starts, on all DUTs | as above, and `step="<num>"`        |
+| `test-stop`  | when the test exits, on all DUTs | as above                           |
+
+The test name is the one 9PM gives it, e.g., `0006-test`, or the
+test's directory name when it runs on its own.
+
+`test/utils/syslog_split.py` uses the markers to filter the log on a
+test or a device, or to split it into one file per test and device.
+After `make test` the split logs are in `test/.log/last/syslog/`, and
+packed in `test/.log/last/logs.tar.gz`, which CI uploads as the
+`dut-syslog` artifact.
+
+> [!NOTE]
+> `32473` is the documentation enterprise number from RFC 5612, a
+> placeholder until KernelKit has a Private Enterprise Number.
 
 ### Test Mode on Virtual Devices
 
-When the test environment is started with Qeneth, the `inject-test-mode`
-script (`test/inject-test-mode`) is run automatically.  It copies the
-base disk image and writes the `test-mode` marker into the `aux`
-partition of that copy, which is then used as the Qeneth backing image.
+All virtual DUTs share one disk image, so Qeneth gives each node its
+test mode settings over QEMU's `fw_cfg` (`opt/test-mode`): its
+management port and its name in the topology.  At boot, the device
+copies them to the `test-mode` file on `aux`, which turns test mode on.
 
 ### Test Mode on Physical Devices
 
@@ -279,6 +324,15 @@ marker file on the `aux` partition, then reboot:
 
 ```
 # touch /mnt/aux/test-mode
+# reboot
+```
+
+To also collect the device's logs during tests, write its management
+port and its name in the topology to the file, see
+[DUT Logs](#dut-logs):
+
+```
+# echo '{ "management-interface": "e1", "physical-name": "dut1" }' >/mnt/aux/test-mode
 # reboot
 ```
 

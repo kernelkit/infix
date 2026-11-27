@@ -6,7 +6,7 @@ import sys
 import random
 import inspect
 
-from . import neigh, netconf, restconf, ssh, tap, topology, util
+from . import marker, neigh, netconf, restconf, ssh, support, tap, topology, util
 
 
 class NullEnv:
@@ -41,6 +41,8 @@ class ArgumentParser():
         self.args.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
         self.args.add_argument("ptop", nargs=1, metavar="topology")
         self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
+        self.args.add_argument("--support-dir", default=None,
+                               help="Save support bundles here if the test fails")
 
     def add_argument(self, *args, **kwargs):
         kwargs["required"] = True
@@ -67,7 +69,7 @@ def test_argument(option, **kwargs):
 class Env(object):
     def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ,
                  nodes_compatible=topology.compatible,
-                 edge_mappings=topology.edge_mappings):
+                 edge_mappings=topology.edge_mappings, test=None):
         if "INFAMY_ARGS" in environ:
             argv = shlex.split(environ["INFAMY_ARGS"]) + argv
 
@@ -78,6 +80,13 @@ class Env(object):
         self.args = self.argp.parse_args(argv)
         pdot = pydot.graph_from_dot_file(self.args.ptop[0])[0]
         self.ptop = topology.Topology(pdot)
+
+        self.test = test or tap.Test.current
+        self.attached = {}
+        self.markers = marker.Markers()
+        if self.test:
+            self.test.push_step_hook(self.markers.step)
+            self.test.push_test_cleanup(self.markers.stop)
 
         self.ltop = None
         if self.args.ltop != False:
@@ -196,15 +205,9 @@ class Env(object):
                                                            password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
-            if test_reset:
-                dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
-            return dev
-
-        if protocol == "ssh":
+        elif protocol == "ssh":
             return ssh.Device(name, ssh.Location(mgmtip, username, password))
-
-        if protocol == "restconf":
+        elif protocol == "restconf":
             dev = restconf.Device(name,
                                   location=restconf.Location(cport,
                                                              mgmtip,
@@ -212,9 +215,23 @@ class Env(object):
                                                              password),
                                   mapping=mapping,
                                   yangdir=self.args.yangdir)
-            if test_reset:
-                dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
-            return dev
+        else:
+            raise Exception(f"Unsupported management procotol \"{protocol}\"")
 
-        raise Exception(f"Unsupported management procotol \"{protocol}\"")
+        if test_reset:
+            dev.test_reset()
+            util.until(lambda: self.is_reachable(node, cport), 30)
+        self.collect_on_fail(dev)
+        if self.test:
+            self.markers.attach(dev)
+        return dev
+
+    def collect_on_fail(self, dev):
+        """Save the support bundle of dev if the test fails"""
+        if not self.test or not self.args.support_dir:
+            return
+
+        if not self.attached:
+            self.test.push_fail_hook(lambda: support.collect_all(
+                self.attached.values(), self.args.support_dir))
+        self.attached[dev.name] = dev

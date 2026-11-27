@@ -217,6 +217,47 @@ Use them from a browser or a terminal on the host.  Docker also
 publishes the ports on the host itself, run `docker port infamy0 9011`
 to see where.
 
+### Reading DUT Logs
+
+When a test fails, the DUTs' logs often show why.  The test environment
+saves the logs of all DUTs in test mode in one file per run, see
+[DUT Logs](test-arch.md#dut-logs).  Its name is in `$TEST_SYSLOG` inside
+the environment:
+
+```
+11:42:54 infamy0:test # tail -f $TEST_SYSLOG
+```
+
+Filter it on a test, a device, or both:
+
+```
+11:42:54 infamy0:test # utils/syslog_split.py -t 0006-test -d dut1 $TEST_SYSLOG
+```
+
+After `make test`, the logs of each test and device are also in
+`test/.log/last/syslog/<test>/<device>.log`, and packed in
+`test/.log/last/logs.tar.gz`.  In CI, download the `dut-syslog`
+artifact.
+
+### Support Bundles From Failed Tests
+
+When a test fails, the DUTs are reset before anyone can look at them.
+So a failed test first saves the support bundle of each DUT it used.
+The bundle has the device's logs, configuration and network state.
+The logs mark where the test and each of its steps start, so you can
+find the failing step.
+
+`make test` saves them in `test/.log/last/support/<test>/<node>.tar.gz`,
+and CI uploads them as the `support-bundles` artifact.  When you run a
+test by hand, add `--support-dir` to save them:
+
+```
+11:42:54 infamy0:test # ./case/system/hostname/test.py --support-dir /tmp/support
+```
+
+All DUTs are collected at once, and collection stops after five
+minutes.
+
 ### Attaching to MACVLANs
 
 To fully isolate the host's interfaces from one another, many tests

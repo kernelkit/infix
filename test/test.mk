@@ -12,6 +12,7 @@ TESTS              ?= $(test-dir)/case/all.yaml
 
 yang_extractor     := $(test-dir)/utils/extract_xpaths.py
 coverage_reporter  := $(test-dir)/utils/coverage_report.py
+syslog_split       := $(test-dir)/utils/syslog_split.py
 YANG_DIR           ?= $(BR2_EXTERNAL_INFIX_PATH)/src/confd/yang/confd
 xpaths_all_csv     := $(test-dir)/.log/xpaths_all.csv
 
@@ -41,7 +42,8 @@ endif
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) \
 		sh -c 'test -f $(xpaths_all_csv) || python3 $(yang_extractor) $(YANG_DIR) $(xpaths_all_csv) || true; \
-		       $(ninepm) -v $(TESTS); rc=$$?; \
+		       INFAMY_ARGS="$$INFAMY_ARGS --support-dir $(test-dir)/.log/last/support" \
+		           $(ninepm) -v $(TESTS); rc=$$?; \
 		       $(ninepm_report) github   $(test-dir)/.log/last/result.json; \
 		       $(ninepm_report) asciidoc $(test-dir)/.log/last/result.json; \
 		       python3 $(coverage_reporter) \
@@ -49,6 +51,11 @@ test:
 		           $(test-dir)/.log/last/xpath_coverage.log \
 		           $(test-dir)/.log/last/xpath_coverage_report.md \
 		           2>/dev/null || true; \
+		       test ! -f "$$TEST_SYSLOG" || { \
+		           python3 $(syslog_split) -o $(test-dir)/.log/last/syslog "$$TEST_SYSLOG" && \
+		           ln -f "$$TEST_SYSLOG" $(test-dir)/.log/last/syslog/full.log && \
+		           tar czf $(test-dir)/.log/last/logs.tar.gz -C $(test-dir)/.log/last syslog; } || true; \
+		       chmod -R 777 $(test-dir)/.log; \
 		       exit $$rc'; rc=$$?; \
 	cp $(topology) $(topology-saved); \
 	cp $(basename $(topology:.in=)).svg $(topology-saved:.dot=.svg) 2>/dev/null; \

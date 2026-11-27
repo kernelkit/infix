@@ -37,6 +37,8 @@ import traceback
 import infamy.netns
 
 class Test:
+    current = None  # the running test
+
     def __init__(self, output=sys.stdout):
         self.out = output
         self.commenter = CommentWriter(self.out)
@@ -44,10 +46,20 @@ class Test:
             sys.stdout = self.commenter
 
         self.test_cleanup=[]
+        self.fail_hooks = []
+        self.step_hooks = []
         self.steps = 0
 
     def push_test_cleanup(self, fn):
         self.test_cleanup.append(fn)
+
+    def push_fail_hook(self, fn):
+        """Call fn() if the test fails, before the cleanup"""
+        self.fail_hooks.append(fn)
+
+    def push_step_hook(self, fn):
+        """Call fn(num, msg) when a step starts"""
+        self.step_hooks.append(fn)
 
     def cleanup(self):
         infamy.netns.IsolatedMacVlans.Cleanup()
@@ -58,6 +70,7 @@ class Test:
         now = datetime.datetime.now().strftime("%F %T")
         self.out.write(f"# Starting ({now})\n")
         self.out.flush()
+        Test.current = self
         return self
 
     def __exit__(self, t, e, tb):
@@ -65,6 +78,9 @@ class Test:
         self.out.write(f"# Exiting ({now})\n")
         self.out.flush()
 
+        if t not in (TestPass, TestSkip):
+            for hook in self.fail_hooks:
+                hook()
         self.cleanup()
 
         if not e:
@@ -92,6 +108,8 @@ class Test:
 
     @contextlib.contextmanager
     def step(self, msg):
+        for hook in self.step_hooks:
+            hook(self.steps + 1, msg)
         try:
             yield
             self._ok(msg)
