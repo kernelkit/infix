@@ -1,0 +1,49 @@
+#!/bin/sh
+# Factory-config overlay, static for this product
+cat <<'EOF'
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "name": "usb1",
+        "class": "infix-hardware:usb",
+        "state": {
+          "admin-state": "unlocked"
+        }
+      },
+      {
+        "name": "usb2",
+        "class": "infix-hardware:usb",
+        "state": {
+          "admin-state": "unlocked"
+        }
+      },
+      {
+        "name": "usb3",
+        "class": "infix-hardware:usb",
+        "state": {
+          "admin-state": "unlocked"
+        }
+      },
+      {
+        "name": "radio0",
+        "class": "infix-hardware:wifi"
+      }
+    ]
+  },
+  "ietf-system:system": {
+    "hostname": "rpi-%m",
+    "ntp": {
+      "server": [
+        {
+          "name": "ntp.org",
+          "udp": {
+            "address": "pool.ntp.org"
+          },
+          "iburst": true
+        }
+      ]
+    }
+  }
+}
+EOF

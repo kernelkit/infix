@@ -1,0 +1,137 @@
+#!/bin/sh
+# Factory-config overlay, static for this product
+cat <<'EOF'
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "name": "usb",
+        "class": "infix-hardware:usb",
+        "state": {
+          "admin-state": "unlocked"
+        }
+      },
+      {
+        "name": "radio0",
+        "class": "infix-hardware:wifi",
+        "infix-hardware:wifi-radio": {
+          "band": "2.4GHz",
+          "channel": "auto"
+        }
+      },
+      {
+        "name": "radio1",
+        "class": "infix-hardware:wifi",
+        "infix-hardware:wifi-radio": {
+          "band": "6GHz",
+          "channel": "auto"
+        }
+      },
+      {
+        "name": "radio2",
+        "class": "infix-hardware:wifi",
+        "infix-hardware:wifi-radio": {
+          "band": "5GHz",
+          "channel": "auto"
+        }
+      }
+    ],
+    "infix-hardware:wifi": {
+      "country-code": "DE"
+    }
+  },
+  "ietf-keystore:keystore": {
+    "symmetric-keys": {
+      "symmetric-key": [
+        {
+          "name": "wifi",
+          "cleartext-symmetric-key": "aW5maXhpbmZpeA==",
+          "key-format": "infix-crypto-types:passphrase-key-format"
+        }
+      ]
+    }
+  },
+  "ietf-system:system": {
+    "hostname": "acer-connect-%m",
+    "infix-system:software": {
+      "check-update": {
+        "schedule": "weekly"
+      },
+      "unattended-update": {
+        "schedule": "weekly",
+        "reboot": "immediate"
+      }
+    },
+    "ntp": {
+      "server": [
+        {
+          "name": "default",
+          "udp": {
+            "address": "pool.ntp.org"
+          }
+        }
+      ]
+    }
+  },
+  "infix-dhcp-server:dhcp-server": {
+    "option": [
+      {
+        "id": "ntp-server",
+        "address": "auto"
+      },
+      {
+        "id": "dns-server",
+        "address": "auto"
+      },
+      {
+        "id": "router",
+        "address": "auto"
+      }
+    ],
+    "subnet": [
+      {
+        "subnet": "192.168.0.0/24",
+        "pool": {
+          "start-address": "192.168.0.100",
+          "end-address": "192.168.0.250"
+        }
+      }
+    ]
+  },
+  "infix-firewall:firewall": {
+    "default": "wan",
+    "zone": [
+      {
+        "name": "lan",
+        "action": "accept",
+        "interface": [
+          "br0"
+        ]
+      },
+      {
+        "name": "wan",
+        "action": "drop",
+        "interface": [
+          "internet"
+        ],
+        "service": [
+          "dhcpv6-client"
+        ]
+      }
+    ],
+    "policy": [
+      {
+        "name": "lan-to-wan",
+        "action": "accept",
+        "ingress": [
+          "lan"
+        ],
+        "egress": [
+          "wan"
+        ],
+        "masquerade": true
+      }
+    ]
+  }
+}
+EOF

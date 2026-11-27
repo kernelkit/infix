@@ -1,0 +1,84 @@
+#!/bin/sh
+# Factory-config interfaces, static for this product
+cat <<'EOF'
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "lo",
+        "type": "infix-if-type:loopback",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "127.0.0.1",
+              "prefix-length": 8
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "::1",
+              "prefix-length": 128
+            }
+          ]
+        }
+      },
+      {
+        "name": "eth0",
+        "type": "infix-if-type:ethernet",
+        "ietf-ip:ipv4": {
+          "infix-dhcp-client:dhcp": {
+            "option": [
+              {
+                "id": "netmask"
+              },
+              {
+                "id": "broadcast"
+              },
+              {
+                "id": "router"
+              },
+              {
+                "id": "domain"
+              },
+              {
+                "id": "hostname",
+                "value": "auto"
+              },
+              {
+                "id": "dns-server"
+              },
+              {
+                "id": "ntp-server"
+              },
+              {
+                "id": "vendor-class",
+                "value": "Banana Pi BPI-M1"
+              }
+            ]
+          }
+        },
+        "ietf-ip:ipv6": {
+          "infix-dhcpv6-client:dhcp": {
+            "option": [
+              {
+                "id": "ntp-server"
+              },
+              {
+                "id": "client-fqdn"
+              },
+              {
+                "id": "domain-search"
+              },
+              {
+                "id": "dns-server"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
+EOF

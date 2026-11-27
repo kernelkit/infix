@@ -375,6 +375,13 @@ This covers all `*-config.cfg` files in every br2-external tree listed
 in `BR2_EXTERNAL`.  A spin of Infix can therefore forward the target to
 the Infix `Makefile` to have its own static configurations migrated.
 
+Product generators, `etc/product/bin/gen-*-custom` in a board's product
+directory, carry no version and are not migrated.  Edit them by hand,
+then check that every product's factory-config still validates against
+the models (needs a built tree):
+
+    make test-unit
+
 See `src/confd/share/migrate/1.6/40-bridge-port-remove-ip.sh` for a
 worked example, and the [Configuration Migration][upgrade-migration]
 section of the Upgrade documentation for the user-facing side of this

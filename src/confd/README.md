@@ -30,6 +30,9 @@ In the second option a script running just after `probe` will in fact
 and directory that is writable at runtime can be overloaded with device
 specific versions.
 
+A product that only differs from the defaults in parts ships generators
+instead, see *Product Generators* in `doc/branding.md`.
+
 
 Origin & References
 -------------------
