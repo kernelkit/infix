@@ -17,6 +17,7 @@ how interfaces differ between devices:
   4. Features the test-config leaves disabled (NTP, containers, routing
      protocols, firewall, PTP) emit no operational data, and the DHCP
      server holds no leases.
+  5. No alarm is active, apart from link-down on unpatched ports.
 
 Both checks use specific-path GETs, which behave the same on NETCONF and
 RESTCONF.  A full-datastore GET is not portable: RESTCONF does not serve
@@ -33,5 +34,6 @@ physical topology provides.
 . Verify operational addresses on each interface match the test-config
 . Verify the routing tables hold only kernel and connected routes for configured addresses
 . Verify unconfigured feature subtrees are absent
+. Verify no alarm other than link-down is active
 
 

@@ -15,6 +15,7 @@ how interfaces differ between devices:
   4. Features the test-config leaves disabled (NTP, containers, routing
      protocols, firewall, PTP) emit no operational data, and the DHCP
      server holds no leases.
+  5. No alarm is active, apart from link-down on unpatched ports.
 
 Both checks use specific-path GETs, which behave the same on NETCONF and
 RESTCONF.  A full-datastore GET is not portable: RESTCONF does not serve
@@ -40,6 +41,8 @@ ABSENT = [
     "/infix-firewall:firewall",
     "/ieee1588-ptp:ptp",
 ]
+
+LINK_DOWN = "infix-alarms:link-down"
 
 # IPv6 addresses the kernel adds on its own, never part of the config.
 AUTO_ORIGINS = ("link-layer", "random")
@@ -181,6 +184,16 @@ def features_absent(name, dut):
     return True
 
 
+def active_alarms(dut):
+    """(type, resource, text) of every alarm that is not cleared, link-down aside."""
+    data = dut.get_data("/ietf-alarms:alarms/alarm-list") or {}
+    alarms = data.get("alarms", {}).get("alarm-list", {}).get("alarm", [])
+    return [(a["alarm-type-id"], a["resource"], a.get("alarm-text"))
+            for a in alarms
+            if a["alarm-type-id"] != LINK_DOWN
+            and str(a.get("is-cleared")).lower() != "true"]
+
+
 with infamy.Test() as test:
     with test.step("Attach to all DUTs in the topology"):
         env = infamy.Env(ltop=False)
@@ -219,5 +232,13 @@ with infamy.Test() as test:
 
         parallel(*(lambda n=name, d=dut: check_absent(n, d)
                    for name, dut in duts.items()))
+
+    with test.step("Verify no alarm other than link-down is active"):
+        active = dict(zip(duts, parallel(*(lambda d=dut: active_alarms(d)
+                                           for dut in duts.values()))))
+        for name, alarms in active.items():
+            for alarm in alarms:
+                print(f"{name}: active alarm {alarm}")
+        assert not any(active.values()), "active alarms found"
 
     test.succeed()
