@@ -38,6 +38,11 @@ All notable changes to the project are documented in this file.
 - Wi-Fi: a radio without a band no longer accepts a channel, channel
   width or legacy rates.  They had no effect there and are dropped from
   the configuration on upgrade
+- The factory configuration of the Banana Pi, NanoPi R2S, Raspberry Pi
+  and Acer Connect Vero W boards now builds on the system defaults, and
+  only adds their interfaces, hardware and router services.  Their
+  NETCONF server and keystore settings are now the same as on all other
+  systems
 - New `infix-system:whoami` RPC, returns the calling user and the NACM
   groups the user is in.  Guests are permitted to call it, see [NACM][nacm],
   and the rule for that is added to existing configurations on upgrade

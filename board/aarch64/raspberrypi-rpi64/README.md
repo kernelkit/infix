@@ -71,10 +71,10 @@ The easiest way to get started is using a microSD card:
    - Default login: `admin` / `admin`
 
 > [!NOTE]
-> Raspberry Pi 3B and 4B boot with a factory configuration (`factory-config.cfg`)
-> that enables DHCP client on the Ethernet port. This means you can access
-> the device over the network without needing a serial console. Simply find
-> the assigned IP address and SSH in!
+> Raspberry Pi 3B and 4B boot with a factory configuration that enables
+> DHCP client on the Ethernet port. This means you can access the device
+> over the network without needing a serial console. Simply find the
+> assigned IP address and SSH in!
 >
 > **Compute Module 4 (CM4)** and some other variants do not have this factory
 > configuration, so you'll need to use a serial console for initial setup or

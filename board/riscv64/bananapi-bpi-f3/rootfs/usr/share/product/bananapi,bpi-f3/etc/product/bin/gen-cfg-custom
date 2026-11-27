@@ -1,0 +1,30 @@
+#!/bin/sh
+# Factory-config overlay, static for this product
+cat <<'EOF'
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "class": "infix-hardware:usb",
+        "name": "usb",
+        "state": {
+          "admin-state": "unlocked"
+        }
+      }
+    ]
+  },
+  "ietf-system:system": {
+    "hostname": "bpi-f3-%m",
+    "ntp": {
+      "server": [
+        {
+          "name": "default",
+          "udp": {
+            "address": "pool.ntp.org"
+          }
+        }
+      ]
+    }
+  }
+}
+EOF
