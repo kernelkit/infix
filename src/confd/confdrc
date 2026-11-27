@@ -1,7 +1,7 @@
 # Defaults for /usr/libexec/confd/bootstrap                   -*-conf-*-
 # Copy and mofify this file to your br2-external overlay
 
-PATH=/usr/libexec/confd/:$PATH
+PATH=/usr/libexec/confd/:/etc/product/bin:$PATH
 INIT_DATA=/etc/sysrepo/factory-default.json
 SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
 
