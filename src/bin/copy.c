@@ -1217,9 +1217,22 @@ static int rpc_main(int argc, char *argv[])
 	return rpc_exec(argv[optind], argc, &argv[optind + 1]);
 }
 
+/* The user chose the environment, and the libraries take paths from it */
+static void reset_env(void)
+{
+	const struct passwd *pw = getpwuid(getuid());
+
+	if (!pw || clearenv())
+		err(1, "failed resetting environment");
+
+	setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1);
+	setenv("HOME", pw->pw_dir, 1);
+}
+
 int main(int argc, char *argv[])
 {
 	prognm = basename(argv[0]);
+	reset_env();
 
 	/* Set-group-ID sysrepo, which checks files by the real group */
 	if (setresgid(getegid(), getegid(), getgid()))
