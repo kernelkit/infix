@@ -1,0 +1,82 @@
+From ca0829fbafc3c026eaf37b3dce336a3bd4c10276 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Fri, 27 Nov 2026 16:38:27 +0100
+Subject: [PATCH] subscribed-notifications: log who starts and ends a
+ subscription
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+Organization: Wires
+
+Nothing told an administrator that a user had subscribed to a stream
+or to datastore changes, nor to what.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/utils/sn_common.c | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/src/utils/sn_common.c b/src/utils/sn_common.c
+index f3542379..d0d841ae 100644
+--- a/src/utils/sn_common.c
++++ b/src/utils/sn_common.c
+@@ -251,6 +251,42 @@ srsn_sub_free(struct srsn_sub *sub)
+     free(sub);
+ }
+ 
++/**
++ * @brief Log the start or the end of a subscription in the audit trail.
++ *
++ * @param[in] sub Subscription to log.
++ * @param[in] start Whether the subscription starts or ends.
++ */
++static void
++srsn_sub_audit(const struct srsn_sub *sub, int start)
++{
++    const char *filter = sub->xpath_filter ? sub->xpath_filter : "/";
++
++    if (!sub->nacm_user) {
++        return;
++    }
++
++    if (!start) {
++        SR_LOG_SEC("user \"%s\" ended subscription %" PRIu32, sub->nacm_user, sub->id);
++        return;
++    }
++
++    switch (sub->type) {
++    case SRSN_SUB_NOTIF:
++        SR_LOG_SEC("user \"%s\" started subscription %" PRIu32 " to stream %s, filter %s", sub->nacm_user, sub->id,
++                sub->stream, filter);
++        break;
++    case SRSN_YANG_PUSH_PERIODIC:
++        SR_LOG_SEC("user \"%s\" started subscription %" PRIu32 " to periodic updates of %s, filter %s", sub->nacm_user,
++                sub->id, sr_ds2str(sub->ds), filter);
++        break;
++    case SRSN_YANG_PUSH_ON_CHANGE:
++        SR_LOG_SEC("user \"%s\" started subscription %" PRIu32 " to changes in %s, filter %s", sub->nacm_user,
++                sub->id, sr_ds2str(sub->ds), filter);
++        break;
++    }
++}
++
+ int
+ srsn_sub_unlink(struct srsn_sub *sub)
+ {
+@@ -265,6 +301,7 @@ srsn_sub_unlink(struct srsn_sub *sub)
+         return 0;
+     }
+ 
++    srsn_sub_audit(sub, 0);
+     if (i < snstate.count - 1) {
+         snstate.subs[i] = snstate.subs[snstate.count - 1];
+     }
+@@ -345,6 +382,7 @@ srsn_sub_add(struct srsn_sub *sub)
+ 
+     snstate.subs[snstate.count] = sub;
+     ++snstate.count;
++    srsn_sub_audit(sub, 1);
+ 
+     /* schedule the stop, its callback finds the subscription linked once it gets the lock */
+     if (sub->stop_time.tv_sec) {
