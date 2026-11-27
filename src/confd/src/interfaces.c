@@ -189,8 +189,10 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:vxlan";
 	else if (!fnmatch("wg+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wireguard";
+#ifdef HAVE_PPPOE
 	else if (!fnmatch("pppoe+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:pppoe";
+#endif
 
 	free(ifname);
 

@@ -41,6 +41,11 @@ CONFD_CONF_OPTS += --enable-gps
 else
 CONFD_CONF_OPTS += --disable-gps
 endif
+ifeq ($(BR2_PACKAGE_FEATURE_PPPOE),y)
+CONFD_CONF_OPTS += --enable-pppoe
+else
+CONFD_CONF_OPTS += --disable-pppoe
+endif
 ifeq ($(BR2_PACKAGE_TTYD),y)
 CONFD_CONF_OPTS += --enable-console
 else
@@ -144,12 +149,17 @@ endef
 endif
 ifeq ($(BR2_PACKAGE_PPPD),y)
 define CONFD_INSTALL_PPP
-	$(INSTALL) -D -m 0644 $(CONFD_PKGDIR)/ppp/pppd@.conf $(FINIT_D)/available/pppd@.conf
 	$(INSTALL) -D -m 0644 $(CONFD_PKGDIR)/ppp/modules.conf $(TARGET_DIR)/etc/modules-load.d/ppp.conf
-	$(INSTALL) -d -m 0755 $(TARGET_DIR)/etc/ppp/peers
 	for script in ip-up ip-down; do \
 		$(INSTALL) -D -m 0755 $(CONFD_PKGDIR)/ppp/$$script $(TARGET_DIR)/etc/ppp/$$script; \
 	done
+endef
+endif
+ifeq ($(BR2_PACKAGE_FEATURE_PPPOE),y)
+define CONFD_INSTALL_PPPOE
+	$(INSTALL) -D -m 0644 $(CONFD_PKGDIR)/ppp/pppd@.conf $(FINIT_D)/available/pppd@.conf
+	$(INSTALL) -D -m 0644 $(CONFD_PKGDIR)/ppp/pppoe.conf $(TARGET_DIR)/etc/modules-load.d/pppoe.conf
+	$(INSTALL) -d -m 0755 $(TARGET_DIR)/etc/ppp/peers
 endef
 define CONFD_INSTALL_YANG_MODULES_PPP
 	$(COMMON_SYSREPO_ENV) \
@@ -226,6 +236,7 @@ CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_CONTAINERS
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_CONTAINERS
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_FRR
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_PPP
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_PPPOE
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_PPP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_WIFI
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_GPS

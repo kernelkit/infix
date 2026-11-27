@@ -61,6 +61,10 @@ AC_ARG_ENABLE(gps,
         AS_HELP_STRING([--enable-gps], [Enable support for GPS receivers]),,[
 	enable_gps=no])
 
+AC_ARG_ENABLE(pppoe,
+        AS_HELP_STRING([--enable-pppoe], [Enable support for the PPPoE client]),,[
+	enable_pppoe=no])
+
 AC_ARG_ENABLE(console,
         AS_HELP_STRING([--enable-console], [Enable support for web console (ttyd)]),,[
 	enable_console=no])
@@ -100,6 +104,9 @@ AS_IF([test "x$enable_wifi" = "xyes"], [
 
 AS_IF([test "x$enable_gps" = "xyes"], [
         AC_DEFINE(HAVE_GPS, 1, [Built with GPS receiver support])])
+
+AS_IF([test "x$enable_pppoe" = "xyes"], [
+        AC_DEFINE(HAVE_PPPOE, 1, [Built with PPPoE client support])])
 
 AS_IF([test "x$enable_console" = "xyes"], [
         AC_DEFINE(HAVE_CONSOLE, 1, [Built with web console (ttyd) support])])
@@ -151,6 +158,7 @@ AC_SUBST([EV_LIBS])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
+AM_CONDITIONAL(PPPOE,        [test "x$enable_pppoe" != "xno"])
 AM_CONDITIONAL(SNMP,         [test "x$enable_snmp" != "xno"])
 AM_CONDITIONAL(NETCONF_SUBSYSTEM, [test "x$enable_netconf_subsystem" != "xno"])
 
@@ -204,6 +212,7 @@ Optional features:
   FRR routing support ..: $enable_frr
   Wi-Fi support ........: $enable_wifi
   GPS support ..........: $enable_gps
+  PPPoE client .........: $enable_pppoe
   SNMP support .........: $enable_snmp
   Login shell ..........: $login_shell
   Default crypt algo ...: $crypt
