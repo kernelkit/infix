@@ -382,3 +382,60 @@ func TestConcurrentFirstMerge(t *testing.T) {
 		}
 	}
 }
+
+func TestWatchStartsWithEveryKey(t *testing.T) {
+	tr := New()
+	tr.Set("a", json.RawMessage(`1`))
+	tr.Set("b", json.RawMessage(`2`))
+
+	w := tr.Watch()
+	defer tr.Unwatch(w)
+
+	<-w.C
+	if keys := w.Take(); len(keys) != 2 {
+		t.Fatalf("expected both keys, got %v", keys)
+	}
+}
+
+func TestWatchGivenKeys(t *testing.T) {
+	tr := New()
+	tr.Set("a", json.RawMessage(`1`))
+
+	w := tr.Watch("b")
+	defer tr.Unwatch(w)
+
+	if keys := w.Take(); len(keys) != 1 || keys[0] != "b" {
+		t.Fatalf("expected b at start, got %v", keys)
+	}
+
+	tr.Set("a", json.RawMessage(`2`))
+	if keys := w.Take(); len(keys) != 0 {
+		t.Fatalf("unwatched key reported: %v", keys)
+	}
+}
+
+func TestWatchOnlyReportsChanges(t *testing.T) {
+	tr := New()
+	tr.Set("a", json.RawMessage(`{"x":1}`))
+
+	w := tr.Watch()
+	defer tr.Unwatch(w)
+	w.Take()
+
+	tr.Set("a", json.RawMessage(`{"x":1}`))
+	tr.Merge("a", json.RawMessage(`{"x":1}`))
+	tr.Delete("missing")
+	if keys := w.Take(); len(keys) != 0 {
+		t.Fatalf("unchanged data reported as changed: %v", keys)
+	}
+
+	tr.Merge("a", json.RawMessage(`{"x":2}`))
+	if keys := w.Take(); len(keys) != 1 || keys[0] != "a" {
+		t.Fatalf("expected a after merge, got %v", keys)
+	}
+
+	tr.Delete("a")
+	if keys := w.Take(); len(keys) != 1 || keys[0] != "a" {
+		t.Fatalf("expected a after delete, got %v", keys)
+	}
+}

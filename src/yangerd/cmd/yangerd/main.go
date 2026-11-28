@@ -458,6 +458,11 @@ func main() {
 			if sig == syscall.SIGHUP {
 				log.Printf("SIGHUP: triggering immediate re-poll")
 				pokes.PokeAll()
+				// finit keeps <pid/yangerd> in flux after a reload until the pidfile is touched
+				if ready.Load() {
+					now := time.Now()
+					_ = os.Chtimes(pidFile, now, now)
+				}
 				continue
 			}
 			cancel()

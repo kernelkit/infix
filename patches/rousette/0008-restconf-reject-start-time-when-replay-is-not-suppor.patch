@@ -1,0 +1,44 @@
+From f31d9a20b510ba3aeabcc388c328df2e6571dfd9 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Mon, 23 Nov 2026 14:25:39 +0100
+Subject: [PATCH 8/8] restconf: reject start-time when replay is not supported
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+RFC 8040 section 4.8.7 requires 400 Bad Request here.  The stream was
+opened anyway and never replayed anything, so a client could not tell
+that it had missed events.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/NotificationStream.cpp | 2 ++
+ tests/restconf-notifications.cpp    | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/src/restconf/NotificationStream.cpp b/src/restconf/NotificationStream.cpp
+index 63f26ba..5b993aa 100644
+--- a/src/restconf/NotificationStream.cpp
++++ b/src/restconf/NotificationStream.cpp
+@@ -77,6 +77,8 @@ NotificationStream::NotificationStream(
+         throw ErrorResponse(400, "application", "invalid-argument", "start-time is in the future");
+     } else if (!startTime && stopTime) {
+         throw ErrorResponse(400, "application", "invalid-argument", "stop-time must be used with start-time");
++    } else if (startTime && !sysrepoReplayInfo(m_session).enabled) {
++        throw ErrorResponse(400, "application", "invalid-argument", "start-time requires replay support");
+     }
+ }
+ 
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index 399392c..d81375d 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -176,6 +176,7 @@ TEST_CASE("NETCONF notification streams")
+         REQUIRE(get("/streams/NETCONF/XML?start-time=2000-01-01T00:00:00+00:00&stop-time=1990-01-01T00:00:00+00:00", {}) == Response{400, plaintextHeaders, "stop-time must be greater than start-time"});
+         REQUIRE(get("/streams/NETCONF/XML?stop-time=1990-01-01T00:00:00+00:00", {}) == Response{400, plaintextHeaders, "stop-time must be used with start-time"});
+         REQUIRE(get("/streams/NETCONF/XML?start-time=" + libyang::yangTimeFormat(std::chrono::system_clock::now() + std::chrono::hours(1), libyang::TimezoneInterpretation::Local), {}) == Response{400, plaintextHeaders, "start-time is in the future"});
++        REQUIRE(get("/streams/NETCONF/XML?start-time=2000-01-01T00:00:00+00:00", {}) == Response{400, plaintextHeaders, "start-time requires replay support"});
+     }
+ 
+     SECTION("Replays")

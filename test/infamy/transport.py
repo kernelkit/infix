@@ -1,6 +1,32 @@
 from abc import ABC, abstractmethod
+import queue
+import threading
+import time
+
 from infamy.neigh import ll6ping
 import infamy.iface
+
+
+class Events:
+    """Notifications of a subscription, queued as dicts in RESTCONF JSON form"""
+
+    def __init__(self):
+        self.events = queue.Queue()
+        self.closed = threading.Event()
+
+    def wait_for(self, match, timeout):
+        """Return the first queued notification match() accepts, or None"""
+        end = time.time() + timeout
+        while True:
+            try:
+                event = self.events.get(timeout=max(end - time.time(), 0.01))
+            except queue.Empty:
+                return None
+            if match(event):
+                return event
+            if time.time() >= end:
+                return None
+
 
 def infer_put_dict(name, models):
     if not models.get("ietf-system"):
@@ -54,6 +80,15 @@ class Transport(ABC):
         `input_data`, if supplied, is a dict of input leaves.  Values
         are strings on both transports, an RPC without output returns
         an empty dict.
+        """
+        pass
+
+    @abstractmethod
+    def subscribe(self, params):
+        """Establish a subscription and return its Events.
+
+        `params` is the input of establish-subscription, without the
+        encoding, which each transport sets for itself.
         """
         pass
 

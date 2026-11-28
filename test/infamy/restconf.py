@@ -69,7 +69,7 @@ def error_message(response):
 
 # Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
 def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
-                        timeout=TIMEOUT):
+                        timeout=TIMEOUT, stream=False):
     # Create a session
     session = requests.Session()
 
@@ -80,7 +80,8 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
     # A zone id like %sw2p2 is not a valid escape, which makes requests
     # re-quote every '%' in the URL, mangling percent-encoded list keys
     prepared_request.url = url
-    response = session.send(prepared_request, verify=verify, timeout=timeout)
+    response = session.send(prepared_request, verify=verify, timeout=timeout,
+                            stream=stream)
     try:
         # Raise exceptions for HTTP errors
         response.raise_for_status()
@@ -91,7 +92,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0,
             print(f"{method} {url}: HTTP error 502, retrying({retry})")
             time.sleep(1)
             response = requests_workaround(method, url, json, headers, auth,
-                                           verify, retry, timeout)
+                                           verify, retry, timeout, stream)
         else:
             raise requests.exceptions.HTTPError(
                 f"{method} {url}: HTTP {response.status_code}: {error_message(response)}",
@@ -492,6 +493,12 @@ class Device(Transport):
 
         return {k: [str(e) for e in v] if isinstance(v, list) else str(v)
                 for k, v in output.items()}
+
+    def subscribe(self, params):
+        """Establish a subscription and open its event stream"""
+        from infamy import sse
+
+        return sse.Stream(self, sse.subscribe(self, {**params, "encoding": "encode-json"}))
 
     def get_dict(self, xpath=None, parse=True):
         """NETCONF compat function, just wraps get_data"""
