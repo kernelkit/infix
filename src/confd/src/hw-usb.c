@@ -29,15 +29,6 @@ static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct
 	return 0;
 }
 
-/* Hubs stay authorized so the devices behind them stay listed */
-static int is_hub(const char *dir)
-{
-	char class[8];
-
-	return readsnf(class, sizeof(class), "%s/bDeviceClass", dir) &&
-		!strcmp(class, "09");
-}
-
 /* Devices on ports the device tree marks as hard-wired, e.g. a modem slot */
 static int is_hardwired(const char *dir)
 {
@@ -47,7 +38,7 @@ static int is_hardwired(const char *dir)
 		!strcmp(type, "hardwired");
 }
 
-/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hubs, hard-wired
+/* Deauthorize devices (1-1.2), not interfaces (1-1.2:1.0), hard-wired
  * devices or the root hub (usb1) */
 static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
@@ -60,7 +51,7 @@ static int deauth_cb(const char *fpath, const struct stat *sb, int typeflag, str
 	strlcpy(dir, fpath, sizeof(dir));
 	dirname(dir);
 	dev = basename(dir);
-	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hub(dir) || is_hardwired(dir))
+	if (!isdigit(dev[0]) || strchr(dev, ':') || is_hardwired(dir))
 		return 0;
 
 	if (writedf(0, "w", "%s", fpath))

@@ -10,7 +10,13 @@ disabled again.
 """
 import infamy
 import infamy.iface as iface
+import infamy.topology as topology
 from infamy.util import until
+
+
+def stp_compatible(physical, logical):
+    return (topology.compatible(physical, logical) and
+            "broken-stp" not in physical["provides"])
 
 
 def stp_state(target, port):
@@ -21,7 +27,7 @@ def stp_state(target, port):
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
-        env = infamy.Env()
+        env = infamy.Env(nodes_compatible=stp_compatible)
         target = env.attach("target", "mgmt")
         tport = target["data"]
         hport = env["host"]["data"]
