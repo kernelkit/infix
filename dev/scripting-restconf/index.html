@@ -2524,6 +2524,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lost-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lost Connections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscribe-to-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscribe to Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#advanced-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3442,6 +3481,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lost-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lost Connections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscribe-to-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscribe to Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#advanced-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4088,58 +4166,169 @@ statistics counters.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>~$<span class="w"> </span>ssh<span class="w"> </span>admin@example.local<span class="w"> </span><span class="s1">'date'</span>
 <a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>Wed<span class="w"> </span>Apr<span class="w"> </span><span class="m">17</span><span class="w"> </span><span class="m">14</span>:48:12<span class="w"> </span>UTC<span class="w"> </span><span class="m">2024</span>
 </code></pre></div>
+<h2 id="notifications">Notifications<a class="headerlink" href="#notifications" title="Permanent link">¶</a></h2>
+<p>A client can subscribe to notifications and read them as a stream of
+server-sent events, instead of polling.  Subscribing is an RPC, and the
+reply has the address of the stream:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>~$<span class="w"> </span>curl<span class="w"> </span>-sk<span class="w"> </span>-u<span class="w"> </span>admin:admin<span class="w"> </span>-X<span class="w"> </span>POST<span class="w">                                   </span><span class="se">\</span>
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a><span class="w">        </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/yang-data+json'</span><span class="w">                </span><span class="se">\</span>
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="w">        </span>-d<span class="w"> </span><span class="s1">'{"ietf-subscribed-notifications:input":{"stream":"NETCONF","encoding":"encode-json"}}'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="w">        </span>https://example.local/restconf/operations/ietf-subscribed-notifications:establish-subscription
+<a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a><span class="o">{</span>
+<a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="w">  </span><span class="s2">"ietf-subscribed-notifications:output"</span>:<span class="w"> </span><span class="o">{</span>
+<a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a><span class="w">    </span><span class="s2">"id"</span>:<span class="w"> </span><span class="m">1</span>,
+<a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a><span class="w">    </span><span class="s2">"ietf-restconf-subscribed-notifications:uri"</span>:<span class="w"> </span><span class="s2">"https://example.local/streams/subscribed/5c7d0cfb-93a1-4a31-9cb4-1ee3c8b4a6f4"</span>
+<a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="w">  </span><span class="o">}</span>
+<a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a><span class="o">}</span>
+</code></pre></div>
+<p>Open the stream within a minute, or the device removes the subscription:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>~$<span class="w"> </span>curl<span class="w"> </span>-sk<span class="w"> </span>-N<span class="w"> </span>-u<span class="w"> </span>admin:admin<span class="w"> </span>-H<span class="w"> </span><span class="s1">'Accept: text/event-stream'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="w">        </span>https://example.local/streams/subscribed/5c7d0cfb-93a1-4a31-9cb4-1ee3c8b4a6f4
+</code></pre></div>
+<p>The stream stays open until the client closes it.  One client address
+can have up to 16 streams open at a time.  The device answers the next
+one with 429 Too Many Requests.</p>
+<p>The address in the reply has the same host name or IP address as the
+request.  If you used an IPv6 link-local address, the reply has it
+without the zone.  Add the zone again, e.g. <code>%25eth0</code>, before you open
+the stream.</p>
+<h3 id="lost-connections">Lost Connections<a class="headerlink" href="#lost-connections" title="Permanent link">¶</a></h3>
+<p>The device sends every event once, to the client that has the stream
+open at the time, and keeps no history of them.  A client has to cope
+with a stream that breaks:</p>
+<ul>
+<li>When nothing happens the device sends a comment line, starting with
+  a colon, every 55 seconds.  If the stream has been silent for two
+  minutes, treat it as lost and open it again</li>
+<li>Events have no <code>id</code>, and the device ignores <code>Last-Event-ID</code>.  A
+  browser <code>EventSource</code> reconnects by itself, but it does not get the
+  events it missed</li>
+<li>A subscription has one reader.  If the stream is already open, a
+  second request for it gets 409 Conflict</li>
+<li>The device keeps the subscription for a minute after the stream
+  closes.  Open the same address again within that time to continue.
+  Later the address answers 404 Not Found, and you have to subscribe
+  again</li>
+<li>Only the user who subscribed can open the stream</li>
+<li>A subscription does not survive a reboot, or a restart of the web
+  services</li>
+<li>Do not count on events from the time the stream was closed.  The
+  device cannot replay them, and answers a request with <code>start-time</code>
+  with 400 Bad Request</li>
+</ul>
+<p>A client that goes away without closing its connection keeps its
+stream, and its place among the 16, until the device notices.  That
+can take up to 15 minutes.  Close the stream, or end the subscription
+with <code>delete-subscription</code> and the <code>id</code> from the reply, when you are
+done.</p>
+<h3 id="subscribe-to-changes">Subscribe to Changes<a class="headerlink" href="#subscribe-to-changes" title="Permanent link">¶</a></h3>
+<p>To be told when operational data changes, subscribe with <code>on-change</code>
+and a filter for the data you want.  This subscription reports when an
+interface goes up or down:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>~$<span class="w"> </span>curl<span class="w"> </span>-sk<span class="w"> </span>-u<span class="w"> </span>admin:admin<span class="w"> </span>-X<span class="w"> </span>POST<span class="w">                                   </span><span class="se">\</span>
+<a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a><span class="w">        </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/yang-data+json'</span><span class="w">                </span><span class="se">\</span>
+<a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="w">        </span>-d<span class="w"> </span><span class="s1">'{"ietf-subscribed-notifications:input":{</span>
+<a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="s1">               "ietf-yang-push:datastore":"ietf-datastores:operational",</span>
+<a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a><span class="s1">               "ietf-yang-push:datastore-xpath-filter":"/ietf-interfaces:interfaces/interface/oper-status",</span>
+<a id="__codelineno-42-6" name="__codelineno-42-6" href="#__codelineno-42-6"></a><span class="s1">               "ietf-yang-push:on-change":{},</span>
+<a id="__codelineno-42-7" name="__codelineno-42-7" href="#__codelineno-42-7"></a><span class="s1">               "encoding":"encode-json"}}'</span><span class="w">                           </span><span class="se">\</span>
+<a id="__codelineno-42-8" name="__codelineno-42-8" href="#__codelineno-42-8"></a><span class="w">        </span>https://example.local/restconf/operations/ietf-subscribed-notifications:establish-subscription
+</code></pre></div>
+<p>The stream starts with the current values in a <code>push-update</code>, followed
+by a <code>push-change-update</code> for every change:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="p">{</span>
+<a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a><span class="w">  </span><span class="nt">"ietf-restconf:notification"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="w">    </span><span class="nt">"ietf-yang-push:push-change-update"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a><span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-43-5" name="__codelineno-43-5" href="#__codelineno-43-5"></a><span class="w">      </span><span class="nt">"datastore-changes"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-43-6" name="__codelineno-43-6" href="#__codelineno-43-6"></a><span class="w">        </span><span class="nt">"yang-patch"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-43-7" name="__codelineno-43-7" href="#__codelineno-43-7"></a><span class="w">          </span><span class="nt">"patch-id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patch-1"</span><span class="p">,</span>
+<a id="__codelineno-43-8" name="__codelineno-43-8" href="#__codelineno-43-8"></a><span class="w">          </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-43-9" name="__codelineno-43-9" href="#__codelineno-43-9"></a><span class="w">            </span><span class="p">{</span>
+<a id="__codelineno-43-10" name="__codelineno-43-10" href="#__codelineno-43-10"></a><span class="w">              </span><span class="nt">"edit-id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"edit-1"</span><span class="p">,</span>
+<a id="__codelineno-43-11" name="__codelineno-43-11" href="#__codelineno-43-11"></a><span class="w">              </span><span class="nt">"operation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"replace"</span><span class="p">,</span>
+<a id="__codelineno-43-12" name="__codelineno-43-12" href="#__codelineno-43-12"></a><span class="w">              </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ietf-interfaces:interfaces/interface[name='e2']/oper-status"</span><span class="p">,</span>
+<a id="__codelineno-43-13" name="__codelineno-43-13" href="#__codelineno-43-13"></a><span class="w">              </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-43-14" name="__codelineno-43-14" href="#__codelineno-43-14"></a><span class="w">                </span><span class="nt">"ietf-interfaces:oper-status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"down"</span>
+<a id="__codelineno-43-15" name="__codelineno-43-15" href="#__codelineno-43-15"></a><span class="w">              </span><span class="p">}</span>
+<a id="__codelineno-43-16" name="__codelineno-43-16" href="#__codelineno-43-16"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-43-17" name="__codelineno-43-17" href="#__codelineno-43-17"></a><span class="w">          </span><span class="p">]</span>
+<a id="__codelineno-43-18" name="__codelineno-43-18" href="#__codelineno-43-18"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-43-19" name="__codelineno-43-19" href="#__codelineno-43-19"></a><span class="w">      </span><span class="p">}</span>
+<a id="__codelineno-43-20" name="__codelineno-43-20" href="#__codelineno-43-20"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-43-21" name="__codelineno-43-21" href="#__codelineno-43-21"></a><span class="w">    </span><span class="nt">"eventTime"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-19T09:39:39.286415871+00:00"</span>
+<a id="__codelineno-43-22" name="__codelineno-43-22" href="#__codelineno-43-22"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-43-23" name="__codelineno-43-23" href="#__codelineno-43-23"></a><span class="p">}</span>
+</code></pre></div>
+<p>The device reports changes to the interfaces and their addresses, the
+LLDP neighbors and the alarm list.  It does not report counters, read
+them with a GET.</p>
+<p>The <code>push-update</code> holds the values as they are when you subscribe.  An
+interface that went down and came back before that is only shown as
+up.  Set <code>"sync-on-start": false</code> inside <code>on-change</code> to skip the
+<code>push-update</code> and only get the changes.</p>
+<p>The device then reports every change by itself, in the order they
+happened.  The <code>patch-id</code> counts up from <code>patch-1</code> in each
+subscription, so a missing number means a change was lost.</p>
+<p>To get back in step after a lost connection, subscribe again and start
+over from the new <code>push-update</code>.  Opening the old stream again within
+the minute gives no new <code>push-update</code>, so changes from the time it was
+closed can be missing.</p>
+<p>A NETCONF client can make the same subscription.  Its notifications
+arrive on the session that subscribed, so there is no stream to open,
+and the subscription ends when the session does.</p>
 <h2 id="advanced-examples">Advanced Examples<a class="headerlink" href="#advanced-examples" title="Permanent link">¶</a></h2>
 <h3 id="makefile-for-common-operations">Makefile for Common Operations<a class="headerlink" href="#makefile-for-common-operations" title="Permanent link">¶</a></h3>
 <p>Create a <code>Makefile</code> to simplify common operations:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="nv">HOST</span><span class="w"> </span><span class="o">?=</span><span class="w"> </span>infix.local
-<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>
-<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="nf">lo-running</span><span class="o">:</span>
-<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
-<a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a>
-<a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="nf">lo-operational</span><span class="o">:</span>
-<a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
-<a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a>
-<a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="nf">lo-add-ip</span><span class="o">:</span>
-<a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-40-11" name="__codelineno-40-11" href="#__codelineno-40-11"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-40-12" name="__codelineno-40-12" href="#__codelineno-40-12"></a><span class="w">        </span>-d<span class="w"> </span><span class="s1">'{ "prefix-length": 32 }'</span>
-<a id="__codelineno-40-13" name="__codelineno-40-13" href="#__codelineno-40-13"></a>
-<a id="__codelineno-40-14" name="__codelineno-40-14" href="#__codelineno-40-14"></a><span class="nf">lo-del-ip</span><span class="o">:</span>
-<a id="__codelineno-40-15" name="__codelineno-40-15" href="#__codelineno-40-15"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-40-16" name="__codelineno-40-16" href="#__codelineno-40-16"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
-<a id="__codelineno-40-17" name="__codelineno-40-17" href="#__codelineno-40-17"></a>
-<a id="__codelineno-40-18" name="__codelineno-40-18" href="#__codelineno-40-18"></a><span class="nf">%-stats</span><span class="o">:</span>
-<a id="__codelineno-40-19" name="__codelineno-40-19" href="#__codelineno-40-19"></a><span class="w">    </span>@./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span><span class="nv">$*</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-40-20" name="__codelineno-40-20" href="#__codelineno-40-20"></a><span class="w">        </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'</span>
-<a id="__codelineno-40-21" name="__codelineno-40-21" href="#__codelineno-40-21"></a>
-<a id="__codelineno-40-22" name="__codelineno-40-22" href="#__codelineno-40-22"></a><span class="nf">%-monitor</span><span class="o">:</span>
-<a id="__codelineno-40-23" name="__codelineno-40-23" href="#__codelineno-40-23"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">0</span>.2<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>make<span class="w"> </span>-s<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span><span class="nv">$*</span>-stats<span class="p">;</span><span class="w"> </span><span class="k">done</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-40-24" name="__codelineno-40-24" href="#__codelineno-40-24"></a><span class="w">        </span><span class="p">|</span><span class="w"> </span>ttyplot<span class="w"> </span>-t<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>HOST<span class="k">)</span><span class="s2">:</span><span class="nv">$*</span><span class="s2"> in-octets"</span><span class="w"> </span>-r
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a><span class="nv">HOST</span><span class="w"> </span><span class="o">?=</span><span class="w"> </span>infix.local
+<a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a>
+<a id="__codelineno-44-3" name="__codelineno-44-3" href="#__codelineno-44-3"></a><span class="nf">lo-running</span><span class="o">:</span>
+<a id="__codelineno-44-4" name="__codelineno-44-4" href="#__codelineno-44-4"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<a id="__codelineno-44-5" name="__codelineno-44-5" href="#__codelineno-44-5"></a>
+<a id="__codelineno-44-6" name="__codelineno-44-6" href="#__codelineno-44-6"></a><span class="nf">lo-operational</span><span class="o">:</span>
+<a id="__codelineno-44-7" name="__codelineno-44-7" href="#__codelineno-44-7"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<a id="__codelineno-44-8" name="__codelineno-44-8" href="#__codelineno-44-8"></a>
+<a id="__codelineno-44-9" name="__codelineno-44-9" href="#__codelineno-44-9"></a><span class="nf">lo-add-ip</span><span class="o">:</span>
+<a id="__codelineno-44-10" name="__codelineno-44-10" href="#__codelineno-44-10"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-11" name="__codelineno-44-11" href="#__codelineno-44-11"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-12" name="__codelineno-44-12" href="#__codelineno-44-12"></a><span class="w">        </span>-d<span class="w"> </span><span class="s1">'{ "prefix-length": 32 }'</span>
+<a id="__codelineno-44-13" name="__codelineno-44-13" href="#__codelineno-44-13"></a>
+<a id="__codelineno-44-14" name="__codelineno-44-14" href="#__codelineno-44-14"></a><span class="nf">lo-del-ip</span><span class="o">:</span>
+<a id="__codelineno-44-15" name="__codelineno-44-15" href="#__codelineno-44-15"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-16" name="__codelineno-44-16" href="#__codelineno-44-16"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
+<a id="__codelineno-44-17" name="__codelineno-44-17" href="#__codelineno-44-17"></a>
+<a id="__codelineno-44-18" name="__codelineno-44-18" href="#__codelineno-44-18"></a><span class="nf">%-stats</span><span class="o">:</span>
+<a id="__codelineno-44-19" name="__codelineno-44-19" href="#__codelineno-44-19"></a><span class="w">    </span>@./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span><span class="nv">$*</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-20" name="__codelineno-44-20" href="#__codelineno-44-20"></a><span class="w">        </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'</span>
+<a id="__codelineno-44-21" name="__codelineno-44-21" href="#__codelineno-44-21"></a>
+<a id="__codelineno-44-22" name="__codelineno-44-22" href="#__codelineno-44-22"></a><span class="nf">%-monitor</span><span class="o">:</span>
+<a id="__codelineno-44-23" name="__codelineno-44-23" href="#__codelineno-44-23"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">0</span>.2<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>make<span class="w"> </span>-s<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span><span class="nv">$*</span>-stats<span class="p">;</span><span class="w"> </span><span class="k">done</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-24" name="__codelineno-44-24" href="#__codelineno-44-24"></a><span class="w">        </span><span class="p">|</span><span class="w"> </span>ttyplot<span class="w"> </span>-t<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>HOST<span class="k">)</span><span class="s2">:</span><span class="nv">$*</span><span class="s2"> in-octets"</span><span class="w"> </span>-r
 </code></pre></div>
 <p>Usage examples:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="c1"># Get loopback operational state</span>
-<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>~$<span class="w"> </span>make<span class="w"> </span>lo-operational
-<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a>
-<a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a><span class="c1"># Add IP to loopback</span>
-<a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a>~$<span class="w"> </span>make<span class="w"> </span>lo-add-ip
-<a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>
-<a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="c1"># Get eth0 statistics</span>
-<a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-stats
-<a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a>
-<a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a><span class="c1"># Monitor eth0 traffic in real-time (requires ttyplot)</span>
-<a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-monitor
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a><span class="c1"># Get loopback operational state</span>
+<a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a>~$<span class="w"> </span>make<span class="w"> </span>lo-operational
+<a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a>
+<a id="__codelineno-45-4" name="__codelineno-45-4" href="#__codelineno-45-4"></a><span class="c1"># Add IP to loopback</span>
+<a id="__codelineno-45-5" name="__codelineno-45-5" href="#__codelineno-45-5"></a>~$<span class="w"> </span>make<span class="w"> </span>lo-add-ip
+<a id="__codelineno-45-6" name="__codelineno-45-6" href="#__codelineno-45-6"></a>
+<a id="__codelineno-45-7" name="__codelineno-45-7" href="#__codelineno-45-7"></a><span class="c1"># Get eth0 statistics</span>
+<a id="__codelineno-45-8" name="__codelineno-45-8" href="#__codelineno-45-8"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-stats
+<a id="__codelineno-45-9" name="__codelineno-45-9" href="#__codelineno-45-9"></a>
+<a id="__codelineno-45-10" name="__codelineno-45-10" href="#__codelineno-45-10"></a><span class="c1"># Monitor eth0 traffic in real-time (requires ttyplot)</span>
+<a id="__codelineno-45-11" name="__codelineno-45-11" href="#__codelineno-45-11"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-monitor
 </code></pre></div>
 <p>You can override the host:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>~$<span class="w"> </span>make<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="m">192</span>.168.1.10<span class="w"> </span>lo-operational
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>~$<span class="w"> </span>make<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="m">192</span>.168.1.10<span class="w"> </span>lo-operational
 </code></pre></div>
 <h3 id="monitoring-interface-traffic">Monitoring Interface Traffic<a class="headerlink" href="#monitoring-interface-traffic" title="Permanent link">¶</a></h3>
 <p>The <code>%-monitor</code> target demonstrates real-time monitoring by polling
 interface statistics and piping to <code>ttyplot</code> for visualization. Install
 <code>ttyplot</code> with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>~$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ttyplot
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>~$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ttyplot
 </code></pre></div>
 <p>Then monitor any interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-monitor
+<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>~$<span class="w"> </span>make<span class="w"> </span>eth0-monitor
 </code></pre></div>
 <p>This creates a live ASCII graph of incoming octets on <code>eth0</code>.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
